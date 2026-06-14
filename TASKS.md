@@ -22,7 +22,7 @@ Projekt befindet sich in Phase 0 — Projektgrundlage
 - [x] GitHub-Repository `theater-command-dcs` erstellen
 - [x] README.md anlegen
 - [x] ROADMAP.md anlegen
-- [ ] TASKS.md anlegen
+- [x] TASKS.md anlegen
 - [ ] CHANGELOG.md anlegen
 - [ ] ARCHITECTURE.md anlegen
 - [ ] MISSION_EDITOR_SETUP.md anlegen
