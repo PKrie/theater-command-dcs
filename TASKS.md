@@ -28,7 +28,7 @@ Projekt befindet sich in Phase 0 — Projektgrundlage
 - [x] MISSION_EDITOR_SETUP.md anlegen
 - [x] NAMING_CONVENTIONS.md anlegen
 - [x] LUA_STYLEGUIDE.md anlegen
-- [ ] .gitignore anlegen
+- [x] .gitignore anlegen
 
 ---
 
@@ -36,8 +36,8 @@ Projekt befindet sich in Phase 0 — Projektgrundlage
 
 Diese Dateien werden später im Ordner `docs/` angelegt:
 
-- [ ] `docs/00_project_overview.md`
-- [ ] `docs/01_campaign_design.md`
+- [x] `docs/00_project_overview.md`
+- [x] `docs/01_campaign_design.md`
 - [ ] `docs/02_technical_architecture.md`
 - [ ] `docs/03_mission_editor_basics.md`
 - [ ] `docs/04_airbase_system.md`
