@@ -1,0 +1,99 @@
+# DCS Mission Files
+
+*.miz
+*.trk
+*.acmi
+
+# DCS Logs
+
+*.log
+dcs.log
+Logs/
+logs/
+
+# DCS Temporary Files
+
+*.tmp
+*.bak
+*.old
+*.backup
+
+# Lua Cache / Temporary
+
+*.luac
+
+# Operating System Files
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Windows Explorer Metadata
+
+ehthumbs.db
+Icon?
+$RECYCLE.BIN/
+
+# macOS Metadata
+
+.AppleDouble
+.LSOverride
+
+# Visual Studio Code
+
+.vscode/
+!.vscode/settings.json
+
+# JetBrains IDEs
+
+.idea/
+
+# Local Development Notes
+
+local_notes/
+scratch/
+temp/
+tmp/
+
+# Save States
+
+save/*.lua
+save/*.json
+!save/README.md
+!save/example_state.lua
+
+# Mission Release Builds
+
+mission/release/*.miz
+
+# Large Generated Exports
+
+exports/
+build/
+dist/
+
+# Audio Working Files
+
+*.aup3
+*.wav.tmp
+
+# Image Working Files
+
+*.psd
+*.xcf
+
+# Personal Test Missions
+
+mission/dev/*_LOCAL.miz
+mission/test/*_LOCAL.miz
+
+# Do not ignore documentation
+
+!README.md
+!ROADMAP.md
+!TASKS.md
+!CHANGELOG.md
+!ARCHITECTURE.md
+!MISSION_EDITOR_SETUP.md
+!NAMING_CONVENTIONS.md
+!LUA_STYLEGUIDE.md
