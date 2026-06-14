@@ -46,7 +46,7 @@ Diese Dateien werden später im Ordner `docs/` angelegt:
 - [x] `docs/07_ai_director.md`
 - [x] `docs/08_iads_system.md`
 - [x] `docs/09_persistence.md`
-- [ ] `docs/10_testing.md`
+- [x] `docs/10_testing.md`
 
 ---
 
@@ -54,8 +54,8 @@ Diese Dateien werden später im Ordner `docs/` angelegt:
 
 Folgende Hauptordner sollen im Repository angelegt werden:
 
-- [ ] `docs/`
-- [ ] `vendor/`
+- [x] `docs/`
+- [x] `vendor/`
 - [ ] `src/`
 - [ ] `mission/`
 - [ ] `mission_editor/`
