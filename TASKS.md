@@ -43,9 +43,9 @@ Diese Dateien werden später im Ordner `docs/` angelegt:
 - [x] `docs/04_airbase_system.md`
 - [x] `docs/05_logistics_system.md`
 - [x] `docs/06_mission_generator.md`
-- [ ] `docs/07_ai_director.md`
-- [ ] `docs/08_iads_system.md`
-- [ ] `docs/09_persistence.md`
+- [x] `docs/07_ai_director.md`
+- [x] `docs/08_iads_system.md`
+- [x] `docs/09_persistence.md`
 - [ ] `docs/10_testing.md`
 
 ---
