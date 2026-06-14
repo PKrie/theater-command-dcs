@@ -23,9 +23,9 @@ Projekt befindet sich in Phase 0 — Projektgrundlage
 - [x] README.md anlegen
 - [x] ROADMAP.md anlegen
 - [x] TASKS.md anlegen
-- [ ] CHANGELOG.md anlegen
-- [ ] ARCHITECTURE.md anlegen
-- [ ] MISSION_EDITOR_SETUP.md anlegen
+- [x] CHANGELOG.md anlegen
+- [x] ARCHITECTURE.md anlegen
+- [x] MISSION_EDITOR_SETUP.md anlegen
 - [ ] NAMING_CONVENTIONS.md anlegen
 - [ ] LUA_STYLEGUIDE.md anlegen
 - [ ] .gitignore anlegen
