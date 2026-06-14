@@ -38,11 +38,11 @@ Diese Dateien werden später im Ordner `docs/` angelegt:
 
 - [x] `docs/00_project_overview.md`
 - [x] `docs/01_campaign_design.md`
-- [ ] `docs/02_technical_architecture.md`
-- [ ] `docs/03_mission_editor_basics.md`
-- [ ] `docs/04_airbase_system.md`
-- [ ] `docs/05_logistics_system.md`
-- [ ] `docs/06_mission_generator.md`
+- [x] `docs/02_technical_architecture.md`
+- [x] `docs/03_mission_editor_basics.md`
+- [x] `docs/04_airbase_system.md`
+- [x] `docs/05_logistics_system.md`
+- [x] `docs/06_mission_generator.md`
 - [ ] `docs/07_ai_director.md`
 - [ ] `docs/08_iads_system.md`
 - [ ] `docs/09_persistence.md`
