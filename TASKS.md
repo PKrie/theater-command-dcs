@@ -6,7 +6,7 @@ Ziel ist, das Projekt Schritt für Schritt aufzubauen und nicht mehrere große B
 
 ---
 
-## Aktueller Projektstand
+## Projekt
 
 Projektname:
 
@@ -16,31 +16,92 @@ Erste Kampagne:
 
 **Operation Levant Reclamation**
 
-Aktueller Stand:
+Map:
 
-- GitHub-Repository ist erstellt.
-- Grunddokumentation ist erstellt.
-- `docs/`-Grundblock ist erstellt.
-- `vendor/`-Grundstruktur ist erstellt.
-- Vendor-README-Dateien für MIST, MOOSE, CTLD und Skynet IADS sind erstellt.
-- MIST wurde als erstes Framework lokal im Repository hinterlegt.
-- MIST liegt als stabile Projektdatei unter `vendor/mist/mist.lua`.
-- MIST-Handbuch und Beispiel-Datenbanken wurden unter `vendor/mist/` abgelegt.
-- Die eigentliche Theater-Command-Lua-Struktur unter `src/` ist noch nicht begonnen.
+**Syria**
 
-Aktuelle Phase:
+Ausgangslage:
 
-**Phase 0 — Projektgrundlage und Vendor-Vorbereitung**
+    Blue Start: Akrotiri / Zypern
+    Red Start: syrisches Festland vollständig rot kontrolliert
 
-Nächster Fokus:
+Grundprinzip:
 
-1. `TASKS.md` sauber aktualisieren
-2. MIST-Ordner auf saubere Struktur prüfen
-3. danach entweder weitere Frameworks hinterlegen oder mit `src/README.md` beginnen
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis
 
 ---
 
-## Grundregel für die Arbeit
+## Aktueller Stand
+
+Stand:
+
+    2026-06-15
+
+Aktuell erledigt:
+
+- Repository erstellt
+- zentrale Projektdokumentation angelegt
+- `docs/`-Grundblock erstellt
+- `vendor/`-Grundstruktur erstellt
+- MIST hinterlegt
+- MOOSE hinterlegt
+- CTLD hinterlegt
+- Skynet IADS hinterlegt
+- MIST auf CTLD-kompatible Version ersetzt
+- alle Vendor-README-Dateien nach Framework-Import aktualisiert
+- `src/README.md` erstellt
+- falsch platzierte Root-`Moose.lua` entfernt
+- Root-`README.md` aktualisiert
+- `ROADMAP.md` aktualisiert
+
+Aktueller Fokus:
+
+    Dokumentation nach abgeschlossenem Vendor-Import vollständig auf Stand bringen
+
+---
+
+## Aktueller Framework-Stand
+
+| Framework | Projektpfad | Stand |
+|---|---|---|
+| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
+| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
+| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
+
+Wichtig:
+
+Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket.
+
+Grund:
+
+CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
+
+---
+
+## Geplante Lade-Reihenfolge
+
+Die geplante Lade-Reihenfolge im DCS Mission Editor lautet:
+
+    1. vendor/mist/mist.lua
+    2. vendor/moose/Moose.lua
+    3. vendor/ctld/CTLD-i18n.lua
+    4. vendor/ctld/CTLD.lua
+    5. vendor/skynet-iads/SkynetIADS.lua
+    6. src/loader.lua
+
+Wichtig:
+
+- MIST muss vor CTLD geladen werden.
+- `CTLD-i18n.lua` muss vor `CTLD.lua` geladen werden.
+- Skynet IADS muss nach MIST geladen werden.
+- Eigene Theater-Command-Logik startet erst nach den externen Frameworks.
+
+---
+
+## Arbeitsregel
 
 Es wird immer nur ein sinnvoller Schritt nach dem anderen umgesetzt.
 
@@ -48,13 +109,19 @@ Keine parallelen Großbaustellen.
 
 Jede neue Datei wird vollständig vorbereitet.
 
-Eigene Theater-Command-Logik gehört nach `src/`.
+Eigene Theater-Command-Logik gehört nach:
 
-Externe Frameworks gehören nach `vendor/` und werden nicht verändert.
+    src/
+
+Externe Frameworks gehören nach:
+
+    vendor/
+
+Externe Frameworks werden nicht verändert.
 
 ---
 
-## Phase 0 — GitHub-Grundstruktur
+## Phase 0 — Repository-Grundstruktur
 
 ### Repository-Grunddateien
 
@@ -71,7 +138,7 @@ Externe Frameworks gehören nach `vendor/` und werden nicht verändert.
 
 ---
 
-## Phase 0 — Dokumentationsordner
+## Phase 0 — Dokumentationsgrundlage
 
 ### Docs-Grundblock
 
@@ -89,28 +156,7 @@ Externe Frameworks gehören nach `vendor/` und werden nicht verändert.
 
 ---
 
-## Phase 0 — Hauptordner vorbereiten
-
-Folgende Hauptordner sind für das Projekt vorgesehen:
-
-- [x] `docs/`
-- [x] `vendor/`
-- [ ] `src/`
-- [ ] `mission/`
-- [ ] `mission_editor/`
-- [ ] `assets/`
-- [ ] `save/`
-- [ ] `tools/`
-
----
-
 ## Phase 0 — Vendor-Grundstruktur
-
-Externe Frameworks werden im Ordner `vendor/` abgelegt.
-
-Sie werden nicht verändert.
-
-Eigene Theater-Command-Logik wird nicht in `vendor/` geschrieben.
 
 ### Vendor-Ordner
 
@@ -129,86 +175,80 @@ Eigene Theater-Command-Logik wird nicht in `vendor/` geschrieben.
 
 ---
 
-## Phase 0 — MIST-Import
+## Phase 0 — Vendor-Frameworks
 
-MIST ist das erste tatsächlich hinterlegte externe Framework.
-
-### MIST-Dateien
+### MIST
 
 - [x] `vendor/mist/mist.lua` hinterlegen
+- [x] MIST-Handbuch hinterlegen
 - [x] `vendor/mist/Mist guide.pdf` hinterlegen
 - [x] `vendor/mist/Example_DBs/` anlegen
-- [x] MIST-Beispiel-Datenbanken unter `vendor/mist/Example_DBs/` hinterlegen
+- [x] MIST-Beispiel-Datenbanken hinterlegen
+- [x] MIST-Datei auf CTLD-kompatible Version ersetzen
 - [x] `vendor/mist/README.md` nach Framework-Import aktualisieren
-- [x] stabilen Projektnamen `vendor/mist/mist.lua` festlegen
+- [x] MIST-Version dokumentieren
 
-### MIST-Version
+Aktiver Stand:
 
-Aktuell dokumentiert:
-
-- [x] MIST-Version intern geprüft
-- [x] MIST-Version in `vendor/mist/README.md` dokumentiert
-
-Aktuelle interne MIST-Version:
-
-    4.5.125
-
-Hinweis:
-
-Die ursprünglich genannte Datei war `mist_4_5_126.lua`.
-
-Für das Projekt soll die aktive Framework-Datei dauerhaft so heißen:
-
-    vendor/mist/mist.lua
-
-### MIST-Nachprüfung
-
-- [ ] prüfen, ob im GitHub-Browser wirklich nur eine aktive MIST-Hauptdatei genutzt wird
-- [ ] falls zusätzlich noch `vendor/mist/mist_4_5_126.lua` vorhanden ist, diese nach Sichtprüfung entfernen
-- [ ] prüfen, ob `vendor/mist/README.md` im GitHub-Browser sauber mehrzeilig formatiert ist
-- [ ] prüfen, ob `vendor/mist/README.md` keine veralteten Hinweise mehr enthält
+    MIST 4.5.128-DYNSLOTS-02
 
 ---
-
-## Phase 0 — Weitere Frameworks hinterlegen
-
-Nach MIST sollen die weiteren externen Frameworks ergänzt werden.
-
-Immer nur ein Framework pro Schritt.
 
 ### MOOSE
 
-- [ ] offizielle MOOSE-Datei herunterladen
-- [ ] MOOSE-Hauptdatei unter `vendor/moose/Moose.lua` hinterlegen
-- [ ] `vendor/moose/README.md` mit Version, Quelle und Datum aktualisieren
-- [ ] prüfen, ob lokale Änderungen an MOOSE vermieden wurden
+- [x] `vendor/moose/Moose.lua` hinterlegen
+- [x] `vendor/moose/MOOSE_DOCS.md` anlegen
+- [x] `vendor/moose/README.md` nach Framework-Import aktualisieren
+- [x] MOOSE-Version dokumentieren
+- [x] falsch platzierte Root-`Moose.lua` entfernen
 
-### CTLD
+Aktiver Stand:
 
-- [ ] offizielle CTLD-Dateien herunterladen
-- [ ] `vendor/ctld/CTLD-i18n.lua` hinterlegen
-- [ ] `vendor/ctld/CTLD.lua` hinterlegen
-- [ ] `vendor/ctld/README.md` mit Version, Quelle und Datum aktualisieren
-- [ ] prüfen, ob lokale Änderungen an CTLD vermieden wurden
-
-### Skynet IADS
-
-- [ ] offizielle Skynet-IADS-Datei herunterladen
-- [ ] `vendor/skynet-iads/SkynetIADS.lua` hinterlegen
-- [ ] `vendor/skynet-iads/README.md` mit Version, Quelle und Datum aktualisieren
-- [ ] prüfen, ob lokale Änderungen an Skynet IADS vermieden wurden
+    MOOSE 2.9.17
 
 ---
 
-## Phase 0 — Lua-Quellstruktur vorbereiten
+### CTLD
 
-Eigene Theater-Command-Logik gehört nach `src/`.
+- [x] `vendor/ctld/CTLD-i18n.lua` hinterlegen
+- [x] `vendor/ctld/CTLD.lua` hinterlegen
+- [x] CTLD-MIST-Hinweis prüfen
+- [x] MIST-Datei passend zu CTLD ersetzen
+- [x] `vendor/ctld/README.md` nach Framework-Import aktualisieren
+- [x] CTLD-Version dokumentieren
 
-Die Struktur wird nach Aufgaben sortiert, nicht nach Frameworks.
+Aktiver Stand:
 
-### Src-Grundstruktur
+    CTLD 1.6.1
 
-- [ ] `src/README.md`
+Nicht hinterlegt:
+
+    vendor/ctld/beacon.ogg
+    vendor/ctld/beaconsilent.ogg
+
+Hinweis:
+
+Diese Sounddateien werden erst ergänzt, wenn CTLD-Radio-Beacons aktiv genutzt werden sollen.
+
+---
+
+### Skynet IADS
+
+- [x] `vendor/skynet-iads/SkynetIADS.lua` hinterlegen
+- [x] kompilierte Skynet-IADS-Datei verwenden
+- [x] Datei stabil als `SkynetIADS.lua` ablegen
+- [x] `vendor/skynet-iads/README.md` nach Framework-Import aktualisieren
+- [x] Skynet-IADS-Version dokumentieren
+
+Aktiver Stand:
+
+    Skynet IADS 3.3.0
+
+---
+
+## Phase 0 — Source-Grundstruktur
+
+- [x] `src/README.md`
 - [ ] `src/loader.lua`
 - [ ] `src/main.lua`
 - [ ] `src/core/`
@@ -235,64 +275,100 @@ Die Struktur wird nach Aufgaben sortiert, nicht nach Frameworks.
 
 ---
 
-## Phase 0 — Erste Lua-Basisdateien
+## Phase 0 — Dokumentation nach Vendor-Abschluss aktualisieren
 
-Diese Dateien bilden später die technische Grundlage von Theater Command DCS.
+Ziel:
 
-### Core
+Alle zentralen Dokumentationsdateien sollen den aktuellen Stand widerspiegeln:
 
+- Vendor-Frameworks sind hinterlegt.
+- MIST ist CTLD-kompatibel ersetzt.
+- Root-`Moose.lua` wurde entfernt.
+- `src/README.md` existiert.
+- Eigene Lua-Logik ist noch nicht begonnen.
+
+### Zentrale Dateien
+
+- [x] `README.md` aktualisieren
+- [x] `ROADMAP.md` aktualisieren
+- [x] `TASKS.md` aktualisieren
+- [ ] `CHANGELOG.md` aktualisieren
+- [ ] `ARCHITECTURE.md` aktualisieren
+- [ ] `MISSION_EDITOR_SETUP.md` prüfen und bei Bedarf aktualisieren
+- [ ] `NAMING_CONVENTIONS.md` prüfen und bei Bedarf aktualisieren
+- [ ] `LUA_STYLEGUIDE.md` prüfen und bei Bedarf aktualisieren
+
+### Vendor-Dokumentation
+
+- [ ] `vendor/README.md` aktualisieren
+
+### Docs-Dokumentation
+
+- [ ] `docs/00_project_overview.md` prüfen und bei Bedarf aktualisieren
+- [ ] `docs/01_campaign_design.md` prüfen und bei Bedarf aktualisieren
+- [ ] `docs/02_technical_architecture.md` aktualisieren
+- [ ] `docs/03_mission_editor_basics.md` aktualisieren
+- [ ] `docs/04_airbase_system.md` prüfen und bei Bedarf aktualisieren
+- [ ] `docs/05_logistics_system.md` aktualisieren
+- [ ] `docs/06_mission_generator.md` prüfen und bei Bedarf aktualisieren
+- [ ] `docs/07_ai_director.md` prüfen und bei Bedarf aktualisieren
+- [ ] `docs/08_iads_system.md` aktualisieren
+- [ ] `docs/09_persistence.md` prüfen und bei Bedarf aktualisieren
+- [ ] `docs/10_testing.md` prüfen und bei Bedarf aktualisieren
+
+---
+
+## Phase 1 — Core-System
+
+Diese Phase beginnt erst nach Abschluss der aktuellen Dokumentationsaktualisierung.
+
+### Geplante Dateien
+
+- [ ] `src/loader.lua`
+- [ ] `src/main.lua`
 - [ ] `src/core/tc_config.lua`
 - [ ] `src/core/tc_logger.lua`
 - [ ] `src/core/tc_state.lua`
 - [ ] `src/core/tc_utils.lua`
 - [ ] `src/core/tc_scheduler.lua`
 
-### Loader
-
-- [ ] `src/loader.lua`
-- [ ] `src/main.lua`
-
-### Loader-Aufgaben
+### Aufgaben
 
 - [ ] globale `TC`-Tabelle initialisieren
-- [ ] Lade-Reihenfolge definieren
 - [ ] Framework-Verfügbarkeit prüfen
+- [ ] Lade-Reihenfolge der eigenen Dateien definieren
 - [ ] Core-Dateien laden
+- [ ] `main.lua` starten
 - [ ] Debug-Ausgabe beim Start vorbereiten
 - [ ] Fehlerausgabe für fehlende Frameworks vorbereiten
+- [ ] erste sichtbare Ausgabe in `dcs.log` erzeugen
 
 ---
 
-## Phase 1 — Airbase-System
-
-Das Airbase-System wird die erste große eigene Theater-Command-Funktion.
-
-### Ziel
-
-DCS-Airbases auf der Syria Map automatisch erkennen und in eigene Theater-Command-Strukturen überführen.
+## Phase 2 — Airbase-System
 
 ### Geplante Dateien
 
 - [ ] `src/world/tc_airbase_scanner.lua`
 - [ ] `src/world/tc_airbase_registry.lua`
-- [ ] `src/world/tc_airbase_debug.lua`
+- [ ] `src/world/tc_airbase_overrides.lua`
+- [ ] `src/world/tc_region_classifier.lua`
+- [ ] `src/debug/tc_debug_airbases.lua`
 
 ### Aufgaben
 
 - [ ] Airbase-Scanner bauen
-- [ ] Airbase-Debugausgabe bauen
-- [ ] Akrotiri erkennen
-- [ ] Khmeimim erkennen
-- [ ] alle Airbases der Syria Map auflisten
+- [ ] alle DCS-Airbases der Syria Map erfassen
+- [ ] Akrotiri als blaue Startbasis erkennen
+- [ ] syrisches Festland initial rot bewerten
 - [ ] BaseNodes erzeugen
 - [ ] Airbase-Koalitionsstatus erfassen
 - [ ] Airbase-Daten für Capture-System vorbereiten
+- [ ] Airbase-Debugausgabe vorbereiten
 
 ---
 
-## Phase 1 — Zonen-System
-
-Virtuelle Zonen sollen später aus Basen und Kampagnenlogik erzeugt werden.
+## Phase 3 — Zonen-System
 
 ### Geplante Dateien
 
@@ -311,15 +387,14 @@ Virtuelle Zonen sollen später aus Basen und Kampagnenlogik erzeugt werden.
 
 ---
 
-## Phase 1 — Capture-System
-
-Das Capture-System steuert später den Besitz von Basen und Zonen.
+## Phase 4 — Capture-System
 
 ### Geplante Dateien
 
 - [ ] `src/campaign/tc_capture_system.lua`
 - [ ] `src/campaign/tc_base_ownership.lua`
 - [ ] `src/campaign/tc_campaign_state.lua`
+- [ ] `src/campaign/tc_frontline_system.lua`
 
 ### Aufgaben
 
@@ -327,24 +402,25 @@ Das Capture-System steuert später den Besitz von Basen und Zonen.
 - [ ] Besitzerstatus für Zonen vorbereiten
 - [ ] Blau/Rot/Neutral-Status definieren
 - [ ] Capture-Bedingungen definieren
-- [ ] Capture-Debugausgabe vorbereiten
+- [ ] Garnisonen auswerten
+- [ ] Supply-Status auswerten
 - [ ] Verbindung zum Airbase-System vorbereiten
 - [ ] Verbindung zum Logistiksystem vorbereiten
+- [ ] Capture-Debugausgabe vorbereiten
 
 ---
 
-## Phase 1 — Logistics und CTLD-Anbindung
-
-CTLD übernimmt technische Transportfunktionen.
-
-Theater Command DCS entscheidet über die kampagnenlogische Wirkung.
+## Phase 5 — Logistics und CTLD-Anbindung
 
 ### Geplante Dateien
 
 - [ ] `src/logistics/tc_logistics_delivery.lua`
 - [ ] `src/logistics/tc_fob_system.lua`
 - [ ] `src/logistics/tc_logistics_state.lua`
+- [ ] `src/logistics/tc_logistics_hubs.lua`
+- [ ] `src/logistics/tc_supply_routes.lua`
 - [ ] `src/ui/tc_f10_menu.lua`
+- [ ] `src/debug/tc_debug_logistics.lua`
 
 ### Aufgaben
 
@@ -355,18 +431,18 @@ Theater Command DCS entscheidet über die kampagnenlogische Wirkung.
 - [ ] Logistiklieferungen kampagnenlogisch auswerten
 - [ ] CTLD-Lieferungen mit Theater Command verbinden
 - [ ] FOB-System vorbereiten
+- [ ] eroberte Basen als neue Logistikhubs freischalten
 
 ---
 
-## Phase 1 — Missionsgenerator
-
-Der Missionsgenerator erzeugt später dynamische Aufgaben abhängig vom Kampagnenzustand.
+## Phase 6 — Missionsgenerator
 
 ### Geplante Dateien
 
 - [ ] `src/missions/tc_mission_generator.lua`
 - [ ] `src/missions/tc_mission_registry.lua`
 - [ ] `src/missions/tc_mission_types.lua`
+- [ ] `src/missions/tc_mission_filter_by_aircraft.lua`
 
 ### Aufgaben
 
@@ -380,15 +456,14 @@ Der Missionsgenerator erzeugt später dynamische Aufgaben abhängig vom Kampagne
 
 ---
 
-## Phase 1 — AI Director
-
-Der AI Director soll später rote und blaue Reaktionen steuern.
+## Phase 7 — AI Director
 
 ### Geplante Dateien
 
 - [ ] `src/ai/tc_ai_director.lua`
 - [ ] `src/ai/tc_ai_cap_manager.lua`
 - [ ] `src/ai/tc_ai_gci_manager.lua`
+- [ ] `src/ai/tc_ai_counterattack.lua`
 
 ### Aufgaben
 
@@ -397,14 +472,11 @@ Der AI Director soll später rote und blaue Reaktionen steuern.
 - [ ] KI-Reaktionen auf Spielerfortschritt vorbereiten
 - [ ] KI-Reaktionen auf Capture-Ereignisse vorbereiten
 - [ ] KI-Reaktionen auf IADS-Schäden vorbereiten
+- [ ] KI-Gegenangriffe vorbereiten
 
 ---
 
-## Phase 1 — IADS-System
-
-Skynet IADS übernimmt später taktisches Radar- und SAM-Verhalten.
-
-Theater Command DCS entscheidet über die kampagnenlogische Einbindung.
+## Phase 8 — IADS-System
 
 ### Geplante Dateien
 
@@ -412,6 +484,7 @@ Theater Command DCS entscheidet über die kampagnenlogische Einbindung.
 - [ ] `src/iads/tc_iads_sites.lua`
 - [ ] `src/iads/tc_iads_sectors.lua`
 - [ ] `src/iads/tc_iads_state.lua`
+- [ ] `src/iads/tc_iads_config.lua`
 - [ ] `src/debug/tc_debug_iads.lua`
 
 ### Aufgaben
@@ -425,9 +498,7 @@ Theater Command DCS entscheidet über die kampagnenlogische Einbindung.
 
 ---
 
-## Phase 1 — Persistenz
-
-Persistenz wird erst gebaut, wenn Airbase-, Capture- und erste Logistiklogik existieren.
+## Phase 9 — Persistenz
 
 ### Geplante Dateien
 
@@ -464,21 +535,6 @@ Diese Aufgaben werden später im DCS Mission Editor erledigt.
 - [ ] erste CTLD-Pickup-Zonen auf Akrotiri anlegen
 - [ ] erste Template-Gruppen mit Late Activation anlegen
 - [ ] erste Framework-Lade-Trigger vorbereiten
-
-### Erste empfohlene Client-Slots
-
-Diese Slots sollen in der ersten DEV-Mission auf Akrotiri angelegt werden:
-
-    CLIENT_BLUE_FA18C_AKROTIRI_01
-    CLIENT_BLUE_FA18C_AKROTIRI_02
-    CLIENT_BLUE_F16C_AKROTIRI_01
-    CLIENT_BLUE_F16C_AKROTIRI_02
-    CLIENT_BLUE_F15E_AKROTIRI_01
-    CLIENT_BLUE_F15E_AKROTIRI_02
-    CLIENT_BLUE_F14B_AKROTIRI_01
-    CLIENT_BLUE_F14B_AKROTIRI_02
-    CLIENT_BLUE_UH1H_AKROTIRI_01
-    CLIENT_BLUE_MI8_AKROTIRI_01
 
 ---
 
@@ -520,6 +576,15 @@ Mögliche spätere Inhalte:
 - Funktexte
 - Audio-Dateien
 - PDF-Briefings
+
+---
+
+## Save
+
+Dieser Ordner wird später für Persistenz genutzt.
+
+- [ ] `save/README.md`
+- [ ] `save/example_state.lua`
 
 ---
 
@@ -581,19 +646,16 @@ Diese Dateien sind perspektivisch erwünscht:
 
 Nach dieser Aktualisierung von `TASKS.md`:
 
-- [ ] MIST-Ordner abschließend prüfen
-- [ ] falls nötig doppelte MIST-Versionierungsdatei entfernen
-- [ ] danach nächsten Einzelschritt festlegen
+    CHANGELOG.md aktualisieren
 
-Empfohlener nächster technischer Schritt nach der MIST-Prüfung:
+Danach:
 
-    src/README.md
-
-Alternativer nächster Vendor-Schritt:
-
-    vendor/moose/Moose.lua
-
-Die Entscheidung erfolgt erst nach Abschluss des aktuellen Einzelschritts.
+    ARCHITECTURE.md aktualisieren
+    vendor/README.md aktualisieren
+    docs/02_technical_architecture.md aktualisieren
+    docs/03_mission_editor_basics.md aktualisieren
+    docs/05_logistics_system.md aktualisieren
+    docs/08_iads_system.md aktualisieren
 
 ---
 
@@ -601,30 +663,18 @@ Die Entscheidung erfolgt erst nach Abschluss des aktuellen Einzelschritts.
 
 Grundsatz:
 
-Erst Dokumentation.
-
-Dann Grundstruktur.
-
-Dann Vendor-Frameworks.
-
-Dann `src/`-Struktur.
-
-Dann Mission-Editor-Basis.
-
-Dann Lua-Core.
-
-Dann Airbase-Scanner.
-
-Dann Zonen.
-
-Dann Capture.
-
-Dann CTLD-Anbindung.
-
-Dann Missionsgenerator.
-
-Dann AI Director.
-
-Dann IADS.
-
-Dann Persistenz.
+    Erst Dokumentation.
+    Dann Vendor abschließen.
+    Dann src-Struktur.
+    Dann Core.
+    Dann Airbases.
+    Dann Zonen.
+    Dann Capture.
+    Dann CTLD-Anbindung.
+    Dann Missionen.
+    Dann KI.
+    Dann IADS.
+    Dann Persistenz.
+    Dann DEV-Mission.
+    Dann Testing.
+    Dann Release-Struktur.
