@@ -1,10 +1,32 @@
 # MIST Framework
 
-Dieser Ordner ist für das externe Framework MIST vorgesehen.
+Dieser Ordner enthält das externe Framework **MIST** für Theater Command DCS.
 
 MIST ist eine externe Bibliothek und gehört deshalb in den Ordner `vendor/`.
 
 Theater Command DCS verändert MIST nicht. Eigene Projektlogik wird nicht in diesem Ordner geschrieben, sondern unter `src/`.
+
+---
+
+## Aktueller Inhalt dieses Ordners
+
+Dieser Ordner enthält aktuell:
+
+    vendor/mist/README.md
+    vendor/mist/mist.lua
+    vendor/mist/Mist guide.pdf
+    vendor/mist/Example_DBs/
+
+Bedeutung:
+
+- `mist.lua` ist die eigentliche MIST-Framework-Datei.
+- `Mist guide.pdf` ist das zugehörige MIST-Handbuch.
+- `Example_DBs/` enthält Beispiel- und Referenzdateien zu MIST-Datenbanken.
+- `README.md` dokumentiert die Nutzung von MIST innerhalb von Theater Command DCS.
+
+Die Dateien in `Example_DBs/` sind Referenzmaterial.
+
+Sie werden nicht automatisch durch Theater Command DCS geladen.
 
 ---
 
@@ -20,6 +42,8 @@ Geplante Nutzung:
 - Koordinatenlogik
 - Hilfsfunktionen für dynamische Missionen
 - technische Grundlage für CTLD
+- Unterstützung bei dynamischem Spawning und Event-Auswertung
+- Hilfsfunktionen für spätere Test- und Debugsysteme
 
 MIST ist nicht die Architektur des Projekts.
 
@@ -27,21 +51,50 @@ Theater Command DCS bleibt das eigentliche Kampagnensystem.
 
 ---
 
-## Erwartete Datei
+## Framework-Datei
 
-Die spätere MIST-Hauptdatei soll hier abgelegt werden:
+Die MIST-Hauptdatei liegt unter:
 
     vendor/mist/mist.lua
 
-Diese Datei wird später aus der offiziellen MIST-Quelle ergänzt.
+Dieser Dateiname bleibt im Projekt bewusst stabil.
 
-Aktuell wird in diesem Schritt nur die Ordnerdokumentation vorbereitet.
+Wenn später eine neue MIST-Version eingespielt wird, wird die neue Framework-Datei wieder als `mist.lua` abgelegt.
+
+Die genaue Version wird in dieser README dokumentiert.
+
+---
+
+## Versionierung
+
+Aktueller Stand:
+
+    MIST version: 4.5.125
+    File used by project: vendor/mist/mist.lua
+    Source: user-provided MIST framework download
+    Original upstream source: TBD
+    Date added: 2026-06-15
+    Local changes: none
+
+Hinweis:
+
+Die ursprünglich hochgeladene Datei trug den Namen `mist_4_5_126.lua`.
+
+Die interne Versionsdefinition der Datei meldet jedoch:
+
+    mist.majorVersion = 4
+    mist.minorVersion = 5
+    mist.build = 125
+
+Für den Projektbetrieb wird die Datei deshalb als `mist.lua` geführt.
+
+Die interne Versionsnummer wird hier dokumentiert.
 
 ---
 
 ## Wichtige Projektregel
 
-Dateien in `vendor/mist/` werden nicht verändert.
+Dateien in `vendor/mist/` werden grundsätzlich nicht verändert.
 
 Wenn Theater Command DCS eigenes Verhalten benötigt, wird dieses Verhalten in eigenen Lua-Dateien unter `src/` programmiert.
 
@@ -106,20 +159,39 @@ Theater Command DCS entscheidet selbst über:
 
 MIST speichert keinen strategischen Kampagnenzustand für Theater Command DCS.
 
+MIST darf technische Hilfsarbeit leisten.
+
+Theater Command DCS entscheidet, welche kampagnenlogische Bedeutung diese technischen Ergebnisse haben.
+
 ---
 
-## Versionierung
+## Umgang mit dem MIST-Handbuch
 
-Beim späteren Einfügen von MIST sollen folgende Informationen ergänzt werden:
+Das Handbuch liegt unter:
 
-    MIST version: TBD
-    Source: TBD
-    Date added: TBD
-    Local changes: none
+    vendor/mist/Mist guide.pdf
 
-Lokale Änderungen an MIST sind nicht vorgesehen.
+Es dient als lokale Projektreferenz.
 
-Wenn später eine neue MIST-Version benötigt wird, wird die Framework-Datei vollständig ersetzt und die Version hier dokumentiert.
+Das Handbuch wird nicht durch DCS geladen.
+
+Es ist nur für Entwicklung, Nachschlagen und spätere Dokumentation gedacht.
+
+---
+
+## Umgang mit Example_DBs
+
+Die Beispiel-Datenbanken liegen unter:
+
+    vendor/mist/Example_DBs/
+
+Diese Dateien dienen nur als Referenz.
+
+Sie sind hilfreich, um die Struktur von MIST-Datenbanken besser zu verstehen.
+
+Sie werden nicht automatisch geladen.
+
+Sie sind kein aktiver Bestandteil des Theater-Command-Kampagnensystems.
 
 ---
 
@@ -133,6 +205,24 @@ Nach dem Einfügen von `mist.lua` soll geprüft werden:
 - CTLD lädt danach ohne fehlende MIST-Abhängigkeiten
 - `dcs.log` enthält keine MIST-bezogenen Fehler
 - Theater Command Loader startet erst nach den externen Frameworks
+- einfache MIST-Funktionen sind nach dem Laden verfügbar
+
+---
+
+## Aktualisierung bei neuer MIST-Version
+
+Wenn später eine neue MIST-Version eingespielt wird:
+
+1. alte Datei `vendor/mist/mist.lua` ersetzen
+2. neuen Inhalt unverändert übernehmen
+3. interne Versionsnummer prüfen
+4. Version in dieser README aktualisieren
+5. `Local changes: none` nur beibehalten, wenn die Datei wirklich unverändert übernommen wurde
+6. Missionstest durchführen
+
+Der Dateiname bleibt weiterhin:
+
+    vendor/mist/mist.lua
 
 ---
 
