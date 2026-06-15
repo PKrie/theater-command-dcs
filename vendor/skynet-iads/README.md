@@ -1,10 +1,24 @@
 # Skynet IADS Framework
 
-Dieser Ordner ist für das externe Framework Skynet IADS vorgesehen.
+Dieser Ordner enthält das externe Framework **Skynet IADS** für Theater Command DCS.
 
 Skynet IADS ist eine externe Bibliothek und gehört deshalb in den Ordner `vendor/`.
 
 Theater Command DCS verändert Skynet IADS nicht. Eigene Projektlogik wird nicht in diesem Ordner geschrieben, sondern unter `src/`.
+
+---
+
+## Aktueller Inhalt dieses Ordners
+
+Dieser Ordner enthält aktuell:
+
+    vendor/skynet-iads/README.md
+    vendor/skynet-iads/SkynetIADS.lua
+
+Bedeutung:
+
+- `SkynetIADS.lua` ist die aktive Skynet-IADS-Framework-Datei.
+- `README.md` dokumentiert die Nutzung von Skynet IADS innerhalb von Theater Command DCS.
 
 ---
 
@@ -23,6 +37,7 @@ Geplante Nutzung:
 - Emissionskontrolle
 - koordinierte Luftverteidigung
 - spätere Verbindung mit dem Theater-Command-AI-Director
+- spätere Verbindung mit dem Missionsgenerator
 
 Skynet IADS ist nicht die Architektur des Projekts.
 
@@ -30,21 +45,76 @@ Theater Command DCS bleibt das eigentliche Kampagnensystem.
 
 ---
 
-## Erwartete Datei
+## Framework-Datei
 
-Die spätere Skynet-IADS-Hauptdatei soll hier abgelegt werden:
+Die aktive Skynet-IADS-Hauptdatei liegt unter:
 
     vendor/skynet-iads/SkynetIADS.lua
 
-Diese Datei wird später aus der offiziellen Skynet-IADS-Quelle ergänzt.
+Dieser Dateiname bleibt im Projekt bewusst stabil.
 
-Aktuell wird in diesem Schritt nur die Ordnerdokumentation vorbereitet.
+Die ursprüngliche Quelldatei heißt im offiziellen Repository:
+
+    skynet-iads-compiled.lua
+
+Für Theater Command DCS wird sie unter folgendem stabilen Projektnamen geführt:
+
+    SkynetIADS.lua
+
+Wenn später eine neue Skynet-IADS-Version eingespielt wird, wird die neue kompilierte Framework-Datei wieder als `SkynetIADS.lua` abgelegt.
+
+Die genaue Version wird in dieser README dokumentiert.
+
+---
+
+## Versionierung
+
+Aktueller Stand:
+
+    Skynet IADS version: 3.3.0
+    Build time: 29.12.2023 2311Z
+    File used by project: vendor/skynet-iads/SkynetIADS.lua
+    Source: walder/Skynet-IADS
+    Source file: demo-missions/skynet-iads-compiled.lua
+    Date added: 2026-06-15
+    Local changes: none
+
+Hinweis:
+
+Skynet IADS wird im Projekt nicht aus einzelnen Source-Dateien zusammengesetzt.
+
+Verwendet wird die fertig kompilierte Datei aus dem offiziellen Skynet-IADS-Repository.
+
+Der Inhalt wird nicht verändert.
+
+Nur der Dateiname wird für Theater Command DCS stabil auf `SkynetIADS.lua` gesetzt.
+
+---
+
+## MIST-Abhängigkeit
+
+Skynet IADS benötigt MIST.
+
+Die offizielle Skynet-IADS-Dokumentation weist darauf hin, dass MIST und die kompilierte Skynet-IADS-Datei in die Mission geladen werden müssen.
+
+Theater Command DCS verwendet aktuell folgende MIST-Datei:
+
+    vendor/mist/mist.lua
+
+Aktive Kombination:
+
+    MIST: 4.5.128-DYNSLOTS-02
+    Skynet IADS: 3.3.0
+
+Diese MIST-Version ist neuer als die ältere MIST-Version, die in früheren Skynet-IADS-Beispielen genannt wurde.
+
+Da MIST zusätzlich für CTLD benötigt wird, bleibt aktuell die CTLD-kompatible MIST-Version aktiv.
 
 ---
 
 ## Wichtige Projektregel
 
-Dateien in `vendor/skynet-iads/` werden nicht verändert.
+Dateien in `vendor/skynet-iads/` werden grundsätzlich nicht verändert.
 
 Wenn Theater Command DCS eigenes Verhalten benötigt, wird dieses Verhalten in eigenen Lua-Dateien unter `src/` programmiert.
 
@@ -85,6 +155,8 @@ Geplante Lade-Reihenfolge:
     6. src/loader.lua
 
 Wichtig:
+
+MIST muss vor Skynet IADS geladen werden.
 
 Der eigene Theater-Command-Loader wird erst gestartet, nachdem die externen Frameworks verfügbar sind.
 
@@ -157,32 +229,38 @@ Sie soll Teil des dynamischen Kampagnenzustands werden.
 
 ---
 
-## Versionierung
-
-Beim späteren Einfügen von Skynet IADS sollen folgende Informationen ergänzt werden:
-
-    Skynet IADS version: TBD
-    Source: TBD
-    Date added: TBD
-    Local changes: none
-
-Lokale Änderungen an Skynet IADS sind nicht vorgesehen.
-
-Wenn später eine neue Skynet-IADS-Version benötigt wird, wird die Framework-Datei vollständig ersetzt und die Version hier dokumentiert.
-
----
-
 ## Test nach Einbindung
 
 Nach dem Einfügen von `SkynetIADS.lua` soll geprüft werden:
 
 - Mission startet ohne Lua-Fehler
 - `vendor/skynet-iads/SkynetIADS.lua` wird im Mission Editor gefunden
+- MIST lädt vor Skynet IADS
 - Skynet IADS lädt vor Theater Command
 - einfache IADS-Objekte können initialisiert werden
-- Radar- und SAM-Gruppen können später korrekt an Skynet IADS übergeben werden
+- Radargruppen können später korrekt an Skynet IADS übergeben werden
+- SAM-Gruppen können später korrekt an Skynet IADS übergeben werden
 - `dcs.log` enthält keine Skynet-IADS-bezogenen Fehler
 - Theater Command Loader startet erst nach den externen Frameworks
+
+---
+
+## Aktualisierung bei neuer Skynet-IADS-Version
+
+Wenn später eine neue Skynet-IADS-Version eingespielt wird:
+
+1. offizielle Skynet-IADS-Quelle prüfen
+2. neue kompilierte Datei herunterladen
+3. alte Datei `vendor/skynet-iads/SkynetIADS.lua` ersetzen
+4. neuen Inhalt unverändert übernehmen
+5. Version und Build-Zeit prüfen
+6. Version in dieser README aktualisieren
+7. `Local changes: none` nur beibehalten, wenn die Datei wirklich unverändert übernommen wurde
+8. Missionstest durchführen
+
+Der Dateiname bleibt weiterhin:
+
+    vendor/skynet-iads/SkynetIADS.lua
 
 ---
 
