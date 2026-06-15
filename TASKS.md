@@ -55,10 +55,33 @@ Aktuell erledigt:
 - falsch platzierte Root-`Moose.lua` entfernt
 - Root-`README.md` aktualisiert
 - `ROADMAP.md` aktualisiert
+- `TASKS.md` aktualisiert
+- `CHANGELOG.md` aktualisiert
+- `ARCHITECTURE.md` aktualisiert
+- `MISSION_EDITOR_SETUP.md` aktualisiert
+- `NAMING_CONVENTIONS.md` aktualisiert
+- `LUA_STYLEGUIDE.md` aktualisiert
+- alle vorhandenen `docs/`-Dateien nach Vendor-Import aktualisiert
+- `vendor/README.md` aktualisiert
 
-Aktueller Fokus:
+Aktueller Projektzustand:
 
-    Dokumentation nach abgeschlossenem Vendor-Import vollständig auf Stand bringen
+    Phase 0 ist fachlich abgeschlossen.
+    Vendor ist funktional abgeschlossen.
+    Dokumentation ist auf dem aktuellen Stand.
+    Eigene Lua-Implementierung ist noch nicht begonnen.
+
+Nächster technischer Fokus:
+
+    src-Unterordner und README-Dateien erstellen
+
+Danach:
+
+    src/loader.lua
+    src/main.lua
+    src/core/tc_config.lua
+    src/core/tc_logger.lua
+    src/core/tc_state.lua
 
 ---
 
@@ -118,6 +141,8 @@ Externe Frameworks gehören nach:
     vendor/
 
 Externe Frameworks werden nicht verändert.
+
+Die eigene Lua-Struktur wird nach Aufgaben sortiert, nicht nach Frameworks.
 
 ---
 
@@ -246,9 +271,51 @@ Aktiver Stand:
 
 ---
 
+## Phase 0 — Dokumentation nach Vendor-Abschluss
+
+### Zentrale Dateien
+
+- [x] `README.md` aktualisieren
+- [x] `ROADMAP.md` aktualisieren
+- [x] `TASKS.md` aktualisieren
+- [x] `CHANGELOG.md` aktualisieren
+- [x] `ARCHITECTURE.md` aktualisieren
+- [x] `MISSION_EDITOR_SETUP.md` aktualisieren
+- [x] `NAMING_CONVENTIONS.md` aktualisieren
+- [x] `LUA_STYLEGUIDE.md` aktualisieren
+
+### Vendor-Dokumentation
+
+- [x] `vendor/README.md` aktualisieren
+- [x] `vendor/mist/README.md` aktualisieren
+- [x] `vendor/moose/README.md` aktualisieren
+- [x] `vendor/ctld/README.md` aktualisieren
+- [x] `vendor/skynet-iads/README.md` aktualisieren
+
+### Docs-Dokumentation
+
+- [x] `docs/00_project_overview.md` aktualisieren
+- [x] `docs/01_campaign_design.md` aktualisieren
+- [x] `docs/02_technical_architecture.md` aktualisieren
+- [x] `docs/03_mission_editor_basics.md` aktualisieren
+- [x] `docs/04_airbase_system.md` aktualisieren
+- [x] `docs/05_logistics_system.md` aktualisieren
+- [x] `docs/06_mission_generator.md` aktualisieren
+- [x] `docs/07_ai_director.md` aktualisieren
+- [x] `docs/08_iads_system.md` aktualisieren
+- [x] `docs/09_persistence.md` aktualisieren
+- [x] `docs/10_testing.md` aktualisieren
+
+---
+
 ## Phase 0 — Source-Grundstruktur
 
+### Bereits vorhanden
+
 - [x] `src/README.md`
+
+### Noch offen
+
 - [ ] `src/loader.lua`
 - [ ] `src/main.lua`
 - [ ] `src/core/`
@@ -275,52 +342,9 @@ Aktiver Stand:
 
 ---
 
-## Phase 0 — Dokumentation nach Vendor-Abschluss aktualisieren
-
-Ziel:
-
-Alle zentralen Dokumentationsdateien sollen den aktuellen Stand widerspiegeln:
-
-- Vendor-Frameworks sind hinterlegt.
-- MIST ist CTLD-kompatibel ersetzt.
-- Root-`Moose.lua` wurde entfernt.
-- `src/README.md` existiert.
-- Eigene Lua-Logik ist noch nicht begonnen.
-
-### Zentrale Dateien
-
-- [x] `README.md` aktualisieren
-- [x] `ROADMAP.md` aktualisieren
-- [x] `TASKS.md` aktualisieren
-- [ ] `CHANGELOG.md` aktualisieren
-- [ ] `ARCHITECTURE.md` aktualisieren
-- [ ] `MISSION_EDITOR_SETUP.md` prüfen und bei Bedarf aktualisieren
-- [ ] `NAMING_CONVENTIONS.md` prüfen und bei Bedarf aktualisieren
-- [ ] `LUA_STYLEGUIDE.md` prüfen und bei Bedarf aktualisieren
-
-### Vendor-Dokumentation
-
-- [ ] `vendor/README.md` aktualisieren
-
-### Docs-Dokumentation
-
-- [ ] `docs/00_project_overview.md` prüfen und bei Bedarf aktualisieren
-- [ ] `docs/01_campaign_design.md` prüfen und bei Bedarf aktualisieren
-- [ ] `docs/02_technical_architecture.md` aktualisieren
-- [ ] `docs/03_mission_editor_basics.md` aktualisieren
-- [ ] `docs/04_airbase_system.md` prüfen und bei Bedarf aktualisieren
-- [ ] `docs/05_logistics_system.md` aktualisieren
-- [ ] `docs/06_mission_generator.md` prüfen und bei Bedarf aktualisieren
-- [ ] `docs/07_ai_director.md` prüfen und bei Bedarf aktualisieren
-- [ ] `docs/08_iads_system.md` aktualisieren
-- [ ] `docs/09_persistence.md` prüfen und bei Bedarf aktualisieren
-- [ ] `docs/10_testing.md` prüfen und bei Bedarf aktualisieren
-
----
-
 ## Phase 1 — Core-System
 
-Diese Phase beginnt erst nach Abschluss der aktuellen Dokumentationsaktualisierung.
+Diese Phase beginnt erst nach Abschluss der `src/`-Unterordner und ihrer README-Dateien.
 
 ### Geplante Dateien
 
@@ -624,6 +648,8 @@ Diese Dateien sollen nicht erstellt werden:
 - [ ] `src/tc_mist.lua`
 - [ ] `src/tc_ctld.lua`
 - [ ] `src/tc_all_in_one.lua`
+- [ ] `src/tc_skynet.lua`
+- [ ] `src/tc_iads_all_in_one.lua`
 
 ---
 
@@ -644,18 +670,24 @@ Diese Dateien sind perspektivisch erwünscht:
 
 ## Aktuell nächster sinnvoller Einzelschritt
 
-Nach dieser Aktualisierung von `TASKS.md`:
+Als nächster technischer Schritt wird die `src/`-Unterstruktur vorbereitet.
 
-    CHANGELOG.md aktualisieren
+Nächste Datei:
 
-Danach:
+    src/core/README.md
 
-    ARCHITECTURE.md aktualisieren
-    vendor/README.md aktualisieren
-    docs/02_technical_architecture.md aktualisieren
-    docs/03_mission_editor_basics.md aktualisieren
-    docs/05_logistics_system.md aktualisieren
-    docs/08_iads_system.md aktualisieren
+Danach folgen einzeln:
+
+    src/world/README.md
+    src/campaign/README.md
+    src/logistics/README.md
+    src/missions/README.md
+    src/ai/README.md
+    src/iads/README.md
+    src/ui/README.md
+    src/debug/README.md
+
+Erst danach werden echte Lua-Dateien begonnen.
 
 ---
 
