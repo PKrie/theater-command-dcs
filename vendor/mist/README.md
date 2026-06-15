@@ -19,7 +19,7 @@ Dieser Ordner enthält aktuell:
 
 Bedeutung:
 
-- `mist.lua` ist die eigentliche MIST-Framework-Datei.
+- `mist.lua` ist die aktive MIST-Framework-Datei.
 - `Mist guide.pdf` ist das zugehörige MIST-Handbuch.
 - `Example_DBs/` enthält Beispiel- und Referenzdateien zu MIST-Datenbanken.
 - `README.md` dokumentiert die Nutzung von MIST innerhalb von Theater Command DCS.
@@ -69,26 +69,28 @@ Die genaue Version wird in dieser README dokumentiert.
 
 Aktueller Stand:
 
-    MIST version: 4.5.125
+    MIST version: 4.5.128-DYNSLOTS-02
     File used by project: vendor/mist/mist.lua
-    Source: user-provided MIST framework download
-    Original upstream source: TBD
+    Source: ciribob/DCS-CTLD
+    Source file: mist.lua from CTLD package
     Date added: 2026-06-15
     Local changes: none
 
 Hinweis:
 
-Die ursprünglich hochgeladene Datei trug den Namen `mist_4_5_126.lua`.
+Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket.
 
-Die interne Versionsdefinition der Datei meldet jedoch:
+Grund dafür ist der Hinweis in `vendor/ctld/CTLD.lua`, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
+
+Die interne Versionsdefinition der aktiven Datei meldet:
 
     mist.majorVersion = 4
     mist.minorVersion = 5
-    mist.build = 125
+    mist.build = "128-DYNSLOTS-02"
 
-Für den Projektbetrieb wird die Datei deshalb als `mist.lua` geführt.
+Vorher war im Projekt eine andere MIST-Datei mit internem Build `4.5.125` hinterlegt.
 
-Die interne Versionsnummer wird hier dokumentiert.
+Diese wurde ersetzt, damit MIST und CTLD zusammenpassen.
 
 ---
 
@@ -136,6 +138,8 @@ Geplante Lade-Reihenfolge:
 Wichtig:
 
 CTLD wird erst nach MIST geladen.
+
+`CTLD-i18n.lua` wird vor `CTLD.lua` geladen.
 
 Der eigene Theater-Command-Loader wird erst gestartet, nachdem die externen Frameworks verfügbar sind.
 
@@ -195,6 +199,23 @@ Sie sind kein aktiver Bestandteil des Theater-Command-Kampagnensystems.
 
 ---
 
+## CTLD-Kompatibilität
+
+CTLD nutzt MIST als technische Grundlage.
+
+Da `vendor/ctld/CTLD.lua` ausdrücklich auf die mit CTLD gelieferte MIST-Version verweist, verwendet Theater Command DCS aktuell bewusst die MIST-Datei aus dem CTLD-Paket.
+
+Aktive Kombination:
+
+    MIST: 4.5.128-DYNSLOTS-02
+    CTLD: 1.6.1
+
+Diese Kombination soll zunächst beibehalten werden.
+
+Bei späteren CTLD-Updates muss geprüft werden, ob auch die zugehörige MIST-Version aktualisiert werden muss.
+
+---
+
 ## Test nach Einbindung
 
 Nach dem Einfügen von `mist.lua` soll geprüft werden:
@@ -206,6 +227,7 @@ Nach dem Einfügen von `mist.lua` soll geprüft werden:
 - `dcs.log` enthält keine MIST-bezogenen Fehler
 - Theater Command Loader startet erst nach den externen Frameworks
 - einfache MIST-Funktionen sind nach dem Laden verfügbar
+- CTLD Dynamic Spawns funktionieren mit der aktiven MIST-Version
 
 ---
 
@@ -213,12 +235,14 @@ Nach dem Einfügen von `mist.lua` soll geprüft werden:
 
 Wenn später eine neue MIST-Version eingespielt wird:
 
-1. alte Datei `vendor/mist/mist.lua` ersetzen
-2. neuen Inhalt unverändert übernehmen
-3. interne Versionsnummer prüfen
-4. Version in dieser README aktualisieren
-5. `Local changes: none` nur beibehalten, wenn die Datei wirklich unverändert übernommen wurde
-6. Missionstest durchführen
+1. prüfen, ob CTLD eine eigene MIST-Version mitliefert
+2. prüfen, ob CTLD diese Version ausdrücklich benötigt
+3. alte Datei `vendor/mist/mist.lua` ersetzen
+4. neuen Inhalt unverändert übernehmen
+5. interne Versionsnummer prüfen
+6. Version in dieser README aktualisieren
+7. `Local changes: none` nur beibehalten, wenn die Datei wirklich unverändert übernommen wurde
+8. Missionstest durchführen
 
 Der Dateiname bleibt weiterhin:
 
