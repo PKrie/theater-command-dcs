@@ -1,604 +1,805 @@
 # Airbase System
 
-Diese Datei beschreibt das geplante Airbase-System von Theater Command DCS.
+Diese Datei beschreibt das geplante Airbase-System von **Theater Command DCS**.
 
-Das Airbase-System ist eines der wichtigsten Grundsysteme des Projekts, weil viele spätere Funktionen davon abhängen.
+Das Airbase-System ist eines der ersten großen eigenen Lua-Systeme des Projekts.
 
-Dazu gehören:
+Ziel ist, DCS-Airbases auf der Syria Map automatisch zu erkennen, in eigene Theater-Command-Strukturen zu überführen und später mit Capture, Logistik, Missionen, IADS und Persistenz zu verbinden.
+
+Die erste Kampagne trägt den Arbeitstitel:
+
+**Operation Levant Reclamation**
+
+Blau startet auf **Zypern / Akrotiri**.
+
+Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+
+---
+
+## Grundprinzip
+
+Das Airbase-System folgt dem Projektprinzip:
+
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis
+
+Der Mission Editor soll nicht für jede Airbase manuelle Triggerzonen und Besitzlogik enthalten.
+
+Stattdessen soll Lua später:
+
+- Airbases erkennen
+- Airbases registrieren
+- Airbases klassifizieren
+- Besitzstatus verwalten
+- virtuelle Zonen erzeugen
+- Airbases mit Kampagnenlogik verbinden
+
+---
+
+## Aktueller Projektstand
+
+Stand:
+
+    2026-06-15
+
+Aktuell vorhanden:
+
+- zentrale Projektdokumentation
+- `docs/`-Grundblock
+- `vendor/`-Frameworks
+- `src/README.md`
+
+Aktuell hinterlegte Frameworks:
+
+| Framework | Projektpfad | Stand |
+|---|---|---|
+| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
+| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
+| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
+
+Noch nicht vorhanden:
+
+- `src/world/tc_airbase_scanner.lua`
+- `src/world/tc_airbase_registry.lua`
+- `src/world/tc_airbase_overrides.lua`
+- `src/world/tc_region_classifier.lua`
+- `src/world/tc_zone_factory.lua`
+- eigenes Capture-System
+- eigene Persistenz
+- DEV-Mission im DCS Mission Editor
+
+---
+
+## Rolle des Airbase-Systems
+
+Das Airbase-System soll später die Grundlage für mehrere andere Systeme bilden.
+
+Es liefert Daten für:
 
 - Capture-System
+- Zonen-System
 - Logistiksystem
 - Missionsgenerator
-- KI-Director
-- IADS-Verknüpfung
+- AI Director
+- IADS-System
 - Persistenz
-- Frontlinienlogik
+- Debug-System
+
+Ohne stabiles Airbase-System kann die Kampagne später keinen zuverlässigen strategischen Zustand führen.
 
 ---
 
-## Ziel
+## Warum Airbases automatisch erkennen?
 
-Das Ziel ist, Airbases nicht manuell im Mission Editor verwalten zu müssen.
+DCS-Karten enthalten viele Airbases, FARP-Strukturen und Flugplätze.
 
-Theater Command soll Airbases automatisch erkennen, intern registrieren und daraus eigene Kampagnenknoten erzeugen.
+Diese alle manuell im Mission Editor zu verwalten wäre fehleranfällig.
 
-Diese Kampagnenknoten werden BaseNodes genannt.
+Ziel ist deshalb:
 
-Eine Airbase ist dabei nicht nur ein DCS-Flugplatz, sondern ein strategisches Objekt innerhalb der Kampagne.
+    DCS-Airbases automatisch erkennen
+    Daten in Theater-Command-Strukturen überführen
+    Sonderfälle über Overrides korrigieren
+    strategischen Zustand selbst verwalten
 
----
-
-## Grundsatz
-
-Airbases werden automatisch erkannt.
-
-Trigger-Zonen für jede Airbase werden nicht manuell im Mission Editor angelegt.
-
-Stattdessen erzeugt Lua virtuelle Zonen um die Airbases.
-
-Der Mission Editor stellt nur die Airbases bereit, die auf der Map ohnehin vorhanden sind.
-
-Theater Command übernimmt die strategische Verwaltung.
+Dadurch bleibt der Mission Editor schlank.
 
 ---
 
-## Warum automatische Airbase-Erkennung?
+## Geplante eigene Dateien
 
-Die Syria Map enthält viele Flugplätze und Helipads.
+Die Airbase-Logik gehört später nach:
 
-Es wäre unübersichtlich und fehleranfällig, für jede Basis manuell Trigger-Zonen, Capture-Zonen, Logistik-Zonen und Defense-Zonen anzulegen.
-
-Deshalb soll das System:
-
-- Airbases automatisch finden
-- Airbases eindeutig registrieren
-- Koordinaten auslesen
-- Besitzer verwalten
-- Regionen zuordnen
-- virtuelle Zonen erzeugen
-- Ressourcen verwalten
-- strategische Bedeutung speichern
-
----
-
-## Mission Editor Rolle
-
-Im Mission Editor müssen keine 69 Airbase-Zonen gebaut werden.
-
-Der Mission Editor muss nur enthalten:
-
-- Syria Map
-- Koalitionen
-- Spieler-Slots
-- Templates
-- Framework-Loader
-- wenige Start-CTLD-Zonen
-- sichtbare statische Ziele
-
-Airbase-Logik wird später in Lua gebaut.
-
----
-
-## Geplante Lua-Dateien
-
-Das Airbase-System liegt im Bereich:
-
-src/world/
+    src/world/
 
 Geplante Dateien:
 
-- tc_airbase_scanner.lua
-- tc_airbase_registry.lua
-- tc_airbase_overrides.lua
-- tc_region_classifier.lua
-- tc_zone_factory.lua
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_airbase_registry.lua
+    src/world/tc_airbase_overrides.lua
+    src/world/tc_region_classifier.lua
+    src/world/tc_zone_factory.lua
+    src/world/tc_zone_registry.lua
+
+Zusätzliche Debug-Dateien:
+
+    src/debug/tc_debug_airbases.lua
+    src/debug/tc_debug_zones.lua
 
 ---
 
-## tc_airbase_scanner.lua
+## Nicht gewünschte Dateien
 
-Diese Datei erkennt alle Airbases der aktuellen DCS-Map.
+Nicht gewünscht:
 
-Aufgaben:
+    src/tc_airbases_all_in_one.lua
+    src/tc_moose_airbases.lua
+    src/tc_mist_airbases.lua
+    src/tc_all_in_one.lua
 
-- DCS-Airbases auslesen
-- Airbase-Namen erfassen
-- Koordinaten erfassen
-- Airbase-Typ erkennen
-- Airbase an Registry übergeben
-- Debug-Ausgabe ermöglichen
+Die eigene Struktur wird nach Aufgaben sortiert.
 
-Mögliche spätere Funktion:
+Sie wird nicht nach Frameworks sortiert.
 
-TC.World.ScanAirbases()
+Eine Datei darf MIST oder MOOSE intern nutzen.
 
----
-
-## tc_airbase_registry.lua
-
-Diese Datei speichert alle erkannten Airbases als BaseNodes.
-
-Aufgaben:
-
-- Airbases registrieren
-- BaseNodes erzeugen
-- Airbase-Daten zentral speichern
-- Suche nach Name ermöglichen
-- Suche nach Region ermöglichen
-- Suche nach Besitzer ermöglichen
-- Zugriff für andere Systeme bereitstellen
-
-Mögliche spätere Funktionen:
-
-TC.World.RegisterAirbase(baseData)
-TC.World.GetAirbaseByName(name)
-TC.World.GetAirbasesByOwner(owner)
-TC.World.GetAirbasesByRegion(region)
+Der Dateiname richtet sich aber immer nach der Aufgabe, nicht nach dem Framework.
 
 ---
 
-## tc_airbase_overrides.lua
+## Geplantes Datenmodell: BaseNode
 
-Diese Datei enthält manuelle Korrekturen.
+Eine erkannte Airbase soll später als eigener Theater-Command-BaseNode geführt werden.
 
-Nicht alle Informationen lassen sich perfekt automatisch bestimmen.
+Vorläufige Struktur:
 
-Deshalb kann es Overrides geben.
+    baseNode = {
+      id = "AKROTIRI",
+      name = "Akrotiri",
+      displayName = "Akrotiri",
+      map = "Syria",
+      region = "CYPRUS",
+      coalition = "BLUE",
+      initialCoalition = "BLUE",
+      category = "AIRBASE",
+      isOperational = true,
+      isLogisticsHub = true,
+      isCaptureTarget = false,
+      isPlayerBase = true,
+      position = {
+        x = 0,
+        y = 0,
+        z = 0
+      }
+    }
+
+Diese Struktur ist konzeptionell.
+
+Die genaue technische Umsetzung erfolgt später in Lua.
+
+---
+
+## Wichtige BaseNode-Felder
+
+### id
+
+Eindeutige Theater-Command-ID.
+
+Beispiel:
+
+    AKROTIRI
+    KHMEIMIM
+    LATTAKIA
+    TARTUS
+
+Die ID soll stabil bleiben und später für Persistenz genutzt werden.
+
+---
+
+### name
+
+Name der Airbase aus DCS oder aus einem Override.
+
+Beispiel:
+
+    Akrotiri
+
+---
+
+### displayName
+
+Anzeigename für Debug, F10-Menüs oder spätere Briefings.
+
+Beispiel:
+
+    Akrotiri Airbase
+
+---
+
+### region
+
+Strategische Region.
+
+Mögliche Werte:
+
+    CYPRUS
+    SYRIAN_COAST
+    SYRIAN_INLAND
+    DAMASCUS_REGION
+    NORTHERN_SYRIA
+    UNKNOWN
+
+Die Region hilft später bei Missionsgenerierung, AI Director und IADS-Sektoren.
+
+---
+
+### coalition
+
+Aktueller Theater-Command-Besitzstatus.
+
+Mögliche Werte:
+
+    BLUE
+    RED
+    NEUTRAL
+
+Dieser Wert muss nicht dauerhaft identisch mit dem DCS-internen Airbase-Status sein.
+
+Theater Command DCS soll langfristig den strategischen Besitz selbst verwalten.
+
+---
+
+### initialCoalition
+
+Startbesitz bei Kampagnenbeginn.
+
+Für Operation Levant Reclamation gilt:
+
+    Akrotiri = BLUE
+    syrisches Festland = RED
+
+---
+
+### category
+
+Mögliche Kategorien:
+
+    AIRBASE
+    HELIPAD
+    FARP
+    CARRIER
+    UNKNOWN
+
+Die genaue Kategorisierung wird später getestet.
+
+---
+
+### isOperational
+
+Gibt an, ob die Basis aktuell nutzbar ist.
+
+Mögliche spätere Einflüsse:
+
+- Runway beschädigt
+- Basis erobert
+- Basis gesperrt
+- IADS-Bedrohung zu hoch
+- Logistik fehlt
+- Mission Editor Status
+
+---
+
+### isLogisticsHub
+
+Gibt an, ob die Basis als Logistikhub genutzt werden kann.
+
+Zu Beginn:
+
+    Akrotiri = true
+
+Später können eroberte Basen oder FOBs neue Logistikhubs werden.
+
+---
+
+### isCaptureTarget
+
+Gibt an, ob eine Basis später erobert werden kann.
 
 Beispiele:
 
-- Region einer Airbase festlegen
-- Startbesitzer überschreiben
-- strategische Bedeutung setzen
-- bestimmte Airbases sperren
-- bestimmte Helipads ignorieren
-- spezielle Logistikwerte setzen
-
-Beispielhafte Override-Idee:
-
-Akrotiri:
-owner = blue
-region = cyprus
-importance = high
-active = true
-
-Khmeimim:
-owner = red
-region = syrian_coast
-importance = high
-active = true
+    Akrotiri = false zu Kampagnenbeginn
+    syrische Airbases = true
 
 ---
 
-## tc_region_classifier.lua
+### isPlayerBase
 
-Diese Datei ordnet Airbases Regionen zu.
+Gibt an, ob Spieler dort starten können.
 
-Geplante Regionen:
+Zu Beginn:
 
-- cyprus
-- eastern_med
-- syrian_coast
-- central_syria
-- northern_syria
-- damascus_sector
-- lebanon_sector
-- jordan_sector
-- israel_sector
-- turkey_sector
+    Akrotiri = true
 
-Die Region ist wichtig für:
+Später:
+
+    eroberte Festlandbasen optional true
+    FOBs optional true
+
+---
+
+## Akrotiri
+
+Akrotiri ist die wichtigste Startbasis der ersten Kampagne.
+
+Geplante Rolle:
+
+- blaue Hauptbasis
+- Spielerstart
+- erster Logistikhub
+- Startpunkt für Luftoperationen
+- Startpunkt für CTLD-Logistik
+- sicherer Rückzugsraum
+- HQ-Knoten im Kampagnenzustand
+
+Akrotiri soll im Airbase-System eindeutig erkannt und als BLUE initialisiert werden.
+
+Vorläufige ID:
+
+    AKROTIRI
+
+Vorläufige Region:
+
+    CYPRUS
+
+Vorläufiger Status:
+
+    BLUE
+    isPlayerBase = true
+    isLogisticsHub = true
+    isCaptureTarget = false
+
+---
+
+## Syrisches Festland
+
+Das syrische Festland ist zu Kampagnenbeginn rot kontrolliert.
+
+Alle relevanten syrischen Airbases sollen initial als RED bewertet werden.
+
+Beispiele für spätere wichtige Airbases:
+
+- Khmeimim
+- Latakia
+- Tartus
+- Hama
+- Homs
+- Damascus
+- weitere Airbases der Syria Map
+
+Die genaue Liste wird später durch den Airbase-Scanner ermittelt.
+
+---
+
+## Umgang mit DCS-Airbase-Daten
+
+DCS liefert Airbase-Daten über Lua-Funktionen und Framework-Wrapper.
+
+Mögliche Quellen:
+
+- DCS-eigene Airbase-Funktionen
+- MOOSE Airbase Wrapper
+- MIST-Hilfsfunktionen
+- eigene Overrides
+
+Die genaue technische Umsetzung wird später getestet.
+
+Möglicher Ansatz:
+
+1. Airbases über DCS/MOOSE auslesen
+2. Rohdaten erfassen
+3. Namen normalisieren
+4. Region zuweisen
+5. Initialbesitz bestimmen
+6. BaseNode erzeugen
+7. BaseNode registrieren
+8. Debug-Ausgabe erzeugen
+
+---
+
+## MOOSE-Nutzung
+
+MOOSE kann später beim Airbase-System helfen.
+
+Mögliche Nutzung:
+
+- Airbase-Wrapper
+- Koordinatenfunktionen
+- SETs
+- Zonenlogik
+- Debug-Ausgaben
+- Objektverwaltung
+
+MOOSE ist aber nicht die Architektur des Airbase-Systems.
+
+Theater Command DCS entscheidet selbst, welche Daten gespeichert und wie sie kampagnenlogisch bewertet werden.
+
+---
+
+## MIST-Nutzung
+
+MIST kann später Hilfsfunktionen bereitstellen.
+
+Mögliche Nutzung:
+
+- Datenbankfunktionen
+- Koordinatenfunktionen
+- Gruppen- und Objektinformationen
+- Debug- und Testhilfen
+
+MIST bleibt eine Utility-Schicht.
+
+Die Airbase-Logik selbst gehört nach:
+
+    src/world/
+
+---
+
+## Airbase Registry
+
+Die Datei `tc_airbase_registry.lua` soll später alle erkannten BaseNodes verwalten.
+
+Geplante Aufgaben:
+
+- BaseNodes speichern
+- BaseNodes nach ID suchen
+- BaseNodes nach Region filtern
+- BaseNodes nach Koalition filtern
+- BaseNodes als Missionsziele bereitstellen
+- BaseNodes für Capture-System bereitstellen
+- BaseNodes für Logistiksystem bereitstellen
+- BaseNodes für Persistenz vorbereiten
+
+Mögliche Funktionsnamen:
+
+    registerBaseNode()
+    getBaseById()
+    getBasesByCoalition()
+    getBasesByRegion()
+    getLogisticsHubs()
+    getCaptureTargets()
+
+---
+
+## Airbase Overrides
+
+Nicht alle automatisch erkannten Daten werden perfekt sein.
+
+Deshalb wird eine Override-Datei geplant:
+
+    src/world/tc_airbase_overrides.lua
+
+Mögliche Override-Aufgaben:
+
+- Namen korrigieren
+- Regionen manuell setzen
+- Airbase-Kategorie überschreiben
+- Initialbesitz definieren
+- Spielerbasis markieren
+- Logistikhub markieren
+- problematische DCS-Namen normalisieren
+
+Beispiel:
+
+    AKROTIRI = {
+      coalition = "BLUE",
+      region = "CYPRUS",
+      isPlayerBase = true,
+      isLogisticsHub = true
+    }
+
+Overrides sollen gezielt und sparsam genutzt werden.
+
+Automatische Erkennung bleibt der Standard.
+
+---
+
+## Region Classifier
+
+Die Datei `tc_region_classifier.lua` soll später Airbases strategischen Regionen zuweisen.
+
+Mögliche Regionen:
+
+    CYPRUS
+    SYRIAN_COAST
+    SYRIAN_NORTH
+    SYRIAN_CENTRAL
+    SYRIAN_SOUTH
+    DAMASCUS_REGION
+    UNKNOWN
+
+Diese Regionen werden später wichtig für:
 
 - Missionsgenerator
-- KI-Reaktionen
+- AI Director
 - IADS-Sektoren
-- Frontlinienlogik
 - Logistikrouten
+- Capture-Prioritäten
 - Kampagnenphasen
 
 ---
 
-## tc_zone_factory.lua
+## Verbindung zum Zonen-System
 
-Diese Datei erzeugt virtuelle Zonen um Airbases.
+Das Airbase-System liefert später die Grundlage für virtuelle Zonen.
 
-Geplante Zonentypen:
+Geplante Verbindung:
+
+    src/world/tc_airbase_scanner.lua
+        ↓
+    src/world/tc_zone_factory.lua
+
+Aus einer Airbase können später entstehen:
 
 - Capture-Zone
-- Logistics-Zone
 - Defense-Zone
-- Repair-Zone
-- Spawn-Zone
-- Warehouse-Zone
-
-Diese Zonen müssen nicht im Mission Editor existieren.
-
-Sie werden durch Lua erzeugt und intern verwendet.
-
----
-
-## BaseNode
-
-Ein BaseNode ist die interne Theater-Command-Darstellung einer Airbase.
-
-Ein BaseNode enthält alle Informationen, die für die Kampagne wichtig sind.
-
-Mögliche Daten:
-
-- Name
-- DCS-Airbase-Objekt
-- Koordinate
-- Region
-- Besitzer
-- Aktivitätsstatus
-- strategische Bedeutung
-- Ressourcen
-- virtuelle Zonen
-- verfügbare Rollen
-- Capture-Status
-- Logistikstatus
-- IADS-Verbindung
-- Persistenzdaten
-
----
-
-## Beispielstruktur eines BaseNode
-
-Beispielhafte interne Struktur:
-
-base = {
-  name = "Akrotiri",
-  owner = "blue",
-  region = "cyprus",
-  active = true,
-  importance = "high",
-
-  resources = {
-    supply = 100,
-    fuel = 100,
-    ammo = 100,
-    manpower = 100,
-    repair = 100,
-    medical = 50,
-    command = 100
-  },
-
-  zones = {
-    capture = nil,
-    logistics = nil,
-    defense = nil,
-    repair = nil,
-    spawn = nil,
-    warehouse = nil
-  }
-}
-
-Diese Struktur ist nur ein Planungsbeispiel.
-
-Die genaue Lua-Umsetzung erfolgt später.
-
----
-
-## Besitzerwerte
-
-Einheitliche Besitzerwerte:
-
-- blue
-- red
-- neutral
-- contested
-- locked
-- inactive
-
-Bedeutung:
-
-blue = durch Blau kontrolliert  
-red = durch Rot kontrolliert  
-neutral = keine Seite kontrolliert die Basis aktiv  
-contested = umkämpft  
-locked = gesperrt und nicht Teil der aktiven Kampagne  
-inactive = erkannt, aber aktuell nicht aktiv genutzt  
-
----
-
-## Startbesitz in Operation Levant Reclamation
-
-Zu Beginn der Kampagne gilt:
-
-Akrotiri = blue
-
-Das syrische Festland = red
-
-Andere Regionen können zunächst neutral, locked oder inactive sein.
-
-Mögliche Anfangslogik:
-
-- Akrotiri ist aktiv und blau
-- syrische Küstenbasen sind aktiv und rot
-- tiefer liegende syrische Basen sind rot, aber eventuell noch nicht aktiv
-- Türkei, Israel, Jordanien und Libanon sind zunächst locked oder inactive
-
----
-
-## Wichtige erste Airbases
-
-Für die erste Entwicklungsphase sind besonders relevant:
-
-### Blau
-
-- Akrotiri
-
-### Rot
-
-- Khmeimim
-- Latakia
-- Bassel Al-Assad
-- Hama
-- Homs
-- Damascus
-- Mezzeh
-- Tiyas
-- Palmyra
-
-Die genaue Namensschreibweise muss später durch den Airbase-Scanner aus DCS ausgelesen werden.
-
----
-
-## Virtuelle Capture-Zone
-
-Die Capture-Zone bestimmt später, ob eine Basis umkämpft oder eroberbar ist.
-
-Mögliche Faktoren:
-
-- blaue Bodentruppen in der Zone
-- rote Bodentruppen in der Zone
-- zerstörte Verteidigung
-- vorhandene Logistik
-- Luftüberlegenheit
-- Missionsfortschritt
-
-Die Capture-Zone wird nicht als Editor-Triggerzone angelegt.
-
-Sie wird per Lua um die Airbase herum erzeugt.
-
----
-
-## Virtuelle Logistics-Zone
-
-Die Logistics-Zone bestimmt später, ob eine Lieferung an einer Basis zählt.
-
-Mögliche Nutzung:
-
-- CTLD-Lieferungen auswerten
-- Konvois registrieren
-- Supply erhöhen
-- Fuel erhöhen
-- Ammo erhöhen
-- Repair erhöhen
-- FOB-Aufbau ermöglichen
-
----
-
-## Virtuelle Defense-Zone
-
-Die Defense-Zone beschreibt den Verteidigungsbereich einer Basis.
-
-Mögliche Nutzung:
-
-- Garnisonen prüfen
-- SAM/SHORAD prüfen
-- CAP-Abdeckung bewerten
-- CAS-Missionen erzeugen
-- Angriffe und Gegenangriffe auswerten
-
----
-
-## Airbase und IADS
-
-Airbases können später mit IADS-Sektoren verbunden werden.
+- Logistics-Zone
+- Mission-Target-Zone
+- IADS-Sector-Anker
 
 Beispiel:
 
-Khmeimim besitzt einen IADS-Sektor.
-
-Wird ein Radar zerstört, wird der Sektor schwächer.
-
-Wird ein Command Post zerstört, reagiert der Sektor langsamer.
-
-Wird ein Fuel Depot zerstört, kann weniger CAP starten.
-
-Theater Command verbindet diese Ereignisse strategisch.
+    BaseNode: LATTAKIA
+        ↓
+    CAPTURE_RED_LATTAKIA_01
+    LOGI_RED_DEPOT_LATTAKIA_01
+    IADS_RED_SECTOR_LATTAKIA_01
 
 ---
 
-## Airbase und Logistik
+## Verbindung zum Capture-System
 
-Jede aktive Basis kann später Ressourcen besitzen.
+Das Capture-System benötigt Airbase-Daten.
 
-Ressourcen:
+Geplante Verbindung:
 
-- supply
-- fuel
-- ammo
-- manpower
-- repair
-- medical
-- command
+    src/world/
+        ↓
+    src/campaign/
 
-Diese Ressourcen beeinflussen:
+Das Capture-System soll später wissen:
 
-- verfügbare KI-Flüge
-- Reparaturfähigkeit
-- SAM-Wiederaufbau
-- FOB-Betrieb
-- Missionsangebote
-- Gegenangriffe
-- Verteidigungsstärke
+- welche Airbases existieren
+- wem sie gehören
+- welche Basen eroberbar sind
+- welche Basen Spielerbasen sind
+- welche Basen Logistikhubs sind
+- welche Basen strategisch relevant sind
+
+Airbase-Besitz soll nicht nur DCS-intern, sondern im Theater-Command-Kampagnenzustand geführt werden.
 
 ---
 
-## Airbase und Missionsgenerator
+## Verbindung zum Logistiksystem
 
-Der Missionsgenerator nutzt Airbase-Daten, um sinnvolle Missionen zu erzeugen.
+Das Logistiksystem benötigt Airbases als Hubs.
 
-Beispiele:
+Geplante Verbindung:
 
-Wenn rote CAP von Khmeimim aktiv ist:
+    src/world/
+        ↓
+    src/logistics/
 
-- CAP-Mission
-- Fighter Sweep
-- Intercept
-- Escort
+Akrotiri ist der erste Logistikhub.
 
-Wenn Khmeimim ein Fuel Depot besitzt:
+Später können weitere Hubs entstehen durch:
 
-- Strike Mission
-- Depot Attack
+- Capture
+- FOB-Aufbau
+- Versorgung
+- Missionsfortschritt
+- Kampagnenphase
 
-Wenn eine Basis geschwächt ist:
+Mögliche Logistikhub-Daten:
 
-- CAS
-- Capture Support
-- Airbase Assault
-
-Wenn Blau eine FOB nahe der Küste hat:
-
-- A-10C CAS
-- AH-64D Armed Recon
-- CTLD Supply
-
----
-
-## Airbase und KI-Director
-
-Der KI-Director nutzt Airbase-Daten, um KI-Aktionen zu planen.
-
-Mögliche Entscheidungen:
-
-- rote CAP von aktiver Basis starten
-- GCI bei Luftraumverletzung starten
-- Konvoi zu bedrohter Basis schicken
-- Gegenangriff auf verlorene Basis auslösen
-- beschädigte Basis verstärken
-- SAM-Wiederaufbau starten
+- Basis-ID
+- verfügbare Ressourcen
+- aktive CTLD-Pickup-Zonen
+- aktive Dropoff-Zonen
+- Versorgungsstatus
+- verfügbare Transportoptionen
 
 ---
 
-## Airbase und Persistenz
+## Verbindung zum Missionsgenerator
 
-Das Airbase-System muss später persistenzfähig sein.
+Der Missionsgenerator benötigt Airbases als Quelle für Ziele und Ausgangspunkte.
 
-Gespeichert werden sollen:
+Geplante Verbindung:
 
-- Besitzer
-- Ressourcen
-- Aktivitätsstatus
-- zerstörte Infrastruktur
-- FOB-Verbindungen
-- IADS-Zustand
-- Capture-Fortschritt
-- strategische Bedeutung
-- letzte bekannte Lage
+    src/world/
+        ↓
+    src/missions/
 
-Persistenz kommt später.
+Mögliche Nutzung:
 
-Zuerst müssen Airbase-Erkennung und Registry stabil funktionieren.
+- Missionen gegen rote Airbases
+- Verteidigung blauer Airbases
+- Logistikmissionen zu eroberten Basen
+- SEAD/DEAD in der Nähe relevanter Basen
+- CAP um strategische Basen
+- CAS bei bedrohten Capture-Zonen
 
 ---
 
-## Debug-Funktionen
+## Verbindung zum AI Director
 
-Für die Entwicklung sind Debug-Ausgaben wichtig.
+Der AI Director benötigt Airbase-Daten für KI-Reaktionen.
 
-Geplante Debug-Funktionen:
+Geplante Verbindung:
 
-- alle erkannten Airbases anzeigen
-- Airbase-Namen ausgeben
-- Besitzer anzeigen
-- Regionen anzeigen
-- Koordinaten anzeigen
-- virtuelle Zonen anzeigen
-- BaseNode-Daten prüfen
+    src/world/
+        ↓
+    src/ai/
 
-Mögliche spätere Funktion:
+Mögliche Nutzung:
 
-TC.Debug.PrintAirbases()
+- rote CAP von aktiven roten Basen
+- GCI-Reaktionen abhängig von Airbase-Besitz
+- Gegenangriffe gegen eroberte Basen
+- Verstärkung gefährdeter Basen
+- Eskalation bei Verlust wichtiger Basen
+
+---
+
+## Verbindung zum IADS-System
+
+IADS-Sektoren können an Airbases gekoppelt werden.
+
+Geplante Verbindung:
+
+    src/world/
+        ↓
+    src/iads/
+
+Mögliche Nutzung:
+
+- Airbase-SAM-Schutz
+- Küsten-IADS um wichtige Basen
+- Radarstellungen als Airbase-Verteidigung
+- SEAD/DEAD-Ziele aus Airbase-Nähe
+- IADS-Zustand beeinflusst Airbase-Capture
+
+---
+
+## Verbindung zur Persistenz
+
+Airbase-Daten werden später persistent gespeichert.
+
+Geplante persistente Werte:
+
+- Airbase-ID
+- aktueller Besitzer
+- initialer Besitzer
+- Betriebsstatus
+- Logistikhub-Status
+- Capture-Status
+- Schadensstatus
+- letzte relevante Ereignisse
+
+Geplante spätere Datei:
+
+    src/campaign/tc_persistence_system.lua
+
+Persistenz wird erst umgesetzt, wenn Airbase-, Capture- und Logistiksystem stabil sind.
+
+---
+
+## Debug-Ausgabe
+
+Das Airbase-System soll früh debugfähig sein.
+
+Geplante Debug-Datei:
+
+    src/debug/tc_debug_airbases.lua
+
+Mögliche Debug-Ausgaben:
+
+- Anzahl erkannter Airbases
+- Name jeder Airbase
+- erkannte Koalition
+- zugewiesene Region
+- erkannte Kategorie
+- erkannter Logistikhub-Status
+- erkannter Capture-Status
+- Warnungen bei unbekannten Basen
+
+Beispielausgabe:
+
+    [TC][DEBUG] Airbase scanner found 42 airbases
+    [TC][DEBUG] BaseNode created: AKROTIRI / BLUE / CYPRUS
+    [TC][WARN] Airbase region unknown: Example Airbase
 
 ---
 
 ## Erste Testziele
 
-Der erste technische Test des Airbase-Systems soll nur prüfen:
+Wenn das Airbase-System später umgesetzt wird, sollen folgende Punkte getestet werden:
 
-- Lua lädt korrekt
-- Airbase-Scanner startet
-- Airbases werden erkannt
-- Airbase-Namen werden ausgegeben
+- Mission startet ohne Lua-Fehler
+- Frameworks werden geladen
+- `src/loader.lua` startet
+- Airbase-Scanner wird geladen
+- Airbases der Syria Map werden erkannt
 - Akrotiri wird erkannt
-- Khmeimim wird erkannt
+- Akrotiri wird als BLUE gesetzt
+- syrische Airbases werden initial als RED gesetzt
 - BaseNodes werden erzeugt
-- Debug-Ausgabe erscheint in dcs.log oder F10-Menü
+- Debug-Ausgabe erscheint im `dcs.log`
+- keine nil-Fehler bei Airbase-Daten
+- problematische Airbases können per Override korrigiert werden
 
-Noch nicht testen:
+---
 
-- Capture
-- CTLD
+## Nicht jetzt umsetzen
+
+Aktuell noch nicht bauen:
+
+- vollständiger Airbase-Scanner
+- automatische Capture-Logik
+- vollständiges Zonen-System
 - Persistenz
-- KI-Director
-- IADS
-- Ressourcenverbrauch
+- Mission-Editor-Testmission
+- automatische Airbase-Koalitionsänderung
+- komplexe Regionserkennung
+- vollständige Airbase-Balancinglogik
+
+Diese Punkte folgen später.
 
 ---
 
-## Entwicklungsreihenfolge
+## Erste Entwicklungsreihenfolge
 
-Empfohlene Reihenfolge:
+Das Airbase-System wird erst nach der `src/`-Grundstruktur begonnen.
 
-1. TC-Grundstruktur erstellen
-2. Logger erstellen
-3. Airbase-Scanner erstellen
-4. Airbase-Namen ausgeben
-5. BaseNode-Struktur definieren
-6. Registry erstellen
-7. Akrotiri als blue setzen
-8. syrische Airbases als red setzen
-9. Regionen zuweisen
-10. virtuelle Zonen erzeugen
-11. Debug-Funktion bauen
-12. Airbase-Daten für andere Systeme bereitstellen
+Vorher müssen entstehen:
 
----
+1. `src/`-Unterordner
+2. `src/core/`
+3. `src/world/`
+4. `src/debug/`
+5. `src/loader.lua`
+6. `src/main.lua`
+7. `src/core/tc_config.lua`
+8. `src/core/tc_logger.lua`
+9. `src/core/tc_state.lua`
 
-## Was bewusst nicht gemacht wird
-
-Nicht in der ersten Version:
-
-- keine vollständige Capture-Logik
-- keine Ressourcenberechnung
-- keine Persistenz
-- keine automatischen Gegenangriffe
-- keine 69 manuell gebauten Triggerzonen
-- keine komplette Frontlinie
-- keine komplexe IADS-Kopplung
-
-Erst muss das Airbase-System zuverlässig erkennen und registrieren.
+Danach kann der erste Airbase-Scanner gebaut werden.
 
 ---
 
-## Zielbild
+## Aktueller Status
 
-Das Airbase-System bildet später das Rückgrat der gesamten Kampagne.
+Aktuell ist das Airbase-System nur dokumentiert.
 
-Jede Basis ist ein strategischer Knoten.
+Die eigene Lua-Implementierung ist noch nicht begonnen.
 
-Aus diesen Knoten entstehen:
+Aktueller Stand:
 
-- Frontlinien
-- Missionen
-- Logistikketten
-- KI-Reaktionen
-- IADS-Sektoren
-- Capture-Ziele
-- persistente Kampagnenzustände
+    Airbase-System geplant
+    Airbase-Scanner noch nicht implementiert
+    Airbase-Registry noch nicht implementiert
+    Overrides noch nicht implementiert
 
-Wenn das Airbase-System sauber funktioniert, können alle späteren Systeme darauf aufbauen.
+Nächster technischer Fokus nach Abschluss der Dokumentationsaktualisierung:
+
+    src-Unterordner und README-Dateien erstellen
+
+Danach:
+
+    src/loader.lua
+    src/main.lua
+    src/core/tc_config.lua
+    src/core/tc_logger.lua
+    src/core/tc_state.lua
