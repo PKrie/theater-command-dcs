@@ -1,710 +1,787 @@
 # Technical Architecture
 
-Diese Datei beschreibt die technische Architektur von Theater Command DCS im Detail.
+Diese Datei beschreibt die technische Architektur von **Theater Command DCS**.
 
-Sie ergänzt die Datei ARCHITECTURE.md im Hauptverzeichnis und dient als ausführlichere Dokumentation für die spätere Entwicklung.
+Theater Command DCS ist ein modulares, dynamisches und später persistentes DCS-World-Kampagnensystem für DCS World.
 
----
+Die erste Kampagne trägt den Arbeitstitel:
 
-## Ziel der Architektur
+**Operation Levant Reclamation**
 
-Theater Command DCS soll kein einzelnes Missionsskript werden, sondern ein modulares Kampagnensystem.
+Die Kampagne wird auf der **Syria Map** aufgebaut.
 
-Das System soll später mehrere Teilbereiche miteinander verbinden:
+Blau startet auf **Zypern / Akrotiri**.
 
-- Mission Editor
-- Lua-Core
-- Airbase-System
-- Zonen-System
-- Capture-System
-- CTLD-Logistik
-- Missionsgenerator
-- KI-Director
-- IADS-System
-- Persistenz
-- Debug- und Statusmenüs
-
-Jeder Bereich soll einzeln verständlich, testbar und erweiterbar bleiben.
+Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
 
 ---
 
 ## Grundprinzip
 
-Die Architektur folgt diesem Grundsatz:
+Das technische Grundprinzip lautet:
 
-Mission Editor = Bühne  
-Lua = Kampagnenlogik  
-GitHub = Projektstruktur und Dokumentation  
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis
 
-Der Mission Editor baut nicht die Kampagne.
+Der Mission Editor stellt die physische Spielumgebung bereit.
 
-Der Mission Editor stellt nur die physische DCS-Grundlage bereit.
+Lua steuert die dynamische Kampagnenlogik.
 
-Die eigentliche Dynamik entsteht durch Lua.
+GitHub dokumentiert Architektur, Aufgaben, Versionen, Entscheidungen und Fortschritt.
 
 ---
 
-## Externe Frameworks
+## Ziel der technischen Architektur
 
-Theater Command DCS nutzt externe Frameworks, verändert diese aber nicht.
+Theater Command DCS soll später folgende Systeme verbinden:
 
-Die Frameworks liegen später im Ordner vendor.
+- Airbase-Erkennung
+- virtuelle Zonen
+- Capture-System
+- Logistiksystem
+- CTLD-Anbindung
+- FOB-System
+- dynamische Missionsgenerierung
+- AI Director
+- CAP- und GCI-Management
+- Skynet-IADS-Anbindung
+- Persistenz
+- F10-Menüs
+- Debug- und Testsysteme
 
-Geplante Frameworks:
+Die technische Architektur soll modular bleiben.
 
-- MOOSE
+Jedes System soll eine klare Aufgabe haben.
+
+Große All-in-one-Dateien werden vermieden.
+
+---
+
+## Aktueller technischer Stand
+
+Stand:
+
+    2026-06-15
+
+Aktuell vorhanden:
+
+- zentrale Projektdateien
+- `docs/`-Grundblock
+- `vendor/`-Frameworkstruktur
 - MIST
+- MOOSE
 - CTLD
 - Skynet IADS
+- `src/README.md`
 
-Diese Frameworks sind Werkzeuge.
+Noch nicht vorhanden:
 
-Sie bestimmen nicht die Struktur des Projekts.
-
----
-
-## Eigene Projektlogik
-
-Die eigene Projektlogik liegt im Ordner src.
-
-Die Struktur richtet sich nach Aufgabenbereichen.
-
-Nicht nach Frameworks.
-
-Schlecht:
-
-tc_moose.lua  
-tc_mist.lua  
-tc_ctld.lua  
-tc_skynet.lua  
-
-Gut:
-
-tc_airbase_scanner.lua  
-tc_zone_factory.lua  
-tc_capture_system.lua  
-tc_logistics_delivery.lua  
-tc_fob_system.lua  
-tc_mission_generator.lua  
-tc_ai_cap_manager.lua  
-tc_persistence_system.lua  
+- `src/loader.lua`
+- `src/main.lua`
+- eigene Core-Dateien
+- eigene World-Dateien
+- eigene Campaign-Dateien
+- eigene Logistics-Dateien
+- eigene Missions-Dateien
+- eigene AI-Dateien
+- eigene IADS-Dateien
+- eigene UI-Dateien
+- eigene Debug-Dateien
+- DEV-Mission im DCS Mission Editor
 
 ---
 
-## Hauptbereiche unter src
+## Haupttrennung
 
-Geplante Hauptbereiche:
+Die wichtigste technische Trennung lautet:
 
-- src/core
-- src/world
-- src/campaign
-- src/logistics
-- src/missions
-- src/ai
-- src/iads
-- src/ui
-- src/debug
+    vendor/ = externe Frameworks
+    src/ = eigene Theater-Command-Logik
 
-Jeder Bereich hat eine klar abgegrenzte Aufgabe.
+Externe Frameworks werden nicht verändert.
 
----
+Eigene Projektlogik wird nicht in Framework-Dateien geschrieben.
 
-## src/core
+Frameworks stellen technische Funktionen bereit.
 
-Der Core enthält die technische Basis des Systems.
-
-Geplante Dateien:
-
-- tc_config.lua
-- tc_logger.lua
-- tc_state.lua
-- tc_utils.lua
-- tc_scheduler.lua
-
-Aufgaben:
-
-- zentrale Konfiguration
-- globale Projektstruktur
-- Logging
-- globaler Kampagnenzustand
-- allgemeine Hilfsfunktionen
-- zentrale Scheduler-Funktionen
-
-Der Core wird als Erstes geladen.
-
-Andere Systeme dürfen den Core verwenden.
-
-Der Core soll aber möglichst wenig Abhängigkeiten zu späteren Systemen haben.
+Theater Command DCS entscheidet über die Kampagnenlogik.
 
 ---
 
-## src/world
+## Vendor-System
 
-Der Bereich world beschreibt die DCS-Welt und die Karte.
+Der Ordner `vendor/` enthält die externen Frameworks.
 
-Geplante Dateien:
+Aktueller Framework-Stand:
 
-- tc_airbase_scanner.lua
-- tc_airbase_registry.lua
-- tc_airbase_overrides.lua
-- tc_region_classifier.lua
-- tc_zone_factory.lua
-- tc_route_registry.lua
-- tc_static_targets.lua
+| Framework | Projektpfad | Stand |
+|---|---|---|
+| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
+| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
+| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
 
-Aufgaben:
+Zusätzliche Referenzdateien:
 
-- Airbases automatisch erkennen
-- Airbases registrieren
-- Airbases Regionen zuordnen
-- virtuelle Zonen erzeugen
-- Routen verwalten
-- statische Ziele registrieren
-- Karteninformationen für andere Systeme bereitstellen
-
-Dieser Bereich ist wichtig, weil viele spätere Systeme auf Airbases und Regionen zugreifen.
+    vendor/mist/Mist guide.pdf
+    vendor/mist/Example_DBs/
+    vendor/moose/MOOSE_DOCS.md
 
 ---
 
-## Airbase-System
+## MIST
 
-Das Airbase-System soll später automatisch alle Airbases der Syria Map erkennen.
+MIST liegt unter:
 
-Mögliche Daten pro Airbase:
+    vendor/mist/mist.lua
 
-- Name
-- DCS-Objekt
-- Koordinate
-- Region
-- aktueller Besitzer
-- Capture-Zone
-- Logistik-Zone
-- Defense-Zone
-- Ressourcenstatus
-- Aktivitätsstatus
-- strategische Bedeutung
+MIST wird als Utility-Schicht genutzt.
 
-Beispielhafte interne Struktur:
+Geplante technische Nutzung:
 
-base = {
-  name = "Akrotiri",
-  owner = "blue",
-  region = "cyprus",
-  active = true,
-  resources = {
-    supply = 100,
-    fuel = 100,
-    ammo = 100
-  }
-}
+- DCS-Hilfsfunktionen
+- Datenbankfunktionen
+- Gruppenlogik
+- Koordinatenlogik
+- Hilfsfunktionen für dynamische Missionen
+- Grundlage für CTLD
+- Unterstützung bei dynamischem Spawning
+- Unterstützung bei Event-Auswertung
+- Debug- und Testhilfen
 
-Das Ziel ist, Airbases nicht manuell im Mission Editor zu verwalten.
+Besonderheit:
 
----
+Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket.
 
-## Virtuelle Zonen
+Grund:
 
-Viele Zonen sollen nicht manuell im Mission Editor angelegt werden.
+CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
 
-Stattdessen erzeugt Lua virtuelle Zonen.
+Aktive Kombination:
 
-Geplante virtuelle Zonentypen:
-
-- Capture-Zone
-- Logistics-Zone
-- Defense-Zone
-- Repair-Zone
-- Spawn-Zone
-- Warehouse-Zone
-
-Diese Zonen existieren nur im Lua-System.
-
-Sie müssen nicht als Trigger-Zonen im Mission Editor sichtbar sein.
+    MIST: 4.5.128-DYNSLOTS-02
+    CTLD: 1.6.1
 
 ---
 
-## src/campaign
+## MOOSE
 
-Der Bereich campaign enthält die strategische Kampagnenlogik.
+MOOSE liegt unter:
 
-Geplante Dateien:
+    vendor/moose/Moose.lua
 
-- tc_base_ownership.lua
-- tc_capture_system.lua
-- tc_frontline_system.lua
-- tc_resource_system.lua
-- tc_economy_system.lua
-- tc_persistence_system.lua
+MOOSE wird als objektorientierte DCS-Framework-Schicht genutzt.
 
-Aufgaben:
+Geplante technische Nutzung:
 
-- Besitz von Basen verwalten
-- Capture-Zustände berechnen
-- Frontlinien ableiten
-- Ressourcen verändern
-- Economy simulieren
-- Kampagnenzustand speichern und laden
+- Wrapper für DCS-Objekte
+- Scheduler
+- SETs
+- Spawning
+- Airbase-Wrapper
+- Zonenlogik
+- Gruppenverwaltung
+- CAP-Management
+- GCI-Management
+- AI-Management
+- Debug- und Testfunktionen
 
-Dieser Bereich entscheidet, wie sich die Kampagne entwickelt.
+MOOSE bleibt ein Werkzeug.
 
----
+Eigene Theater-Command-Dateien dürfen MOOSE intern nutzen.
 
-## Capture-System
+Es wird aber keine eigene Framework-Sammeldatei erstellt.
 
-Das Capture-System soll später bestimmen, wann eine Basis oder Region den Besitzer wechselt.
+Nicht gewünscht:
 
-Mögliche Einflussfaktoren:
-
-- Bodentruppen im Bereich
-- zerstörte Verteidigung
-- vorhandene Logistik
-- Luftüberlegenheit
-- aktive Gegner
-- Missionsfortschritt
-- Versorgungslage
-
-Das Capture-System wird nicht durch einfache Mission-Editor-Trigger gebaut.
-
-Es wird durch Lua gesteuert.
+    src/tc_moose.lua
 
 ---
 
-## Ressourcen-System
+## CTLD
 
-Basen und FOBs sollen Ressourcen besitzen.
+CTLD liegt unter:
 
-Geplante Ressourcen:
+    vendor/ctld/CTLD-i18n.lua
+    vendor/ctld/CTLD.lua
 
-- supply
-- fuel
-- ammo
-- manpower
-- repair
-- medical
-- command
+CTLD wird als Logistik- und Helikopter-Framework genutzt.
 
-Diese Ressourcen beeinflussen später:
+Geplante technische Nutzung:
 
-- verfügbare Missionen
-- KI-Aktivität
-- Reparaturfähigkeit
-- FOB-Ausbau
-- CAP-Frequenz
-- SAM-Wiederaufbau
-- Gegenangriffe
+- Truppentransport
+- Kistentransport
+- Logistikflüge
+- Pickup-Zonen
+- Dropoff-Zonen
+- FOB-Aufbau
+- Heli-Interaktion
 
----
+CTLD führt technische Logistikvorgänge aus.
 
-## src/logistics
-
-Der Bereich logistics enthält das Logistiksystem.
-
-Geplante Dateien:
-
-- tc_ctld_config.lua
-- tc_logistics_hubs.lua
-- tc_logistics_delivery.lua
-- tc_fob_system.lua
-- tc_supply_routes.lua
-- tc_convoy_system.lua
-- tc_warehouse_system.lua
-
-Aufgaben:
-
-- CTLD konfigurieren
-- Logistikhubs verwalten
-- Lieferungen auswerten
-- FOBs aufbauen
-- Konvois steuern
-- Supply-Routen verwalten
-- Lagerbestände simulieren
-
-CTLD transportiert Kisten und Truppen.
-
-Theater Command entscheidet, was diese Lieferungen strategisch bewirken.
-
----
-
-## CTLD-Anbindung
-
-CTLD ist für die Spielerinteraktion im Logistiksystem zuständig.
-
-Beispiele:
-
-- Kisten aufnehmen
-- Kisten transportieren
-- Kisten absetzen
-- Truppen transportieren
-- FOB-Elemente liefern
-
-Theater Command wertet diese Aktionen aus.
+Theater Command DCS bewertet später die kampagnenlogische Wirkung.
 
 Beispiel:
 
-Ein Spieler liefert eine Supply-Kiste an FOB Alpha.
+Eine CTLD-Kiste wird technisch abgesetzt.
 
-CTLD verarbeitet den Transport.
-
-Theater Command erkennt die Lieferung.
-
-FOB Alpha erhält supply.
-
-Der Kampagnenzustand wird verändert.
+Theater Command DCS entscheidet, ob dadurch eine Basis versorgt wird, ein FOB entsteht oder eine Capture-Zone beeinflusst wird.
 
 ---
 
-## src/missions
+## Skynet IADS
 
-Der Bereich missions enthält den dynamischen Missionsgenerator.
+Skynet IADS liegt unter:
 
-Geplante Dateien:
+    vendor/skynet-iads/SkynetIADS.lua
 
-- tc_mission_generator.lua
-- tc_mission_filter_by_aircraft.lua
-- tc_mission_air_superiority.lua
-- tc_mission_sead_dead.lua
-- tc_mission_strike.lua
-- tc_mission_cas.lua
-- tc_mission_logistics.lua
-- tc_mission_csar.lua
-- tc_mission_recon.lua
+Skynet IADS wird als Framework für integrierte Luftverteidigung genutzt.
 
-Aufgaben:
+Verwendet wird die kompilierte Skynet-IADS-Datei.
 
-- Spielerflugzeug erkennen
-- passende Missionen auswählen
-- Missionen aus dem Kampagnenzustand erzeugen
-- Missionsziele definieren
-- Erfolg oder Misserfolg auswerten
-- Kampagnenzustand anpassen
+Geplante technische Nutzung:
 
-Nicht jedes Flugzeug soll jede Mission bekommen.
+- IADS-Netzwerke
+- Radarlogik
+- SAM-Verhalten
+- Emissionskontrolle
+- SEAD-Reaktionen
+- DEAD-Reaktionen
+- Luftverteidigungssektoren
 
----
+Skynet IADS steuert taktisches Verhalten.
 
-## Missionsfilter nach Flugzeugtyp
-
-Beispiele:
-
-F/A-18C:
-
-- CAP
-- SEAD
-- DEAD
-- Strike
-- Escort
-- Anti-Ship optional
-
-F-16C:
-
-- CAP
-- SEAD
-- DEAD
-- Strike
-- Interdiction
-
-F-15E:
-
-- Deep Strike
-- Depot Attack
-- Runway Attack
-- Command Post Strike
-
-A-10C II:
-
-- CAS
-- Armed Recon
-- Convoy Attack
-- FOB Defense
-
-AH-64D:
-
-- Armed Recon
-- CAS
-- Anti-Armor
-- FOB Defense
-
-UH-1H und Mi-8:
-
-- CTLD Transport
-- Troop Insertion
-- FOB Supply
-- Logistics
-
----
-
-## src/ai
-
-Der Bereich ai steuert dynamische KI-Aktionen.
-
-Geplante Dateien:
-
-- tc_ai_director.lua
-- tc_ai_cap_manager.lua
-- tc_ai_gci_manager.lua
-- tc_ai_strike_manager.lua
-- tc_ai_cas_manager.lua
-- tc_ai_ground_war.lua
-- tc_ai_counterattack.lua
-
-Aufgaben:
-
-- CAP erzeugen
-- GCI erzeugen
-- Strike-Pakete erzeugen
-- Bodenkrieg simulieren
-- Gegenangriffe starten
-- rote Reaktionen auslösen
-- blaue KI-Unterstützung ermöglichen
-
-Die KI soll später nicht statisch sein.
-
-Sie soll auf die Kampagnenlage reagieren.
-
----
-
-## AI Director
-
-Der AI Director ist die übergeordnete Entscheidungslogik für KI-Aktionen.
-
-Er soll später prüfen:
-
-- Welche Regionen sind aktiv?
-- Welche Basen sind bedroht?
-- Welche Ressourcen sind verfügbar?
-- Wie stark ist Blau?
-- Wie stark ist Rot?
-- Gibt es offene Missionsziele?
-- Muss Rot reagieren?
-- Muss Blau unterstützt werden?
-
-Danach entscheidet der AI Director, welche KI-Aktionen sinnvoll sind.
-
----
-
-## src/iads
-
-Der Bereich iads verbindet Theater Command mit Skynet IADS.
-
-Geplante Dateien:
-
-- tc_iads_config.lua
-- tc_iads_sector_manager.lua
-- tc_iads_damage_handler.lua
-- tc_iads_rebuild_system.lua
-
-Aufgaben:
-
-- IADS-Sektoren definieren
-- Radar- und SAM-Strukturen verwalten
-- Schäden auswerten
-- IADS mit Regionen koppeln
-- Wiederaufbau ermöglichen
-- SEAD/DEAD-Erfolge in die Kampagne übertragen
-
----
-
-## IADS-Integration
-
-Skynet IADS übernimmt die taktische Luftverteidigungslogik.
-
-Theater Command übernimmt die strategische Einbindung.
+Theater Command DCS entscheidet über den strategischen IADS-Zustand.
 
 Beispiel:
 
-Ein Radar wird zerstört.
+Skynet IADS steuert ein SAM-Netzwerk taktisch.
 
-Skynet IADS verliert einen Sensor.
-
-Theater Command registriert den Schaden.
-
-Der betroffene IADS-Sektor wird geschwächt.
-
-Der Missionsgenerator erkennt bessere Chancen für Strike-Missionen.
-
-Rot kann später versuchen, den Sektor wieder aufzubauen.
+Theater Command DCS entscheidet, ob dieser IADS-Sektor aktiv, beschädigt, zerstört, wiederaufgebaut oder als Missionsziel verfügbar ist.
 
 ---
 
-## src/ui
+## Geplante Lade-Reihenfolge
 
-Der Bereich ui enthält Spielerinformationen und F10-Menüs.
+Die Frameworks und die spätere eigene Theater-Command-Logik sollen im DCS Mission Editor in dieser Reihenfolge geladen werden:
 
-Geplante Dateien:
+    1. vendor/mist/mist.lua
+    2. vendor/moose/Moose.lua
+    3. vendor/ctld/CTLD-i18n.lua
+    4. vendor/ctld/CTLD.lua
+    5. vendor/skynet-iads/SkynetIADS.lua
+    6. src/loader.lua
 
-- tc_f10_root_menu.lua
-- tc_f10_mission_menu.lua
-- tc_f10_status_menu.lua
-- tc_f10_logistics_menu.lua
-- tc_briefing_system.lua
+Wichtige Regeln:
 
-Aufgaben:
-
-- F10-Hauptmenü erstellen
-- Missionen anzeigen
-- Kampagnenstatus anzeigen
-- Logistikstatus anzeigen
-- Debug-Informationen anzeigen
-- Briefinginformationen bereitstellen
-
-Das UI soll dem Spieler erklären, was im Krieg gerade passiert.
+- MIST wird vor CTLD geladen.
+- `CTLD-i18n.lua` wird vor `CTLD.lua` geladen.
+- Skynet IADS wird nach MIST geladen.
+- Die eigene Theater-Command-Logik startet erst nach allen externen Frameworks.
+- `src/loader.lua` wird später der Einstiegspunkt für Theater Command DCS.
 
 ---
 
-## src/debug
+## Source-System
 
-Der Bereich debug enthält Entwicklungsfunktionen.
+Der Ordner `src/` enthält die eigene Lua-Logik von Theater Command DCS.
 
-Geplante Dateien:
+Aktuell vorhanden:
 
-- tc_debug_airbases.lua
-- tc_debug_zones.lua
-- tc_debug_logistics.lua
-- tc_debug_missions.lua
-- tc_debug_state.lua
-
-Aufgaben:
-
-- erkannte Airbases anzeigen
-- erzeugte Zonen anzeigen
-- Logistikstatus prüfen
-- Missionsgenerator prüfen
-- Kampagnenzustand prüfen
-
-Debug-Funktionen sind für die Entwicklung wichtig.
-
-Später können sie im Release deaktiviert oder eingeschränkt werden.
-
----
-
-## Lade-Reihenfolge
-
-Die Lade-Reihenfolge ist wichtig.
-
-Zuerst werden externe Frameworks geladen.
-
-Danach wird der eigene Loader geladen.
-
-Geplante Reihenfolge im Mission Editor:
-
-1. MIST
-2. MOOSE
-3. CTLD
-4. Skynet IADS
-5. src/loader.lua
-
-Danach lädt loader.lua die eigenen Projektdateien.
-
-Geplante interne Reihenfolge:
-
-1. Core
-2. World
-3. Campaign
-4. Logistics
-5. Missions
-6. AI
-7. IADS
-8. UI
-9. Debug
-10. Main
-
----
-
-## Globale Tabelle TC
-
-Alle eigenen Systeme hängen an der globalen Tabelle TC.
+    src/README.md
 
 Geplante Struktur:
 
-TC.Core  
-TC.World  
-TC.Campaign  
-TC.Logistics  
-TC.Missions  
-TC.AI  
-TC.IADS  
-TC.UI  
-TC.Debug  
+    src/
+    ├── README.md
+    ├── loader.lua
+    ├── main.lua
+    ├── core/
+    ├── world/
+    ├── campaign/
+    ├── logistics/
+    ├── missions/
+    ├── ai/
+    ├── iads/
+    ├── ui/
+    └── debug/
 
-Dadurch entsteht ein klarer gemeinsamer Namespace.
+Die Struktur wird nach Aufgaben sortiert, nicht nach Frameworks.
+
+Nicht gewünscht:
+
+    src/tc_moose.lua
+    src/tc_mist.lua
+    src/tc_ctld.lua
+    src/tc_all_in_one.lua
+
+Gewünscht:
+
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_zone_factory.lua
+    src/campaign/tc_capture_system.lua
+    src/logistics/tc_logistics_delivery.lua
+    src/logistics/tc_fob_system.lua
+    src/missions/tc_mission_generator.lua
+    src/ai/tc_ai_cap_manager.lua
+    src/campaign/tc_persistence_system.lua
 
 ---
 
-## Datenfluss
+## Loader-System
 
-Vereinfachter Datenfluss:
+Die Datei `src/loader.lua` wird später der technische Einstiegspunkt für Theater Command DCS.
 
-1. DCS startet die Mission.
-2. Frameworks werden geladen.
-3. Theater Command Loader startet.
-4. Core wird initialisiert.
-5. Airbases werden erkannt.
-6. Virtuelle Zonen werden erzeugt.
-7. Kampagnenzustand wird aufgebaut oder geladen.
-8. F10-Menüs werden erstellt.
-9. Missionsgenerator erstellt verfügbare Missionen.
-10. KI-System reagiert auf die Lage.
-11. CTLD-Lieferungen verändern Ressourcen.
-12. Capture-System verändert Besitzstände.
-13. Persistenz speichert den Zustand.
+Geplante Aufgaben:
+
+- globale `TC`-Tabelle erzeugen
+- Projektversion setzen
+- Framework-Verfügbarkeit prüfen
+- Lade-Reihenfolge der eigenen Module definieren
+- Core-Dateien laden
+- `src/main.lua` starten
+- Fehler bei fehlenden Frameworks sichtbar machen
+- erste Debug-Ausgabe in `dcs.log` erzeugen
+
+`loader.lua` soll keine große Kampagnenlogik enthalten.
+
+Die Datei lädt und prüft nur die Projektstruktur.
+
+---
+
+## Main-System
+
+Die Datei `src/main.lua` wird später die eigentliche Kampagneninitialisierung starten.
+
+Geplante Aufgaben:
+
+- Theater Command DCS initialisieren
+- Konfiguration laden
+- Kampagnenzustand vorbereiten
+- Airbase-System starten
+- Zonen-System starten
+- Capture-System starten
+- Logistiksystem starten
+- Missionsgenerator starten
+- AI Director starten
+- IADS-Anbindung starten
+- Debugsysteme aktivieren
+
+`main.lua` verbindet Systeme.
+
+`main.lua` ersetzt keine Einzelsysteme.
+
+---
+
+## Core-System
+
+Der Ordner `src/core/` enthält später die technische Basis des Projekts.
+
+Geplante Dateien:
+
+    src/core/tc_config.lua
+    src/core/tc_logger.lua
+    src/core/tc_state.lua
+    src/core/tc_utils.lua
+    src/core/tc_scheduler.lua
+
+Geplante Aufgaben:
+
+- zentrale Konfiguration
+- Logging
+- globale Zustandsverwaltung
+- Utility-Funktionen
+- Scheduler
+- Fehlerausgabe
+- Framework-Prüfung
+- globale Konstanten
+
+Das Core-System soll klein, stabil und unabhängig bleiben.
+
+---
+
+## World-System
+
+Der Ordner `src/world/` bildet später die DCS-Welt in Theater-Command-Strukturen ab.
+
+Geplante Dateien:
+
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_airbase_registry.lua
+    src/world/tc_airbase_overrides.lua
+    src/world/tc_region_classifier.lua
+    src/world/tc_zone_factory.lua
+    src/world/tc_zone_registry.lua
+
+Geplante Aufgaben:
+
+- Airbases erkennen
+- Airbases registrieren
+- Koalitionsstatus erfassen
+- Regionen klassifizieren
+- virtuelle Capture-Zonen erzeugen
+- virtuelle Logistik-Zonen erzeugen
+- virtuelle Defense-Zonen erzeugen
+- Weltobjekte für andere Systeme bereitstellen
+
+---
+
+## Campaign-System
+
+Der Ordner `src/campaign/` enthält später den strategischen Kampagnenzustand.
+
+Geplante Dateien:
+
+    src/campaign/tc_campaign_state.lua
+    src/campaign/tc_base_ownership.lua
+    src/campaign/tc_capture_system.lua
+    src/campaign/tc_frontline_system.lua
+    src/campaign/tc_persistence_system.lua
+
+Geplante Aufgaben:
+
+- Kampagnenzustand verwalten
+- Basenbesitz verwalten
+- Zonenbesitz verwalten
+- Capture-Bedingungen auswerten
+- Kampagnenfortschritt bewerten
+- Frontlogik vorbereiten
+- Persistenz vorbereiten
+- strategische Entscheidungen speichern
+
+---
+
+## Logistics-System
+
+Der Ordner `src/logistics/` verbindet CTLD mit Theater Command DCS.
+
+Geplante Dateien:
+
+    src/logistics/tc_logistics_delivery.lua
+    src/logistics/tc_fob_system.lua
+    src/logistics/tc_logistics_state.lua
+    src/logistics/tc_logistics_hubs.lua
+    src/logistics/tc_supply_routes.lua
+
+Geplante Aufgaben:
+
+- CTLD-Lieferungen auswerten
+- FOB-Aufbau bewerten
+- Logistikhubs verwalten
+- Versorgungslinien vorbereiten
+- Ressourcenstatus speichern
+- Logistik mit Capture-System verbinden
+- Logistik mit Missionsgenerator verbinden
+
+Grundsatz:
+
+    CTLD führt aus.
+    Theater Command bewertet.
+
+---
+
+## Missions-System
+
+Der Ordner `src/missions/` erzeugt später dynamische Missionen.
+
+Geplante Dateien:
+
+    src/missions/tc_mission_generator.lua
+    src/missions/tc_mission_registry.lua
+    src/missions/tc_mission_types.lua
+    src/missions/tc_mission_filter_by_aircraft.lua
+
+Geplante Aufgaben:
+
+- Spielerflugzeug erkennen
+- Missionen nach Flugzeugtyp filtern
+- Missionen aus Kampagnenlage ableiten
+- Airbase-Ziele auswählen
+- SEAD/DEAD-Ziele auswählen
+- Logistikziele auswählen
+- Missionen über F10-Menü anbieten
+- Missionserfolg auswerten
+
+---
+
+## AI-System
+
+Der Ordner `src/ai/` enthält später KI-Reaktionen und den AI Director.
+
+Geplante Dateien:
+
+    src/ai/tc_ai_director.lua
+    src/ai/tc_ai_cap_manager.lua
+    src/ai/tc_ai_gci_manager.lua
+    src/ai/tc_ai_counterattack.lua
+
+Geplante Aufgaben:
+
+- CAP steuern
+- GCI steuern
+- KI-Reaktionen auf Spielerfortschritt vorbereiten
+- KI-Reaktionen auf Capture-Ereignisse vorbereiten
+- KI-Reaktionen auf IADS-Schäden vorbereiten
+- Gegenangriffe vorbereiten
+- Eskalationslogik vorbereiten
+
+---
+
+## IADS-System
+
+Der Ordner `src/iads/` verbindet Skynet IADS mit Theater Command DCS.
+
+Geplante Dateien:
+
+    src/iads/tc_iads_network.lua
+    src/iads/tc_iads_sites.lua
+    src/iads/tc_iads_sectors.lua
+    src/iads/tc_iads_state.lua
+    src/iads/tc_iads_config.lua
+
+Geplante Aufgaben:
+
+- IADS-Sektoren definieren
+- SAM-Stellungen als Kampagnenobjekte verwalten
+- Radarstellungen als Kampagnenobjekte verwalten
+- Skynet-IADS-Netzwerke initialisieren
+- zerstörte IADS-Komponenten auswerten
+- IADS-Zustand für Persistenz vorbereiten
+- IADS-Ziele an Missionsgenerator liefern
+- IADS-Zustand an AI Director liefern
+
+---
+
+## UI-System
+
+Der Ordner `src/ui/` enthält später Spielerinteraktion.
+
+Geplante Dateien:
+
+    src/ui/tc_f10_menu.lua
+    src/ui/tc_status_menu.lua
+    src/ui/tc_mission_menu.lua
+
+Geplante Aufgaben:
+
+- F10-Menüs erzeugen
+- Status anzeigen
+- Missionen auswählbar machen
+- Debugfunktionen erreichbar machen
+- einfache Spielerkommandos ermöglichen
+
+---
+
+## Debug-System
+
+Der Ordner `src/debug/` enthält später Debug- und Testhilfen.
+
+Geplante Dateien:
+
+    src/debug/tc_debug_airbases.lua
+    src/debug/tc_debug_zones.lua
+    src/debug/tc_debug_capture.lua
+    src/debug/tc_debug_logistics.lua
+    src/debug/tc_debug_iads.lua
+
+Geplante Aufgaben:
+
+- erkannte Airbases anzeigen
+- virtuelle Zonen anzeigen
+- Capture-Status ausgeben
+- Logistikstatus ausgeben
+- IADS-Status ausgeben
+- Ladezustand prüfen
+- Fehleranalyse erleichtern
+
+---
+
+## Mission-Editor-Anbindung
+
+Der DCS Mission Editor soll später nur die physische Bühne bereitstellen.
+
+Geplante DEV-Mission:
+
+    Operation_Levant_Reclamation_DEV.miz
+
+Der Mission Editor enthält später:
+
+- Karte
+- Koalitionen
+- Spieler-Slots
+- notwendige Trigger zum Laden der Lua-Dateien
+- Template-Gruppen mit Late Activation
+- CTLD-Startzonen
+- statische Ziele
+- erste Testumgebung
+
+Der Mission Editor soll nicht enthalten:
+
+- große Kampagnenlogik
+- komplexe Triggerketten
+- manuell gepflegte Basenbesitzlogik
+- manuell gepflegte Frontlinienlogik
+- manuell gepflegte Missionsgeneratorlogik
+
+Diese Logik gehört nach Lua.
 
 ---
 
 ## Persistenz
 
-Das Persistenzsystem wird erst später gebaut.
+Persistenz wird erst aufgebaut, wenn Airbase-, Capture- und Logistiksystem existieren.
 
-Es soll langfristig speichern:
+Geplante Dateien:
 
-- Basenbesitz
-- Ressourcen
-- FOB-Status
-- zerstörte Ziele
-- beschädigte IADS-Sektoren
+    src/campaign/tc_persistence_system.lua
+    save/README.md
+    save/example_state.lua
+
+Später zu speichernde Werte:
+
+- Besitz jeder Basis
+- Besitz jeder Zone
+- aktive FOBs
+- Ressourcenstatus
+- Logistikstatus
+- IADS-Zustand
+- zerstörte strategische Ziele
+- Missionshistorie
 - Kampagnenphase
-- aktive Regionen
-- Verluste
-- Missionsfortschritt
 
-Persistenz ist wichtig, aber sie wird erst nach Airbase-System, Zonen, Capture und Logistik sinnvoll.
+Persistenz wird nicht am Anfang gebaut.
 
----
-
-## Entwicklungsreihenfolge
-
-Die technische Entwicklung erfolgt in dieser Reihenfolge:
-
-1. GitHub-Struktur
-2. Dokumentation
-3. Mission-Editor-Grundlage
-4. Lua-Core
-5. Logger
-6. State-System
-7. Airbase-Scanner
-8. virtuelle Zonen
-9. Airbase-Registry
-10. F10-Debugmenü
-11. Capture-Grundlogik
-12. CTLD-Grundlogik
-13. Missionsgenerator
-14. KI-Director
-15. IADS-Verknüpfung
-16. Persistenz
+Zuerst muss klar sein, welche Daten stabil gespeichert werden müssen.
 
 ---
 
-## Architekturziel
+## Datenfluss
 
-Die Architektur soll verhindern, dass Theater Command DCS zu einer unübersichtlichen Einzelmission wird.
+Geplanter Datenfluss:
 
-Das Projekt soll:
+    DCS World
+        ↓
+    Frameworks
+        ↓
+    Theater Command Loader
+        ↓
+    Core-System
+        ↓
+    World-System
+        ↓
+    Campaign-System
+        ↓
+    Logistics / Missions / AI / IADS
+        ↓
+    UI / Debug / Persistenz
 
-- modular bleiben
-- lesbar bleiben
-- testbar bleiben
-- dokumentiert bleiben
-- erweiterbar bleiben
-- versionsfähig bleiben
-- langfristig wartbar bleiben
+Frameworks liefern technische Funktionen.
 
-Theater Command DCS soll Schritt für Schritt wachsen, ohne die Kontrolle über Struktur und Logik zu verlieren.
+Theater Command DCS interpretiert diese Funktionen kampagnenlogisch.
+
+---
+
+## Abhängigkeitsregel
+
+Abhängigkeiten sollen möglichst nur in eine Richtung laufen.
+
+Geplant:
+
+    core
+      ↓
+    world
+      ↓
+    campaign
+      ↓
+    logistics / missions / ai / iads
+      ↓
+    ui / debug / persistence
+
+Verhindert werden sollen:
+
+- zyklische Abhängigkeiten
+- unklare globale Seiteneffekte
+- direkte Kopplung aller Module an alle Frameworks
+- große All-in-one-Dateien
+
+---
+
+## Globale Tabelle
+
+Die eigene Projektlogik soll später über eine globale Tabelle erreichbar sein:
+
+    TC
+
+Geplante Struktur:
+
+    TC = {
+      version = "...",
+      config = {},
+      state = {},
+      modules = {},
+      debug = {}
+    }
+
+Diese Struktur wird später in `src/loader.lua` und `src/main.lua` konkret umgesetzt.
+
+---
+
+## Namensregeln
+
+Eigene Lua-Dateien beginnen mit:
+
+    tc_
+
+Beispiele:
+
+    tc_airbase_scanner.lua
+    tc_zone_factory.lua
+    tc_capture_system.lua
+    tc_logistics_delivery.lua
+    tc_fob_system.lua
+    tc_mission_generator.lua
+    tc_ai_cap_manager.lua
+    tc_persistence_system.lua
+
+Framework-Dateien behalten ihre externen Namen oder stabile Projektnamen:
+
+    mist.lua
+    Moose.lua
+    CTLD-i18n.lua
+    CTLD.lua
+    SkynetIADS.lua
+
+---
+
+## Aktueller nächster technischer Schritt
+
+Nach Abschluss der aktuellen Dokumentationsaktualisierung beginnt die praktische `src/`-Struktur.
+
+Nächster technischer Fokus:
+
+    src-Unterordner und README-Dateien erstellen
+
+Danach:
+
+    src/loader.lua
+    src/main.lua
+    src/core/tc_config.lua
+    src/core/tc_logger.lua
+    src/core/tc_state.lua
+
+---
+
+## Architekturregel
+
+Theater Command DCS bleibt modular.
+
+Frameworks sind Werkzeuge.
+
+Die Kampagne ist die eigene Logik.
+
+Keine All-in-one-Datei.
+
+Keine Framework-Sammeldateien.
+
+Keine unnötig große Mission-Editor-Triggerlogik.
