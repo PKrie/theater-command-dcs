@@ -1,466 +1,493 @@
 # Mission Editor Basics
 
-Diese Datei beschreibt die grundlegenden Mission-Editor-Arbeiten für Theater Command DCS.
+Diese Datei beschreibt die grundlegende Nutzung des DCS Mission Editors für **Theater Command DCS**.
 
-Sie ergänzt die Datei MISSION_EDITOR_SETUP.md im Hauptverzeichnis.
+Der Mission Editor ist in diesem Projekt nicht das eigentliche Kampagnensystem.
 
----
+Der Mission Editor stellt die Bühne bereit.
 
-## Ziel
-
-Der DCS Mission Editor soll nur die technische und physische Grundlage der Mission bereitstellen.
-
-Die dynamische Kampagne selbst wird später durch Lua gesteuert.
-
-Der Mission Editor ist nicht dafür gedacht, die gesamte Kampagnenlogik über Triggerketten abzubilden.
+Die Kampagnenlogik entsteht später durch Lua.
 
 ---
 
-## Grundsatz
+## Grundprinzip
 
-Mission Editor = Bühne
+Das Projekt folgt dem Prinzip:
 
-Lua = Kampagnensystem
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis
 
-GitHub = Projektgedächtnis
+Der Mission Editor soll möglichst schlank bleiben.
 
-Der Mission Editor enthält nur das, was DCS als echte Missionseinheiten, Slots, Zonen, Templates oder Trigger-Dateien braucht.
-
-Alles Dynamische wird später über Lua-Dateien im Ordner src gesteuert.
+Alles, was sinnvoll durch Lua erkannt, berechnet oder gesteuert werden kann, soll nicht als große Triggerkette im Mission Editor gebaut werden.
 
 ---
 
-## Was im Mission Editor gebaut wird
+## Rolle des Mission Editors
 
-Im Mission Editor werden angelegt:
+Der Mission Editor wird später genutzt für:
 
-- Syria Map
-- Koalitionen
-- Startzeit
-- Wetter
+- Karte auswählen
+- Koalitionen festlegen
+- Spieler-Slots anlegen
+- Frameworks laden
+- Theater-Command-Loader laden
+- Template-Gruppen vorbereiten
+- CTLD-Startzonen vorbereiten
+- statische Ziele setzen
+- Testumgebung aufbauen
+
+Der Mission Editor wird nicht genutzt für:
+
+- komplette Kampagnenlogik
+- manuelle Frontlinienverwaltung
+- große Triggerketten für Basenbesitz
+- manuelle Missionsgenerierung
+- persistente Zustandsverwaltung
+- komplexe AI-Director-Logik
+
+Diese Aufgaben gehören später in die Lua-Struktur unter:
+
+    src/
+
+---
+
+## Erste Kampagne
+
+Erste Kampagne:
+
+    Operation Levant Reclamation
+
+Map:
+
+    Syria
+
+Ausgangslage:
+
+    Blue Start: Akrotiri / Zypern
+    Red Start: syrisches Festland vollständig rot kontrolliert
+
+Akrotiri ist die erste blaue Hauptbasis.
+
+Das syrische Festland ist zu Kampagnenbeginn rot kontrolliert.
+
+Die erste operative Zielrichtung ist die syrische Küste.
+
+---
+
+## Geplante DEV-Mission
+
+Die erste Entwicklungsmission soll später heißen:
+
+    Operation_Levant_Reclamation_DEV.miz
+
+Geplanter Ablageort:
+
+    mission/dev/
+
+Dieser Ordner existiert aktuell noch nicht.
+
+Er wird erst angelegt, wenn die Mission-Editor-Arbeit beginnt.
+
+---
+
+## Aktueller technischer Stand
+
+Stand:
+
+    2026-06-15
+
+Aktuell vorhanden:
+
+- Projektgrunddokumentation
+- `docs/`-Grundblock
+- `vendor/`-Frameworks
+- `src/README.md`
+
+Aktuell noch nicht vorhanden:
+
+- DEV-Mission
+- `src/loader.lua`
+- `src/main.lua`
+- Mission-Editor-Triggerstruktur
 - Spieler-Slots
-- Framework-Lade-Trigger
 - Template-Gruppen
-- wenige CTLD-Startzonen
-- sichtbare statische Ziele
-- optionale Carrier-Gruppe
-- erste Testeinheiten
+- CTLD-Zonen
+- Testmission
 
 ---
 
-## Was nicht im Mission Editor gebaut wird
+## Frameworks im Mission Editor laden
 
-Nicht im Mission Editor bauen:
+Die externen Frameworks liegen im Projekt unter:
 
-- keine vollständige Kampagnenlogik
-- keine große Triggerkette für jede Basis
-- keine Capture-Trigger pro Airbase
-- keine manuelle 69-Airbase-Verwaltung
-- keine dynamische Missionsauswahl per Trigger
-- keine Ressourcenlogik per Trigger
-- keine Persistenzlogik per Trigger
-- keine komplette Frontlinie als statisches Konstrukt
+    vendor/
 
-Diese Dinge werden später durch Lua übernommen.
+Aktuell hinterlegte Frameworks:
 
----
+| Framework | Projektpfad | Stand |
+|---|---|---|
+| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
+| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
+| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
 
-## Erste Grundmission
+Wichtig:
 
-Die erste Entwicklungsmission soll eine einfache Testumgebung sein.
+Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket.
 
-Name:
+Grund:
 
-Operation Levant Reclamation DEV
-
-Dateiname:
-
-Operation_Levant_Reclamation_DEV.miz
-
-Speicherort im Projekt:
-
-mission/dev/Operation_Levant_Reclamation_DEV.miz
+CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
 
 ---
 
-## Map
+## Geplante Lade-Reihenfolge
 
-Verwendete Map:
+Die geplante Lade-Reihenfolge im DCS Mission Editor lautet:
 
-Syria
+    1. vendor/mist/mist.lua
+    2. vendor/moose/Moose.lua
+    3. vendor/ctld/CTLD-i18n.lua
+    4. vendor/ctld/CTLD.lua
+    5. vendor/skynet-iads/SkynetIADS.lua
+    6. src/loader.lua
 
-Die erste aktive Operationsregion umfasst:
+Diese Reihenfolge ist verbindlich.
 
-- Cyprus
-- Eastern Mediterranean
-- Syrian Coast
+Wichtig:
 
-Noch nicht aktiv:
-
-- Central Syria
-- Northern Syria
-- Damascus Sector
-- Lebanon Sector
-- Jordan Sector
-- Israel Sector
-- Turkey Sector
-
-Diese Regionen werden später erweitert.
+- MIST muss vor CTLD geladen werden.
+- `CTLD-i18n.lua` muss vor `CTLD.lua` geladen werden.
+- Skynet IADS muss nach MIST geladen werden.
+- Eigene Theater-Command-Logik startet erst nach allen externen Frameworks.
+- `src/loader.lua` wird später der Einstiegspunkt für das eigene Kampagnensystem.
 
 ---
 
-## Startbasis Blau
+## Trigger-Grundstruktur
 
-Die erste blaue Startbasis ist:
+Die Frameworks sollen später über Mission-Editor-Trigger geladen werden.
 
-Akrotiri
+Geplantes Grundschema:
 
-Akrotiri dient am Anfang als:
+    Trigger 1: Load MIST
+    Trigger 2: Load MOOSE
+    Trigger 3: Load CTLD-i18n
+    Trigger 4: Load CTLD
+    Trigger 5: Load Skynet IADS
+    Trigger 6: Load Theater Command Loader
 
-- Spielerbasis
-- Logistikhub
-- Startpunkt für CAP
-- Startpunkt für SEAD
-- Startpunkt für Strike
-- Startpunkt für Transportflüge
-- technischer Testbereich
+Die genaue Triggerumsetzung wird später unter folgendem Pfad dokumentiert:
 
----
+    mission_editor/trigger_setup.md
 
-## Roter Ausgangsraum
-
-Das syrische Festland gilt zu Beginn als vollständig rot kontrolliert.
-
-Wichtige rote Räume für die erste Version:
-
-- Latakia
-- Tartus
-- Khmeimim
-- Syrian Coast
-
-Weitere rote Räume werden später ergänzt.
+Diese Datei existiert aktuell noch nicht.
 
 ---
 
-## Koalitionen
+## Empfohlene Trigger-Logik
 
-### Blau
+Für die erste DEV-Mission wird später voraussichtlich eine einfache Starttrigger-Struktur genutzt.
 
-Empfohlene blaue Länder:
+Geplantes Muster:
 
-- USA
-- UK
-- France
-- Germany optional
-- Canada optional
+    ONCE - TC_LOAD_MIST
+        DO SCRIPT FILE: vendor/mist/mist.lua
 
-### Rot
+    ONCE - TC_LOAD_MOOSE
+        DO SCRIPT FILE: vendor/moose/Moose.lua
 
-Empfohlene rote Länder:
+    ONCE - TC_LOAD_CTLD_I18N
+        DO SCRIPT FILE: vendor/ctld/CTLD-i18n.lua
 
-- Syria
-- Russia
-- Iran optional
-- Insurgent optional
+    ONCE - TC_LOAD_CTLD
+        DO SCRIPT FILE: vendor/ctld/CTLD.lua
 
-### Neutral oder zunächst nicht aktiv
+    ONCE - TC_LOAD_SKYNET_IADS
+        DO SCRIPT FILE: vendor/skynet-iads/SkynetIADS.lua
 
-- Turkey
-- Israel
-- Jordan
-- Lebanon
+    ONCE - TC_LOAD_THEATER_COMMAND
+        DO SCRIPT FILE: src/loader.lua
 
-Diese Länder können später je nach Kampagnendesign eingebunden werden.
+Die endgültige Umsetzung wird erst getestet, wenn `src/loader.lua` existiert.
+
+---
+
+## Warum die Reihenfolge wichtig ist
+
+MIST muss zuerst geladen werden, weil CTLD MIST benötigt.
+
+CTLD-i18n muss vor CTLD geladen werden, weil CTLD die Übersetzungsstruktur erwartet.
+
+Skynet IADS benötigt ebenfalls MIST-Funktionalität und wird daher nach MIST geladen.
+
+Theater Command DCS wird zuletzt geladen, damit die eigene Logik auf die bereits vorhandenen Frameworks zugreifen kann.
 
 ---
 
 ## Spieler-Slots
 
-Spieler-Slots müssen im Mission Editor angelegt werden.
+Spieler-Slots werden später auf Akrotiri angelegt.
 
-Für die erste Entwicklungsphase werden nur Slots auf Akrotiri angelegt.
+Erste geplante Client-Slots:
 
-Erste empfohlene Slots:
+    CLIENT_BLUE_FA18C_AKROTIRI_01
+    CLIENT_BLUE_FA18C_AKROTIRI_02
+    CLIENT_BLUE_F16C_AKROTIRI_01
+    CLIENT_BLUE_F16C_AKROTIRI_02
+    CLIENT_BLUE_F15E_AKROTIRI_01
+    CLIENT_BLUE_F15E_AKROTIRI_02
+    CLIENT_BLUE_F14B_AKROTIRI_01
+    CLIENT_BLUE_F14B_AKROTIRI_02
+    CLIENT_BLUE_UH1H_AKROTIRI_01
+    CLIENT_BLUE_MI8_AKROTIRI_01
 
-CLIENT_BLUE_FA18C_AKROTIRI_01
-CLIENT_BLUE_FA18C_AKROTIRI_02
-CLIENT_BLUE_F16C_AKROTIRI_01
-CLIENT_BLUE_F16C_AKROTIRI_02
-CLIENT_BLUE_F15E_AKROTIRI_01
-CLIENT_BLUE_F15E_AKROTIRI_02
-CLIENT_BLUE_F14B_AKROTIRI_01
-CLIENT_BLUE_F14B_AKROTIRI_02
-CLIENT_BLUE_UH1H_AKROTIRI_01
-CLIENT_BLUE_MI8_AKROTIRI_01
+Die genaue Client-Slot-Dokumentation wird später unter folgendem Pfad angelegt:
 
----
-
-## Spätere Spieler-Slots
-
-A-10C II und AH-64D werden später sinnvoll, wenn ein FOB oder eine Festlandbasis aktiv ist.
-
-Beispiele:
-
-CLIENT_BLUE_A10C_FOB_ALPHA_01
-CLIENT_BLUE_AH64D_FOB_ALPHA_01
-CLIENT_BLUE_UH1H_FOB_ALPHA_01
-CLIENT_BLUE_MI8_FOB_ALPHA_01
+    mission_editor/client_slots.md
 
 ---
 
-## Skill-Einstellung
+## Koalitionen
 
-Für Spielerflugzeuge:
+Die erste Kampagne nutzt folgende Grundlogik:
 
-Skill = Client
+Blau:
 
-Für KI-Templates:
+- USA
+- Großbritannien
+- mögliche NATO-/Partnerstaaten
+- Start auf Zypern / Akrotiri
 
-Skill nach Bedarf
+Rot:
 
-Wichtig:
+- Syrien
+- Russland
+- mögliche verbündete rote Kräfte
+- Startkontrolle über das syrische Festland
 
-Template-Gruppen dürfen nicht aktiv zum Missionsstart erscheinen.
+Die genaue Koalitionsverteilung wird später in der DEV-Mission festgelegt und dokumentiert.
+
+---
+
+## Akrotiri
+
+Akrotiri ist die erste blaue Hauptbasis.
+
+Geplante Rolle:
+
+- Startbasis für Spieler
+- erster Logistikhub
+- Ausgangspunkt für Luftoperationen
+- Ausgangspunkt für CTLD-Logistik
+- sichere blaue Rückfallbasis
+- späterer HQ-Knoten im Kampagnenzustand
+
+Akrotiri soll im Mission Editor sauber vorbereitet werden.
+
+Die strategische Auswertung erfolgt später durch Lua.
+
+---
+
+## Syrisches Festland
+
+Das syrische Festland ist zu Kampagnenbeginn rot kontrolliert.
+
+Im Mission Editor soll diese Ausgangslage sichtbar vorbereitet werden.
+
+Die eigentliche strategische Kontrolle wird später durch Theater Command DCS verwaltet.
+
+Ziel:
+
+Nicht jede Basis manuell mit komplexen Triggern verwalten.
+
+Stattdessen:
+
+- Basen automatisch erkennen
+- Besitzstatus per Lua führen
+- Capture-Zonen virtuell erzeugen
+- Kampagnenfortschritt dynamisch bewerten
 
 ---
 
 ## Template-Gruppen
 
-Template-Gruppen sind vorbereitete Gruppen, die später per Lua gespawnt werden.
+Template-Gruppen werden später im Mission Editor mit Late Activation angelegt.
 
-Alle Template-Gruppen sollen:
+Geplante Nutzung:
 
-- Late Activation aktiviert haben
-- Hidden on Map aktiviert haben
-- klar benannt sein
-- nicht direkt in die laufende Mission eingreifen
-
----
-
-## Erste rote Templates
-
-Empfohlene erste rote Template-Gruppen:
-
-TPL_RED_CAP_MIG29_PAIR_01
-TPL_RED_GCI_MIG29_PAIR_01
-TPL_RED_INTERCEPT_MIG29_PAIR_01
-TPL_RED_CAS_SU25_PAIR_01
-TPL_RED_STRIKE_SU24_PAIR_01
-TPL_RED_SAM_SA6_SITE_01
-TPL_RED_SHORAD_SA8_01
-TPL_RED_GARRISON_INF_LIGHT_01
-TPL_RED_GARRISON_INF_HEAVY_01
-TPL_RED_ARMOR_PLATOON_T72_01
-TPL_RED_SUPPLY_CONVOY_01
-
----
-
-## Erste blaue Templates
-
-Empfohlene erste blaue Template-Gruppen:
-
-TPL_BLUE_CAP_FA18C_PAIR_01
-TPL_BLUE_CAP_F16C_PAIR_01
-TPL_BLUE_SEAD_FA18C_PAIR_01
-TPL_BLUE_SEAD_F16C_PAIR_01
-TPL_BLUE_STRIKE_F15E_PAIR_01
-TPL_BLUE_CAS_A10C_PAIR_01
-TPL_BLUE_ENGINEER_TEAM_01
-TPL_BLUE_INF_SQUAD_01
-TPL_BLUE_SUPPLY_CONVOY_01
-
----
-
-## Trigger für Frameworks
-
-Die Frameworks werden im Mission Editor über Trigger geladen.
-
-Empfohlene Reihenfolge:
-
-TIME MORE 1 -> DO SCRIPT FILE -> vendor/mist/mist.lua
-TIME MORE 2 -> DO SCRIPT FILE -> vendor/moose/Moose.lua
-TIME MORE 3 -> DO SCRIPT FILE -> vendor/ctld/CTLD-i18n.lua
-TIME MORE 4 -> DO SCRIPT FILE -> vendor/ctld/CTLD.lua
-TIME MORE 5 -> DO SCRIPT FILE -> vendor/skynet-iads/SkynetIADS.lua
-TIME MORE 7 -> DO SCRIPT FILE -> src/loader.lua
+- CAP-Templates
+- GCI-Templates
+- SEAD-/DEAD-Zielgruppen
+- Bodentruppen
+- Logistikobjekte
+- IADS-Komponenten
+- statische Ziele
+- Testgruppen
 
 Wichtig:
 
-MIST wird vor CTLD geladen.
+Template-Gruppen sind nur Vorlagen.
 
-Der eigene Loader wird erst nach den externen Frameworks geladen.
+Die dynamische Logik entscheidet später, wann und warum sie genutzt werden.
+
+Die Dokumentation erfolgt später unter:
+
+    mission_editor/template_groups.md
 
 ---
 
 ## CTLD-Zonen
 
-Für die erste Version werden nur wenige CTLD-Zonen im Mission Editor angelegt.
+Für CTLD werden später erste Pickup- und Dropoff-Zonen benötigt.
 
-Startzonen auf Akrotiri:
+Geplanter Start:
 
-ZONE_BLUE_AKROTIRI_CTLD_PICKUP
-ZONE_BLUE_AKROTIRI_CTLD_TROOP_PICKUP
-ZONE_BLUE_AKROTIRI_CTLD_SUPPLY_PICKUP
-ZONE_BLUE_AKROTIRI_CTLD_VEHICLE_PICKUP
+    Akrotiri
 
-Erste mögliche Drop-Zonen:
+Mögliche erste Zonen:
 
-ZONE_BLUE_BEACHHEAD_ALPHA_DROP
-ZONE_BLUE_FOB_ALPHA_SITE
+    CTLD_PICKUP_BLUE_AKROTIRI_01
+    CTLD_PICKUP_BLUE_AKROTIRI_02
+    CTLD_DROPOFF_BLUE_COASTAL_FOB_01
 
-Nicht jede Airbase bekommt eine eigene CTLD-Zone.
+Die genaue Benennung muss mit `NAMING_CONVENTIONS.md` abgestimmt werden.
 
-Später entscheidet Theater Command per Lua, welche Basis als Logistikhub aktiv ist.
+Die spätere Dokumentation erfolgt unter:
+
+    mission_editor/ctld_start_zones.md
 
 ---
 
 ## Statische Ziele
 
-Statische Ziele werden nur dann im Mission Editor angelegt, wenn sie sichtbar, angreifbar und zerstörbar sein sollen.
+Statische Ziele werden später als Kampagnenobjekte vorbereitet.
 
-Erste mögliche Ziele:
+Mögliche Zielarten:
 
-STATIC_RED_LATAKIA_RADAR_01
-STATIC_RED_LATAKIA_AMMO_DEPOT_01
-STATIC_RED_LATAKIA_FUEL_DEPOT_01
-STATIC_RED_TARTUS_NAVAL_DEPOT_01
-STATIC_RED_TARTUS_RADAR_01
-STATIC_RED_KHMEIMIM_COMMAND_POST_01
-STATIC_RED_KHMEIMIM_FUEL_DEPOT_01
-STATIC_RED_KHMEIMIM_AMMO_DEPOT_01
+- Radarstellungen
+- SAM-Stellungen
+- Depots
+- Munitionslager
+- Treibstofflager
+- Hafenanlagen
+- Kommandoposten
+- Kommunikationsanlagen
 
-Diese Ziele können später durch Lua mit strategischer Bedeutung versehen werden.
+Diese Ziele sollen möglichst sinnvoll benannt werden.
 
----
+Später kann Theater Command DCS diese Ziele kampagnenlogisch auswerten.
 
-## Airbases
+Die Dokumentation erfolgt später unter:
 
-Airbases werden nicht manuell als Triggerzonen angelegt.
-
-Das spätere Lua-System soll:
-
-- Airbases automatisch erkennen
-- Airbases registrieren
-- virtuelle Capture-Zonen erzeugen
-- virtuelle Logistik-Zonen erzeugen
-- virtuelle Defense-Zonen erzeugen
-- Besitzstände verwalten
-- Ressourcen verwalten
+    mission_editor/static_targets.md
 
 ---
 
-## Native DCS Auto Capture
+## Mission Editor und Airbases
 
-Die native DCS-Airbase-Auto-Capture-Logik soll später möglichst deaktiviert oder kontrolliert werden.
+Airbases sollen später möglichst automatisch durch Lua erkannt werden.
 
-Theater Command soll selbst entscheiden, wann eine Basis den Besitzer wechselt.
+Der Mission Editor soll nicht für jede Airbase manuelle Triggerzonen enthalten.
 
-Ziel:
+Geplantes Vorgehen:
 
-DCS stellt die Airbase bereit.
+1. DCS-Airbases über Lua erkennen
+2. Airbase-Daten in Theater-Command-Struktur überführen
+3. wichtige Sonderfälle per Override behandeln
+4. virtuelle Zonen erzeugen
+5. Besitzstatus durch Theater Command verwalten
 
-Theater Command verwaltet den strategischen Besitz.
-
----
-
-## Wetter
-
-Für die erste Entwicklungsphase soll das Wetter einfach bleiben.
-
-Empfehlung:
-
-- klare Sicht
-- wenig Wind
-- keine schweren Wolken
-- keine starken Turbulenzen
-- keine komplexen Nachtbedingungen
-
-Komplexes Wetter kommt erst später.
+Dadurch bleibt der Mission Editor schlanker.
 
 ---
 
-## Startzeit
+## Mission Editor und Persistenz
 
-Empfohlene Startzeit:
+Persistenz wird nicht im Mission Editor gelöst.
 
-08:00 lokal
+Persistenz wird später unter `src/campaign/` und `save/` vorbereitet.
 
-Grund:
+Geplante Dateien:
 
-- gute Sicht
-- einfache Tests
-- keine Nachtflugprobleme
-- gute Debug-Bedingungen
+    src/campaign/tc_persistence_system.lua
+    save/README.md
+    save/example_state.lua
 
----
+Der Mission Editor liefert nur den Startzustand.
 
-## Carrier optional
-
-Eine Carrier-Gruppe ist für die erste Version optional.
-
-Wenn sie eingebaut wird, sollten mögliche Slots sein:
-
-CLIENT_BLUE_FA18C_CARRIER_01
-CLIENT_BLUE_FA18C_CARRIER_02
-CLIENT_BLUE_F14B_CARRIER_01
-CLIENT_BLUE_F14B_CARRIER_02
-
-Für die erste Entwicklungsphase reicht Akrotiri als Startbasis aus.
+Theater Command DCS verwaltet später den gespeicherten Zustand.
 
 ---
 
-## Erste Testziele
+## Mission Editor und Debug
 
-Für frühe Tests reichen wenige Ziele.
+Debug-Funktionen sollen später über Lua und F10-Menüs erreichbar sein.
 
-Beispiele:
+Mögliche Debug-Funktionen:
 
-- eine rote CAP-Template-Gruppe
-- eine rote SAM-Template-Gruppe
-- ein statisches Radar
-- ein statisches Fuel Depot
-- eine CTLD-Pickup-Zone
-- ein Heli-Client-Slot
-- ein Jet-Client-Slot
+- erkannte Airbases anzeigen
+- virtuelle Zonen anzeigen
+- Kampagnenstatus anzeigen
+- Logistikstatus anzeigen
+- IADS-Status anzeigen
+- aktive Missionen anzeigen
+- Framework-Ladestatus anzeigen
 
-Nicht direkt die ganze Map füllen.
-
----
-
-## Test nach dem Aufbau
-
-Nach dem ersten Mission-Editor-Aufbau prüfen:
-
-- Mission startet ohne Fehler
-- Spieler kann auf Akrotiri spawnen
-- Slots sind sichtbar
-- Template-Gruppen sind nicht aktiv
-- Trigger werden ausgelöst
-- Frameworks laden
-- CTLD-Menü erscheint bei Heli-Slots
-- loader.lua wird geladen
-- keine Fehlermeldungen in dcs.log
+Der Mission Editor selbst soll nicht mit Debug-Triggern überladen werden.
 
 ---
 
-## Entwicklungsregel
+## Test nach Framework-Ladung
 
-Immer nur so viel im Mission Editor bauen, wie für den nächsten Test notwendig ist.
+Nach dem ersten Mission-Editor-Aufbau müssen folgende Punkte geprüft werden:
 
-Nicht die ganze Kampagne im Editor vorbereiten.
-
-Erst eine kleine stabile Testbasis.
-
-Dann Schritt für Schritt erweitern.
+- Mission startet ohne Lua-Fehler
+- MIST lädt korrekt
+- MOOSE lädt korrekt
+- CTLD-i18n lädt korrekt
+- CTLD lädt korrekt
+- Skynet IADS lädt korrekt
+- Lade-Reihenfolge stimmt
+- `dcs.log` enthält keine Framework-Fehler
+- spätere Datei `src/loader.lua` wird korrekt geladen
+- erste Theater-Command-Debugausgabe erscheint im Log
 
 ---
 
-## Ziel
+## Nicht jetzt umsetzen
 
-Der Mission Editor soll sauber, übersichtlich und wartbar bleiben.
+Aktuell noch nicht im Mission Editor bauen:
 
-Die eigentliche Stärke von Theater Command DCS entsteht später durch die Lua-Systeme.
+- komplette Frontlinie
+- alle syrischen Airbases manuell als Triggerzonen
+- komplexe Basen-Capture-Trigger
+- komplette IADS-Struktur
+- vollständige rote Großkampagne
+- komplette KI-Logik
+- Persistenz
+- Release-Mission
 
-Der Mission Editor bleibt die Bühne.
+Diese Dinge werden schrittweise vorbereitet.
 
-Lua führt die Kampagne.
+---
+
+## Aktueller nächster Schritt
+
+Nach Abschluss der aktuellen Dokumentationsaktualisierung folgt zunächst die weitere `src/`-Grundstruktur.
+
+Nächster technischer Fokus:
+
+    src-Unterordner und README-Dateien erstellen
+
+Danach:
+
+    src/loader.lua
+    src/main.lua
+    src/core/tc_config.lua
+    src/core/tc_logger.lua
+    src/core/tc_state.lua
+
+Die eigentliche Mission-Editor-DEV-Mission wird erst begonnen, wenn die erste minimale Lua-Struktur vorhanden ist.
