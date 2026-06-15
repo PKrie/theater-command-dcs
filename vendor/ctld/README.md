@@ -1,10 +1,33 @@
 # CTLD Framework
 
-Dieser Ordner ist für das externe Framework CTLD vorgesehen.
+Dieser Ordner enthält das externe Framework **CTLD** für Theater Command DCS.
 
 CTLD ist eine externe Bibliothek und gehört deshalb in den Ordner `vendor/`.
 
 Theater Command DCS verändert CTLD nicht. Eigene Projektlogik wird nicht in diesem Ordner geschrieben, sondern unter `src/`.
+
+---
+
+## Aktueller Inhalt dieses Ordners
+
+Dieser Ordner enthält aktuell:
+
+    vendor/ctld/README.md
+    vendor/ctld/CTLD-i18n.lua
+    vendor/ctld/CTLD.lua
+
+Bedeutung:
+
+- `CTLD-i18n.lua` enthält die Internationalisierungs- und Übersetzungsstruktur für CTLD.
+- `CTLD.lua` ist die eigentliche CTLD-Framework-Datei.
+- `README.md` dokumentiert die Nutzung von CTLD innerhalb von Theater Command DCS.
+
+Nicht hinterlegt sind aktuell:
+
+    vendor/ctld/beacon.ogg
+    vendor/ctld/beaconsilent.ogg
+
+Diese Sounddateien werden nur benötigt, wenn CTLD-Radio-Beacons aktiv genutzt werden sollen.
 
 ---
 
@@ -30,22 +53,67 @@ Theater Command DCS bleibt das eigentliche Kampagnensystem.
 
 ---
 
-## Erwartete Dateien
+## Framework-Dateien
 
-Die späteren CTLD-Hauptdateien sollen hier abgelegt werden:
+Die aktiven CTLD-Dateien liegen unter:
 
     vendor/ctld/CTLD-i18n.lua
     vendor/ctld/CTLD.lua
 
-Diese Dateien werden später aus der offiziellen CTLD-Quelle ergänzt.
+Diese Dateinamen bleiben im Projekt bewusst stabil.
 
-Aktuell wird in diesem Schritt nur die Ordnerdokumentation vorbereitet.
+Wenn später eine neue CTLD-Version eingespielt wird, werden die Dateien wieder unter denselben Pfaden abgelegt.
+
+Die genaue Version wird in dieser README dokumentiert.
+
+---
+
+## Versionierung
+
+Aktueller Stand:
+
+    CTLD version: 1.6.1
+    File used by project: vendor/ctld/CTLD.lua
+    I18N file used by project: vendor/ctld/CTLD-i18n.lua
+    Source: ciribob/DCS-CTLD
+    Source branch/release line: master / v1.6.1
+    Date added: 2026-06-15
+    Local changes: none
+
+Hinweis:
+
+CTLD wird im Projekt unverändert als externes Framework geführt.
+
+Eigene Theater-Command-Logistiklogik wird nicht in `CTLD.lua` geschrieben.
+
+---
+
+## MIST-Abhängigkeit
+
+CTLD benötigt MIST.
+
+Die offizielle CTLD-Dokumentation weist darauf hin, dass MIST vor CTLD geladen werden muss.
+
+Außerdem weist `CTLD.lua` darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
+
+Theater Command DCS verwendet deshalb aktuell bewusst die CTLD-kompatible MIST-Datei unter:
+
+    vendor/mist/mist.lua
+
+Aktive Kombination:
+
+    MIST: 4.5.128-DYNSLOTS-02
+    CTLD: 1.6.1
+
+Diese Kombination soll zunächst beibehalten werden.
+
+Bei späteren CTLD-Updates muss geprüft werden, ob auch die zugehörige MIST-Version aktualisiert werden muss.
 
 ---
 
 ## Wichtige Projektregel
 
-Dateien in `vendor/ctld/` werden nicht verändert.
+Dateien in `vendor/ctld/` werden grundsätzlich nicht verändert.
 
 Wenn Theater Command DCS eigenes Verhalten benötigt, wird dieses Verhalten in eigenen Lua-Dateien unter `src/` programmiert.
 
@@ -137,6 +205,8 @@ Es wird keine zentrale Sammeldatei nur für CTLD erstellt.
 
 In der ersten Kampagne startet Blau auf Zypern bei Akrotiri.
 
+Das syrische Festland ist zu Kampagnenbeginn rot kontrolliert.
+
 CTLD soll später genutzt werden, um Akrotiri als ersten blauen Logistikhub aufzubauen.
 
 Mögliche spätere Aufgaben:
@@ -148,24 +218,29 @@ Mögliche spätere Aufgaben:
 - logistische Voraussetzung für neue Missionen
 - Unterstützung der schrittweisen Rückeroberung des syrischen Festlands
 
-Das syrische Festland ist zu Kampagnenbeginn rot kontrolliert.
-
-Logistik soll deshalb ein wichtiger Teil des Fortschritts von Blau werden.
+Logistik soll ein wichtiger Teil des Fortschritts von Blau werden.
 
 ---
 
-## Versionierung
+## Sounddateien für Radio-Beacons
 
-Beim späteren Einfügen von CTLD sollen folgende Informationen ergänzt werden:
+CTLD kann Radio-Beacons nutzen.
 
-    CTLD version: TBD
-    Source: TBD
-    Date added: TBD
-    Local changes: none
+Dafür werden normalerweise folgende Sounddateien benötigt:
 
-Lokale Änderungen an CTLD sind nicht vorgesehen.
+    beacon.ogg
+    beaconsilent.ogg
 
-Wenn später eine neue CTLD-Version benötigt wird, werden die Framework-Dateien vollständig ersetzt und die Version hier dokumentiert.
+Diese Dateien sind aktuell nicht im Projekt hinterlegt.
+
+Das ist für den jetzigen Stand in Ordnung, solange CTLD-Radio-Beacons noch nicht aktiv genutzt werden.
+
+Wenn Radio-Beacons später genutzt werden sollen, müssen die Sounddateien separat ergänzt und im Mission Editor korrekt eingebunden werden.
+
+Geplante Zielpfade wären dann:
+
+    vendor/ctld/beacon.ogg
+    vendor/ctld/beaconsilent.ogg
 
 ---
 
@@ -181,8 +256,30 @@ Nach dem Einfügen von `CTLD-i18n.lua` und `CTLD.lua` soll geprüft werden:
 - CTLD lädt vor Theater Command
 - CTLD-Menüs erscheinen für geeignete Helikopter
 - einfache Pickup-Zonen können erkannt werden
+- einfache Dropoff-Zonen können erkannt werden
+- CTLD Dynamic Spawns funktionieren mit der aktiven MIST-Version
 - `dcs.log` enthält keine CTLD-bezogenen Fehler
 - Theater Command Loader startet erst nach den externen Frameworks
+
+---
+
+## Aktualisierung bei neuer CTLD-Version
+
+Wenn später eine neue CTLD-Version eingespielt wird:
+
+1. offizielle CTLD-Quelle prüfen
+2. `vendor/ctld/CTLD-i18n.lua` ersetzen
+3. `vendor/ctld/CTLD.lua` ersetzen
+4. prüfen, ob CTLD eine eigene MIST-Version mitliefert
+5. prüfen, ob `vendor/mist/mist.lua` ebenfalls aktualisiert werden muss
+6. Version in dieser README aktualisieren
+7. `Local changes: none` nur beibehalten, wenn die Dateien wirklich unverändert übernommen wurden
+8. Missionstest durchführen
+
+Die Dateinamen bleiben weiterhin:
+
+    vendor/ctld/CTLD-i18n.lua
+    vendor/ctld/CTLD.lua
 
 ---
 
