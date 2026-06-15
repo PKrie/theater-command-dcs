@@ -2,621 +2,651 @@
 
 Diese Datei beschreibt das Kampagnendesign der ersten Theater-Command-DCS-Kampagne.
 
-Arbeitstitel:
+Die erste Kampagne trägt den Arbeitstitel:
 
-Operation Levant Reclamation
+**Operation Levant Reclamation**
+
+Die Kampagne wird auf der **Syria Map** aufgebaut.
+
+Blau startet auf **Zypern / Akrotiri**.
+
+Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
 
 ---
 
-## Grundidee
+## Grundidee der Kampagne
 
-Operation Levant Reclamation ist eine dynamische Kampagne auf der Syria Map.
+Operation Levant Reclamation soll keine lineare Einzelmission werden.
 
-Die blaue Koalition startet auf Zypern und muss das syrische Festland schrittweise zurückerobern.
+Ziel ist eine dynamische Kampagne, in der sich der Zustand des Einsatzraums schrittweise verändert.
 
-Die rote Koalition kontrolliert zu Beginn der Kampagne das gesamte syrische Festland.
+Spieleraktionen sollen später Auswirkungen haben auf:
 
-Die Kampagne soll nicht aus einzelnen isolierten Missionen bestehen, sondern aus einem fortlaufenden Kriegsszenario mit persistenter Lageentwicklung.
+- Basenbesitz
+- Luftverteidigung
+- Logistik
+- Missionsangebot
+- KI-Reaktionen
+- Frontentwicklung
+- Persistenz
+- strategische Kontrolle
+
+Die Kampagne soll nicht nur aus einzelnen vordefinierten Missionen bestehen.
+
+Sie soll aus einem Kampagnenzustand heraus Missionen erzeugen.
 
 ---
 
 ## Ausgangslage
 
-Die Region Syrien befindet sich zu Beginn der Kampagne vollständig unter Kontrolle der roten Koalition.
+Blau startet auf:
 
-Die rote Koalition verfügt über:
-
-- Flugplätze
-- Radarstellungen
-- SAM-Stellungen
-- IADS-Strukturen
-- Nachschubdepots
-- Treibstoffdepots
-- Munitionsdepots
-- Kommandoposten
-- Bodentruppen
-- Küstenverteidigung
-- Nachschubrouten
-
-Die blaue Koalition hat zunächst keinen festen Stützpunkt auf dem syrischen Festland.
-
-Die wichtigste blaue Startbasis ist:
-
-Akrotiri
-
----
-
-## Blaue Ausgangslage
-
-Blau startet mit einer starken, aber begrenzten Operationsbasis auf Zypern.
-
-Akrotiri dient als:
-
-- Luftwaffenbasis
-- Logistikhub
-- Ausgangspunkt für Strike-Missionen
-- Ausgangspunkt für SEAD/DEAD
-- Ausgangspunkt für CAP
-- Ausgangspunkt für Transport- und CTLD-Missionen
-- strategische Rückfallebene
-
-Blau hat zu Beginn keine gesicherten FOBs auf dem Festland.
-
----
-
-## Rote Ausgangslage
+    Akrotiri / Zypern
 
 Rot kontrolliert zu Beginn:
 
-- Syrian Coast
-- Latakia
-- Tartus
-- Khmeimim
-- Hama
-- Homs
-- Damascus
-- zentrale Nachschubrouten
-- militärische Infrastruktur
-- IADS-Netzwerke
-- Flugplätze auf dem Festland
+    syrisches Festland vollständig
 
-Rot ist zu Beginn defensiv stark, aber langfristig durch gezielte Angriffe schwächbar.
+Die erste operative Richtung ist:
 
----
+    syrische Küste
 
-## Strategisches Ziel Blau
+Die erste strategische Herausforderung für Blau ist der Aufbau eines sicheren Zugangs zum syrischen Festland.
 
-Die blaue Koalition soll das syrische Festland nicht in einer einzelnen Mission erobern.
+Dafür müssen mehrere Dinge zusammenspielen:
 
-Der Fortschritt erfolgt in Phasen.
-
-Strategische Hauptziele:
-
-- Luftüberlegenheit herstellen
-- rote CAP und GCI reduzieren
-- IADS aufbrechen
-- Küstenregion schwächen
-- Brückenkopf an der Küste ermöglichen
-- FOB aufbauen
-- Logistikkette etablieren
-- erste Festlandbasis sichern
-- weitere Operationen ins Landesinnere ermöglichen
-- rote Infrastruktur dauerhaft schwächen
-- Kampagnenfortschritt persistent speichern
+- Luftüberlegenheit
+- Schwächung der roten Luftverteidigung
+- Aufbau einer Logistikverbindung
+- Sicherung eines Küsten-Brückenkopfes
+- spätere Eroberung und Stabilisierung von Basen
 
 ---
 
-## Strategisches Ziel Rot
+## Projektprinzip
 
-Die rote Koalition soll nicht nur passiv Zielscheibe sein.
+Das Kampagnendesign folgt dem technischen Projektprinzip:
 
-Rot soll:
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis
 
-- CAP einsetzen
-- GCI starten
-- SAM-Systeme betreiben
-- Konvois schicken
-- Nachschubrouten nutzen
-- verlorene Gebiete zurückerobern wollen
-- auf blaue Angriffe reagieren
-- beschädigte Infrastruktur teilweise wiederherstellen
-- bedrohte Regionen verstärken
+Der Mission Editor stellt die Karte, Slots, Templates und Startbedingungen bereit.
 
-Rot soll dadurch wie ein aktiver Gegner wirken.
+Lua steuert später den dynamischen Kampagnenverlauf.
+
+GitHub hält fest, welche Regeln, Systeme und Entscheidungen gelten.
+
+---
+
+## Aktueller Projektstand
+
+Stand:
+
+    2026-06-15
+
+Aktuell vorhanden:
+
+- zentrale Projektdateien
+- `docs/`-Grundblock
+- `vendor/`-Frameworks
+- `src/README.md`
+
+Aktuell hinterlegte Frameworks:
+
+| Framework | Projektpfad | Stand |
+|---|---|---|
+| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
+| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
+| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
+
+Noch nicht vorhanden:
+
+- eigene Lua-Core-Dateien
+- `src/loader.lua`
+- `src/main.lua`
+- Airbase-System
+- Capture-System
+- Logistiksystem
+- Missionsgenerator
+- AI Director
+- IADS-Kampagnenlogik
+- Persistenz
+- DEV-Mission im DCS Mission Editor
+
+---
+
+## Strategische Ausgangssituation
+
+Die blaue Seite verfügt zu Beginn über eine sichere Basis auf Zypern.
+
+Diese Basis ist:
+
+    Akrotiri
+
+Akrotiri dient zunächst als:
+
+- Hauptbasis
+- Luftoperationsbasis
+- erster Logistikhub
+- Ausgangspunkt für CTLD-Logistik
+- sicherer Rückzugsraum
+- späterer HQ-Knoten im Kampagnenzustand
+
+Die rote Seite kontrolliert zu Beginn das syrische Festland.
+
+Rot verfügt perspektivisch über:
+
+- Airbases
+- IADS
+- SAM-Stellungen
+- Radarstellungen
+- Bodentruppen
+- Logistikknoten
+- statische Ziele
+- mögliche Gegenangriffskräfte
+
+---
+
+## Kampagnenziel
+
+Langfristiges Ziel von Blau:
+
+    schrittweise Rückeroberung und Stabilisierung relevanter Bereiche des syrischen Festlands
+
+Erstes operatives Ziel:
+
+    rote Luftverteidigung an der Küste schwächen
+
+Erstes logistisches Ziel:
+
+    Brückenkopf oder FOB an der syrischen Küste aufbauen
+
+Erstes strategisches Ziel:
+
+    sichere Grundlage für weitere Operationen auf dem Festland schaffen
 
 ---
 
 ## Kampagnenphasen
 
-Die Kampagne wird in mehrere Phasen unterteilt.
+Die Kampagne soll später in dynamische Phasen gegliedert werden.
 
-Diese Phasen müssen später nicht starr sein, helfen aber bei Planung und Entwicklung.
+Diese Phasen sind zunächst konzeptionell.
 
----
-
-## Phase 0 — Aufbau und Initialisierung
-
-Ziel:
-
-Die technische Grundlage wird aufgebaut.
-
-Inhalt:
-
-- GitHub-Struktur
-- Dokumentation
-- Mission-Editor-Grundlage
-- Framework-Loader
-- Lua-Core
-- Airbase-Scanner
-- Debug-Ausgaben
-
-Diese Phase ist noch keine spielbare Kampagne.
+Die konkrete Umsetzung erfolgt später über Lua.
 
 ---
 
-## Phase 1 — Air Superiority Preparation
+### Phase 1 — Initial Air Operations
 
-Ziel:
+Blau startet ausschließlich von Akrotiri.
 
-Blau muss die Operationsfreiheit über dem östlichen Mittelmeer und vor der syrischen Küste herstellen.
+Schwerpunkte:
 
-Typische Missionen:
-
+- Aufklärung
 - CAP
-- Fighter Sweep
-- Intercept
 - Escort
-- AWACS-Schutz
-- Tanker-Schutz
+- erste SEAD-/DEAD-Missionen
+- Angriffe auf Radarstellungen
+- Schwächung der Küsten-IADS
+- Vorbereitung eines späteren Brückenkopfes
 
-Rote Reaktion:
+Mögliche Spielerrollen:
 
-- CAP
-- GCI
-- Intercept
-- begrenzte SAM-Bedrohung nahe der Küste
-
-Erfolg wirkt sich aus auf:
-
-- geringere rote Luftaktivität
-- sicherere Strike-Pakete
-- weniger Risiko für Transportflüge
-- bessere Voraussetzungen für SEAD/DEAD
-
----
-
-## Phase 2 — IADS Suppression
+- F/A-18C
+- F-16C
+- F-14B
+- F-15E
 
 Ziel:
 
-Das rote IADS an der Küste wird geschwächt.
+    sichere Luftoperationsfenster über der syrischen Küste schaffen
 
-Typische Missionen:
+---
+
+### Phase 2 — Coastal Suppression
+
+Die rote Küstenverteidigung wird gezielt geschwächt.
+
+Schwerpunkte:
 
 - SEAD
 - DEAD
-- Radar Strike
-- Command Post Strike
-- SAM Site Attack
-- ELINT / Recon
-
-Wichtige Zieltypen:
-
-- Radar
-- SAM-Stellungen
-- Early Warning Sites
-- Command Posts
-- Fuel Depots
-- Ammo Depots
-
-Erfolg wirkt sich aus auf:
-
-- schwächere SAM-Abdeckung
-- weniger koordinierte rote Luftverteidigung
-- größere Operationsfreiheit für Blau
-- mögliche Öffnung eines Beachhead-Korridors
-
----
-
-## Phase 3 — Coastal Strike Campaign
+- Strike gegen SAM-Komponenten
+- Strike gegen Radarstellungen
+- CAP zur Absicherung von Strike-Paketen
+- erste Logistikvorbereitung
 
 Ziel:
 
-Die syrische Küstenregion wird operativ geschwächt.
-
-Typische Missionen:
-
-- Strike
-- Runway Attack
-- Depot Attack
-- Naval Depot Attack
-- Infrastructure Strike
-- Supply Route Interdiction
-
-Wichtige Räume:
-
-- Latakia
-- Tartus
-- Khmeimim
-- Küstenstraße
-- Hafenbereiche
-- Depots
-
-Erfolg wirkt sich aus auf:
-
-- reduzierte rote Versorgung
-- eingeschränkte rote Flugoperationen
-- schwächere Gegenangriffe
-- Vorbereitung eines Brückenkopfes
+    rote Luftverteidigung soweit schwächen, dass Helikopter- und Logistikoperationen möglich werden
 
 ---
 
-## Phase 4 — Beachhead Establishment
+### Phase 3 — Logistics Entry
+
+Blau beginnt mit Logistikoperationen Richtung syrischer Küste.
+
+Schwerpunkte:
+
+- CTLD-Kistenflüge
+- Truppentransport
+- Versorgung vorbereiteter Dropoff-Zonen
+- Aufbau eines ersten FOB
+- Sicherung von Helikopterrouten
+- Schutz durch CAP und SEAD
+
+Mögliche Spielerrollen:
+
+- UH-1H
+- Mi-8
+- F/A-18C
+- F-16C
+- F-14B
+- F-15E
 
 Ziel:
 
-Blau errichtet einen ersten Brückenkopf an der syrischen Küste.
-
-Typische Missionen:
-
-- Transport
-- CTLD Supply
-- Troop Insertion
-- CAS
-- Armed Recon
-- Helicopter Logistics
-- Convoy Escort
-
-Benötigte Voraussetzungen:
-
-- reduzierte SAM-Bedrohung
-- reduzierte rote Luftaktivität
-- gesicherter Luftraum
-- ausreichend Supply
-- ausreichend Transportkapazität
-
-Erfolg wirkt sich aus auf:
-
-- erste blaue Präsenz auf dem Festland
-- Möglichkeit zum FOB-Aufbau
-- neue Missionstypen
-- kürzere Einsatzwege
-- stärkere Bodenkampagne
+    ersten blauen Brückenkopf auf dem Festland kampagnenlogisch vorbereiten
 
 ---
 
-## Phase 5 — FOB Aufbau
+### Phase 4 — First Capture Operations
+
+Blau beginnt mit ersten Capture-Operationen.
+
+Schwerpunkte:
+
+- Sicherung von Capture-Zonen
+- Unterstützung durch CAS
+- Luftnahunterstützung für Bodentruppen
+- Logistiklieferungen
+- Eroberung oder Neutralisierung erster Schlüsselräume
+- Stabilisierung des Brückenkopfes
+
+Mögliche spätere Spielerrollen:
+
+- A-10C II
+- AH-64D
+- UH-1H
+- Mi-8
+- F/A-18C
+- F-16C
 
 Ziel:
 
-Ein Forward Operating Base wird aufgebaut und versorgt.
-
-FOB benötigt später mögliche Ressourcen:
-
-- supply
-- fuel
-- ammo
-- manpower
-- repair
-- medical
-- command
-
-Typische Missionen:
-
-- CTLD Cargo
-- Troop Transport
-- Engineer Delivery
-- Convoy Escort
-- CAS
-- FOB Defense
-- Logistics Support
-
-Erfolg wirkt sich aus auf:
-
-- neue Heli-Slots
-- spätere A-10C-Operationen
-- spätere AH-64D-Operationen
-- bessere Versorgung
-- lokale Reparaturmöglichkeiten
-- stärkere Frontentwicklung
+    dauerhafte blaue Präsenz auf dem syrischen Festland herstellen
 
 ---
 
-## Phase 6 — Inland Offensive
+### Phase 5 — Expansion Inland
+
+Nach erfolgreichem Brückenkopf kann Blau weiter ins Landesinnere vorstoßen.
+
+Schwerpunkte:
+
+- weitere Airbases bedrohen oder erobern
+- rote Logistik schwächen
+- IADS-Lücken ausnutzen
+- FOBs ausbauen
+- neue Logistikhubs freischalten
+- KI-Gegenangriffe abwehren
 
 Ziel:
 
-Blau stößt vom Küstenraum ins Landesinnere vor.
-
-Typische Missionen:
-
-- CAS
-- Interdiction
-- Strike
-- SEAD
-- Convoy Attack
-- Armed Recon
-- Ground Support
-- Airbase Capture Support
-
-Wichtige spätere Räume:
-
-- Hama
-- Homs
-- Damascus Sector
-- zentrale Nachschubrouten
-- weitere Flugplätze
-
-Erfolg wirkt sich aus auf:
-
-- neue Frontlinien
-- eroberbare Basen
-- neue Logistikknoten
-- neue Missionsräume
-- stärkere rote Gegenreaktionen
-
----
-
-## Phase 7 — Red Counteroffensive
-
-Ziel:
-
-Rot reagiert aktiv auf blaue Fortschritte.
-
-Mögliche rote Aktionen:
-
-- Gegenangriff auf Beachhead
-- Angriff auf FOB
-- Konvoi zu bedrohten Basen
-- verstärkte CAP
-- GCI-Reaktionen
-- SAM-Wiederaufbau
-- Angriff auf blaue Logistik
-- Artillerie oder Raketenangriffe
-
-Rot soll nicht warten, bis der Spieler alles zerstört.
-
-Rot soll versuchen, den Kampagnenfortschritt zurückzudrängen.
-
----
-
-## Phase 8 — Theater Expansion
-
-Ziel:
-
-Die Kampagne wird über die erste Küstenregion hinaus erweitert.
-
-Mögliche neue Operationsräume:
-
-- Central Syria
-- Northern Syria
-- Damascus Sector
-- Lebanon Sector
-- Eastern Syria
-- Jordan Border
-- Turkish Border
-
-Diese Phase wird erst später relevant.
+    Kampagnenraum dynamisch erweitern
 
 ---
 
 ## Spielerrollen
 
-Die Kampagne soll Missionen nach Spielerflugzeug filtern.
+Die Kampagne soll mehrere Spielerrollen sinnvoll einbinden.
 
-Nicht jedes Flugzeug soll jede Mission bekommen.
+### Fighter / Air Superiority
 
----
-
-## F/A-18C
-
-Mögliche Rollen:
+Mögliche Aufgaben:
 
 - CAP
-- SEAD
-- DEAD
-- Strike
-- Anti-Ship
+- Intercept
 - Escort
-- Precision Strike
-- Carrier Operations optional
-
----
-
-## F-16C
-
-Mögliche Rollen:
-
-- CAP
-- SEAD
-- DEAD
-- Strike
-- Interdiction
-- Escort
-- Precision Strike
-
----
-
-## F-15E
-
-Mögliche Rollen:
-
-- Deep Strike
-- Heavy Strike
-- Interdiction
-- Runway Attack
-- Depot Attack
-- Command Post Strike
-
----
-
-## F-14B
-
-Mögliche Rollen:
-
 - Fleet Defense
-- CAP
-- Intercept
-- Escort
-- Long Range Patrol
-- Strike optional
+- Schutz von Strike-Paketen
+- Schutz von Logistikrouten
+
+Mögliche Module:
+
+- F-14B
+- F/A-18C
+- F-16C
+- F-15E
 
 ---
 
-## A-10C II
+### Strike / SEAD / DEAD
 
-Mögliche Rollen:
+Mögliche Aufgaben:
 
-- CAS
-- Armed Recon
-- Convoy Attack
-- FOB Defense
-- Ground Support
+- Angriff auf Radarstellungen
+- Angriff auf SAM-Stellungen
+- Angriff auf Kommandoposten
+- Angriff auf Depots
+- Schwächung der roten Luftverteidigung
 
-Hinweis:
+Mögliche Module:
 
-A-10C wird erst sinnvoll, wenn Blau eine sichere Festlandbasis oder ein FOB hat.
-
----
-
-## AH-64D
-
-Mögliche Rollen:
-
-- Armed Recon
-- CAS
-- Anti-Armor
-- FOB Defense
-- Deep Attack im begrenzten Raum
-
-Hinweis:
-
-AH-64D wird erst sinnvoll, wenn FOBs oder Festlandbasen vorhanden sind.
+- F/A-18C
+- F-16C
+- F-15E
 
 ---
 
-## UH-1H und Mi-8
+### CAS
 
-Mögliche Rollen:
+Mögliche Aufgaben:
 
-- CTLD Transport
-- Troop Insertion
-- Cargo Delivery
-- FOB Aufbau
-- Supply Delivery
-- Medevac optional
-- CSAR optional
+- Unterstützung von Capture-Zonen
+- Bekämpfung roter Bodentruppen
+- Verteidigung eigener FOBs
+- Unterstützung eigener Gegenangriffe
 
-Diese Rollen sind für die Logistikphase besonders wichtig.
+Mögliche Module:
+
+- A-10C II
+- AH-64D
+- F/A-18C
+- F-16C
+
+A-10C II und AH-64D werden erst sinnvoll, wenn Blau auf dem Festland eine nutzbare Struktur aufgebaut hat.
 
 ---
 
-## Missionsarten
+### Logistics / Helicopter
 
-Geplante Missionsarten:
+Mögliche Aufgaben:
 
-- CAP
-- Intercept
-- Fighter Sweep
-- Escort
-- SEAD
-- DEAD
-- Strike
-- Runway Attack
-- Depot Attack
-- CAS
-- Armed Recon
-- Convoy Attack
-- CTLD Logistics
-- Troop Transport
-- FOB Construction
+- CTLD-Kistentransport
+- Truppentransport
+- FOB-Aufbau
+- Versorgung von Capture-Zonen
 - CSAR
-- Recon
-- Naval Strike optional
+- Verlegung von Material
+
+Mögliche Module:
+
+- UH-1H
+- Mi-8
 
 ---
 
-## Dynamische Missionsauswahl
+## Airbase-Design
 
-Der Missionsgenerator soll später prüfen:
+Airbases sollen später nicht komplett manuell im Mission Editor verwaltet werden.
 
-- Welches Flugzeug fliegt der Spieler?
-- Welche Basen sind verfügbar?
-- Welche Region ist aktiv?
-- Welche Ziele existieren noch?
-- Wie stark ist das IADS?
-- Wie stark ist rote CAP?
-- Welche Ressourcen fehlen?
-- Welche Phase ist aktiv?
-- Welche Mission ist taktisch sinnvoll?
+Geplantes Prinzip:
 
-Dann werden nur passende Missionen angeboten.
+1. Airbases per Lua erkennen
+2. Airbases als Theater-Command-BaseNodes registrieren
+3. Besitzstatus verwalten
+4. virtuelle Zonen erzeugen
+5. Airbases mit Logistik, Missionen und Capture verbinden
 
----
+Akrotiri ist der erste fest definierte blaue Ausgangspunkt.
 
-## Persistenz-Idee
+Syrische Airbases sind zu Beginn rot.
 
-Der Kampagnenzustand soll langfristig gespeichert werden.
+Spätere Airbase-Logik entsteht unter:
 
-Persistente Elemente:
-
-- Besitz von Basen
-- Zustand von Depots
-- Zustand von Radarstellungen
-- Zustand von SAM-Stellungen
-- Ressourcen
-- FOB-Status
-- aktive Regionen
-- zerstörte Ziele
-- rote und blaue Verluste
-- Kampagnenphase
+    src/world/
+    src/campaign/
 
 ---
 
-## Erfolg und Misserfolg
+## Zonen-Design
 
-Missionen sollen Auswirkungen haben.
+Zonen sollen später soweit möglich virtuell durch Lua erzeugt werden.
+
+Geplante Zonentypen:
+
+- Capture-Zonen
+- Logistik-Zonen
+- Defense-Zonen
+- IADS-Sektoren
+- Missions-Zielräume
+- FOB-Zonen
+
+Nicht jede Zone soll manuell im Mission Editor angelegt werden.
+
+Manuelle Zonen werden nur genutzt, wenn CTLD oder DCS sie technisch benötigt.
+
+---
+
+## Capture-Design
+
+Das Capture-System soll später entscheiden, wann eine Zone oder Basis den Besitzer wechselt.
+
+Mögliche Capture-Faktoren:
+
+- eigene Kräfte in der Zone
+- feindliche Kräfte reduziert
+- Logistikversorgung vorhanden
+- FOB aufgebaut
+- IADS-Bedrohung reduziert
+- Airbase gesichert
+- Missionserfolge erreicht
+
+Capture soll nicht durch einfache DCS-AutoCapture-Logik bestimmt werden.
+
+Theater Command DCS soll den Besitz kampagnenlogisch verwalten.
+
+---
+
+## Logistik-Design
+
+Logistik soll ein zentraler Fortschrittsfaktor sein.
+
+CTLD übernimmt technische Transportfunktionen.
+
+Theater Command DCS bewertet die Wirkung.
 
 Beispiele:
 
-Erfolgreiche SEAD-Mission:
+Eine gelieferte Kiste kann später:
 
-- IADS-Sektor wird schwächer
-- Strike-Missionen werden leichter
-- Transportflüge werden sicherer
+- Ressourcen erhöhen
+- einen FOB-Aufbau unterstützen
+- eine Zone versorgen
+- eine Basis stabilisieren
+- neue Missionen freischalten
+- Capture-Bedingungen erfüllen
 
-Fehlgeschlagene Logistikmission:
+Erster Logistikhub:
 
-- FOB erhält keine Versorgung
-- CAS-Slots bleiben eingeschränkt
-- Gegenangriff wird gefährlicher
+    Akrotiri
 
-Zerstörtes Fuel Depot:
+Mögliche erste CTLD-Zonen:
 
-- weniger rote CAP
-- langsamere rote Reaktion
-
-Zerstörter Command Post:
-
-- schwächere rote Koordination
-- verzögerte Gegenoffensive
+    CTLD_PICKUP_BLUE_AKROTIRI_01
+    CTLD_PICKUP_BLUE_AKROTIRI_02
+    CTLD_DROPOFF_BLUE_COASTAL_FOB_01
 
 ---
 
-## Designziel
+## IADS-Design
 
-Die Kampagne soll sich lebendig anfühlen.
+Die rote Luftverteidigung soll ein wichtiger Kampagnenfaktor sein.
 
-Der Spieler soll merken:
+Skynet IADS steuert taktisches Verhalten.
 
-- Die Welt reagiert.
-- Ziele bleiben relevant.
-- Logistik zählt.
-- Luftverteidigung hat Bedeutung.
-- Basenbesitz verändert den Krieg.
-- KI-Operationen laufen parallel.
-- Fortschritt muss erarbeitet und gehalten werden.
+Theater Command DCS bewertet den strategischen IADS-Zustand.
 
-Operation Levant Reclamation soll dadurch mehr sein als eine einzelne Mission.
+Mögliche IADS-Auswirkungen:
 
-Sie soll ein dynamisches Operationsgebiet darstellen.
+- SEAD/DEAD-Missionen werden sinnvoll
+- Helikopterrouten werden gefährlicher oder sicherer
+- Strike-Fenster entstehen
+- Capture wird durch Luftverteidigung erschwert
+- zerstörte Radarstellungen beeinflussen Folgeoperationen
+- IADS-Schäden werden später persistent gespeichert
+
+Mögliche erste IADS-Region:
+
+    syrische Küste
+
+---
+
+## Missionsdesign
+
+Missionen sollen später aus dem Kampagnenzustand entstehen.
+
+Missionen werden nicht einfach als feste Triggerliste gebaut.
+
+Der Missionsgenerator soll berücksichtigen:
+
+- Spielerflugzeug
+- aktuelle Frontlage
+- Basenbesitz
+- Logistikstatus
+- IADS-Zustand
+- verfügbare Ziele
+- Kampagnenphase
+
+Mögliche Missionstypen:
+
+- CAP
+- Escort
+- Intercept
+- SEAD
+- DEAD
+- Strike
+- CAS
+- Logistics
+- FOB Supply
+- CSAR
+- Recon
+
+---
+
+## AI Director
+
+Der AI Director soll die Welt reaktiver machen.
+
+Mögliche Aufgaben:
+
+- rote CAP erzeugen
+- rote GCI erzeugen
+- Gegenangriffe vorbereiten
+- Reaktion auf Capture-Ereignisse
+- Reaktion auf IADS-Schäden
+- Reaktion auf Logistikfortschritt
+- Eskalation je nach Kampagnenphase
+
+Der AI Director soll nicht alles zufällig machen.
+
+Er soll aus dem Kampagnenzustand sinnvolle Reaktionen ableiten.
+
+---
+
+## Persistenz-Design
+
+Persistenz wird erst später gebaut.
+
+Vorher müssen Airbase-, Capture- und Logistiksystem stabil sein.
+
+Mögliche persistente Werte:
+
+- Basenbesitz
+- Zonenbesitz
+- aktive FOBs
+- Ressourcen
+- Logistikstatus
+- IADS-Zustand
+- zerstörte Ziele
+- Missionshistorie
+- Kampagnenphase
+
+Persistenz wird nicht am Anfang umgesetzt.
+
+Zuerst muss klar sein, welche Daten stabil gespeichert werden müssen.
+
+---
+
+## Mission-Editor-Design
+
+Der Mission Editor stellt später nur die Bühne bereit.
+
+Geplante Mission:
+
+    Operation_Levant_Reclamation_DEV.miz
+
+Der Mission Editor enthält später:
+
+- Syria Map
+- Koalitionen
+- Spieler-Slots
+- Lade-Trigger
+- Template-Gruppen
+- CTLD-Zonen
+- statische Ziele
+- erste Testumgebung
+
+Der Mission Editor enthält nicht:
+
+- große Kampagnenlogik
+- große Basen-Triggerketten
+- manuelle Frontlinienlogik
+- manuelle Missionsgeneratorlogik
+- Persistenzlogik
+
+---
+
+## Erster spielbarer Zielzustand
+
+Ein erster spielbarer Zielzustand könnte sein:
+
+- Mission lädt alle Frameworks korrekt
+- Theater Command Loader startet
+- Akrotiri wird als blaue Startbasis erkannt
+- erste Spieler-Slots funktionieren
+- erste CTLD-Pickup-Zone funktioniert
+- einfache Statusausgabe über F10 funktioniert
+- erste Airbase-Liste wird erkannt
+- erste Debug-Ausgabe erscheint im `dcs.log`
+
+Dieser Zustand ist noch keine vollständige Kampagne.
+
+Er ist der erste technische Meilenstein.
+
+---
+
+## Nicht jetzt umsetzen
+
+Aktuell noch nicht bauen:
+
+- komplette rote Großkampagne
+- komplette Frontlinie
+- alle syrischen Airbases manuell konfigurieren
+- vollständiges IADS-Netz
+- vollständige Persistenz
+- große Mission-Editor-Triggerketten
+- komplette dynamische Missionslogik
+- vollständige KI-Gegenoffensive
+
+Diese Systeme werden schrittweise aufgebaut.
+
+---
+
+## Aktueller nächster technischer Schritt
+
+Nach Abschluss der aktuellen Dokumentationsaktualisierung:
+
+    src-Unterordner und README-Dateien erstellen
+
+Danach:
+
+    src/loader.lua
+    src/main.lua
+    src/core/tc_config.lua
+    src/core/tc_logger.lua
+    src/core/tc_state.lua
