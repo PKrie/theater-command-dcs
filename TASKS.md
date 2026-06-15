@@ -70,9 +70,13 @@ Folgende Hauptordner sollen im Repository angelegt werden:
 Diese Ordner sind für externe Frameworks vorgesehen:
 
 - [x] `vendor/mist/`
-- [ ] `vendor/moose/`
-- [ ] `vendor/ctld/`
-- [ ] `vendor/skynet-iads/`
+- [x] `vendor/moose/`
+- [x] `vendor/ctld/`
+- [x] `vendor/skynet-iads/`
+- [x] `vendor/mist/README.md`
+- [x] `vendor/moose/README.md`
+- [x] `vendor/ctld/README.md`
+- [x] `vendor/skynet-iads/README.md`
 
 Hinweis:
 
