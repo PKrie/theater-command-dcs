@@ -143,6 +143,18 @@ Loader.missionFiles = {
   }
 }
 
+Loader.aiFiles = {
+  {
+    key = "aiCapManager",
+    name = "tc_ai_cap_manager",
+    path = "src/ai/tc_ai_cap_manager.lua",
+    required = true,
+    isLoaded = function()
+      return TC.AI ~= nil and TC.AI.CapManager ~= nil
+    end
+  }
+}
+
 Loader.mainFile = {
   key = "main",
   name = "main",
@@ -469,6 +481,10 @@ function Loader.loadMissions()
   return loadFileGroup("Missions", Loader.missionFiles)
 end
 
+function Loader.loadAI()
+  return loadFileGroup("AI", Loader.aiFiles)
+end
+
 function Loader.loadMain()
   if Loader.mainFile == nil then
     return false
@@ -575,6 +591,14 @@ function Loader.start()
     return false
   end
 
+  local aiLoaded = Loader.loadAI()
+
+  if aiLoaded ~= true then
+    Loader.failed = true
+    logError("Theater Command loader stopped because AI loading failed")
+    return false
+  end
+
   local mainLoaded = Loader.loadMain()
 
   if mainLoaded ~= true then
@@ -611,7 +635,8 @@ function Loader.summary()
     worldFileCount = #Loader.worldFiles,
     campaignFileCount = #Loader.campaignFiles,
     logisticsFileCount = #Loader.logisticsFiles,
-    missionFileCount = #Loader.missionFiles
+    missionFileCount = #Loader.missionFiles,
+    aiFileCount = #Loader.aiFiles
   }
 end
 
