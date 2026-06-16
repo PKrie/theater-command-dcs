@@ -6,26 +6,28 @@
 --   Command campaign state.
 --
 -- Current focus:
---   The Airbase Scanner now classifies Syria airbase-like objects and the
---   Zone Factory now creates filtered campaign zones. The Mission Generator
---   must therefore use classified zones instead of raw DCS airbase objects.
+--   FOB System v0.2.0 now creates state-only FOBs from Logistics Hubs.
+--   The Mission Generator must ensure that FOB construction and FOB support
+--   are represented in the available mission pool instead of being pushed out
+--   by high-priority airbase attack and SEAD candidates.
 --
 -- Version:
---   0.2.0
+--   0.2.1
 --
 -- Responsibilities:
 --   - build mission candidates from classified campaign zones
---   - prioritize missions by owner, zone class and strategic relevance
+--   - build FOB support candidates from planned and under-construction FOBs
+--   - reserve mission pool space for FOB support when FOBs require support
+--   - prioritize missions by owner, zone class, FOB need and strategic relevance
 --   - avoid medical pads, single helipads and unknown objects as strike targets
---   - create a limited set of available missions for the player
 --   - prevent duplicate missions for the same target/type combination
---   - keep mission state compatible with later persistence and F10 UI systems
+--   - keep mission state compatible with later persistence, AI and F10 UI systems
 --
 -- Vendor note:
 --   This file does not directly call MIST, MOOSE, CTLD or Skynet IADS.
---   It consumes Theater Command state produced by the World, Campaign and
---   Logistics systems. Framework-specific mission execution will be added
---   later in dedicated systems.
+--   It consumes Theater Command state produced by World, Campaign, Logistics,
+--   FOB and AI systems. Framework-specific execution will be added later in
+--   dedicated systems.
 
 TC = TC or {}
 TC.modules = TC.modules or {}
@@ -37,7 +39,7 @@ local MissionGenerator = {}
 MissionGenerator.name = "tc_mission_generator"
 MissionGenerator.displayName = "Mission Generator"
 MissionGenerator.path = "src/missions/tc_mission_generator.lua"
-MissionGenerator.version = "0.2.0"
+MissionGenerator.version = "0.2.1"
 
 MissionGenerator.loaded = true
 MissionGenerator.started = false
@@ -49,8 +51,11 @@ MissionGenerator.lastCandidateCount = 0
 MissionGenerator.lastCreatedCount = 0
 MissionGenerator.lastSkippedDuplicateCount = 0
 MissionGenerator.lastSkippedLimitCount = 0
+MissionGenerator.lastReservedCreatedCount = 0
+MissionGenerator.lastFobCandidateCount = 0
 
 MissionGenerator.defaultGenerationLimit = 10
+MissionGenerator.minimumFobSupportMissions = 1
 
 MissionGenerator.types = {
     RECON = "RECON",
@@ -85,8 +90,8 @@ MissionGenerator.defaultPriorities = {
     INTERDICTION = 50,
     ESCORT = 35,
     CAP = 45,
-    LOGISTICS = 45,
-    FOB_SUPPORT = 55,
+    LOGISTICS = 50,
+    FOB_SUPPORT = 92,
     AIRBASE_ATTACK = 85,
     IADS_SUPPRESSION = 75
 }
@@ -100,8 +105,8 @@ MissionGenerator.maxPerGenerationByType = {
     INTERDICTION = 2,
     ESCORT = 1,
     CAP = 1,
-    LOGISTICS = 1,
-    FOB_SUPPORT = 1,
+    LOGISTICS = 2,
+    FOB_SUPPORT = 2,
     AIRBASE_ATTACK = 4,
     IADS_SUPPRESSION = 1
 }
@@ -113,7 +118,8 @@ MissionGenerator.zoneClasses = {
     FARP_ZONE = "FARP_ZONE",
     TACTICAL_PAD_ZONE = "TACTICAL_PAD_ZONE",
     MISSION_EDITOR_CAPTURE_ZONE = "MISSION_EDITOR_CAPTURE_ZONE",
-    MISSION_EDITOR_ZONE = "MISSION_EDITOR_ZONE"
+    MISSION_EDITOR_ZONE = "MISSION_EDITOR_ZONE",
+    UNKNOWN_ZONE = "UNKNOWN_ZONE"
 }
 
 MissionGenerator.airbaseClassifications = {
@@ -125,6 +131,15 @@ MissionGenerator.airbaseClassifications = {
     FARP = "FARP",
     TACTICAL_PAD = "TACTICAL_PAD",
     UNKNOWN = "UNKNOWN"
+}
+
+MissionGenerator.fobStatus = {
+    PLANNED = "PLANNED",
+    UNDER_CONSTRUCTION = "UNDER_CONSTRUCTION",
+    ACTIVE = "ACTIVE",
+    DAMAGED = "DAMAGED",
+    OUT_OF_SUPPLY = "OUT_OF_SUPPLY",
+    DESTROYED = "DESTROYED"
 }
 
 local function getConfig()
@@ -366,6 +381,14 @@ local function getStatusCancelled()
     return getConstant("missionStatus", "CANCELLED", MissionGenerator.status.CANCELLED)
 end
 
+local function getRecordOwner(record)
+    if type(record) ~= "table" then
+        return getOwnerUnknown()
+    end
+
+    return record.currentOwner or record.initialOwner or record.owner or getOwnerUnknown()
+end
+
 local function isValidMissionType(missionType)
     if missionType == nil then
         return false
@@ -436,7 +459,10 @@ local function ensureMissionState()
         cancelled = 0,
         lastCreated = 0,
         lastCandidates = 0,
-        lastDuplicatesSkipped = 0
+        lastFobCandidates = 0,
+        lastReservedCreated = 0,
+        lastDuplicatesSkipped = 0,
+        lastLimitSkipped = 0
     }
 
     return state
@@ -519,12 +545,12 @@ local function getFobRegistry()
     return {}
 end
 
-local function getRecordOwner(record)
-    if record == nil then
-        return getOwnerUnknown()
+local function getDeliverySystem()
+    if TC.Logistics == nil then
+        return nil
     end
 
-    return record.currentOwner or record.initialOwner or record.owner or getOwnerUnknown()
+    return TC.Logistics.Delivery
 end
 
 local function findBaseByKeyOrName(keyOrName)
@@ -591,7 +617,6 @@ local function getBlueStartBase()
     local config = getConfig()
     local campaignConfig = config.campaign or {}
     local configuredStartBase = campaignConfig.blueStartBase or "AKROTIRI"
-
     local startBase = findBaseByKeyOrName(configuredStartBase)
 
     if startBase ~= nil then
@@ -761,26 +786,29 @@ local function getZoneDisplayName(zoneRecord)
         return "UNKNOWN_ZONE"
     end
 
-    if zoneRecord.linkedAirbaseName ~= nil then
-        return zoneRecord.linkedAirbaseName
+    return zoneRecord.linkedAirbaseName
+        or zoneRecord.displayName
+        or zoneRecord.name
+        or zoneRecord.key
+        or "UNKNOWN_ZONE"
+end
+
+local function getFobDisplayName(fobRecord)
+    if fobRecord == nil then
+        return "UNKNOWN_FOB"
     end
 
-    if zoneRecord.displayName ~= nil then
-        return zoneRecord.displayName
-    end
-
-    if zoneRecord.name ~= nil then
-        return zoneRecord.name
-    end
-
-    return zoneRecord.key or "UNKNOWN_ZONE"
+    return fobRecord.displayName
+        or fobRecord.name
+        or fobRecord.key
+        or "UNKNOWN_FOB"
 end
 
 local function getMissionName(missionType, targetZone, targetBase, targetFob)
     local targetName = "UNKNOWN_TARGET"
 
-    if targetFob ~= nil and targetFob.name ~= nil then
-        targetName = targetFob.name
+    if targetFob ~= nil then
+        targetName = getFobDisplayName(targetFob)
     elseif targetBase ~= nil and targetBase.name ~= nil then
         targetName = targetBase.name
     elseif targetZone ~= nil then
@@ -803,32 +831,16 @@ local function buildMissionRecord(missionType, options)
         return nil, "mission_id_failed"
     end
 
-    local targetZone = nil
-    local targetBase = nil
-    local targetFob = nil
+    local targetZone = missionOptions.targetZoneRecord
+    local targetBase = missionOptions.targetBaseRecord
+    local targetFob = missionOptions.targetFobRecord
 
-    if missionOptions.targetZone ~= nil then
+    if targetZone == nil and missionOptions.targetZone ~= nil then
         targetZone = findZoneByKeyOrName(missionOptions.targetZone)
     end
 
-    if missionOptions.targetBase ~= nil then
+    if targetBase == nil and missionOptions.targetBase ~= nil then
         targetBase = findBaseByKeyOrName(missionOptions.targetBase)
-    end
-
-    if missionOptions.targetFob ~= nil then
-        targetFob = missionOptions.targetFob
-    end
-
-    if targetZone == nil and type(missionOptions.targetZoneRecord) == "table" then
-        targetZone = missionOptions.targetZoneRecord
-    end
-
-    if targetBase == nil and type(missionOptions.targetBaseRecord) == "table" then
-        targetBase = missionOptions.targetBaseRecord
-    end
-
-    if targetFob == nil and type(missionOptions.targetFobRecord) == "table" then
-        targetFob = missionOptions.targetFobRecord
     end
 
     if targetZone ~= nil and targetBase == nil and targetZone.linkedAirbaseKey ~= nil then
@@ -850,7 +862,6 @@ local function buildMissionRecord(missionType, options)
     local targetBaseKey = targetBase and targetBase.key or missionOptions.targetBase
     local targetFobKey = targetFob and targetFob.key or missionOptions.targetFob
     local signature = buildMissionSignature(missionType, targetZoneKey, targetBaseKey, targetFobKey)
-
     local missionName = missionOptions.name or getMissionName(missionType, targetZone, targetBase, targetFob)
 
     local missionRecord = {
@@ -877,7 +888,9 @@ local function buildMissionRecord(missionType, options)
         targetAirbaseClassification = targetZone and targetZone.airbaseClassification or targetBase and targetBase.classification or nil,
 
         targetFobKey = targetFobKey,
-        targetFobName = targetFob and targetFob.name or nil,
+        targetFobName = targetFob and getFobDisplayName(targetFob) or nil,
+        targetFobStatus = targetFob and targetFob.status or nil,
+        targetFobLinkedHubKey = targetFob and targetFob.linkedHubKey or nil,
 
         targetIadsSiteKey = missionOptions.targetIadsSite,
 
@@ -904,6 +917,7 @@ local function buildMissionRecord(missionType, options)
         updatedAt = getCurrentTime(),
 
         source = missionOptions.source or "MISSION_GENERATOR",
+        reservedSlot = missionOptions.reservedSlot == true,
         notes = missionOptions.notes
     }
 
@@ -958,7 +972,6 @@ end
 
 local function createMissionIfMissing(missionType, options)
     local previewOptions = options or {}
-
     local targetZoneKey = previewOptions.targetZone
     local targetBaseKey = previewOptions.targetBase
     local targetFobKey = previewOptions.targetFob
@@ -1001,19 +1014,9 @@ local function isStrategicAirbaseZone(zoneRecord)
         return false
     end
 
-    if zoneRecord.isStrategicAirbaseZone == true then
-        return true
-    end
-
-    if zoneRecord.zoneClass == MissionGenerator.zoneClasses.STRATEGIC_AIRBASE_ZONE then
-        return true
-    end
-
-    if zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.STRATEGIC_AIRFIELD then
-        return true
-    end
-
-    return false
+    return zoneRecord.isStrategicAirbaseZone == true
+        or zoneRecord.zoneClass == MissionGenerator.zoneClasses.STRATEGIC_AIRBASE_ZONE
+        or zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.STRATEGIC_AIRFIELD
 end
 
 local function isSecondaryAirbaseZone(zoneRecord)
@@ -1021,19 +1024,9 @@ local function isSecondaryAirbaseZone(zoneRecord)
         return false
     end
 
-    if zoneRecord.isSecondaryAirbaseZone == true then
-        return true
-    end
-
-    if zoneRecord.zoneClass == MissionGenerator.zoneClasses.SECONDARY_AIRBASE_ZONE then
-        return true
-    end
-
-    if zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.SECONDARY_AIRFIELD then
-        return true
-    end
-
-    return false
+    return zoneRecord.isSecondaryAirbaseZone == true
+        or zoneRecord.zoneClass == MissionGenerator.zoneClasses.SECONDARY_AIRBASE_ZONE
+        or zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.SECONDARY_AIRFIELD
 end
 
 local function isHeliportZone(zoneRecord)
@@ -1041,19 +1034,9 @@ local function isHeliportZone(zoneRecord)
         return false
     end
 
-    if zoneRecord.isHeliportZone == true then
-        return true
-    end
-
-    if zoneRecord.zoneClass == MissionGenerator.zoneClasses.HELIPORT_ZONE then
-        return true
-    end
-
-    if zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.HELIPORT then
-        return true
-    end
-
-    return false
+    return zoneRecord.isHeliportZone == true
+        or zoneRecord.zoneClass == MissionGenerator.zoneClasses.HELIPORT_ZONE
+        or zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.HELIPORT
 end
 
 local function isFarpZone(zoneRecord)
@@ -1061,19 +1044,9 @@ local function isFarpZone(zoneRecord)
         return false
     end
 
-    if zoneRecord.isFarpZone == true then
-        return true
-    end
-
-    if zoneRecord.zoneClass == MissionGenerator.zoneClasses.FARP_ZONE then
-        return true
-    end
-
-    if zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.FARP then
-        return true
-    end
-
-    return false
+    return zoneRecord.isFarpZone == true
+        or zoneRecord.zoneClass == MissionGenerator.zoneClasses.FARP_ZONE
+        or zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.FARP
 end
 
 local function isTacticalPadZone(zoneRecord)
@@ -1081,19 +1054,9 @@ local function isTacticalPadZone(zoneRecord)
         return false
     end
 
-    if zoneRecord.isTacticalPadZone == true then
-        return true
-    end
-
-    if zoneRecord.zoneClass == MissionGenerator.zoneClasses.TACTICAL_PAD_ZONE then
-        return true
-    end
-
-    if zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.TACTICAL_PAD then
-        return true
-    end
-
-    return false
+    return zoneRecord.isTacticalPadZone == true
+        or zoneRecord.zoneClass == MissionGenerator.zoneClasses.TACTICAL_PAD_ZONE
+        or zoneRecord.airbaseClassification == MissionGenerator.airbaseClassifications.TACTICAL_PAD
 end
 
 local function isValidMissionTargetZone(zoneRecord)
@@ -1113,19 +1076,11 @@ local function isValidMissionTargetZone(zoneRecord)
         return false
     end
 
-    if zoneRecord.zoneClass == "UNKNOWN_ZONE" then
+    if zoneRecord.zoneClass == MissionGenerator.zoneClasses.UNKNOWN_ZONE then
         return false
     end
 
-    if zoneRecord.isMissionZone == true then
-        return true
-    end
-
-    if zoneRecord.isCaptureZone == true then
-        return true
-    end
-
-    if zoneRecord.isLogisticsZone == true then
+    if zoneRecord.isMissionZone == true or zoneRecord.isCaptureZone == true or zoneRecord.isLogisticsZone == true then
         return true
     end
 
@@ -1165,9 +1120,7 @@ local function getZoneStrategicRelevance(zoneRecord)
 end
 
 local function getPriorityBonusFromZone(zoneRecord)
-    local relevance = getZoneStrategicRelevance(zoneRecord)
-
-    return math.floor(relevance / 10)
+    return math.floor(getZoneStrategicRelevance(zoneRecord) / 10)
 end
 
 local function getLinkedBaseForZone(zoneRecord)
@@ -1186,30 +1139,113 @@ local function getLinkedBaseForZone(zoneRecord)
     return nil
 end
 
+local function getLinkedZoneForFob(fobRecord)
+    if type(fobRecord) ~= "table" then
+        return nil
+    end
+
+    if fobRecord.linkedZoneKey ~= nil then
+        return findZoneByKeyOrName(fobRecord.linkedZoneKey)
+    end
+
+    if fobRecord.linkedZoneName ~= nil then
+        return findZoneByKeyOrName(fobRecord.linkedZoneName)
+    end
+
+    return nil
+end
+
+local function shouldSupportFob(fobRecord)
+    if type(fobRecord) ~= "table" then
+        return false
+    end
+
+    if fobRecord.status == MissionGenerator.fobStatus.DESTROYED then
+        return false
+    end
+
+    if fobRecord.status == MissionGenerator.fobStatus.PLANNED then
+        return true
+    end
+
+    if fobRecord.status == MissionGenerator.fobStatus.UNDER_CONSTRUCTION then
+        return true
+    end
+
+    if fobRecord.status == MissionGenerator.fobStatus.OUT_OF_SUPPLY then
+        return true
+    end
+
+    if fobRecord.status == MissionGenerator.fobStatus.DAMAGED then
+        return true
+    end
+
+    if (fobRecord.supplyLevel or 0) < 50 then
+        return true
+    end
+
+    if (fobRecord.constructionProgress or 0) < 100 then
+        return true
+    end
+
+    return false
+end
+
+local function getFobSupportPriority(fobRecord)
+    local priority = MissionGenerator.defaultPriorities.FOB_SUPPORT
+
+    if fobRecord.status == MissionGenerator.fobStatus.UNDER_CONSTRUCTION then
+        priority = priority + 8
+    elseif fobRecord.status == MissionGenerator.fobStatus.PLANNED then
+        priority = priority + 6
+    elseif fobRecord.status == MissionGenerator.fobStatus.OUT_OF_SUPPLY then
+        priority = priority + 10
+    elseif fobRecord.status == MissionGenerator.fobStatus.DAMAGED then
+        priority = priority + 7
+    end
+
+    if (fobRecord.constructionProgress or 0) < 50 then
+        priority = priority + 4
+    end
+
+    if (fobRecord.supplyLevel or 0) < 25 then
+        priority = priority + 4
+    end
+
+    return priority
+end
+
 local function createCandidate(missionType, zoneRecord, options)
-    if missionType == nil or zoneRecord == nil then
+    if missionType == nil then
         return nil
     end
 
     local candidateOptions = options or {}
-    local linkedBase = candidateOptions.targetBaseRecord or getLinkedBaseForZone(zoneRecord)
+    local linkedBase = candidateOptions.targetBaseRecord
+
+    if linkedBase == nil and zoneRecord ~= nil then
+        linkedBase = getLinkedBaseForZone(zoneRecord)
+    end
+
+    local targetFob = candidateOptions.targetFobRecord
+
+    local targetZoneKey = zoneRecord and zoneRecord.key or candidateOptions.targetZone
+    local targetBaseKey = linkedBase and linkedBase.key or candidateOptions.targetBase
+    local targetFobKey = targetFob and targetFob.key or candidateOptions.targetFob
 
     local priority = getPriority(missionType, candidateOptions.priority)
-    local signature = buildMissionSignature(
-        missionType,
-        zoneRecord.key,
-        linkedBase and linkedBase.key or candidateOptions.targetBase,
-        candidateOptions.targetFob
-    )
+    local signature = buildMissionSignature(missionType, targetZoneKey, targetBaseKey, targetFobKey)
 
     return {
         missionType = missionType,
         targetZoneRecord = zoneRecord,
         targetBaseRecord = linkedBase,
-        targetFobRecord = candidateOptions.targetFobRecord,
-        targetFob = candidateOptions.targetFob,
+        targetFobRecord = targetFob,
+        targetZone = targetZoneKey,
+        targetBase = targetBaseKey,
+        targetFob = targetFobKey,
         priority = priority,
-        strategicRelevance = getZoneStrategicRelevance(zoneRecord),
+        strategicRelevance = candidateOptions.strategicRelevance or zoneRecord and getZoneStrategicRelevance(zoneRecord) or 0,
         signature = signature,
         objective = candidateOptions.objective,
         description = candidateOptions.description,
@@ -1219,7 +1255,8 @@ local function createCandidate(missionType, zoneRecord, options)
         generationReason = candidateOptions.generationReason,
         effect = candidateOptions.effect or {},
         source = "MISSION_GENERATOR",
-        sortName = getZoneDisplayName(zoneRecord)
+        reservedSlot = candidateOptions.reservedSlot == true,
+        sortName = candidateOptions.sortName or zoneRecord and getZoneDisplayName(zoneRecord) or targetFob and getFobDisplayName(targetFob) or signature
     }
 end
 
@@ -1345,7 +1382,7 @@ local function buildLogisticsCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
 
     return createCandidate(MissionGenerator.types.LOGISTICS, zoneRecord, {
-        priority = 42 + bonus,
+        priority = 52 + bonus,
         objective = "Support friendly logistics buildup",
         description = "Move supplies and equipment to support operations from " .. tostring(getZoneDisplayName(zoneRecord)) .. ".",
         recommendedAircraft = { "UH-1H", "Mi-8", "CH-47F" },
@@ -1378,15 +1415,11 @@ local function buildCasCandidate(zoneRecord)
 end
 
 local function buildFobSupportCandidate(fobRecord)
-    if fobRecord == nil then
+    if type(fobRecord) ~= "table" then
         return nil
     end
 
-    local targetZone = nil
-
-    if fobRecord.linkedZoneKey ~= nil then
-        targetZone = findZoneByKeyOrName(fobRecord.linkedZoneKey)
-    end
+    local targetZone = getLinkedZoneForFob(fobRecord)
 
     if targetZone == nil then
         targetZone = getBlueStartZone()
@@ -1396,20 +1429,43 @@ local function buildFobSupportCandidate(fobRecord)
         return nil
     end
 
+    local supportFocus = "construction"
+
+    if fobRecord.status == MissionGenerator.fobStatus.OUT_OF_SUPPLY or (fobRecord.supplyLevel or 0) < 25 then
+        supportFocus = "supply"
+    elseif fobRecord.status == MissionGenerator.fobStatus.DAMAGED then
+        supportFocus = "repair"
+    end
+
+    local payload = {
+        supply = 25,
+        fuel = 10,
+        ammunition = 10,
+        engineering = 25,
+        fobConstruction = 1
+    }
+
+    if supportFocus == "supply" then
+        payload.supply = 50
+        payload.engineering = 10
+    elseif supportFocus == "repair" then
+        payload.repair = 25
+        payload.engineering = 25
+    end
+
     local candidate = createCandidate(MissionGenerator.types.FOB_SUPPORT, targetZone, {
-        priority = 56,
+        priority = getFobSupportPriority(fobRecord),
         targetFobRecord = fobRecord,
         objective = "Support FOB construction or sustainment",
-        description = "Deliver material, supply or engineering support to FOB " .. tostring(fobRecord.name or fobRecord.key),
+        description = "Deliver material, supply and engineering support to " .. tostring(getFobDisplayName(fobRecord)) .. ". Current FOB status is " .. tostring(fobRecord.status or "UNKNOWN") .. ".",
         recommendedAircraft = { "UH-1H", "Mi-8", "CH-47F" },
         recommendedPayload = { "CTLD cargo", "Engineering material", "Fuel", "Ammunition" },
         packageRole = "FOB_SUPPORT_PACKAGE",
         generationReason = "fob_requires_support",
-        effect = {
-            fobSupport = 25,
-            supply = 25,
-            engineering = 25
-        }
+        reservedSlot = true,
+        effect = payload,
+        sortName = getFobDisplayName(fobRecord),
+        strategicRelevance = 60
     })
 
     if candidate ~= nil then
@@ -1435,8 +1491,12 @@ local function shouldCreateLogisticsMission(zoneRecord)
         return false
     end
 
-    if zoneRecord.isLogisticsZone == true then
-        return true
+    if zoneRecord.isStartBaseZone == true then
+        return false
+    end
+
+    if zoneRecord.isLogisticsZone ~= true then
+        return false
     end
 
     local logistics = zoneRecord.logistics or {}
@@ -1444,43 +1504,7 @@ local function shouldCreateLogisticsMission(zoneRecord)
     local ammunition = logistics.ammunition or 0
     local fuel = logistics.fuel or 0
 
-    if supply < 50 then
-        return true
-    end
-
-    if ammunition < 25 then
-        return true
-    end
-
-    if fuel < 25 then
-        return true
-    end
-
-    return false
-end
-
-local function shouldCreateFobSupportMission(fobRecord)
-    if fobRecord == nil then
-        return false
-    end
-
-    if fobRecord.status == "DESTROYED" then
-        return false
-    end
-
-    if fobRecord.status == "PLANNED" then
-        return true
-    end
-
-    if fobRecord.status == "UNDER_CONSTRUCTION" then
-        return true
-    end
-
-    if fobRecord.status == "OUT_OF_SUPPLY" then
-        return true
-    end
-
-    if (fobRecord.supplyLevel or 0) < 50 then
+    if supply < 50 or ammunition < 25 or fuel < 25 then
         return true
     end
 
@@ -1489,6 +1513,7 @@ end
 
 local function collectMissionCandidates()
     local candidates = {}
+    local fobCandidateCount = 0
 
     for _, zoneRecord in pairs(getZoneRegistry()) do
         if isValidMissionTargetZone(zoneRecord) == true then
@@ -1523,12 +1548,20 @@ local function collectMissionCandidates()
     end
 
     for _, fobRecord in pairs(getFobRegistry()) do
-        if shouldCreateFobSupportMission(fobRecord) == true then
-            addCandidate(candidates, buildFobSupportCandidate(fobRecord))
+        if shouldSupportFob(fobRecord) == true then
+            local candidate = buildFobSupportCandidate(fobRecord)
+
+            if addCandidate(candidates, candidate) == true then
+                fobCandidateCount = fobCandidateCount + 1
+            end
         end
     end
 
     table.sort(candidates, function(left, right)
+        if (left.reservedSlot == true) ~= (right.reservedSlot == true) then
+            return left.reservedSlot == true
+        end
+
         if left.priority ~= right.priority then
             return left.priority > right.priority
         end
@@ -1540,7 +1573,9 @@ local function collectMissionCandidates()
         return tostring(left.sortName or left.signature) < tostring(right.sortName or right.signature)
     end)
 
-    return candidates
+    MissionGenerator.lastFobCandidateCount = fobCandidateCount
+
+    return candidates, fobCandidateCount
 end
 
 local function countAvailableMissions()
@@ -1558,6 +1593,8 @@ local function candidateToMissionOptions(candidate)
         targetZoneRecord = candidate.targetZoneRecord,
         targetBaseRecord = candidate.targetBaseRecord,
         targetFobRecord = candidate.targetFobRecord,
+        targetZone = candidate.targetZone,
+        targetBase = candidate.targetBase,
         targetFob = candidate.targetFob,
         priority = candidate.priority,
         strategicRelevance = candidate.strategicRelevance,
@@ -1568,6 +1605,7 @@ local function candidateToMissionOptions(candidate)
         packageRole = candidate.packageRole,
         generationReason = candidate.generationReason,
         effect = candidate.effect,
+        reservedSlot = candidate.reservedSlot == true,
         source = candidate.source or "MISSION_GENERATOR"
     }
 end
@@ -1576,11 +1614,113 @@ local function getTypeLimit(missionType)
     return MissionGenerator.maxPerGenerationByType[missionType] or MissionGenerator.defaultGenerationLimit
 end
 
-local function createCandidatesWithTypeLimits(candidates, limit)
+local function createCandidateMission(candidate, createdByType)
+    if candidate == nil then
+        return false, "candidate_missing"
+    end
+
+    if missionSignatureExists(candidate.signature) == true then
+        return false, "mission_already_exists"
+    end
+
+    local currentTypeCount = createdByType[candidate.missionType] or 0
+    local typeLimit = getTypeLimit(candidate.missionType)
+
+    if currentTypeCount >= typeLimit then
+        return false, "type_limit_reached"
+    end
+
+    local createdMission, missionRecordOrReason = createMissionIfMissing(
+        candidate.missionType,
+        candidateToMissionOptions(candidate)
+    )
+
+    if createdMission == true then
+        createdByType[candidate.missionType] = currentTypeCount + 1
+        return true, missionRecordOrReason
+    end
+
+    return false, missionRecordOrReason
+end
+
+local function createReservedFobSupportMissions(candidates, limit, createdByType)
     local created = 0
     local duplicateSkipped = 0
     local limitSkipped = 0
-    local createdByType = {}
+    local minimum = MissionGenerator.minimumFobSupportMissions or 0
+
+    if minimum <= 0 or limit <= 0 then
+        return 0, 0, 0
+    end
+
+    for _, candidate in ipairs(candidates) do
+        if created >= minimum or created >= limit then
+            break
+        end
+
+        if candidate.missionType == MissionGenerator.types.FOB_SUPPORT then
+            local success, missionRecordOrReason = createCandidateMission(candidate, createdByType)
+
+            if success == true then
+                created = created + 1
+                logInfo(
+                    "Reserved FOB support mission created: "
+                    .. tostring(missionRecordOrReason.key)
+                    .. " target="
+                    .. tostring(missionRecordOrReason.targetFobName or missionRecordOrReason.targetZoneName or "UNKNOWN")
+                )
+            elseif missionRecordOrReason == "mission_already_exists" then
+                duplicateSkipped = duplicateSkipped + 1
+            elseif missionRecordOrReason == "type_limit_reached" then
+                limitSkipped = limitSkipped + 1
+            end
+        end
+    end
+
+    return created, duplicateSkipped, limitSkipped
+end
+
+local function createCandidatesWithTypeLimits(candidates, limit, alreadyCreated, createdByType)
+    local created = alreadyCreated or 0
+    local duplicateSkipped = 0
+    local limitSkipped = 0
+
+    for _, candidate in ipairs(candidates) do
+        if created >= limit then
+            break
+        end
+
+        local success, missionRecordOrReason = createCandidateMission(candidate, createdByType)
+
+        if success == true then
+            created = created + 1
+            logDebug(
+                "Generated mission candidate accepted: "
+                .. tostring(missionRecordOrReason.key)
+                .. " "
+                .. tostring(missionRecordOrReason.type)
+                .. " priority="
+                .. tostring(missionRecordOrReason.priority)
+            )
+        elseif missionRecordOrReason == "mission_already_exists" then
+            duplicateSkipped = duplicateSkipped + 1
+        elseif missionRecordOrReason == "type_limit_reached" then
+            limitSkipped = limitSkipped + 1
+        end
+    end
+
+    return created - (alreadyCreated or 0), duplicateSkipped, limitSkipped
+end
+
+local function fillRemainingCandidates(candidates, limit, alreadyCreated)
+    local created = alreadyCreated or 0
+    local duplicateSkipped = 0
+
+    if created >= limit then
+        return 0, 0
+    end
+
+    local createdByFillType = {}
 
     for _, candidate in ipairs(candidates) do
         if created >= limit then
@@ -1590,12 +1730,9 @@ local function createCandidatesWithTypeLimits(candidates, limit)
         if missionSignatureExists(candidate.signature) == true then
             duplicateSkipped = duplicateSkipped + 1
         else
-            local currentTypeCount = createdByType[candidate.missionType] or 0
-            local typeLimit = getTypeLimit(candidate.missionType)
+            local currentTypeCount = createdByFillType[candidate.missionType] or 0
 
-            if currentTypeCount >= typeLimit then
-                limitSkipped = limitSkipped + 1
-            else
+            if currentTypeCount < 1 then
                 local createdMission, missionRecordOrReason = createMissionIfMissing(
                     candidate.missionType,
                     candidateToMissionOptions(candidate)
@@ -1603,9 +1740,9 @@ local function createCandidatesWithTypeLimits(candidates, limit)
 
                 if createdMission == true then
                     created = created + 1
-                    createdByType[candidate.missionType] = currentTypeCount + 1
+                    createdByFillType[candidate.missionType] = currentTypeCount + 1
                     logDebug(
-                        "Generated mission candidate accepted: "
+                        "Generated fill mission: "
                         .. tostring(missionRecordOrReason.key)
                         .. " "
                         .. tostring(missionRecordOrReason.type)
@@ -1619,50 +1756,10 @@ local function createCandidatesWithTypeLimits(candidates, limit)
         end
     end
 
-    return created, duplicateSkipped, limitSkipped, createdByType
-end
-
-local function fillRemainingCandidates(candidates, limit, alreadyCreated)
-    local created = alreadyCreated or 0
-    local duplicateSkipped = 0
-
-    if created >= limit then
-        return 0, 0
-    end
-
-    for _, candidate in ipairs(candidates) do
-        if created >= limit then
-            break
-        end
-
-        if missionSignatureExists(candidate.signature) == true then
-            duplicateSkipped = duplicateSkipped + 1
-        else
-            local createdMission, missionRecordOrReason = createMissionIfMissing(
-                candidate.missionType,
-                candidateToMissionOptions(candidate)
-            )
-
-            if createdMission == true then
-                created = created + 1
-                logDebug(
-                    "Generated fill mission: "
-                    .. tostring(missionRecordOrReason.key)
-                    .. " "
-                    .. tostring(missionRecordOrReason.type)
-                    .. " priority="
-                    .. tostring(missionRecordOrReason.priority)
-                )
-            elseif missionRecordOrReason == "mission_already_exists" then
-                duplicateSkipped = duplicateSkipped + 1
-            end
-        end
-    end
-
     return created - (alreadyCreated or 0), duplicateSkipped
 end
 
-local function updateGenerationStatistics(candidateCount, createdCount, duplicateSkipped, limitSkipped)
+local function updateGenerationStatistics(candidateCount, fobCandidateCount, createdCount, duplicateSkipped, limitSkipped, reservedCreated)
     local state = ensureMissionState()
 
     if state == nil then
@@ -1672,15 +1769,19 @@ local function updateGenerationStatistics(candidateCount, createdCount, duplicat
     state.Missions.lastGenerationTime = getCurrentTime()
     state.Missions.statistics.lastCreated = createdCount
     state.Missions.statistics.lastCandidates = candidateCount
+    state.Missions.statistics.lastFobCandidates = fobCandidateCount
+    state.Missions.statistics.lastReservedCreated = reservedCreated
     state.Missions.statistics.lastDuplicatesSkipped = duplicateSkipped
     state.Missions.statistics.lastLimitSkipped = limitSkipped
 
     table.insert(state.Missions.generationHistory, {
         time = state.Missions.lastGenerationTime,
         candidateCount = candidateCount,
+        fobCandidateCount = fobCandidateCount,
         createdCount = createdCount,
         duplicateSkipped = duplicateSkipped,
         limitSkipped = limitSkipped,
+        reservedCreated = reservedCreated,
         availableAfterGeneration = countAvailableMissions()
     })
 end
@@ -1729,7 +1830,7 @@ local function applyMissionCompletionEffect(missionRecord)
     end
 
     if missionRecord.type == MissionGenerator.types.FOB_SUPPORT then
-        local deliverySystem = TC.Logistics and TC.Logistics.Delivery or nil
+        local deliverySystem = getDeliverySystem()
 
         if deliverySystem ~= nil and deliverySystem.createFobPackageDelivery ~= nil then
             deliverySystem.createFobPackageDelivery({
@@ -1739,7 +1840,7 @@ local function applyMissionCompletionEffect(missionRecord)
                 targetZone = missionRecord.targetZoneKey,
                 targetBase = missionRecord.targetBaseKey,
                 targetFob = missionRecord.targetFobKey,
-                effect = {
+                effect = missionRecord.effect or {
                     supply = 25,
                     engineering = 25,
                     fobConstruction = 1
@@ -1783,7 +1884,7 @@ function MissionGenerator.createMission(missionType, options)
         .. " ["
         .. tostring(missionRecord.key)
         .. "] target="
-        .. tostring(missionRecord.targetZoneName or missionRecord.targetBaseName or missionRecord.targetFobName or "UNKNOWN")
+        .. tostring(missionRecord.targetFobName or missionRecord.targetZoneName or missionRecord.targetBaseName or "UNKNOWN")
         .. " priority="
         .. tostring(missionRecord.priority)
     )
@@ -1798,37 +1899,24 @@ function MissionGenerator.getMission(missionKeyOrName)
         return nil
     end
 
-    local missionRecord = getMissionFromContainer(state.Missions.available, missionKeyOrName)
+    local containers = {
+        state.Missions.available,
+        state.Missions.active,
+        state.Missions.completed,
+        state.Missions.failed,
+        state.Missions.expired,
+        state.Missions.cancelled
+    }
 
-    if missionRecord ~= nil then
-        return missionRecord
+    for _, container in ipairs(containers) do
+        local missionRecord = getMissionFromContainer(container, missionKeyOrName)
+
+        if missionRecord ~= nil then
+            return missionRecord
+        end
     end
 
-    missionRecord = getMissionFromContainer(state.Missions.active, missionKeyOrName)
-
-    if missionRecord ~= nil then
-        return missionRecord
-    end
-
-    missionRecord = getMissionFromContainer(state.Missions.completed, missionKeyOrName)
-
-    if missionRecord ~= nil then
-        return missionRecord
-    end
-
-    missionRecord = getMissionFromContainer(state.Missions.failed, missionKeyOrName)
-
-    if missionRecord ~= nil then
-        return missionRecord
-    end
-
-    missionRecord = getMissionFromContainer(state.Missions.expired, missionKeyOrName)
-
-    if missionRecord ~= nil then
-        return missionRecord
-    end
-
-    return getMissionFromContainer(state.Missions.cancelled, missionKeyOrName)
+    return nil
 end
 
 function MissionGenerator.setMissionStatus(missionKeyOrName, status, reason)
@@ -1972,8 +2060,9 @@ function MissionGenerator.generateAvailableMissions(limit)
         MissionGenerator.lastCreatedCount = 0
         MissionGenerator.lastSkippedDuplicateCount = 0
         MissionGenerator.lastSkippedLimitCount = 0
+        MissionGenerator.lastReservedCreatedCount = 0
 
-        updateGenerationStatistics(0, 0, 0, 0)
+        updateGenerationStatistics(0, 0, 0, 0, 0, 0)
 
         logInfo(
             "Mission generation skipped: available mission pool already contains "
@@ -1985,32 +2074,51 @@ function MissionGenerator.generateAvailableMissions(limit)
     end
 
     local remainingLimit = generationLimit - currentAvailable
-    local candidates = collectMissionCandidates()
+    local candidates, fobCandidateCount = collectMissionCandidates()
     local candidateCount = #candidates
+    local createdByType = {}
 
     MissionGenerator.lastCandidateCount = candidateCount
+    MissionGenerator.lastFobCandidateCount = fobCandidateCount
 
     logInfo(
         "Mission candidate summary: candidates="
         .. tostring(candidateCount)
+        .. ", fobSupportCandidates="
+        .. tostring(fobCandidateCount)
         .. ", availableBefore="
         .. tostring(currentAvailable)
         .. ", generationSlots="
         .. tostring(remainingLimit)
     )
 
-    local createdWithLimits, duplicatesWithLimits, skippedByTypeLimit = createCandidatesWithTypeLimits(candidates, remainingLimit)
-    local createdByFill, duplicatesByFill = fillRemainingCandidates(candidates, remainingLimit, createdWithLimits)
+    local reservedCreated, reservedDuplicates, reservedTypeLimit = createReservedFobSupportMissions(
+        candidates,
+        remainingLimit,
+        createdByType
+    )
 
-    local createdTotal = createdWithLimits + createdByFill
-    local duplicateTotal = duplicatesWithLimits + duplicatesByFill
+    local createdWithLimits, duplicatesWithLimits, skippedByTypeLimit = createCandidatesWithTypeLimits(
+        candidates,
+        remainingLimit,
+        reservedCreated,
+        createdByType
+    )
+
+    local createdAfterLimits = reservedCreated + createdWithLimits
+    local createdByFill, duplicatesByFill = fillRemainingCandidates(candidates, remainingLimit, createdAfterLimits)
+
+    local createdTotal = reservedCreated + createdWithLimits + createdByFill
+    local duplicateTotal = reservedDuplicates + duplicatesWithLimits + duplicatesByFill
+    local limitSkippedTotal = reservedTypeLimit + skippedByTypeLimit
 
     MissionGenerator.lastGenerationTime = getCurrentTime()
     MissionGenerator.lastCreatedCount = createdTotal
     MissionGenerator.lastSkippedDuplicateCount = duplicateTotal
-    MissionGenerator.lastSkippedLimitCount = skippedByTypeLimit
+    MissionGenerator.lastSkippedLimitCount = limitSkippedTotal
+    MissionGenerator.lastReservedCreatedCount = reservedCreated
 
-    updateGenerationStatistics(candidateCount, createdTotal, duplicateTotal, skippedByTypeLimit)
+    updateGenerationStatistics(candidateCount, fobCandidateCount, createdTotal, duplicateTotal, limitSkippedTotal, reservedCreated)
     updateStatistics()
     markDirty("missions_generated")
 
@@ -2019,10 +2127,14 @@ function MissionGenerator.generateAvailableMissions(limit)
         .. tostring(createdTotal)
         .. " new missions from "
         .. tostring(candidateCount)
-        .. " candidates (duplicatesSkipped="
+        .. " candidates (fobSupportCandidates="
+        .. tostring(fobCandidateCount)
+        .. ", reservedCreated="
+        .. tostring(reservedCreated)
+        .. ", duplicatesSkipped="
         .. tostring(duplicateTotal)
         .. ", typeLimitSkipped="
-        .. tostring(skippedByTypeLimit)
+        .. tostring(limitSkippedTotal)
         .. ")"
     )
 
@@ -2196,6 +2308,40 @@ function MissionGenerator.getMissionsForZone(zoneKeyOrName)
     return result
 end
 
+function MissionGenerator.getMissionsForFob(fobKeyOrName)
+    local result = {}
+
+    if fobKeyOrName == nil then
+        return result
+    end
+
+    local state = ensureMissionState()
+
+    if state == nil then
+        return result
+    end
+
+    local normalizedSearch = normalizeName(fobKeyOrName)
+    local containers = {
+        state.Missions.available,
+        state.Missions.active,
+        state.Missions.completed,
+        state.Missions.failed,
+        state.Missions.expired,
+        state.Missions.cancelled
+    }
+
+    for _, container in ipairs(containers) do
+        for key, missionRecord in pairs(container) do
+            if missionRecord.targetFobKey == fobKeyOrName or normalizeName(missionRecord.targetFobName) == normalizedSearch then
+                result[key] = missionRecord
+            end
+        end
+    end
+
+    return result
+end
+
 function MissionGenerator.getTopAvailableMission()
     local state = ensureMissionState()
 
@@ -2221,7 +2367,9 @@ function MissionGenerator.getTopAvailableMission()
 end
 
 function MissionGenerator.getGenerationCandidates()
-    return collectMissionCandidates()
+    local candidates = collectMissionCandidates()
+
+    return candidates
 end
 
 function MissionGenerator.getStatistics()
@@ -2255,9 +2403,12 @@ function MissionGenerator.summary()
         finished = MissionGenerator.finished,
         failed = MissionGenerator.failed,
         defaultGenerationLimit = MissionGenerator.defaultGenerationLimit,
+        minimumFobSupportMissions = MissionGenerator.minimumFobSupportMissions,
         lastGenerationTime = MissionGenerator.lastGenerationTime,
         lastCandidateCount = MissionGenerator.lastCandidateCount,
+        lastFobCandidateCount = MissionGenerator.lastFobCandidateCount,
         lastCreatedCount = MissionGenerator.lastCreatedCount,
+        lastReservedCreatedCount = MissionGenerator.lastReservedCreatedCount,
         lastSkippedDuplicateCount = MissionGenerator.lastSkippedDuplicateCount,
         lastSkippedLimitCount = MissionGenerator.lastSkippedLimitCount,
         statistics = statistics
