@@ -72,6 +72,8 @@ Aktuell erledigt:
 - `ARCHITECTURE.md` nach Source-Ausbau aktualisiert
 - Root-`README.md` nach Source-Ausbau aktualisiert
 - `CHANGELOG.md` nach Main-Aktualisierung aktualisiert
+- `TASKS.md` nach Loader-/Main-Startkettenprüfung aktualisiert
+- `MISSION_EDITOR_SETUP.md` für Source-Ladetest und `dofile`-Prüfstrategie aktualisiert
 
 Aktueller Projektzustand:
 
@@ -81,18 +83,20 @@ Aktueller Projektzustand:
     Erste eigene Lua-Module sind erstellt.
     Loader und Main sind auf die aktuellen Module ausgerichtet.
     Die Loader-/Main-Startkette ist logisch geprüft.
-    Der aktuelle Fokus liegt auf der Prüfung des DCS-Sandbox-Verhaltens für dofile.
+    Die Mission-Editor-Dokumentation beschreibt jetzt eine sichere erste Source-Ladevariante ohne dofile-Abhängigkeit.
+    Der aktuelle Fokus liegt auf der Vorbereitung des ersten realen DCS-Starttests.
 
 Noch nicht erledigt:
 
+- `TASKS.md` nach Mission-Editor-Setup-Aktualisierung abschließend aktualisieren
 - Start aller geladenen Module technisch in DCS verifizieren
-- DCS-Sandbox-Verhalten für `dofile` prüfen
+- DCS-Sandbox-Verhalten für `dofile` praktisch testen
 - erster realer DCS-Mission-Starttest durchführen
 - DCS-Mission-Editor-Test vorbereiten
+- DEV-Mission im DCS Mission Editor erstellen
 - IADS-Implementierung beginnen
 - UI-Implementierung beginnen
 - Debug-Implementierung beginnen
-- DEV-Mission im DCS Mission Editor erstellen
 
 ---
 
@@ -124,14 +128,96 @@ Die geplante Lade-Reihenfolge im DCS Mission Editor lautet:
     3. vendor/ctld/CTLD-i18n.lua
     4. vendor/ctld/CTLD.lua
     5. vendor/skynet-iads/SkynetIADS.lua
-    6. src/loader.lua
 
-Wichtig:
+Danach folgt für den ersten realen DEV-Test zunächst die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
 
-- MIST muss vor CTLD geladen werden.
-- `CTLD-i18n.lua` muss vor `CTLD.lua` geladen werden.
-- Skynet IADS muss nach MIST geladen werden.
-- Eigene Theater-Command-Logik startet erst nach den externen Frameworks.
+---
+
+## Sichere erste Source-Ladevariante
+
+Für den ersten DCS-Test wird nicht vorausgesetzt, dass `dofile` zuverlässig funktioniert.
+
+Empfohlen wird zuerst:
+
+    Starttest-Variante A — sichere Einzeldatei-Ladung
+
+Dabei werden alle aktiven Source-Dateien einzeln im Mission Editor per `DO SCRIPT FILE` geladen.
+
+Danach wird `src/loader.lua` zuletzt geladen.
+
+Ziel:
+
+    Module im DCS-Kontext testen
+    dofile-Abhängigkeit vermeiden
+    Framework-Ladung prüfen
+    Theater-Command-Startkette prüfen
+    dcs.log auf Fehler prüfen
+
+---
+
+## Geplante Trigger-Reihenfolge für Starttest-Variante A
+
+Im DCS Mission Editor werden die Dateien zeitversetzt geladen:
+
+    TIME MORE 1
+    DO SCRIPT FILE: vendor/mist/mist.lua
+
+    TIME MORE 2
+    DO SCRIPT FILE: vendor/moose/Moose.lua
+
+    TIME MORE 3
+    DO SCRIPT FILE: vendor/ctld/CTLD-i18n.lua
+
+    TIME MORE 4
+    DO SCRIPT FILE: vendor/ctld/CTLD.lua
+
+    TIME MORE 5
+    DO SCRIPT FILE: vendor/skynet-iads/SkynetIADS.lua
+
+    TIME MORE 7
+    DO SCRIPT FILE: src/core/tc_config.lua
+
+    TIME MORE 8
+    DO SCRIPT FILE: src/core/tc_logger.lua
+
+    TIME MORE 9
+    DO SCRIPT FILE: src/core/tc_state.lua
+
+    TIME MORE 10
+    DO SCRIPT FILE: src/core/tc_utils.lua
+
+    TIME MORE 11
+    DO SCRIPT FILE: src/core/tc_scheduler.lua
+
+    TIME MORE 12
+    DO SCRIPT FILE: src/world/tc_airbase_scanner.lua
+
+    TIME MORE 13
+    DO SCRIPT FILE: src/world/tc_zone_factory.lua
+
+    TIME MORE 14
+    DO SCRIPT FILE: src/campaign/tc_capture_system.lua
+
+    TIME MORE 15
+    DO SCRIPT FILE: src/campaign/tc_persistence_system.lua
+
+    TIME MORE 16
+    DO SCRIPT FILE: src/logistics/tc_logistics_delivery.lua
+
+    TIME MORE 17
+    DO SCRIPT FILE: src/logistics/tc_fob_system.lua
+
+    TIME MORE 18
+    DO SCRIPT FILE: src/missions/tc_mission_generator.lua
+
+    TIME MORE 19
+    DO SCRIPT FILE: src/ai/tc_ai_cap_manager.lua
+
+    TIME MORE 20
+    DO SCRIPT FILE: src/main.lua
+
+    TIME MORE 22
+    DO SCRIPT FILE: src/loader.lua
 
 ---
 
@@ -402,7 +488,7 @@ Aktiver Stand:
 ### Noch zu prüfen
 
 - [ ] Start aller geladenen Module technisch in DCS verifizieren
-- [ ] DCS-Sandbox-Verhalten für `dofile` prüfen
+- [ ] DCS-Sandbox-Verhalten für `dofile` praktisch testen
 - [ ] erster realer DCS-Mission-Starttest durchführen
 
 ---
@@ -695,8 +781,10 @@ Diese Aufgaben werden später im DCS Mission Editor erledigt.
 - [ ] erste CTLD-Pickup-Zonen auf Akrotiri anlegen
 - [ ] erste Template-Gruppen mit Late Activation anlegen
 - [ ] Framework-Lade-Trigger vorbereiten
+- [ ] Source-Lade-Trigger für Starttest-Variante A vorbereiten
 - [ ] `src/loader.lua` als letzte eigene Datei laden
 - [ ] erster Starttest mit `dcs.log`-Kontrolle durchführen
+- [ ] danach Loader-only-Variante mit `dofile` prüfen
 
 ---
 
@@ -817,23 +905,28 @@ Diese Dateien sind aktuell vorhanden oder perspektivisch erwünscht:
 
 ## Aktuell nächster sinnvoller Einzelschritt
 
-Als nächster technischer Schritt wird das DCS-Sandbox-Verhalten für `dofile` geprüft.
+Als nächster Schritt wird `CHANGELOG.md` aktualisiert, damit die Mission-Editor-Setup-Aktualisierung und die `dofile`-Prüfstrategie dokumentiert sind.
 
 Nächste Datei:
 
-    MISSION_EDITOR_SETUP.md
+    CHANGELOG.md
 
-Prüffokus:
+Danach:
 
-    ob dofile im geplanten DCS-Setup realistisch nutzbar ist
-    ob die Mission-Editor-Ladeweise angepasst werden muss
-    ob src/loader.lua Dateien selbst nachladen kann
-    ob alternativ alle Dateien einzeln im Mission Editor geladen werden müssen
-    welche Starttest-Variante als erste DEV-Prüfung empfohlen wird
+    DEV-Testvariante A im DCS Mission Editor vorbereiten
+
+Prüffokus für DEV-Testvariante A:
+
+    Frameworks laden
+    aktive Source-Dateien einzeln laden
+    main.lua laden
+    loader.lua zuletzt laden
+    dcs.log prüfen
+    keine dofile-Abhängigkeit im ersten Test
 
 Grund:
 
-`src/loader.lua` ist aktuell so gebaut, dass eigene Module per `dofile` geladen werden. Das ist strukturell sauber, muss aber im konkreten DCS-Sandbox-Kontext geprüft werden, bevor wir mit der DEV-Mission weitermachen.
+Die Mission-Editor-Dokumentation ist jetzt auf den Source-Ladetest vorbereitet. Das Changelog muss diesen Stand ebenfalls abbilden, bevor praktisch im Mission Editor weitergearbeitet wird.
 
 ---
 
@@ -876,5 +969,5 @@ Aktueller Stand in dieser Reihenfolge:
     UI: dokumentiert
     Debug: dokumentiert
     Startkette: logisch geprüft
-    DCS-Sandbox-Prüfung: nächster Schritt
+    DCS-Sandbox-Prüfstrategie: dokumentiert
     Starttest: noch offen
