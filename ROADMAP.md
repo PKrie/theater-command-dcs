@@ -26,6 +26,12 @@ Grundprinzip:
     Lua = Kampagnensystem
     GitHub = Projektgedächtnis
 
+Der DCS Mission Editor stellt die physische Umgebung bereit.
+
+Lua übernimmt die eigentliche Kampagnenlogik.
+
+GitHub dokumentiert Struktur, Entscheidungen, Versionen und Aufgabenstand.
+
 ---
 
 ## Aktueller Stand
@@ -35,66 +41,64 @@ Stand: 2026-06-16
 Aktuell abgeschlossen:
 
 - Repository erstellt
-- zentrale Dokumentationsdateien angelegt
+- zentrale Projektdokumentation angelegt
 - `docs/`-Grundblock erstellt
 - `vendor/`-Grundstruktur erstellt
 - MIST importiert
 - MOOSE importiert
 - CTLD importiert
 - Skynet IADS importiert
-- CTLD-kompatible MIST-Version hinterlegt
+- MIST auf CTLD-kompatible Version gesetzt
 - Vendor-Dokumentation aktualisiert
 - zentrale Dokumentation nach Vendor-Abschluss aktualisiert
-- `src/README.md` erstellt und nach Source-Ausbau aktualisiert
-- `src/loader.lua` erstellt
-- `src/main.lua` erstellt
-- `src/core/` erstellt
-- `src/world/` erstellt
-- `src/campaign/` erstellt
-- `src/logistics/` erstellt
-- `src/missions/` erstellt
-- `src/ai/` erstellt
-- `src/iads/` erstellt
-- `src/ui/` erstellt
-- `src/debug/` erstellt
-- Core-Module erstellt
-- World-Module erstellt
-- Campaign-Module erstellt
-- Logistics-Module erstellt
-- Missionsgenerator erstellt
-- AI-CAP-Manager erstellt
-- Loader auf Core, World, Campaign, Logistics, Missions und AI erweitert
-- `TASKS.md` nach Source-Ausbau aktualisiert
-- `CHANGELOG.md` nach Source-Ausbau aktualisiert
+- `src/`-Grundstruktur angelegt
+- erste eigene Lua-Module erstellt
+- Core-System angelegt
+- World-System angelegt
+- Campaign-System angelegt
+- Logistics-System angelegt
+- Missions-System angelegt
+- AI-CAP-System angelegt
+- IADS-, UI- und Debug-Bereiche dokumentiert
+- Loader erstellt
+- Main-Initialisierung erstellt
+- Loader-/Main-Startkette logisch geprüft
+- Mission-Editor-Dokumentation für sicheren ersten Source-Test aktualisiert
+- lokale Repository-Kopie auf dem DCS-PC eingerichtet
+- minimale Syria-DEV-Mission im DCS Mission Editor erstellt
+- Akrotiri als blaue Startbasis genutzt
+- erster blauer F/A-18C-Client-Slot auf Akrotiri erstellt
+- Framework-Lade-Trigger im Mission Editor angelegt
+- Source-Lade-Trigger für Starttest-Variante A im Mission Editor angelegt
+- erster realer DCS-Starttest durchgeführt
+- `dcs.log` ausgewertet
+- Theater-Command-Startkette in DCS erfolgreich bestätigt
 
-Aktueller Fokus:
+Aktueller technischer Status:
 
-    zentrale Dokumentation nach Source-Ausbau konsistent machen
+    Die Theater-Command-Startkette läuft im DCS Mission Scripting Environment.
+    Frameworks werden geladen und erkannt.
+    Eigene Source-Module werden geladen.
+    Main wird gestartet.
+    Runtime-Systeme werden initialisiert.
+    Loader beendet sauber.
+    Airbase-Scanner und Zone-Factory laufen im DCS-Test.
 
-Noch nicht abgeschlossen:
+Wichtiges Testergebnis:
 
-- `ARCHITECTURE.md` nach Source-Ausbau aktualisieren
-- Root-`README.md` nach Source-Ausbau aktualisieren
-- `src/main.lua` technisch gegen aktuelle Modulnamen prüfen
-- erster echter DCS-Starttest
-- DEV-Mission im DCS Mission Editor
-- konkrete IADS-Lua-Implementierung
-- konkrete UI-/F10-Lua-Implementierung
-- konkrete Debug-Lua-Implementierung
-- reale CTLD-Ereignisbrücke
-- reale MOOSE-CAP-Spawns
-- reale Skynet-IADS-Kampagnenbrücke
-- Persistenz mit DCS-Dateizugriff
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
+
+Bewertung:
+
+    Starttest-Variante A ist bestanden.
+    Die hohe Zahl erkannter Objekte ist kein Startfehler.
+    Das aktuelle Syria-Update liefert sehr viele Airbase-ähnliche Objekte.
+    Der nächste technische Schwerpunkt ist die fachliche Filterung und Klassifizierung dieser Objekte.
 
 ---
 
-## Aktueller Framework-Stand
-
-Externe Frameworks liegen unter:
-
-    vendor/
-
-Aktuell hinterlegte Frameworks:
+## Aktuelle Framework-Basis
 
 | Framework | Projektpfad | Stand |
 |---|---|---|
@@ -105,30 +109,33 @@ Aktuell hinterlegte Frameworks:
 
 Wichtig:
 
-Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket, weil CTLD für korrektes dynamisches Spawning auf die mitgelieferte MIST-Version verweist.
+Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket.
 
-Frameworks unter `vendor/` werden nicht verändert.
+Grund:
+
+CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
 
 ---
 
-## DCS-Lade-Reihenfolge
+## Externe DCS-Lade-Reihenfolge
 
-Die Lade-Reihenfolge im DCS Mission Editor lautet:
+Die Frameworks werden im DCS Mission Editor in dieser Reihenfolge geladen:
 
     1. vendor/mist/mist.lua
     2. vendor/moose/Moose.lua
     3. vendor/ctld/CTLD-i18n.lua
     4. vendor/ctld/CTLD.lua
     5. vendor/skynet-iads/SkynetIADS.lua
-    6. src/loader.lua
 
-Eigene Theater-Command-Logik startet erst nach den externen Frameworks.
+Danach folgt die eigene Theater-Command-Logik.
+
+Für Starttest-Variante A wurden alle aktiven Source-Dateien einzeln per `DO SCRIPT FILE` geladen.
 
 ---
 
-## Interne Source-Lade-Reihenfolge
+## Interne Theater-Command-Lade-Reihenfolge
 
-Die interne Theater-Command-Lade-Reihenfolge lautet:
+Die interne Theater-Command-Lade-Reihenfolge ist:
 
     1. Core
     2. World
@@ -141,7 +148,7 @@ Die interne Theater-Command-Lade-Reihenfolge lautet:
     9. Debug
     10. Main
 
-Aktuell lädt `src/loader.lua` aktiv:
+Aktuell aktiv umgesetzt:
 
 - Core
 - World
@@ -150,727 +157,675 @@ Aktuell lädt `src/loader.lua` aktiv:
 - Missions
 - AI
 - Main
+- Loader
 
-IADS, UI und Debug besitzen aktuell README-Dateien, aber noch keine aktiven Lua-Module.
+Aktuell nur dokumentiert:
 
----
-
-## Aktuelle Source-Struktur
-
-Die aktuelle Source-Struktur lautet:
-
-    src/
-    ├── README.md
-    ├── loader.lua
-    ├── main.lua
-    ├── core/
-    │   ├── README.md
-    │   ├── tc_config.lua
-    │   ├── tc_logger.lua
-    │   ├── tc_state.lua
-    │   ├── tc_utils.lua
-    │   └── tc_scheduler.lua
-    ├── world/
-    │   ├── README.md
-    │   ├── tc_airbase_scanner.lua
-    │   └── tc_zone_factory.lua
-    ├── campaign/
-    │   ├── README.md
-    │   ├── tc_capture_system.lua
-    │   └── tc_persistence_system.lua
-    ├── logistics/
-    │   ├── README.md
-    │   ├── tc_logistics_delivery.lua
-    │   └── tc_fob_system.lua
-    ├── missions/
-    │   ├── README.md
-    │   └── tc_mission_generator.lua
-    ├── ai/
-    │   ├── README.md
-    │   └── tc_ai_cap_manager.lua
-    ├── iads/
-    │   └── README.md
-    ├── ui/
-    │   └── README.md
-    └── debug/
-        └── README.md
+- IADS
+- UI
+- Debug
 
 ---
 
-## Entwicklungsphasen
+## Erfolgreicher Starttest
 
-Die Roadmap ist in technische Entwicklungsphasen unterteilt.
+Der erste reale DCS-Test wurde mit folgender Methode durchgeführt:
 
-Die Phasen beschreiben die Zielrichtung.
+    Starttest-Variante A — sichere Einzeldatei-Ladung
 
-Die konkrete Aufgabenverwaltung erfolgt über:
+Dabei wurden zuerst alle Frameworks per `DO SCRIPT FILE` geladen.
 
-    TASKS.md
+Danach wurden alle aktiven eigenen Source-Dateien einzeln per `DO SCRIPT FILE` geladen.
 
----
+Danach wurde `src/main.lua` geladen.
 
-## Phase 0 — Projektgrundlage und Vendor-Abschluss
+Zuletzt wurde `src/loader.lua` geladen.
 
-### Ziel
+Ergebnis:
 
-Repository, Dokumentation und externe Frameworks sauber vorbereiten.
+    Bestanden.
 
-### Aufgaben
+Bestätigt wurde:
 
-- [x] GitHub-Repository erstellen
-- [x] grundlegende Projektstruktur anlegen
-- [x] `README.md` erstellen
-- [x] `ROADMAP.md` erstellen
-- [x] `TASKS.md` erstellen
-- [x] `CHANGELOG.md` erstellen
-- [x] `ARCHITECTURE.md` erstellen
-- [x] `MISSION_EDITOR_SETUP.md` erstellen
-- [x] `NAMING_CONVENTIONS.md` erstellen
-- [x] `LUA_STYLEGUIDE.md` erstellen
-- [x] `docs/`-Grundblock erstellen
-- [x] `vendor/README.md` erstellen
-- [x] `vendor/mist/README.md` erstellen
-- [x] `vendor/moose/README.md` erstellen
-- [x] `vendor/ctld/README.md` erstellen
-- [x] `vendor/skynet-iads/README.md` erstellen
-- [x] MIST hinterlegen
-- [x] MOOSE hinterlegen
-- [x] CTLD hinterlegen
-- [x] Skynet IADS hinterlegen
-- [x] Framework-Versionen dokumentieren
-- [x] `src/README.md` erstellen
-- [x] falsch platzierte Root-`Moose.lua` entfernen
-- [x] zentrale Dokumentation nach Vendor-Import aktualisieren
-- [x] `TASKS.md` nach Vendor-Abschluss aktualisieren
-- [x] `CHANGELOG.md` nach Vendor-Abschluss aktualisieren
-
-### Ergebnis
-
-Phase 0 ist fachlich abgeschlossen.
-
-Das Projekt ist dokumentiert.
-
-Die externen Frameworks sind lokal unter `vendor/` hinterlegt.
-
-Die eigene Lua-Struktur konnte danach beginnen.
+- MIST geladen
+- MOOSE geladen
+- CTLD-i18n geladen
+- CTLD geladen
+- Skynet IADS geladen
+- Theater Command Loader gestartet
+- Frameworks durch Loader erkannt
+- Core geladen
+- World geladen
+- Campaign geladen
+- Logistics geladen
+- Missions geladen
+- AI geladen
+- Main gestartet
+- Runtime-Systeme initialisiert
+- Airbase-Scanner ausgeführt
+- Zone-Factory ausgeführt
+- Loader sauber beendet
 
 ---
 
-## Phase 1 — Source-Grundstruktur und Core-System
+## Phase 0 — Projektbasis
 
-### Ziel
+Status:
 
-Theater Command als eigenes Lua-System initialisieren.
+    Abgeschlossen
 
-### Geplante Struktur
+Ziele:
 
-    src/
-    ├── README.md
-    ├── loader.lua
-    ├── main.lua
-    ├── core/
-    ├── world/
-    ├── campaign/
-    ├── logistics/
-    ├── missions/
-    ├── ai/
-    ├── iads/
-    ├── ui/
-    └── debug/
+- Projektidee dokumentieren
+- Repository anlegen
+- zentrale Dokumentationsdateien erstellen
+- Architekturgrundsätze definieren
+- Namenskonventionen definieren
+- Lua-Stilregeln definieren
+- Mission-Editor-Grundprinzip festlegen
+- Docs-Grundblock erstellen
+- Vendor-Grundstruktur erstellen
 
-### Vorhandene Dateien
+Ergebnis:
 
-- [x] `src/README.md`
-- [x] `src/loader.lua`
-- [x] `src/main.lua`
-- [x] `src/core/README.md`
-- [x] `src/core/tc_config.lua`
-- [x] `src/core/tc_logger.lua`
-- [x] `src/core/tc_state.lua`
-- [x] `src/core/tc_utils.lua`
-- [x] `src/core/tc_scheduler.lua`
-
-### Aufgaben
-
-- [x] `src/`-Unterordner vorbereiten
-- [x] README-Dateien für alle `src/`-Unterordner erstellen
-- [x] globale `TC`-Tabelle anlegen
-- [x] zentrale Konfiguration vorbereiten
-- [x] Logger für `dcs.log` erstellen
-- [x] globalen Kampagnen-State vorbereiten
-- [x] Utility-Funktionen vorbereiten
-- [x] Scheduler-Grundfunktionen vorbereiten
-- [x] Lade-Reihenfolge der eigenen Lua-Dateien festlegen
-- [x] Framework-Verfügbarkeit prüfen
-- [x] erste Debug-Ausgabe im DCS-Log vorbereiten
-- [ ] `src/main.lua` gegen aktuelle Modulnamen prüfen
-- [ ] DCS-Sandbox-Verhalten für `dofile` prüfen
-- [ ] erster echter DCS-Starttest
-
-### Ergebnis
-
-Die eigene Lua-Grundstruktur ist modular vorbereitet.
-
-Der Core ist in erster Version vorhanden.
-
-Der reale Starttest in DCS steht noch aus.
+    Phase 0 ist fachlich abgeschlossen.
 
 ---
 
-## Phase 2 — Airbase- und Zonen-System
+## Phase 0.5 — Vendor-Basis
 
-### Ziel
+Status:
 
-Relevante Airbases der Syria Map automatisch erkennen und daraus eigene strategische BaseNodes sowie virtuelle Zonen erzeugen.
+    Abgeschlossen
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/world/README.md`
-- [x] `src/world/tc_airbase_scanner.lua`
-- [x] `src/world/tc_zone_factory.lua`
+- MIST unter `vendor/mist/` hinterlegen
+- MOOSE unter `vendor/moose/` hinterlegen
+- CTLD unter `vendor/ctld/` hinterlegen
+- Skynet IADS unter `vendor/skynet-iads/` hinterlegen
+- Framework-Versionen dokumentieren
+- Frameworks nicht verändern
+- Lade-Reihenfolge dokumentieren
+- Vendor-Dokumentation aktualisieren
 
-### Geplante spätere Dateien
+Ergebnis:
 
-- [ ] `src/debug/tc_debug_airbase_report.lua`
-- [ ] `src/debug/tc_debug_zone_overlay.lua`
-
-### Aufgaben
-
-- [x] Airbase-Scanner bauen
-- [x] Airbases über DCS-API erfassbar machen
-- [x] Name, Position, Koalition und Kategorie vorbereiten
-- [x] Airbases als eigene BaseRecords registrieren
-- [x] Akrotiri als blaue Startbasis vorbereiten
-- [x] syrisches Festland initial als rot kontrolliert vorbereiten
-- [x] virtuelle Airbase-Zonen vorbereiten
-- [x] optionale Mission-Editor-Zonen einlesbar machen
-- [x] Zonen mit Airbases verknüpfen
-- [x] Zonen für spätere Missionen nutzbar machen
-- [ ] Debug-Ausgabe für erkannte Airbases erstellen
-- [ ] Debug-Ausgabe für virtuelle Zonen erstellen
-- [ ] realen Syria-Airbase-Scan in DCS testen
-
-### Ergebnis
-
-Die Map kann als strategisches Basen- und Zonensystem vorbereitet werden.
-
-Manuelle Triggerzonen pro Airbase sollen langfristig nicht nötig sein.
+    Vendor ist funktional abgeschlossen.
 
 ---
 
-## Phase 3 — Besitz- und Capture-System
+## Phase 1 — Source Foundation
 
-### Ziel
+Status:
 
-Basen und Gefechtszonen sollen durch Theater-Command-Logik erobert, verloren und bewertet werden können.
+    Weitgehend abgeschlossen
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/campaign/README.md`
-- [x] `src/campaign/tc_capture_system.lua`
-- [x] `src/campaign/tc_persistence_system.lua`
+- `src/`-Grundstruktur anlegen
+- eigene Lua-Logik nach Aufgaben sortieren
+- keine frameworkorientierten Sammeldateien erstellen
+- Core-Bereich erstellen
+- Loader erstellen
+- Main-Initialisierung erstellen
+- erste Modulstruktur vorbereiten
+- Framework-Verfügbarkeit prüfen
+- Logging vorbereiten
+- State-Struktur vorbereiten
+- Scheduler vorbereiten
+- Startkette im DCS Mission Scripting Environment prüfen
 
-### Geplante spätere Dateien
+Erledigt:
 
-- [ ] `src/debug/tc_debug_capture_report.lua`
+- `src/README.md`
+- `src/core/README.md`
+- `src/world/README.md`
+- `src/campaign/README.md`
+- `src/logistics/README.md`
+- `src/missions/README.md`
+- `src/ai/README.md`
+- `src/iads/README.md`
+- `src/ui/README.md`
+- `src/debug/README.md`
+- `src/loader.lua`
+- `src/main.lua`
+- `src/core/tc_config.lua`
+- `src/core/tc_logger.lua`
+- `src/core/tc_state.lua`
+- `src/core/tc_utils.lua`
+- `src/core/tc_scheduler.lua`
 
-### Aufgaben
+Ergebnis:
 
-- [x] Blau/Rot/Neutral/Contested/Unknown-Status vorbereiten
-- [x] Besitzstatus für Basen vorbereiten
-- [x] Besitzstatus für Zonen vorbereiten
-- [x] Besitzstatus lesen
-- [x] Besitzstatus ändern
-- [x] Capture-Events speichern
-- [x] State als dirty markieren
-- [x] Verbindung zum Airbase-System vorbereiten
-- [x] Verbindung zum Zonen-System vorbereiten
-- [x] In-Memory-Persistenz vorbereiten
-- [x] State-Export vorbereiten
-- [x] State-Import vorbereiten
-- [ ] DCS-AutoCapture deaktivieren oder umgehen
-- [ ] Capture-Bedingungen fachlich definieren
-- [ ] Garnisonen auswerten
-- [ ] Supply-Status auswerten
-- [ ] CTLD-Lieferungen in Capture-Logik einbinden
-- [ ] Basiswechsel später per DCS-Mechanik oder State-Brücke abbilden
-- [ ] Capture-Debugausgabe vorbereiten
-- [ ] Capture-System in DCS testen
+    Source Foundation ist technisch angelegt.
+    Loader und Main funktionieren im ersten DCS-Starttest.
 
-### Ergebnis
+Offen:
 
-Basen und Zonen sollen nicht zufällig, sondern nur durch Theater-Command-Logik ihren strategischen Besitzstatus ändern.
-
-Der Kampagnenfortschritt wird strategisch nachvollziehbar.
+- Loader-only-Variante mit `dofile` praktisch testen
+- DCS-Sandbox-Verhalten bewerten
 
 ---
 
-## Phase 4 — CTLD- und Logistiksystem
+## Phase 2 — Airbase- und World-System
 
-### Ziel
+Status:
 
-CTLD soll nicht nur Zusatzfunktion sein, sondern ein wichtiger Teil des Kampagnenfortschritts werden.
+    Begonnen und erster DCS-Test bestanden
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/logistics/README.md`
-- [x] `src/logistics/tc_logistics_delivery.lua`
-- [x] `src/logistics/tc_fob_system.lua`
+- DCS-Airbases erfassen
+- Airbases in Theater-Command-State überführen
+- Akrotiri als blaue Startbasis erkennen
+- syrisches Festland als rote Ausgangslage vorbereiten
+- virtuelle Kampagnenzonen erzeugen
+- Airbases und Zonen verknüpfen
+- Airbase-Daten für Capture, Logistics, Missions und AI vorbereiten
 
-### Geplante spätere Dateien
+Aktuell vorhanden:
 
-- [ ] `src/ui/tc_logistics_menu.lua`
-- [ ] `src/debug/tc_debug_logistics_report.lua`
-- [ ] `src/logistics/tc_logistics_hub.lua`
-- [ ] `src/logistics/tc_supply_network.lua`
-- [ ] `src/logistics/tc_ctld_bridge.lua`
+- `src/world/tc_airbase_scanner.lua`
+- `src/world/tc_zone_factory.lua`
 
-### Aufgaben
+Testergebnis:
 
-- [x] Logistik-State vorbereiten
-- [x] Lieferungen anlegen
-- [x] Lieferstatus verwalten
-- [x] Lieferungen als abgeschlossen markieren
-- [x] Lieferungen als verloren markieren
-- [x] logistische Effekte auf Zonen vorbereiten
-- [x] logistische Effekte auf Basen vorbereiten
-- [x] FOB-System vorbereiten
-- [x] FOBs anlegen
-- [x] FOB-Zustände verwalten
-- [x] FOB-Versorgung verwalten
-- [x] FOB-Baufortschritt verwalten
-- [ ] CTLD-Grundkonfiguration vorbereiten
-- [ ] Akrotiri als Start-Logistikhub definieren
-- [ ] erste Pickup-Zonen für Akrotiri vorbereiten
-- [ ] erste Dropoff-Zonen vorbereiten
-- [ ] eroberte Basen als neue Hubs freischalten
-- [ ] Kistenlieferungen auswerten
-- [ ] Truppentransport auswerten
-- [ ] FOB-Aufbau mit CTLD-Ereignissen verbinden
-- [ ] Logistikstatus in den Kampagnen-State schreiben
-- [ ] Verbindung zwischen CTLD und Capture-System vertiefen
-- [ ] Logistiksystem in DCS testen
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
 
-### Ergebnis
+Bewertung:
 
-Heli-Spieler können den Frontverlauf später durch Truppen- und Kistenlieferungen real beeinflussen.
+    Die technische Erfassung funktioniert.
+    Die fachliche Filterung fehlt noch.
 
-Logistik wird kampagnenrelevant.
+Nächster technischer Schwerpunkt:
+
+- Airbase-Typen klassifizieren
+- strategische Airfields erkennen
+- Heliports, Helipads, Medical Pads und sonstige Pads separat klassifizieren
+- Capture- und Missionslogik nur auf strategisch relevante Basen anwenden
+- Airbase-Debugreport vorbereiten
+
+---
+
+## Phase 3 — Campaign State und Capture-System
+
+Status:
+
+    Grundstruktur vorhanden
+
+Ziele:
+
+- Besitzstatus von Basen vorbereiten
+- Besitzstatus von Zonen vorbereiten
+- Blau/Rot/Neutral/Contested/Unknown-Status verwalten
+- Capture-Ereignisse speichern
+- State als dirty markieren
+- Capture-System mit Airbase- und Zone-System verbinden
+
+Aktuell vorhanden:
+
+- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
+
+Erledigt:
+
+- Basisstatus vorbereitet
+- Zonenstatus vorbereitet
+- Capture-Events vorbereitet
+- In-Memory-Persistenz vorbereitet
+- State-Snapshot vorbereitet
+- State-Export vorbereitet
+- State-Import vorbereitet
+
+Offen:
+
+- Capture-Bedingungen fachlich definieren
+- Capture nur auf strategische Kampagnenbasen anwenden
+- Garnisonen berücksichtigen
+- Supply berücksichtigen
+- Capture-Debugreport vorbereiten
+- Capture-System funktional in DCS testen
+
+---
+
+## Phase 4 — Logistics und FOB-System
+
+Status:
+
+    Grundstruktur vorhanden
+
+Ziele:
+
+- Logistiklieferungen verwalten
+- Supply-, Fuel-, Ammunition- und Engineering-Effekte vorbereiten
+- FOB-Aufbau vorbereiten
+- CTLD später anbinden
+- eroberte Basen als neue Logistikhubs nutzbar machen
+- Logistikdaten an Campaign, Missions und AI melden
+
+Aktuell vorhanden:
+
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/logistics/tc_fob_system.lua`
+
+Erledigt:
+
+- Lieferstatus vorbereitet
+- Lieferungen anlegbar
+- Lieferungen abschließbar
+- Lieferungen verlierbar
+- Lieferungen abbrechbar
+- FOB-State vorbereitet
+- FOBs anlegbar
+- FOB-Versorgung vorbereitet
+- FOB-Baufortschritt vorbereitet
+
+Offen:
+
+- CTLD-Grundkonfiguration vorbereiten
+- Akrotiri als Start-Logistikhub definieren
+- Pickup-Zonen auf Akrotiri anlegen
+- Dropoff-Zonen vorbereiten
+- CTLD-Ereignisse mit Theater Command verbinden
+- Logistics-System funktional in DCS testen
 
 ---
 
 ## Phase 5 — Missionsgenerator
 
-### Ziel
+Status:
 
-Spieler erhalten abhängig von Flugzeugtyp, Kampagnenzustand und Weltlage sinnvolle Missionen.
+    Grundstruktur vorhanden
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/missions/README.md`
-- [x] `src/missions/tc_mission_generator.lua`
+- Missionsarten vorbereiten
+- Missionen aus Kampagnenzustand erzeugen
+- Missionen nach Ziel, Zone, Basis und Frontlage ableiten
+- Missionen im State speichern
+- Missionsstatus verwalten
+- Missionserfolg auswerten
+- Missionen später über F10-Menüs anzeigen
 
-### Geplante spätere Dateien
+Aktuell vorhanden:
 
-- [ ] `src/ui/tc_mission_menu.lua`
-- [ ] `src/debug/tc_debug_mission_report.lua`
-- [ ] `src/missions/tc_mission_registry.lua`
-- [ ] `src/missions/tc_mission_types.lua`
-- [ ] `src/missions/tc_target_selector.lua`
+- `src/missions/tc_mission_generator.lua`
 
-### Aufgaben
+Erledigt:
 
-- [x] Missionsarten vorbereiten
-- [x] Missionsstatus vorbereiten
-- [x] Missionen aus Kampagnenzustand erzeugen
-- [x] Missionen im State speichern
-- [x] verfügbare Missionen verwalten
-- [x] aktive Missionen verwalten
-- [x] abgeschlossene Missionen verwalten
-- [x] fehlgeschlagene Missionen verwalten
-- [x] Logistikmissionen mit Logistics verbinden
-- [x] FOB-Support-Missionen vorbereiten
-- [ ] Spielerflugzeug erkennen
-- [ ] Missionstypen nach Flugzeug filtern
-- [ ] Missionen über F10-Menü auswählbar machen
-- [ ] Missionsziele aus DCS-Objekten erstellen
-- [ ] Airbase-Ziele aus Kampagnenzustand verfeinern
-- [ ] SEAD/DEAD-Ziele aus IADS-Zustand ableiten
-- [ ] Logistikmissionen aus Logistikzustand vertiefen
-- [ ] Missionsabschluss real auswerten
-- [ ] Auswirkungen auf Kampagnenzustand speichern
-- [ ] Missionsgenerator in DCS testen
+- Missionsarten vorbereitet
+- Missionsstatus vorbereitet
+- Missionen anlegbar
+- Missionen aktivierbar
+- Missionen abschließbar
+- Missionen fehlgeschlagen markierbar
+- Logistikmissionen vorbereitet
+- FOB-Support-Missionen vorbereitet
 
-### Ergebnis
+Offen:
 
-Missionen entstehen aus der aktuellen Kampagnenlage.
-
-F/A-18C, F-14B, F-15C/E, A-10C, AH-64D und Helis sollen später unterschiedliche, sinnvolle Aufgaben erhalten.
+- Airbase-Ziele aus gefiltertem Kampagnenzustand ableiten
+- Missionen nach Flugzeugtyp filtern
+- erste F10-Missionsliste vorbereiten
+- Missionserfolg real auswerten
+- Missionsgenerator funktional in DCS testen
 
 ---
 
-## Phase 6 — KI-System und AI Director
+## Phase 6 — AI Director und CAP-Manager
 
-### Ziel
+Status:
 
-Die Welt soll auch ohne Spieler aktiv und reaktionsfähig wirken.
+    CAP-Grundstruktur vorhanden
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/ai/README.md`
-- [x] `src/ai/tc_ai_cap_manager.lua`
+- CAP-Bedarf aus Kampagnenzustand ableiten
+- CAP-Zonen verwalten
+- AI-Reaktionen vorbereiten
+- MOOSE später für reale Spawns nutzen
+- GCI-Logik vorbereiten
+- Gegenangriffe vorbereiten
+- Luftlage dynamisch an Kampagnenfortschritt koppeln
 
-### Geplante spätere Dateien
+Aktuell vorhanden:
 
-- [ ] `src/ai/tc_ai_director.lua`
-- [ ] `src/ai/tc_ai_gci_manager.lua`
-- [ ] `src/ai/tc_ai_reinforcement_manager.lua`
-- [ ] `src/ai/tc_ai_counterattack.lua`
-- [ ] `src/debug/tc_debug_ai_report.lua`
+- `src/ai/tc_ai_cap_manager.lua`
 
-### Aufgaben
+Erledigt:
 
-- [x] einfache CAP-Logik vorbereiten
-- [x] CAP-Zonen registrieren
-- [x] CAP-Bedarf aus State-Daten ableiten
-- [x] CAP-Anforderungen speichern
-- [x] aktive CAPs verwalten
-- [x] abgeschlossene CAPs verwalten
-- [x] fehlgeschlagene CAPs verwalten
-- [x] AI-Reaktionsstatus vorbereiten
-- [x] Bedrohungsniveau vorbereiten
-- [ ] MOOSE-Anbindung für reale CAP-Spawns vorbereiten
-- [ ] AI Director vorbereiten
-- [ ] einfache GCI-Logik vorbereiten
-- [ ] KI-Missionen lageabhängig erzeugen
-- [ ] rote Reaktionen auf blaue Erfolge erzeugen
-- [ ] Gegenangriffe vorbereiten
-- [ ] Konvois bewegen
-- [ ] Ressourcenverbrauch durch KI einbauen
-- [ ] Frontdruck simulieren
-- [ ] KI-Reaktionen auf Capture-Ereignisse vorbereiten
-- [ ] KI-Reaktionen auf IADS-Schäden vorbereiten
-- [ ] AI-System in DCS testen
+- CAP-Zonen vorbereitbar
+- CAP-Anforderungen speicherbar
+- aktive CAPs verwaltbar
+- abgeschlossene CAPs verwaltbar
+- fehlgeschlagene CAPs verwaltbar
+- Prioritäten vorbereitet
+- Bedrohungsstatus vorbereitet
 
-### Ergebnis
+Offen:
 
-Die Kampagne soll dynamisch weiterlaufen.
-
-Spieler beeinflussen Teilbereiche, aber die Welt wirkt eigenständig.
+- MOOSE-Anbindung für reale CAP-Spawns
+- AI Director erstellen
+- GCI Manager erstellen
+- Counterattack-System erstellen
+- AI-Reaktionen auf Capture vorbereiten
+- AI-Reaktionen auf IADS-Schäden vorbereiten
+- AI-System funktional in DCS testen
 
 ---
 
 ## Phase 7 — IADS-System
 
-### Ziel
+Status:
 
-Skynet IADS mit der Theater-Command-Kampagnenlogik verbinden.
+    Dokumentiert, noch nicht implementiert
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/iads/README.md`
+- rote IADS-Struktur vorbereiten
+- SAM-Sites als Kampagnenobjekte verwalten
+- Radarstellungen als Kampagnenobjekte verwalten
+- IADS-Sektoren definieren
+- Skynet IADS kapseln
+- Missionsgenerator mit IADS-Zielen verbinden
+- AI Director mit IADS-Zustand verbinden
+- zerstörte IADS-Komponenten persistieren
 
-### Geplante Dateien
+Geplante Dateien:
 
-- [ ] `src/iads/tc_iads_network.lua`
-- [ ] `src/iads/tc_iads_sector_manager.lua`
-- [ ] `src/iads/tc_iads_site_registry.lua`
-- [ ] `src/iads/tc_iads_mission_bridge.lua`
-- [ ] `src/debug/tc_debug_iads_report.lua`
+- `src/iads/tc_iads_network.lua`
+- `src/iads/tc_iads_sector_manager.lua`
+- `src/iads/tc_iads_site_registry.lua`
+- `src/iads/tc_iads_mission_bridge.lua`
 
-### Aufgaben
+Offen:
 
-- [x] IADS-Bereich dokumentieren
-- [ ] rote IADS-Sektoren vorbereiten
-- [ ] Radar-/SAM-Gruppen mit Regionen koppeln
-- [ ] SAM-Stellungen als Kampagnenobjekte definieren
-- [ ] Radarstellungen als Kampagnenobjekte definieren
-- [ ] zerstörte Radarstellungen auswerten
-- [ ] beschädigte Sektoren schwächen
-- [ ] Reparatur über Ressourcen und Logistik ermöglichen
-- [ ] SEAD/DEAD-Erfolge dauerhaft in den State schreiben
-- [ ] Missionsgenerator mit IADS-Zielen verbinden
-- [ ] AI Director mit IADS-Zustand verbinden
-- [ ] Skynet-IADS-Anbindung kapseln
-- [ ] IADS-System in DCS testen
-
-### Ergebnis
-
-SEAD/DEAD-Missionen haben strategische Wirkung.
-
-Die rote Luftverteidigung ist Teil des dynamischen Kampagnenzustands.
+- erste IADS-Implementierung beginnen
+- Skynet-IADS-Anbindung testen
+- SEAD-/DEAD-Ziele erzeugen
+- IADS-Zustand in Campaign State abbilden
 
 ---
 
 ## Phase 8 — UI und F10-Menüs
 
-### Ziel
+Status:
 
-Spieler sollen Theater Command DCS im Spiel verstehen und bedienen können.
+    Dokumentiert, noch nicht implementiert
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/ui/README.md`
+- F10-Menü-Grundstruktur vorbereiten
+- Kampagnenstatus anzeigen
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Logistikstatus anzeigen
+- FOB-Status anzeigen
+- AI-Status anzeigen
+- IADS-Status anzeigen
+- Debug-Menü getrennt vorbereiten
 
-### Geplante Dateien
+Geplante Dateien:
 
-- [ ] `src/ui/tc_f10_menu.lua`
-- [ ] `src/ui/tc_status_display.lua`
-- [ ] `src/ui/tc_mission_menu.lua`
-- [ ] `src/ui/tc_logistics_menu.lua`
-- [ ] `src/ui/tc_debug_menu.lua`
+- `src/ui/tc_f10_menu.lua`
+- `src/ui/tc_status_display.lua`
+- `src/ui/tc_mission_menu.lua`
+- `src/ui/tc_logistics_menu.lua`
+- `src/ui/tc_debug_menu.lua`
 
-### Aufgaben
+Offen:
 
-- [x] UI-Bereich dokumentieren
-- [ ] F10-Menü-Grundstruktur vorbereiten
-- [ ] Kampagnenstatus anzeigen
-- [ ] verfügbare Missionen anzeigen
-- [ ] aktive Missionen anzeigen
-- [ ] Logistikstatus anzeigen
-- [ ] FOB-Status anzeigen
-- [ ] AI-Status anzeigen
-- [ ] IADS-Status anzeigen
-- [ ] Spielerkommandos vorbereiten
-- [ ] Debug-Menü klar getrennt vorbereiten
-- [ ] UI in DCS testen
-
-### Ergebnis
-
-Spieler können Missionen, Status und einfache Kommandos später über F10-Menüs erreichen.
+- UI-Implementierung beginnen
+- erste F10-Menüstruktur in DCS testen
 
 ---
 
 ## Phase 9 — Debug-System
 
-### Ziel
+Status:
 
-Interne Zustände sollen sichtbar und testbar werden.
+    Dokumentiert, noch nicht implementiert
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/debug/README.md`
+- Debug-Ausgaben bündeln
+- Airbase-Reports erzeugen
+- Zonen-Reports erzeugen
+- Capture-Reports erzeugen
+- Logistik-Reports erzeugen
+- Missions-Reports erzeugen
+- AI-Reports erzeugen
+- IADS-Reports erzeugen
+- Debug-State-Dumps vorbereiten
+- Debug-Menü später optional aktivieren
 
-### Geplante Dateien
+Geplante Dateien:
 
-- [ ] `src/debug/tc_debug_console.lua`
-- [ ] `src/debug/tc_debug_state_dump.lua`
-- [ ] `src/debug/tc_debug_zone_overlay.lua`
-- [ ] `src/debug/tc_debug_airbase_report.lua`
-- [ ] `src/debug/tc_debug_mission_report.lua`
-- [ ] `src/debug/tc_debug_logistics_report.lua`
-- [ ] `src/debug/tc_debug_ai_report.lua`
-- [ ] `src/debug/tc_debug_iads_report.lua`
+- `src/debug/tc_debug_console.lua`
+- `src/debug/tc_debug_state_dump.lua`
+- `src/debug/tc_debug_zone_overlay.lua`
+- `src/debug/tc_debug_airbase_report.lua`
+- `src/debug/tc_debug_mission_report.lua`
+- `src/debug/tc_debug_logistics_report.lua`
+- `src/debug/tc_debug_ai_report.lua`
+- `src/debug/tc_debug_iads_report.lua`
 
-### Aufgaben
+Offen:
 
-- [x] Debug-Bereich dokumentieren
-- [ ] Debug-State vorbereiten
-- [ ] State-Dumps vorbereiten
-- [ ] Airbase-Reports vorbereiten
-- [ ] Zonen-Reports vorbereiten
-- [ ] Capture-Reports vorbereiten
-- [ ] Logistik-Reports vorbereiten
-- [ ] Missions-Reports vorbereiten
-- [ ] AI-Reports vorbereiten
-- [ ] IADS-Reports vorbereiten
-- [ ] Debug deaktivierbar machen
-- [ ] Debug in DCS testen
-
-### Ergebnis
-
-Entwicklung und Fehlersuche werden kontrollierbar.
-
-Debug bleibt klar von produktiver Kampagnenlogik getrennt.
+- Debug-Grundmodul erstellen
+- Airbase-Debugreport als nächstes sinnvolles Debug-Werkzeug vorbereiten
 
 ---
 
 ## Phase 10 — Persistenz
 
-### Ziel
+Status:
 
-Der Kampagnenzustand soll über Sessions hinweg erhalten bleiben.
+    In-Memory-Grundstruktur vorhanden
 
-### Vorhandene Dateien
+Ziele:
 
-- [x] `src/campaign/tc_persistence_system.lua`
+- Kampagnenzustand speichern
+- Kampagnenzustand laden
+- Airbase-Besitz speichern
+- Zonenstatus speichern
+- Logistikstatus speichern
+- Missionsfortschritt speichern
+- AI-Zustand speichern
+- IADS-Zustand speichern
+- Save-Dateien später kontrolliert schreiben und lesen
 
-### Geplante Dateien
+Aktuell vorhanden:
 
-- [ ] `save/README.md`
-- [ ] `save/example_state.lua`
+- `src/campaign/tc_persistence_system.lua`
 
-### Zu speichernde Werte
+Offen:
 
-- Besitzer jeder Basis
-- Besitzer jeder Gefechtszone
-- Ressourcen je Basis
-- Garnison je Basis
-- Runway-Zustand
-- Radarstatus
-- IADS-Sektoren
-- aktive FOBs
-- zerstörte strategische Ziele
-- Kampagnenphase
-- KI-Verluste
-- Spieler-Erfolge
-- aktive Missionshistorie
-
-### Aufgaben
-
-- [x] In-Memory-Persistenz vorbereiten
-- [x] State-Snapshot vorbereiten
-- [x] State-Export vorbereiten
-- [x] State-Import vorbereiten
-- [x] Lua-String-Export vorbereiten
-- [ ] Speicherstruktur definieren
-- [ ] Beispiel-Save-State erstellen
-- [ ] DCS-Dateizugriff gesondert prüfen
-- [ ] Kampagnenzustand serialisieren
-- [ ] Kampagnenzustand laden
-- [ ] Airbase-Besitz speichern
-- [ ] Logistikstatus speichern
-- [ ] IADS-Zustand speichern
-- [ ] Missionsfortschritt speichern
-
-### Ergebnis
-
-Die Kampagne kann nach einem Serverneustart weitergeführt werden.
+- DCS-Sandbox-Dateizugriff prüfen
+- `save/README.md` erstellen
+- `save/example_state.lua` erstellen
+- echte Dateipersistenz erst nach Sandbox-Test umsetzen
 
 ---
 
-## Phase 11 — Mission-Editor-DEV-Mission
+## Phase 11 — Mission-Editor-Ausbau
 
-### Ziel
+Status:
 
-Eine erste schlanke DCS-Entwicklungsmission als technische Bühne erstellen.
+    DEV-Mission begonnen
 
-### Geplante Mission
+Aktuelle DEV-Mission:
 
     Operation_Levant_Reclamation_DEV.miz
 
-### Aufgaben
+Bisheriger Inhalt:
 
-- [ ] Syria Map als neue Mission öffnen
-- [ ] Mission unter `mission/dev/` ablegen
-- [ ] Koalitionen festlegen
-- [ ] Akrotiri als blaue Startbasis nutzen
-- [ ] syrisches Festland initial rot kontrolliert anlegen
-- [ ] erste Spieler-Slots auf Akrotiri anlegen
-- [ ] erste CTLD-Pickup-Zonen auf Akrotiri anlegen
-- [ ] erste Template-Gruppen mit Late Activation anlegen
-- [ ] erste Framework-Lade-Trigger vorbereiten
-- [ ] `src/loader.lua` als letzte eigene Datei laden
-- [ ] erster Starttest mit `dcs.log`-Kontrolle durchführen
+    Map: Syria
+    Koalitionspreset: Modern
+    Blue Start: Akrotiri / Zypern
+    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
+    Trigger: Starttest-Variante A vollständig angelegt
+    keine rote Frontlinie
+    keine IADS-Stellungen
+    keine CTLD-Zonen
+    keine Template-Gruppen
+    keine F10-Menüs
 
-### Ergebnis
+Ziele:
 
-Die erste DEV-Mission lädt Frameworks und Theater Command in definierter Reihenfolge.
+- DEV-Mission im Repository dokumentieren
+- erste CTLD-Pickup-Zonen anlegen
+- erste Dropoff-Zonen anlegen
+- erste Template-Gruppen vorbereiten
+- erste rote IADS-Struktur anlegen
+- erste Debug-Trigger oder Debug-Menüs vorbereiten
+- Mission-Editor-Aufbau bewusst schlank halten
 
-Danach kann die Lua-Logik im echten DCS-Kontext getestet werden.
+Offen:
 
----
-
-## Phase 12 — Balancing, Testing und Polishing
-
-### Ziel
-
-Das System spielbar, verständlich und performant machen.
-
-### Aufgaben
-
-- [ ] Testplan erstellen
-- [ ] F10-Menüs aufräumen
-- [ ] Debug-Funktionen strukturieren
-- [ ] Performance testen
-- [ ] Missionen balancen
-- [ ] Briefings schreiben
-- [ ] Kneeboard-Seiten erstellen
-- [ ] Release-Version vorbereiten
-- [ ] Dokumentation aktualisieren
-- [ ] Changelog pflegen
-
-### Ergebnis
-
-Operation Levant Reclamation wird als erste spielbare Kampagne nutzbar.
+- `mission/`-Ordnerstruktur anlegen
+- `mission/dev/` dokumentieren
+- DEV-Mission sauber versionieren oder zumindest dokumentieren
+- Mission-Editor-Zonen später mit Lua-System verbinden
 
 ---
 
-## Phase 13 — Release-Struktur
+## Phase 12 — Teststrategie
 
-### Ziel
+Status:
 
-Eine saubere Struktur für Entwicklungs-, Test- und Release-Versionen schaffen.
+    Erster DCS-Starttest bestanden
 
-### Geplante Ordner
+Bisher bestanden:
 
-    mission/dev/
-    mission/test/
-    mission/release/
-    tools/
-    assets/
-    save/
+    Starttest-Variante A — sichere Einzeldatei-Ladung
 
-### Aufgaben
+Noch offen:
 
-- [ ] DEV-Mission getrennt halten
-- [ ] Test-Missionen getrennt halten
-- [ ] Release-Missionen getrennt halten
-- [ ] Build-Notizen anlegen
-- [ ] Release-Checkliste anlegen
-- [ ] Assets strukturieren
-- [ ] Beispiel-Speicherstand bereitstellen
+    Starttest-Variante B — Loader-only mit dofile
 
-### Ergebnis
+Ziel Variante B:
 
-Das Projekt kann kontrolliert weiterentwickelt, getestet und später veröffentlicht werden.
+- Frameworks per `DO SCRIPT FILE` laden
+- nur `src/loader.lua` per `DO SCRIPT FILE` laden
+- prüfen, ob der Loader weitere Source-Dateien per `dofile` nachladen kann
+- DCS-Sandbox-Verhalten bewerten
+- entscheiden, ob spätere Entwicklung mit Loader-only möglich ist oder Einzeldatei-Ladung nötig bleibt
 
----
+Weitere geplante Tests:
 
-## Entwicklungsregel
-
-Jede Phase wird einzeln gebaut und getestet.
-
-Es wird nicht alles gleichzeitig umgesetzt.
-
-Arbeitsreihenfolge:
-
-    Erst Dokumentation.
-    Dann Vendor abschließen.
-    Dann src-Struktur.
-    Dann Core.
-    Dann Airbases.
-    Dann Zonen.
-    Dann Capture.
-    Dann Logistik.
-    Dann Missionen.
-    Dann KI.
-    Dann IADS.
-    Dann UI.
-    Dann Debug.
-    Dann Persistenz vertiefen.
-    Dann DEV-Mission.
-    Dann Testing.
-    Dann Release-Struktur.
+- Airbase-Klassifizierung testen
+- Debug-Airbase-Report testen
+- Zone-Factory mit gefilterten Basen testen
+- Capture-System funktional testen
+- CTLD-Verbindung testen
+- Mission Generator testen
+- AI CAP Manager mit MOOSE testen
+- IADS-Verbindung mit Skynet testen
+- F10-Menüs testen
+- Persistenz testen
 
 ---
 
-## Aktueller nächster Schritt
+## Nächster technischer Schwerpunkt
 
-Nach dieser Roadmap-Aktualisierung wird die nächste zentrale Dokumentationsdatei aktualisiert.
+Der nächste technische Schwerpunkt ist:
 
-Nächste Datei:
+    Airbase-Scanner nach dem Syria-Update fachlich filtern
 
-    ARCHITECTURE.md
+Warum:
 
-Danach:
+Der erste reale DCS-Test hat gezeigt, dass DCS auf der Syria Map aktuell 225 Airbase-/Helipad-Objekte zurückliefert.
 
-    README.md
+Diese Objekte dürfen nicht ungefiltert als strategische Kampagnenbasen verwendet werden.
 
-Anschließender technischer Fokus:
+Ziel:
 
-    src/main.lua gegen aktuelle Modulnamen prüfen
+- strategische Airfields identifizieren
+- Heliports erkennen
+- Helipads erkennen
+- Medical Pads erkennen
+- sonstige taktische Pads erkennen
+- `AirbaseScanner` um Klassifizierung erweitern
+- `ZoneFactory` an diese Klassifizierung koppeln
+- Capture-System nur auf geeignete strategische Basen anwenden
+- Missionsgenerator nur geeignete Ziele verwenden lassen
+- Debugreport für erkannte Airbase-Typen vorbereiten
 
-Grund:
+---
 
-Die Source-Struktur ist inzwischen deutlich weiter als die alte zentrale Dokumentation. Erst nach dem Dokumentationsabgleich sollte der technische Startpfad geprüft und dann in DCS getestet werden.
+## Danach geplanter Schritt
+
+Nach der Airbase-Klassifizierung:
+
+    Starttest-Variante B vorbereiten und testen
+
+Ziel:
+
+- prüfen, ob `src/loader.lua` die übrigen Source-Dateien im DCS-Kontext eigenständig nachladen kann
+- `dofile`-Verhalten im Mission Scripting Environment bewerten
+- spätere Lade- und Deployment-Strategie festlegen
+
+---
+
+## Langfristiges Zielbild
+
+Theater Command DCS soll langfristig folgende Systeme verbinden:
+
+- Airbase-Erkennung
+- strategische Airbase-Klassifizierung
+- virtuelle Zonen
+- Capture-System
+- Logistiksystem
+- CTLD-Anbindung
+- FOB-Aufbau
+- dynamische Missionsgenerierung
+- AI Director
+- CAP- und GCI-Management
+- Skynet-IADS-Anbindung
+- SEAD-/DEAD-Missionslogik
+- F10-Menüs
+- Debug-Werkzeuge
+- Persistenz
+- Kampagnenfortschritt über mehrere Sessions
+
+---
+
+## Nicht-Ziele für die aktuelle Phase
+
+Aktuell wird bewusst nicht gemacht:
+
+- keine vollständige Frontlinie bauen
+- keine komplette Syria Map manuell mit Einheiten füllen
+- keine komplette IADS-Großstruktur bauen
+- keine komplexe KI-Kampagne bauen
+- keine automatische perfekte `.miz`-Generierung bauen
+- keine Multiplayer-Synchronisation lösen
+- keine kommerzielle Release-Struktur vorbereiten
+- keine produktive Persistenz bauen
+- keine All-in-one-Datei erstellen
+- keine Framework-Dateien verändern
+
+---
+
+## Arbeitsregel
+
+Es wird immer nur eine konkrete Aufgabe oder eine Datei pro Schritt umgesetzt.
+
+Keine langen parallelen Aufgabenlisten.
+
+Neue Dateien werden immer mit vollständigem Inhalt vorbereitet.
+
+Eigene Theater-Command-Logik gehört nach:
+
+    src/
+
+Externe Frameworks gehören nach:
+
+    vendor/
+
+Frameworks werden nicht verändert.
+
+Die eigene Lua-Struktur wird nach Aufgaben sortiert, nicht nach Frameworks.
