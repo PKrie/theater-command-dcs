@@ -6,7 +6,7 @@ Das Projekt befindet sich aktuell in der frühen Aufbauphase.
 
 Aktueller Fokus:
 
-    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Main-Initialisierung, Mission-Editor-Ladestrategie und Vorbereitung des ersten DCS-Starttests
+    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Main-Initialisierung, Mission-Editor-Ladestrategie, erster realer DCS-Starttest und Auswertung der Airbase-Erkennung nach dem aktuellen Syria-Update
 
 ---
 
@@ -57,6 +57,15 @@ Aktueller Fokus:
   - `src/ui/README.md`
 - Debug-Bereich dokumentiert:
   - `src/debug/README.md`
+- `mission_editor/README.md` erstellt
+- `mission_editor/trigger_setup.md` erstellt
+- lokale Repository-Kopie auf dem DCS-PC eingerichtet
+- minimale Syria-DEV-Mission im DCS Mission Editor erstellt
+- erster blauer F/A-18C-Client-Slot auf Akrotiri angelegt
+- Framework-Lade-Trigger im DCS Mission Editor angelegt
+- Source-Lade-Trigger für Starttest-Variante A im DCS Mission Editor angelegt
+- erster realer DCS-Starttest durchgeführt
+- `dcs.log` nach Starttest ausgewertet
 
 ### Changed
 
@@ -118,7 +127,78 @@ Aktueller Fokus:
 - `TASKS.md` korrigiert:
   - Phase 1 bis Phase 7 teilweise erledigt
   - Phase 8 bis Phase 10 dokumentarisch vorbereitet
-  - Starttest-Variante A als nächster praktischer Prüfpfad dokumentiert
+  - Starttest-Variante A als praktischer Prüfpfad dokumentiert
+- `TASKS.md` nach erfolgreichem DCS-Starttest aktualisiert
+
+### Tested
+
+- Starttest-Variante A im DCS Mission Editor durchgeführt
+- Framework-Ladung erfolgreich geprüft:
+  - MIST
+  - MOOSE
+  - CTLD-i18n
+  - CTLD
+  - Skynet IADS
+- Theater-Command-Source-Ladung erfolgreich geprüft:
+  - Core
+  - World
+  - Campaign
+  - Logistics
+  - Missions
+  - AI
+  - Main
+  - Loader
+- `src/main.lua` wurde im DCS Mission Scripting Environment gestartet
+- `src/loader.lua` wurde im DCS Mission Scripting Environment gestartet
+- Runtime-Systeme wurden durch `src/main.lua` initialisiert
+- Framework-Verfügbarkeit wurde durch den Loader erkannt
+- `dcs.log` zeigte erfolgreiche Theater-Command-Startausgaben
+- Airbase-Scanner wurde in DCS ausgeführt
+- Zone-Factory wurde in DCS ausgeführt
+
+### DCS Start Test Result
+
+Erster realer DCS-Starttest:
+
+    Starttest-Variante A
+    Ergebnis: bestanden
+
+Wichtige bestätigte Logik:
+
+    MIST wurde geladen.
+    MOOSE wurde geladen.
+    CTLD wurde geladen.
+    Skynet IADS wurde geladen.
+    Theater Command Loader wurde gestartet.
+    Frameworks wurden durch den Loader erkannt.
+    Core wurde geladen.
+    World wurde geladen.
+    Campaign wurde geladen.
+    Logistics wurde geladen.
+    Missions wurde geladen.
+    AI wurde geladen.
+    Main wurde gestartet.
+    Runtime-Systeme wurden initialisiert.
+    Loader wurde beendet.
+
+Wichtige technische Beobachtung:
+
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
+
+Bewertung:
+
+    Die Theater-Command-Startkette läuft im DCS Mission Scripting Environment.
+    Die Frameworks werden korrekt geladen und erkannt.
+    Die aktiven eigenen Lua-Module werden korrekt geladen.
+    Es gab keinen schweren Lua-Abbruch der Theater-Command-Startkette.
+    Die Zahl von 225 registrierten Objekten ist kein Startfehler, aber ein wichtiger fachlicher Befund.
+
+Folgerung:
+
+    Das aktuelle Syria-Update liefert sehr viele Airbase-ähnliche Objekte, darunter Airfields, Heliports, Helipads, Medical Pads und ähnliche Objekte.
+    Der Airbase-Scanner muss später zwischen strategischen Basen und rein taktischen/medizinischen Helipads unterscheiden.
+    Capture-, Missions- und Persistenzlogik dürfen 225 erkannte Objekte nicht ungefiltert als strategische Kampagnenbasen verwenden.
 
 ### Current Source Modules
 
@@ -166,27 +246,27 @@ Aktuell vorhandene Source-Dokumentationen:
 
 Die externe Framework-Lade-Reihenfolge im DCS Mission Editor bleibt:
 
-    1. vendor/mist/mist.lua
-    2. vendor/moose/Moose.lua
-    3. vendor/ctld/CTLD-i18n.lua
-    4. vendor/ctld/CTLD.lua
-    5. vendor/skynet-iads/SkynetIADS.lua
+1. `vendor/mist/mist.lua`
+2. `vendor/moose/Moose.lua`
+3. `vendor/ctld/CTLD-i18n.lua`
+4. `vendor/ctld/CTLD.lua`
+5. `vendor/skynet-iads/SkynetIADS.lua`
 
-Danach folgt für den ersten realen DEV-Test die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
+Danach folgt für Starttest-Variante A die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
 
 ### Current Recommended Start Test
 
-Empfohlene erste Testvariante:
+Die erste Testvariante wurde erfolgreich durchgeführt:
 
     Starttest-Variante A — sichere Einzeldatei-Ladung
 
-Dabei werden zuerst die Frameworks geladen.
+Dabei wurden zuerst die Frameworks geladen.
 
-Danach werden die aktiven Source-Dateien einzeln im Mission Editor geladen.
+Danach wurden die aktiven Source-Dateien einzeln im Mission Editor geladen.
 
-Danach wird `src/main.lua` geladen.
+Danach wurde `src/main.lua` geladen.
 
-Zuletzt wird `src/loader.lua` geladen.
+Zuletzt wurde `src/loader.lua` geladen.
 
 Ziel:
 
@@ -196,20 +276,24 @@ Ziel:
     Loader-/Main-Startkette prüfen
     dcs.log auf Lua-Fehler prüfen
 
+Ergebnis:
+
+    Bestanden.
+
 ### Current Internal Source Load Order
 
 Die interne Source-Lade-Reihenfolge lautet:
 
-    1. Core
-    2. World
-    3. Campaign
-    4. Logistics
-    5. Missions
-    6. AI
-    7. IADS
-    8. UI
-    9. Debug
-    10. Main
+1. Core
+2. World
+3. Campaign
+4. Logistics
+5. Missions
+6. AI
+7. IADS
+8. UI
+9. Debug
+10. Main
 
 Aktuell aktiv vom Loader geladen:
 
@@ -235,8 +319,8 @@ Diese Bereiche besitzen aktuell nur README-Dateien und noch keine konkreten Lua-
 
 Noch nicht umgesetzt:
 
-- praktische DCS-Prüfung der Starttest-Variante A
 - praktische DCS-Prüfung der Loader-only-Variante mit `dofile`
+- Airbase-Klassifizierung nach strategischen Basen, Heliports, Helipads, Medical Pads und sonstigen Airbase-Objekten
 - konkrete IADS-Lua-Implementierung
 - konkrete UI-/F10-Lua-Implementierung
 - konkrete Debug-Lua-Implementierung
@@ -245,10 +329,7 @@ Noch nicht umgesetzt:
 - reale Skynet-IADS-Kampagnenbrücke
 - DCS-Dateipersistenz
 - DCS-Sandbox-Prüfung für Dateizugriff
-- DEV-Mission im DCS Mission Editor
-- erster realer DCS-Starttest
 - Debug-Menüs
-- Mission-Editor-Dokumentation
 - Mission-Ordnerstruktur
 - Save-Ordnerstruktur
 - Tools-Ordnerstruktur
@@ -262,17 +343,16 @@ Der technische Source-Grundaufbau ist begonnen und enthält bereits erste eigene
 
 `src/main.lua` ist an die aktuell vorhandenen Module angepasst.
 
-Die Loader- und Main-Startkette ist logisch geprüft.
+Die Loader- und Main-Startkette ist logisch geprüft und im DCS Mission Scripting Environment erfolgreich gestartet.
 
-Die Mission-Editor-Ladestrategie für den ersten sicheren Source-Test ist dokumentiert.
+Die Mission-Editor-Ladestrategie für den ersten sicheren Source-Test ist dokumentiert und praktisch erfolgreich getestet.
 
-Der nächste praktische Prüfpunkt ist:
+Der nächste technische Schwerpunkt ist:
 
-    DEV-Testvariante A im DCS Mission Editor vorbereiten
+    Airbase-Scanner nach dem Syria-Update fachlich filtern
 
 Danach:
 
-    dcs.log prüfen
     Loader-only-Variante mit dofile praktisch testen
 
 ---
@@ -349,7 +429,7 @@ Aktive MIST-Version:
 
 Grund:
 
-CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
+    CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
 
 ### Removed
 
