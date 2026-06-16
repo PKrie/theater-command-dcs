@@ -78,6 +78,24 @@ Aktuell erledigt:
 - `CHANGELOG.md` nach Mission-Editor-Source-Ladeplanung aktualisiert
 - `mission_editor/README.md` erstellt
 - `mission_editor/trigger_setup.md` erstellt
+- lokale Repository-Kopie auf dem DCS-PC eingerichtet
+- minimale Syria-DEV-Mission im DCS Mission Editor erstellt
+- Koalitionspreset für modernen Syria-Kontext gewählt
+- Akrotiri als blaue Startbasis genutzt
+- erster blauer F/A-18C-Client-Slot auf Akrotiri angelegt
+- Framework-Lade-Trigger im Mission Editor angelegt
+- Source-Lade-Trigger für Starttest-Variante A im Mission Editor angelegt
+- `src/main.lua` vor `src/loader.lua` geladen
+- `src/loader.lua` als letzte eigene Datei geladen
+- erster realer DCS-Starttest mit Starttest-Variante A durchgeführt
+- `dcs.log` nach Starttest ausgewertet
+- Framework-Ladung in DCS bestätigt
+- Theater-Command-Loader-Start in DCS bestätigt
+- Main-Initialisierung in DCS bestätigt
+- Runtime-Systemstart in DCS bestätigt
+- Airbase-Scan in DCS erfolgreich ausgeführt
+- Zone-Factory in DCS erfolgreich ausgeführt
+- Starttest-Variante A als technisch bestanden bewertet
 
 Aktueller Projektzustand:
 
@@ -87,19 +105,50 @@ Aktueller Projektzustand:
     Erste eigene Lua-Module sind erstellt.
     Loader und Main sind auf die aktuellen Module ausgerichtet.
     Die Loader-/Main-Startkette ist logisch geprüft.
-    Die Mission-Editor-Dokumentation beschreibt jetzt eine sichere erste Source-Ladevariante ohne dofile-Abhängigkeit.
+    Die Mission-Editor-Dokumentation beschreibt eine sichere erste Source-Ladevariante ohne dofile-Abhängigkeit.
     Die konkrete Trigger-Struktur für Starttest-Variante A ist dokumentiert.
-    Der aktuelle Fokus liegt auf der praktischen Vorbereitung der minimalen DEV-Mission im DCS Mission Editor.
+    Die minimale Syria-DEV-Mission wurde im DCS Mission Editor angelegt.
+    Die komplette Starttest-Variante A wurde im Mission Editor umgesetzt.
+    Der erste reale DCS-Starttest wurde durchgeführt.
+    Die Theater-Command-Startkette läuft im DCS Mission Scripting Environment ohne schweren Lua-Abbruch.
+    Der aktuelle Fokus liegt auf der Dokumentation des Testergebnisses und der Vorbereitung der nächsten Session.
+
+Wichtiges Testergebnis aus `dcs.log`:
+
+    MIST wurde geladen.
+    MOOSE wurde geladen.
+    CTLD wurde geladen.
+    Skynet IADS wurde geladen.
+    Theater Command Loader wurde gestartet.
+    Frameworks wurden durch den Loader erkannt.
+    Core wurde geladen.
+    World wurde geladen.
+    Campaign wurde geladen.
+    Logistics wurde geladen.
+    Missions wurde geladen.
+    AI wurde geladen.
+    Main wurde gestartet.
+    Runtime-Systeme wurden initialisiert.
+    Loader wurde beendet.
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
+
+Bewertung:
+
+    Starttest-Variante A ist bestanden.
+    Die Zahl von 225 registrierten Airbase-/Helipad-Objekten ist kein Startfehler.
+    Das aktuelle Syria-Update liefert sehr viele Airbase-ähnliche Objekte, darunter Airfields, Heliports, Helipads, Medical Pads und ähnliche Objekte.
+    Der Airbase-Scanner muss später zwischen strategischen Basen und rein taktischen/medizinischen Helipads unterscheiden.
+    Vor einer echten Kampagnenlogik darf die Zahl von 225 Objekten nicht ungefiltert als strategische Basisliste verwendet werden.
 
 Noch nicht erledigt:
 
-- minimale Syria-DEV-Mission im DCS Mission Editor erstellen
-- Framework-Lade-Trigger nach `mission_editor/trigger_setup.md` anlegen
-- Source-Lade-Trigger nach `mission_editor/trigger_setup.md` anlegen
-- Start aller geladenen Module technisch in DCS verifizieren
-- erster realer DCS-Mission-Starttest durchführen
-- `dcs.log` nach Starttest auswerten
 - DCS-Sandbox-Verhalten für `dofile` praktisch testen
+- Starttest-Variante B vorbereiten
+- Starttest-Variante B durchführen
+- Airbase-Scanner fachlich filtern
+- strategische Airbases von Helipads/FARPs/Medical Pads trennen
+- Airbase-Debugreport vorbereiten
 - DEV-Mission unter `mission/dev/` im Repository dokumentieren
 - IADS-Implementierung beginnen
 - UI-Implementierung beginnen
@@ -128,7 +177,7 @@ CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gel
 
 ## DCS-Lade-Reihenfolge
 
-Die geplante externe Lade-Reihenfolge im DCS Mission Editor lautet:
+Die externe Lade-Reihenfolge im DCS Mission Editor lautet:
 
     1. vendor/mist/mist.lua
     2. vendor/moose/Moose.lua
@@ -136,21 +185,19 @@ Die geplante externe Lade-Reihenfolge im DCS Mission Editor lautet:
     4. vendor/ctld/CTLD.lua
     5. vendor/skynet-iads/SkynetIADS.lua
 
-Danach folgt für den ersten realen DEV-Test die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
+Danach folgt für Starttest-Variante A die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
 
 ---
 
-## Sichere erste Source-Ladevariante
+## Erfolgreich getestete Source-Ladevariante
 
-Für den ersten DCS-Test wird nicht vorausgesetzt, dass `dofile` zuverlässig funktioniert.
-
-Empfohlen wird zuerst:
+Der erste reale DCS-Test wurde mit folgender Variante durchgeführt:
 
     Starttest-Variante A — sichere Einzeldatei-Ladung
 
-Dabei werden alle aktiven Source-Dateien einzeln im Mission Editor per `DO SCRIPT FILE` geladen.
+Dabei wurden alle aktiven Source-Dateien einzeln im Mission Editor per `DO SCRIPT FILE` geladen.
 
-Danach wird `src/loader.lua` zuletzt geladen.
+Danach wurde `src/loader.lua` zuletzt geladen.
 
 Ziel:
 
@@ -160,11 +207,15 @@ Ziel:
     Theater-Command-Startkette prüfen
     dcs.log auf Fehler prüfen
 
+Ergebnis:
+
+    Bestanden.
+
 ---
 
-## Geplante Trigger-Reihenfolge für Starttest-Variante A
+## Getestete Trigger-Reihenfolge für Starttest-Variante A
 
-Im DCS Mission Editor werden die Dateien zeitversetzt geladen:
+Im DCS Mission Editor wurden die Dateien zeitversetzt geladen:
 
     TIME MORE 1
     DO SCRIPT FILE: vendor/mist/mist.lua
@@ -345,6 +396,7 @@ Die eigene Lua-Struktur wird nach Aufgaben sortiert, nicht nach Frameworks.
 - [x] MIST-Datei auf CTLD-kompatible Version ersetzen
 - [x] `vendor/mist/README.md` nach Framework-Import aktualisieren
 - [x] MIST-Version dokumentieren
+- [x] MIST in DCS Starttest-Variante A erfolgreich geladen
 
 Aktiver Stand:
 
@@ -359,6 +411,7 @@ Aktiver Stand:
 - [x] `vendor/moose/README.md` nach Framework-Import aktualisieren
 - [x] MOOSE-Version dokumentieren
 - [x] falsch platzierte Root-`Moose.lua` entfernen
+- [x] MOOSE in DCS Starttest-Variante A erfolgreich geladen
 
 Aktiver Stand:
 
@@ -374,6 +427,8 @@ Aktiver Stand:
 - [x] MIST-Datei passend zu CTLD ersetzen
 - [x] `vendor/ctld/README.md` nach Framework-Import aktualisieren
 - [x] CTLD-Version dokumentieren
+- [x] CTLD-i18n in DCS Starttest-Variante A erfolgreich geladen
+- [x] CTLD in DCS Starttest-Variante A erfolgreich geladen
 
 Aktiver Stand:
 
@@ -397,6 +452,7 @@ Diese Sounddateien werden erst ergänzt, wenn CTLD-Radio-Beacons aktiv genutzt w
 - [x] Datei stabil als `SkynetIADS.lua` ablegen
 - [x] `vendor/skynet-iads/README.md` nach Framework-Import aktualisieren
 - [x] Skynet-IADS-Version dokumentieren
+- [x] Skynet IADS in DCS Starttest-Variante A erfolgreich geladen
 
 Aktiver Stand:
 
@@ -491,12 +547,13 @@ Aktiver Stand:
 - [x] erste sichtbare Ausgabe in `dcs.log` vorbereiten
 - [x] `src/main.lua` gegen aktuelle Modulnamen prüfen und anpassen
 - [x] Loader- und Main-Startkette logisch prüfen
+- [x] Start aller geladenen Pflichtmodule technisch in DCS verifiziert
+- [x] erster realer DCS-Mission-Starttest durchgeführt
 
 ### Noch zu prüfen
 
-- [ ] Start aller geladenen Module technisch in DCS verifizieren
 - [ ] DCS-Sandbox-Verhalten für `dofile` praktisch testen
-- [ ] erster realer DCS-Mission-Starttest durchführen
+- [ ] Starttest-Variante B durchführen
 
 ---
 
@@ -516,8 +573,12 @@ Aktiver Stand:
 - [x] Base-Datensätze erzeugen
 - [x] Airbase-Koalitionsstatus erfassen
 - [x] Airbase-Daten für Capture-System vorbereiten
+- [x] realen Syria-Airbase-Scan in DCS testen
+- [x] Airbase-Scanner hat nach aktuellem Syria-Update 225 Airbase-/Helipad-Objekte erkannt
+- [ ] Airbase-Typen fachlich klassifizieren
+- [ ] strategische Airfields von Helipads/FARPs/Medical Pads trennen
+- [ ] reine Helipads aus strategischer Capture-Logik herausfiltern
 - [ ] Airbase-Debugausgabe vorbereiten
-- [ ] realen Syria-Airbase-Scan in DCS testen
 
 ---
 
@@ -535,8 +596,10 @@ Aktiver Stand:
 - [x] Mission-Editor-Zonen optional über MIST einlesbar machen
 - [x] Zonen mit Airbases verknüpfen
 - [x] Zonen für spätere Missionen nutzbar machen
+- [x] reale Zonenprüfung in DCS testen
+- [x] Zone-Factory hat nach aktuellem Syria-Update 225 Zonen erzeugt
+- [ ] Zonenfilter an Airbase-Klassifizierung koppeln
 - [ ] Debug-Anzeige für Zonen vorbereiten
-- [ ] reale Zonenprüfung in DCS testen
 
 ---
 
@@ -558,11 +621,13 @@ Aktiver Stand:
 - [x] State als dirty markieren
 - [x] Verbindung zum Airbase-System vorbereiten
 - [x] Verbindung zum Zonen-System vorbereiten
+- [x] Capture-System im DCS-Starttest ohne schweren Lua-Fehler geladen
 - [ ] Capture-Bedingungen fachlich definieren
 - [ ] Garnisonen später auswerten
 - [ ] Supply-Status später auswerten
+- [ ] Capture nur auf strategische Kampagnenbasen anwenden
 - [ ] Capture-Debugausgabe vorbereiten
-- [ ] Capture-System in DCS testen
+- [ ] Capture-System in DCS funktional testen
 
 ---
 
@@ -590,13 +655,14 @@ Aktiver Stand:
 - [x] FOB-Zustände verwalten
 - [x] FOB-Versorgung verwalten
 - [x] FOB-Baufortschritt verwalten
+- [x] Logistics-Module im DCS-Starttest ohne schweren Lua-Fehler geladen
 - [ ] CTLD-Grundkonfiguration vorbereiten
 - [ ] Akrotiri als Start-Logistikhub definieren
 - [ ] erste Pickup-Zonen für Akrotiri vorbereiten
 - [ ] erste Dropoff-Zonen vorbereiten
 - [ ] CTLD-Lieferungen mit Theater Command verbinden
 - [ ] eroberte Basen als neue Logistikhubs freischalten
-- [ ] Logistiksystem in DCS testen
+- [ ] Logistiksystem in DCS funktional testen
 
 ---
 
@@ -620,13 +686,14 @@ Aktiver Stand:
 - [x] fehlgeschlagene Missionen verwalten
 - [x] Logistikmissionen mit Logistics verbinden
 - [x] FOB-Support-Missionen vorbereiten
+- [x] Missionsgenerator im DCS-Starttest ohne schweren Lua-Fehler geladen
 - [ ] Spielerflugzeug erkennen
 - [ ] Missionen nach Flugzeugtyp filtern
 - [ ] erste einfache Missionsliste über F10 anzeigen
-- [ ] Airbase-Ziele aus Kampagnenzustand verfeinern
+- [ ] Airbase-Ziele aus gefiltertem Kampagnenzustand ableiten
 - [ ] SEAD/DEAD-Ziele aus IADS-Zustand ableiten
 - [ ] Missionserfolg real auswertbar machen
-- [ ] Missionsgenerator in DCS testen
+- [ ] Missionsgenerator in DCS funktional testen
 
 ---
 
@@ -651,13 +718,14 @@ Aktiver Stand:
 - [x] fehlgeschlagene CAPs verwalten
 - [x] AI-Reaktionsstatus vorbereiten
 - [x] Bedrohungsniveau vorbereiten
+- [x] AI-CAP-Manager im DCS-Starttest ohne schweren Lua-Fehler geladen
 - [ ] MOOSE-Anbindung für reale CAP-Spawns vorbereiten
 - [ ] einfache GCI-Logik vorbereiten
 - [ ] KI-Reaktionen auf Spielerfortschritt vorbereiten
 - [ ] KI-Reaktionen auf Capture-Ereignisse vorbereiten
 - [ ] KI-Reaktionen auf IADS-Schäden vorbereiten
 - [ ] KI-Gegenangriffe vorbereiten
-- [ ] AI-System in DCS testen
+- [ ] AI-System in DCS funktional testen
 
 ---
 
@@ -760,6 +828,7 @@ Aktiver Stand:
 - [x] State-Export vorbereiten
 - [x] State-Import vorbereiten
 - [x] Lua-String-Export vorbereiten
+- [x] Persistence-System im DCS-Starttest ohne schweren Lua-Fehler geladen
 - [ ] Speicherstruktur im Repository definieren
 - [ ] Beispiel-Save-State erstellen
 - [ ] DCS-Dateizugriff gesondert prüfen
@@ -774,31 +843,50 @@ Aktiver Stand:
 
 ## Mission-Editor-Grundlage
 
-Diese Aufgaben werden später im DCS Mission Editor erledigt.
+Diese Aufgaben werden im DCS Mission Editor erledigt.
 
 ### DEV-Mission
 
-- [ ] Syria Map als neue Mission öffnen
-- [ ] Mission speichern als `Operation_Levant_Reclamation_DEV.miz`
+- [x] Syria Map als neue Mission öffnen
+- [x] Mission speichern als `Operation_Levant_Reclamation_DEV.miz`
 - [ ] Mission unter `mission/dev/` ablegen
-- [ ] Koalitionen festlegen
-- [ ] Akrotiri als blaue Startbasis nutzen
-- [ ] syrisches Festland initial rot kontrolliert anlegen
-- [ ] erste Spieler-Slots auf Akrotiri anlegen
+- [x] Koalitionen festlegen
+- [x] Akrotiri als blaue Startbasis nutzen
+- [x] syrisches Festland initial rot kontrolliert anlegen
+- [x] ersten Spieler-Slot auf Akrotiri anlegen
 - [ ] erste CTLD-Pickup-Zonen auf Akrotiri anlegen
 - [ ] erste Template-Gruppen mit Late Activation anlegen
-- [ ] Framework-Lade-Trigger vorbereiten
-- [ ] Source-Lade-Trigger für Starttest-Variante A vorbereiten
-- [ ] `src/main.lua` vor `src/loader.lua` laden
-- [ ] `src/loader.lua` als letzte eigene Datei laden
-- [ ] erster Starttest mit `dcs.log`-Kontrolle durchführen
+- [x] Framework-Lade-Trigger vorbereiten
+- [x] Source-Lade-Trigger für Starttest-Variante A vorbereiten
+- [x] `src/main.lua` vor `src/loader.lua` laden
+- [x] `src/loader.lua` als letzte eigene Datei laden
+- [x] erster Starttest mit `dcs.log`-Kontrolle durchführen
 - [ ] danach Loader-only-Variante mit `dofile` prüfen
+
+### Aktuelle DEV-Mission
+
+Dateiname:
+
+    Operation_Levant_Reclamation_DEV.miz
+
+Bisheriger Inhalt:
+
+    Map: Syria
+    Koalitionspreset: Modern
+    Blue Start: Akrotiri / Zypern
+    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
+    Trigger: Starttest-Variante A vollständig angelegt
+    keine rote Frontlinie
+    keine IADS-Stellungen
+    keine CTLD-Zonen
+    keine Template-Gruppen
+    keine F10-Menüs
 
 ---
 
 ## Mission-Editor-Dokumentation
 
-Diese Dateien werden später unter `mission_editor/` angelegt.
+Diese Dateien werden unter `mission_editor/` angelegt.
 
 - [x] `mission_editor/README.md`
 - [ ] `mission_editor/client_slots.md`
@@ -863,14 +951,14 @@ Diese Punkte werden noch nicht begonnen:
 
 - [ ] keine vollständige Frontlinie bauen
 - [ ] keine komplette Syria Map manuell mit Einheiten füllen
-- [ ] keine 69 Airbase-Zonen im Mission Editor anlegen
-- [ ] keine riesigen Triggerketten im Mission Editor bauen
+- [ ] keine Airbase-Zonen für die gesamte Karte manuell anlegen
+- [ ] keine große Triggerlogik für Kampagnenentscheidungen im Mission Editor bauen
 - [ ] keine große Sammeldatei für MOOSE erstellen
 - [ ] keine große Sammeldatei für MIST erstellen
 - [ ] keine große Sammeldatei für CTLD erstellen
 - [ ] keine All-in-one-Lua-Datei erstellen
 - [ ] keine produktive Persistenz ohne DCS-Sandbox-Prüfung bauen
-- [ ] keine dynamische Großkampagne bauen, bevor der Starttest stabil ist
+- [ ] keine dynamische Großkampagne bauen, bevor die technische Startkette und die Airbase-Klassifizierung stabil sind
 
 ---
 
@@ -908,42 +996,48 @@ Diese Dateien sind aktuell vorhanden oder perspektivisch erwünscht:
 - [ ] `src/iads/tc_iads_network.lua`
 - [ ] `src/ui/tc_f10_menu.lua`
 - [ ] `src/debug/tc_debug_state_dump.lua`
+- [ ] `src/debug/tc_debug_airbase_report.lua`
 
 ---
 
 ## Aktuell nächster sinnvoller Einzelschritt
 
-Als nächster Schritt beginnt die praktische Mission-Editor-Arbeit.
+Als nächster Schritt wird die Dokumentation des erfolgreichen Starttests abgeschlossen.
 
-Nächster praktischer Schritt:
+Nächster Dokumentationsschritt:
 
-    minimale Syria-DEV-Mission im DCS Mission Editor erstellen
-
-Ziel:
-
-    Syria Map öffnen
-    minimale Mission speichern
-    Akrotiri als blaue Startbasis vorbereiten
-    einfache Koalitionen setzen
-    einen ersten blauen Testslot anlegen
-    noch keine komplette Kampagne bauen
+    CHANGELOG.md aktualisieren
 
 Danach:
 
-    Framework- und Source-Ladetrigger nach mission_editor/trigger_setup.md anlegen
+    ROADMAP.md aktualisieren
+    README.md aktualisieren
+    MISSION_EDITOR_SETUP.md aktualisieren
+    mission_editor/trigger_setup.md aktualisieren
+    docs/10_testing.md aktualisieren
 
-Prüffokus:
+Danach wird die Session beendet.
 
-    Mission startet
-    Frameworks laden
-    aktive Source-Dateien laden
-    main.lua lädt
-    loader.lua startet zuletzt
-    dcs.log zeigt keine schweren Lua-Fehler
+Nächster technischer Schritt für die nächste Session:
 
-Grund:
+    Airbase-Scanner nach dem Syria-Update fachlich filtern
 
-Die Mission-Editor-Dokumentation und die konkrete Trigger-Struktur sind jetzt vorbereitet. Der nächste sinnvolle Schritt ist nicht weitere Lua-Implementierung, sondern der erste praktische DCS-Starttest.
+Ziel:
+
+    strategische Airfields identifizieren
+    Helipads, Medical Pads und rein taktische Pads separat klassifizieren
+    Capture- und Missionslogik nur auf geeignete strategische Kampagnenbasen anwenden
+    225 erkannte Airbase-/Helipad-Objekte nicht ungefiltert als Kampagnenbasen verwenden
+
+Danach:
+
+    Starttest-Variante B vorbereiten und testen
+
+Prüffokus Variante B:
+
+    nur Frameworks und src/loader.lua im Mission Editor laden
+    prüfen, ob src/loader.lua die restlichen Source-Dateien per dofile nachladen kann
+    DCS-Sandbox-Verhalten praktisch bewerten
 
 ---
 
@@ -965,27 +1059,31 @@ Grundsatz:
     Dann UI.
     Dann Debug.
     Dann Starttest.
-    Dann DEV-Mission.
+    Dann Airbase-Klassifizierung.
+    Dann dofile-Variante.
+    Dann DEV-Mission vertiefen.
     Dann Persistenz vertiefen.
     Dann Testing.
     Dann Release-Struktur.
 
 Aktueller Stand in dieser Reihenfolge:
 
-    Dokumentation: auf Source-Grundstand aktualisiert
+    Dokumentation: wird nach erstem DCS-Starttest aktualisiert
     Vendor: abgeschlossen
     src-Struktur: angelegt
-    Core: erste Version vorhanden
-    Airbases: erste Version vorhanden
-    Zonen: erste Version vorhanden
-    Capture: erste Version vorhanden
-    Logistik: erste Version vorhanden
-    Missionen: erste Version vorhanden
-    KI: erste CAP-Version vorhanden
+    Core: erste Version vorhanden und in DCS geladen
+    Airbases: erste Version vorhanden und in DCS getestet
+    Zonen: erste Version vorhanden und in DCS getestet
+    Capture: erste Version vorhanden und in DCS geladen
+    Logistik: erste Version vorhanden und in DCS geladen
+    Missionen: erste Version vorhanden und in DCS geladen
+    KI: erste CAP-Version vorhanden und in DCS geladen
     IADS: dokumentiert
     UI: dokumentiert
     Debug: dokumentiert
-    Startkette: logisch geprüft
+    Startkette: real in DCS erfolgreich getestet
     DCS-Sandbox-Prüfstrategie: dokumentiert
-    Trigger-Setup: dokumentiert
-    Starttest: nächster praktischer Schritt
+    Trigger-Setup: dokumentiert und praktisch umgesetzt
+    Starttest-Variante A: bestanden
+    Airbase-Klassifizierung: nächster technischer Schwerpunkt
+    Starttest-Variante B: danach offen
