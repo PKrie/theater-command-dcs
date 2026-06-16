@@ -131,6 +131,18 @@ Loader.logisticsFiles = {
   }
 }
 
+Loader.missionFiles = {
+  {
+    key = "missionGenerator",
+    name = "tc_mission_generator",
+    path = "src/missions/tc_mission_generator.lua",
+    required = true,
+    isLoaded = function()
+      return TC.Missions ~= nil and TC.Missions.Generator ~= nil
+    end
+  }
+}
+
 Loader.mainFile = {
   key = "main",
   name = "main",
@@ -453,6 +465,10 @@ function Loader.loadLogistics()
   return loadFileGroup("Logistics", Loader.logisticsFiles)
 end
 
+function Loader.loadMissions()
+  return loadFileGroup("Missions", Loader.missionFiles)
+end
+
 function Loader.loadMain()
   if Loader.mainFile == nil then
     return false
@@ -551,6 +567,14 @@ function Loader.start()
     return false
   end
 
+  local missionsLoaded = Loader.loadMissions()
+
+  if missionsLoaded ~= true then
+    Loader.failed = true
+    logError("Theater Command loader stopped because missions loading failed")
+    return false
+  end
+
   local mainLoaded = Loader.loadMain()
 
   if mainLoaded ~= true then
@@ -586,7 +610,8 @@ function Loader.summary()
     coreFileCount = #Loader.coreFiles,
     worldFileCount = #Loader.worldFiles,
     campaignFileCount = #Loader.campaignFiles,
-    logisticsFileCount = #Loader.logisticsFiles
+    logisticsFileCount = #Loader.logisticsFiles,
+    missionFileCount = #Loader.missionFiles
   }
 end
 
