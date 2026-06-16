@@ -6,7 +6,7 @@ Das Projekt befindet sich aktuell in der frühen Aufbauphase.
 
 Aktueller Fokus:
 
-    Projektgrundlage, Vendor-Frameworks und Dokumentation
+    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Dokumentationsabgleich und Vorbereitung des ersten DCS-Starttests
 
 ---
 
@@ -14,141 +14,113 @@ Aktueller Fokus:
 
 ### Added
 
-- GitHub-Repository `theater-command-dcs` erstellt
-- Projektname **Theater Command DCS** festgelegt
-- erste Kampagne als **Operation Levant Reclamation** definiert
-- Syria Map als primärer Kampagnenraum festgelegt
-- Akrotiri als blaue Startbasis definiert
-- syrisches Festland als vollständig rot kontrollierter Ausgangszustand definiert
-- Grundidee einer persistenten dynamischen DCS-Kampagne dokumentiert
-- Leitprinzip festgelegt:
-
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis
-
-- zentrale Projektdateien angelegt:
-
-    README.md
-    ROADMAP.md
-    TASKS.md
-    CHANGELOG.md
-    ARCHITECTURE.md
-    MISSION_EDITOR_SETUP.md
-    NAMING_CONVENTIONS.md
-    LUA_STYLEGUIDE.md
-    .gitignore
-
-- Dokumentationsordner `docs/` angelegt
-- Docs-Grundblock erstellt:
-
-    docs/00_project_overview.md
-    docs/01_campaign_design.md
-    docs/02_technical_architecture.md
-    docs/03_mission_editor_basics.md
-    docs/04_airbase_system.md
-    docs/05_logistics_system.md
-    docs/06_mission_generator.md
-    docs/07_ai_director.md
-    docs/08_iads_system.md
-    docs/09_persistence.md
-    docs/10_testing.md
-
-- Vendor-Grundstruktur angelegt
-- `vendor/README.md` erstellt
-- MIST-Vendor-Ordner erstellt
-- MOOSE-Vendor-Ordner erstellt
-- CTLD-Vendor-Ordner erstellt
-- Skynet-IADS-Vendor-Ordner erstellt
-- Vendor-README-Dateien erstellt:
-
-    vendor/mist/README.md
-    vendor/moose/README.md
-    vendor/ctld/README.md
-    vendor/skynet-iads/README.md
-
-- MIST-Framework hinterlegt:
-
-    vendor/mist/mist.lua
-
-- MIST-Handbuch hinterlegt:
-
-    vendor/mist/Mist guide.pdf
-
-- MIST-Beispiel-Datenbanken hinterlegt:
-
-    vendor/mist/Example_DBs/
-
-- MOOSE-Framework hinterlegt:
-
-    vendor/moose/Moose.lua
-
-- MOOSE-Dokumentationsreferenz erstellt:
-
-    vendor/moose/MOOSE_DOCS.md
-
-- CTLD-Framework-Dateien hinterlegt:
-
-    vendor/ctld/CTLD-i18n.lua
-    vendor/ctld/CTLD.lua
-
-- Skynet-IADS-Framework-Datei hinterlegt:
-
-    vendor/skynet-iads/SkynetIADS.lua
-
-- `src/README.md` erstellt
-- Root-`README.md` nach Vendor-Import aktualisiert
-- `ROADMAP.md` nach Vendor-Import aktualisiert
-- `TASKS.md` nach Vendor-Import aktualisiert
-
----
+- `src/core/README.md` erstellt
+- `src/world/README.md` erstellt
+- `src/campaign/README.md` erstellt
+- `src/logistics/README.md` erstellt
+- `src/missions/README.md` erstellt
+- `src/ai/README.md` erstellt
+- `src/iads/README.md` erstellt
+- `src/ui/README.md` erstellt
+- `src/debug/README.md` erstellt
+- `src/loader.lua` erstellt
+- `src/main.lua` erstellt
+- Core-Konfigurationsmodul erstellt:
+  - `src/core/tc_config.lua`
+- Core-Loggingmodul erstellt:
+  - `src/core/tc_logger.lua`
+- Core-State-Modul erstellt:
+  - `src/core/tc_state.lua`
+- Core-Utility-Modul erstellt:
+  - `src/core/tc_utils.lua`
+- Core-Scheduler-Modul erstellt:
+  - `src/core/tc_scheduler.lua`
+- World-Airbase-Scanner erstellt:
+  - `src/world/tc_airbase_scanner.lua`
+- World-Zone-Factory erstellt:
+  - `src/world/tc_zone_factory.lua`
+- Campaign-Capture-System erstellt:
+  - `src/campaign/tc_capture_system.lua`
+- Campaign-Persistence-System erstellt:
+  - `src/campaign/tc_persistence_system.lua`
+- Logistics-Delivery-System erstellt:
+  - `src/logistics/tc_logistics_delivery.lua`
+- Logistics-FOB-System erstellt:
+  - `src/logistics/tc_fob_system.lua`
+- Missionsgenerator erstellt:
+  - `src/missions/tc_mission_generator.lua`
+- AI-CAP-Manager erstellt:
+  - `src/ai/tc_ai_cap_manager.lua`
+- IADS-Bereich dokumentiert:
+  - `src/iads/README.md`
+- UI-Bereich dokumentiert:
+  - `src/ui/README.md`
+- Debug-Bereich dokumentiert:
+  - `src/debug/README.md`
 
 ### Changed
 
-- MIST wurde auf die CTLD-kompatible Version ersetzt.
+- `src/README.md` nach Source-Ausbau aktualisiert
+- `TASKS.md` nach Source-Ausbau aktualisiert
+- `src/loader.lua` schrittweise erweitert:
+  - Core-Ladung ergänzt
+  - World-Ladung ergänzt
+  - Campaign-Ladung ergänzt
+  - Logistics-Ladung ergänzt
+  - Missions-Ladung ergänzt
+  - AI-Ladung ergänzt
+- interne Theater-Command-Lade-Reihenfolge konkretisiert:
+  - Core
+  - World
+  - Campaign
+  - Logistics
+  - Missions
+  - AI
+  - IADS
+  - UI
+  - Debug
+  - Main
+- `src/README.md` korrigiert:
+  - Source-Implementierung ist nicht mehr nur geplant
+  - erste aktive Lua-Module sind vorhanden
+  - IADS, UI und Debug sind aktuell dokumentiert, aber noch nicht aktiv implementiert
+- `TASKS.md` korrigiert:
+  - Phase 1 bis Phase 7 teilweise erledigt
+  - Phase 8 bis Phase 10 dokumentarisch vorbereitet
+  - nächster Fokus auf Dokumentationsabgleich und technischen Starttest verschoben
 
-Aktiver Stand:
+### Current Source Modules
 
-    MIST 4.5.128-DYNSLOTS-02
+Aktuell vorhandene aktive eigene Lua-Module:
 
-Grund:
+- `src/loader.lua`
+- `src/main.lua`
+- `src/core/tc_config.lua`
+- `src/core/tc_logger.lua`
+- `src/core/tc_state.lua`
+- `src/core/tc_utils.lua`
+- `src/core/tc_scheduler.lua`
+- `src/world/tc_airbase_scanner.lua`
+- `src/world/tc_zone_factory.lua`
+- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/logistics/tc_fob_system.lua`
+- `src/missions/tc_mission_generator.lua`
+- `src/ai/tc_ai_cap_manager.lua`
 
-CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
+Aktuell vorhandene Source-Dokumentationen:
 
-- Vendor-Dokumentation wurde nach dem tatsächlichen Framework-Import aktualisiert.
-- MOOSE wird im Projekt als stabile Datei unter folgendem Pfad geführt:
-
-    vendor/moose/Moose.lua
-
-- Skynet IADS wird im Projekt als stabile Datei unter folgendem Pfad geführt:
-
-    vendor/skynet-iads/SkynetIADS.lua
-
-- Die Framework-Dateien werden unter stabilen Projektnamen geführt, damit die spätere Mission-Editor-Ladefolge nicht bei jedem Versionswechsel angepasst werden muss.
-- Die Dokumentation wurde auf die aktuelle geplante Lade-Reihenfolge ausgerichtet:
-
-    1. vendor/mist/mist.lua
-    2. vendor/moose/Moose.lua
-    3. vendor/ctld/CTLD-i18n.lua
-    4. vendor/ctld/CTLD.lua
-    5. vendor/skynet-iads/SkynetIADS.lua
-    6. src/loader.lua
-
----
-
-### Removed
-
-- falsch platzierte Root-Datei entfernt:
-
-    Moose.lua
-
-Grund:
-
-MOOSE gehört ausschließlich unter:
-
-    vendor/moose/Moose.lua
-
----
+- `src/README.md`
+- `src/core/README.md`
+- `src/world/README.md`
+- `src/campaign/README.md`
+- `src/logistics/README.md`
+- `src/missions/README.md`
+- `src/ai/README.md`
+- `src/iads/README.md`
+- `src/ui/README.md`
+- `src/debug/README.md`
 
 ### Current Framework Versions
 
@@ -159,33 +131,132 @@ MOOSE gehört ausschließlich unter:
 | CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
 | Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
 
----
+### Current DCS Load Order
+
+Die externe Lade-Reihenfolge im DCS Mission Editor bleibt:
+
+    1. vendor/mist/mist.lua
+    2. vendor/moose/Moose.lua
+    3. vendor/ctld/CTLD-i18n.lua
+    4. vendor/ctld/CTLD.lua
+    5. vendor/skynet-iads/SkynetIADS.lua
+    6. src/loader.lua
+
+Danach übernimmt `src/loader.lua` die interne Theater-Command-Ladung.
+
+### Current Internal Source Load Order
+
+Die interne Source-Lade-Reihenfolge lautet:
+
+    1. Core
+    2. World
+    3. Campaign
+    4. Logistics
+    5. Missions
+    6. AI
+    7. IADS
+    8. UI
+    9. Debug
+    10. Main
+
+Aktuell aktiv vom Loader geladen:
+
+- Core
+- World
+- Campaign
+- Logistics
+- Missions
+- AI
+- Main
+
+Noch nicht aktiv vom Loader geladen:
+
+- IADS
+- UI
+- Debug
+
+Grund:
+
+Diese Bereiche besitzen aktuell nur README-Dateien und noch keine konkreten Lua-Implementierungen.
 
 ### Not Yet Implemented
 
-Noch nicht begonnen:
+Noch nicht umgesetzt:
 
-- eigene Lua-Core-Dateien
-- `src/loader.lua`
-- `src/main.lua`
-- `src/core/`
-- `src/world/`
-- `src/campaign/`
-- `src/logistics/`
-- `src/missions/`
-- `src/ai/`
-- `src/iads/`
-- `src/ui/`
-- `src/debug/`
-- Airbase-Scanner
-- virtuelles Zonen-System
-- Capture-System
-- CTLD-Anbindung an Theater-Command-Logik
-- Missionsgenerator
-- AI Director
-- IADS-Anbindung an Theater-Command-Logik
-- Persistenz
+- konkrete IADS-Lua-Implementierung
+- konkrete UI-/F10-Lua-Implementierung
+- konkrete Debug-Lua-Implementierung
+- reale MOOSE-CAP-Spawns
+- reale CTLD-Ereignisauswertung
+- reale Skynet-IADS-Kampagnenbrücke
+- DCS-Dateipersistenz
+- DCS-Sandbox-Prüfung für Dateizugriff
 - DEV-Mission im DCS Mission Editor
+- erster realer DCS-Starttest
+- technische Prüfung von `src/main.lua` gegen alle aktuellen Modulnamen
+- Debug-Menüs
+- Mission-Editor-Dokumentation
+- Mission-Ordnerstruktur
+- Save-Ordnerstruktur
+- Tools-Ordnerstruktur
+- Assets-Ordnerstruktur
+
+### Status
+
+Diese Version ist noch keine spielbare DCS-Mission.
+
+Der technische Source-Grundaufbau ist begonnen und enthält bereits erste eigene Theater-Command-Lua-Module.
+
+Der nächste technische Prüfpunkt ist:
+
+    src/main.lua gegen aktuelle Modulnamen prüfen
+
+Der nächste Dokumentationsabgleich nach dieser Datei ist:
+
+    ROADMAP.md
+
+Danach:
+
+    ARCHITECTURE.md
+    README.md
+
+---
+
+## Version 0.1.0 — Source Foundation Baseline
+
+### Added
+
+- Source-Grundstruktur begonnen
+- `src/loader.lua` als zentrale Einstiegdatei erstellt
+- `src/main.lua` als Hauptinitialisierung erstellt
+- Core-Bereich erstellt
+- World-Bereich erstellt
+- Campaign-Bereich erstellt
+- Logistics-Bereich erstellt
+- Missions-Bereich erstellt
+- AI-Bereich erstellt
+- IADS-Bereich dokumentiert
+- UI-Bereich dokumentiert
+- Debug-Bereich dokumentiert
+- erste Core-Module erstellt
+- erste World-Module erstellt
+- erste Campaign-Module erstellt
+- erste Logistics-Module erstellt
+- erster Missionsgenerator erstellt
+- erster AI-CAP-Manager erstellt
+
+### Changed
+
+- Projektstatus von reiner Dokumentations- und Vendor-Basis auf begonnene Source-Implementierung erweitert
+- Loader auf modulare Source-Struktur ausgerichtet
+- Source-Dokumentation an die tatsächliche Ordnerstruktur angepasst
+- Tasks an den aktuellen Implementierungsstand angepasst
+
+### Status
+
+Diese Version ist noch keine spielbare DCS-Mission.
+
+Sie stellt die erste eigene Lua-Grundstruktur für Theater Command DCS bereit.
 
 ---
 
@@ -213,6 +284,15 @@ Noch nicht begonnen:
 - Root-`README.md` auf den aktuellen Vendor-Stand gebracht
 - `ROADMAP.md` auf den aktuellen Vendor-Stand gebracht
 - `TASKS.md` auf den aktuellen Vendor-Stand gebracht
+- zentrale Lade-Reihenfolge dokumentiert
+
+Aktive MIST-Version:
+
+    MIST 4.5.128-DYNSLOTS-02
+
+Grund:
+
+CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
 
 ### Removed
 
@@ -232,39 +312,55 @@ Sie stellt die lokale Framework-Basis für die weitere Entwicklung bereit.
 
 - erste Projektidee dokumentiert
 - GitHub-Grundstruktur begonnen
-- Projektziel definiert:
+- Projektname **Theater Command DCS** festgelegt
+- erste Kampagne als **Operation Levant Reclamation** definiert
+- Syria Map als primärer Kampagnenraum festgelegt
+- Akrotiri als blaue Startbasis definiert
+- syrisches Festland als vollständig rot kontrollierter Ausgangszustand definiert
+- Grundidee einer persistenten dynamischen DCS-Kampagne dokumentiert
+- Leitprinzip festgelegt:
 
-    persistente dynamische Kampagne
-    automatische Airbase-Erkennung
-    virtuelle Capture- und Logistikzonen
-    CTLD-gestütztes Logistiksystem
-    dynamische Missionsauswahl nach Flugzeugtyp
-    KI-gesteuerte Reaktionen
-    langfristige Persistenz
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis
 
-- erste zentrale Projektdateien angelegt
-- erste Architekturregeln definiert
-- erste Aufgabenstruktur vorbereitet
-- erste Roadmap vorbereitet
+- erste zentrale Projektdateien angelegt:
+  - `README.md`
+  - `ROADMAP.md`
+  - `TASKS.md`
+  - `CHANGELOG.md`
+  - `ARCHITECTURE.md`
+  - `MISSION_EDITOR_SETUP.md`
+  - `NAMING_CONVENTIONS.md`
+  - `LUA_STYLEGUIDE.md`
+  - `.gitignore`
+- Dokumentationsordner `docs/` angelegt
+- Docs-Grundblock erstellt:
+  - `docs/00_project_overview.md`
+  - `docs/01_campaign_design.md`
+  - `docs/02_technical_architecture.md`
+  - `docs/03_mission_editor_basics.md`
+  - `docs/04_airbase_system.md`
+  - `docs/05_logistics_system.md`
+  - `docs/06_mission_generator.md`
+  - `docs/07_ai_director.md`
+  - `docs/08_iads_system.md`
+  - `docs/09_persistence.md`
+  - `docs/10_testing.md`
+- Vendor-Grundstruktur angelegt
+- `vendor/README.md` erstellt
+- MIST-Vendor-Ordner erstellt
+- MOOSE-Vendor-Ordner erstellt
+- CTLD-Vendor-Ordner erstellt
+- Skynet-IADS-Vendor-Ordner erstellt
+- Vendor-README-Dateien erstellt:
+  - `vendor/mist/README.md`
+  - `vendor/moose/README.md`
+  - `vendor/ctld/README.md`
+  - `vendor/skynet-iads/README.md`
 
 ### Status
 
 Diese Version ist noch keine spielbare DCS-Mission.
 
 Sie dient ausschließlich der Projektanlage, Dokumentation und Architekturplanung.
-
----
-
-## Aktueller nächster Dokumentationsschritt
-
-Nach dieser Aktualisierung:
-
-    ARCHITECTURE.md aktualisieren
-
-Danach:
-
-    vendor/README.md aktualisieren
-    docs/02_technical_architecture.md aktualisieren
-    docs/03_mission_editor_basics.md aktualisieren
-    docs/05_logistics_system.md aktualisieren
-    docs/08_iads_system.md aktualisieren
