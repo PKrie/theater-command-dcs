@@ -11,12 +11,16 @@
 --   must not all be treated as strategic campaign airfields.
 --
 -- Version:
---   0.2.1
+--   0.2.2
 --
 -- Fixes:
---   - Avoids conflict between state.Bases.unknown as owner counter and unknown
---     airbase classification list.
---   - Uses logger with the actual one-argument project logger interface.
+--   - Keeps the fixed unknown-classification state conflict from v0.2.1.
+--   - Classifies strategic and secondary airfields by normalized name before
+--     relying on DCS category data.
+--   - Correctly prepares Syrian mainland strategic airfields as potential Red
+--     strategic bases even when DCS category data is not AIRDROME.
+--   - Adds prefix-based classification for Syria helipad-like objects such as
+--     HMED, H_MED_ORIG, HI, HS, HC, HL, HJ, HT, HOIL and HSTAD.
 --   - Keeps ZoneFactory compatibility through getRegistry(), categoryName,
 --     currentOwner and position.
 
@@ -30,7 +34,7 @@ local AirbaseScanner = {}
 AirbaseScanner.name = "tc_airbase_scanner"
 AirbaseScanner.displayName = "Airbase Scanner"
 AirbaseScanner.path = "src/world/tc_airbase_scanner.lua"
-AirbaseScanner.version = "0.2.1"
+AirbaseScanner.version = "0.2.2"
 
 AirbaseScanner.loaded = true
 AirbaseScanner.started = false
@@ -94,6 +98,8 @@ AirbaseScanner.syrianMainlandKeywords = {
     "THALAH",
     "MARJ_AS_SULTAN",
     "MARJ AS SULTAN",
+    "MARJ_RUHAYYIL",
+    "MARJ RUHAYYIL",
     "AL_DUMAYR",
     "AL-DUMAYR",
     "AD_DUMAYR",
@@ -120,6 +126,8 @@ AirbaseScanner.syrianMainlandKeywords = {
     "LATAKIA",
     "LATTAKIA",
     "BASSEL",
+    "BASSEL_AL_ASSAD",
+    "BASSEL AL-ASSAD",
     "HMEIMIM",
     "KHMEIMIM",
     "DEIR_EZ_ZOR",
@@ -128,7 +136,14 @@ AirbaseScanner.syrianMainlandKeywords = {
     "DEIR EZZOR",
     "DEIR_ZOR",
     "DEIR ZOR",
-    "TABQA"
+    "TABQA",
+    "KHALKHALAH",
+    "QABR_AS_SITT",
+    "QABR AS SITT",
+    "TAL_SIMAN",
+    "TAL SIMAN",
+    "KHARAB_ISHK",
+    "KHARAB ISHK"
 }
 
 AirbaseScanner.strategicAirfieldKeywords = {
@@ -152,6 +167,8 @@ AirbaseScanner.strategicAirfieldKeywords = {
     "LATAKIA",
     "LATTAKIA",
     "BASSEL",
+    "BASSEL_AL_ASSAD",
+    "BASSEL AL-ASSAD",
     "HMEIMIM",
     "KHMEIMIM",
     "DEIR_EZ_ZOR",
@@ -168,7 +185,9 @@ AirbaseScanner.strategicAirfieldKeywords = {
     "ABU AL DUHUR",
     "MINAKH",
     "MENAGH",
-    "TAFTANAZ"
+    "TAFTANAZ",
+    "JIRAH",
+    "KHALKHALAH"
 }
 
 AirbaseScanner.secondaryAirfieldKeywords = {
@@ -187,7 +206,10 @@ AirbaseScanner.secondaryAirfieldKeywords = {
     "THA'LAH",
     "THALAH",
     "MARJ_AS_SULTAN",
-    "MARJ AS SULTAN"
+    "MARJ AS SULTAN",
+    "MARJ_RUHAYYIL",
+    "MARJ RUHAYYIL",
+    "RAYAK"
 }
 
 AirbaseScanner.medicalPadKeywords = {
@@ -256,7 +278,32 @@ AirbaseScanner.tacticalPadKeywords = {
     "COMBAT_OUTPOST",
     "COMBAT OUTPOST",
     "HOIL",
-    "OIL"
+    "OIL",
+    "EMERGENCY"
+}
+
+AirbaseScanner.medicalPadPatterns = {
+    "^HMED%d+",
+    "^H_MED",
+    "^H_MED_ORIG"
+}
+
+AirbaseScanner.tacticalPadPatterns = {
+    "^HOIL%d+",
+    "^H%d$",
+    "^H%d_",
+    "^T%d$",
+    "^T%d_"
+}
+
+AirbaseScanner.helipadPatterns = {
+    "^HI%d+",
+    "^HS%d+",
+    "^HC%d+",
+    "^HL%d+",
+    "^HJ%d+",
+    "^HT%d+",
+    "^HSTAD%d+"
 }
 
 local function getConfig()
@@ -436,6 +483,20 @@ local function containsAnyKeyword(normalizedName, keywords)
     return false, nil
 end
 
+local function matchesAnyPattern(normalizedName, patterns)
+    if type(normalizedName) ~= "string" or type(patterns) ~= "table" then
+        return false, nil
+    end
+
+    for _, pattern in ipairs(patterns) do
+        if string.find(normalizedName, pattern) ~= nil then
+            return true, pattern
+        end
+    end
+
+    return false, nil
+end
+
 local function safeCall(object, methodName)
     if object == nil or methodName == nil then
         return nil
@@ -545,26 +606,28 @@ local function classifyAirbase(normalizedName, dcsCategoryName)
         return AirbaseScanner.Categories.STRATEGIC_AIRFIELD, "configured_blue_start_base", getConfiguredBlueStartBase()
     end
 
-    if dcsCategoryName == "AIRDROME" then
-        local isStrategic, strategicKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.strategicAirfieldKeywords)
+    local isStrategic, strategicKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.strategicAirfieldKeywords)
 
-        if isStrategic == true then
-            return AirbaseScanner.Categories.STRATEGIC_AIRFIELD, "strategic_airfield_keyword", strategicKeyword
-        end
+    if isStrategic == true then
+        return AirbaseScanner.Categories.STRATEGIC_AIRFIELD, "strategic_airfield_keyword", strategicKeyword
+    end
 
-        local isSecondary, secondaryKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.secondaryAirfieldKeywords)
+    local isSecondary, secondaryKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.secondaryAirfieldKeywords)
 
-        if isSecondary == true then
-            return AirbaseScanner.Categories.SECONDARY_AIRFIELD, "secondary_airfield_keyword", secondaryKeyword
-        end
-
-        return AirbaseScanner.Categories.SECONDARY_AIRFIELD, "dcs_airdrome_default", nil
+    if isSecondary == true then
+        return AirbaseScanner.Categories.SECONDARY_AIRFIELD, "secondary_airfield_keyword", secondaryKeyword
     end
 
     local isMedical, medicalKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.medicalPadKeywords)
 
     if isMedical == true then
         return AirbaseScanner.Categories.MEDICAL_PAD, "medical_pad_keyword", medicalKeyword
+    end
+
+    local isMedicalPattern, medicalPattern = matchesAnyPattern(normalizedName, AirbaseScanner.medicalPadPatterns)
+
+    if isMedicalPattern == true then
+        return AirbaseScanner.Categories.MEDICAL_PAD, "medical_pad_pattern", medicalPattern
     end
 
     local isFarp, farpKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.farpKeywords)
@@ -585,10 +648,30 @@ local function classifyAirbase(normalizedName, dcsCategoryName)
         return AirbaseScanner.Categories.TACTICAL_PAD, "tactical_pad_keyword", tacticalKeyword
     end
 
+    local isTacticalPattern, tacticalPattern = matchesAnyPattern(normalizedName, AirbaseScanner.tacticalPadPatterns)
+
+    if isTacticalPattern == true then
+        return AirbaseScanner.Categories.TACTICAL_PAD, "tactical_pad_pattern", tacticalPattern
+    end
+
     local isHelipad, helipadKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.helipadKeywords)
 
-    if dcsCategoryName == "HELIPAD" or isHelipad == true then
-        return AirbaseScanner.Categories.HELIPAD, "dcs_helipad_default", helipadKeyword
+    if isHelipad == true then
+        return AirbaseScanner.Categories.HELIPAD, "helipad_keyword", helipadKeyword
+    end
+
+    local isHelipadPattern, helipadPattern = matchesAnyPattern(normalizedName, AirbaseScanner.helipadPatterns)
+
+    if isHelipadPattern == true then
+        return AirbaseScanner.Categories.HELIPAD, "helipad_pattern", helipadPattern
+    end
+
+    if dcsCategoryName == "AIRDROME" then
+        return AirbaseScanner.Categories.SECONDARY_AIRFIELD, "dcs_airdrome_default", nil
+    end
+
+    if dcsCategoryName == "HELIPAD" then
+        return AirbaseScanner.Categories.HELIPAD, "dcs_helipad_default", nil
     end
 
     return AirbaseScanner.Categories.UNKNOWN, "unknown_airbase_like_object", nil
@@ -767,9 +850,6 @@ local function ensureStateTables()
     state.Bases.farps = {}
     state.Bases.tacticalPads = {}
 
-    -- Important:
-    -- state.Bases.unknown is already used as an owner counter.
-    -- Therefore unknown classified airbase objects use a separate list name.
     state.Bases.unknownAirbaseObjects = {}
 
     state.Bases.captureCandidates = {}
@@ -1062,14 +1142,12 @@ local function createAirbaseRecord(airbaseObject, index)
         dcsCategoryId = dcsCategoryId,
         dcsCategoryName = dcsCategoryName,
 
-        -- Compatibility fields for current ZoneFactory.
         categoryId = dcsCategoryId,
         categoryName = dcsCategoryName,
         coalitionId = coalitionId,
         coalitionName = coalitionName,
         position = position,
 
-        -- Theater Command classification fields.
         classification = classification,
         classificationReason = classificationReason,
         classificationKeyword = classificationKeyword,
