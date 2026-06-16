@@ -1,767 +1,736 @@
 # Mission Generator
 
-Diese Datei beschreibt den geplanten Missionsgenerator von **Theater Command DCS**.
-
-Der Missionsgenerator soll später aus dem aktuellen Kampagnenzustand dynamische Aufgaben erzeugen.
+Diese Datei beschreibt den Missionsgenerator von **Theater Command DCS**.
 
 Die erste Kampagne trägt den Arbeitstitel:
 
-**Operation Levant Reclamation**
+    Operation Levant Reclamation
 
 Die Kampagne wird auf der **Syria Map** aufgebaut.
 
-Blau startet auf **Zypern / Akrotiri**.
+Ausgangslage:
 
-Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+    Blue Start: Akrotiri / Zypern
+    Red Start: syrisches Festland vollständig rot kontrolliert
+
+---
+
+## Zweck des Missionsgenerators
+
+Der Missionsgenerator soll später aus dem aktuellen Kampagnenzustand dynamische, sinnvolle und spielbare Missionen erzeugen.
+
+Er soll keine feste lineare Missionskette abarbeiten.
+
+Stattdessen soll er auf Basis des aktuellen Zustands entscheiden, welche Missionen sinnvoll verfügbar sind.
+
+Mögliche Einflussfaktoren:
+
+- Besitzstatus von Airbases
+- Besitzstatus von Zonen
+- Airbase-Klassifizierung
+- Logistikstatus
+- FOB-Status
+- IADS-Zustand
+- AI-Aktivität
+- Kampagnenphase
+- bisherige Missionserfolge
+- bisherige Missionsfehlschläge
+- verfügbare blaue Basen
+- verfügbare rote Ziele
+- aktuelle Operationsreichweite
 
 ---
 
 ## Grundprinzip
 
-Der Missionsgenerator folgt dem Projektprinzip:
+Das zentrale Projektprinzip lautet:
 
     Mission Editor = Bühne
     Lua = Kampagnensystem
     GitHub = Projektgedächtnis
 
-Missionen sollen später nicht primär als feste Triggerketten im Mission Editor gebaut werden.
+Der Mission Editor stellt nur die Bühne bereit.
 
-Stattdessen soll Theater Command DCS Missionen aus dem aktuellen Kampagnenzustand ableiten.
+Die eigentliche Missionslogik liegt in Lua.
 
----
-
-## Ziel des Missionsgenerators
-
-Der Missionsgenerator soll später passende Aufgaben erzeugen abhängig von:
-
-- Spielerflugzeug
-- Kampagnenphase
-- Basenbesitz
-- Zonenstatus
-- Logistikstatus
-- IADS-Zustand
-- AI-Director-Lage
-- verfügbaren Zielen
-- Entfernung zu Spielerbasis
-- strategischer Priorität
-
-Der Spieler soll nicht einfach eine starre Missionsliste erhalten.
-
-Der Spieler soll Aufgaben erhalten, die zur aktuellen Lage passen.
+GitHub dokumentiert Struktur, Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
 
 ---
 
-## Aktueller Projektstand
+## Aktueller technischer Stand
 
-Stand:
+Stand: 2026-06-16
 
-    2026-06-15
-
-Aktuell vorhanden:
-
-- zentrale Projektdokumentation
-- `docs/`-Grundblock
-- `vendor/`-Frameworks
-- `src/README.md`
-
-Aktuell hinterlegte Frameworks:
-
-| Framework | Projektpfad | Stand |
-|---|---|---|
-| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
-| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
-| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
-| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
-
-Noch nicht vorhanden:
-
-- `src/missions/tc_mission_generator.lua`
-- `src/missions/tc_mission_registry.lua`
-- `src/missions/tc_mission_types.lua`
-- `src/missions/tc_mission_filter_by_aircraft.lua`
-- eigene F10-Missionsmenüs
-- eigene Missionsauswertung
-- eigene Missionspersistenz
-
----
-
-## Geplante eigene Dateien
-
-Die Missionslogik gehört später nach:
-
-    src/missions/
-
-Geplante Dateien:
+Aktuelle Missions-Datei:
 
     src/missions/tc_mission_generator.lua
-    src/missions/tc_mission_registry.lua
-    src/missions/tc_mission_types.lua
-    src/missions/tc_mission_filter_by_aircraft.lua
-    src/missions/tc_mission_air_superiority.lua
-    src/missions/tc_mission_sead_dead.lua
-    src/missions/tc_mission_strike.lua
-    src/missions/tc_mission_cas.lua
-    src/missions/tc_mission_logistics.lua
-    src/missions/tc_mission_csar.lua
-    src/missions/tc_mission_recon.lua
 
-Zusätzliche spätere Dateien:
+Der erste reale DCS-Starttest wurde durchgeführt.
 
-    src/ui/tc_mission_menu.lua
-    src/ui/tc_f10_menu.lua
-    src/debug/tc_debug_missions.lua
+Test:
 
----
+    Starttest-Variante A — sichere Einzeldatei-Ladung
 
-## Nicht gewünschte Dateien
+Ergebnis:
 
-Nicht gewünscht:
+    Bestanden
 
-    src/tc_mission_generator_all_in_one.lua
-    src/tc_moose_missions.lua
-    src/tc_mist_missions.lua
-    src/tc_all_in_one.lua
+Bestätigt wurde:
 
-Die eigene Struktur wird nach Aufgaben sortiert.
+- Missions-Bereich wird geladen
+- `tc_mission_generator.lua` wird geladen
+- keine schweren Lua-Fehler beim Laden
+- Missions wird durch Main als Runtime-System berücksichtigt
+- Theater-Command-Startkette läuft sauber weiter
 
-Sie wird nicht nach Frameworks sortiert.
+Aktueller Stand:
 
-Eine Datei darf MIST, MOOSE, CTLD oder Skynet IADS intern nutzen.
-
-Der Dateiname richtet sich aber immer nach der Aufgabe, nicht nach dem Framework.
+    Missionsgenerator ist technisch ladbar.
+    Funktionale Missionsgenerator-Tests wurden noch nicht durchgeführt.
+    Es werden noch keine spielbaren dynamischen Missionen erzeugt.
 
 ---
 
-## Missionen aus Kampagnenzustand
+## Aktuelle DEV-Mission
 
-Missionen sollen später aus dem Theater-Command-State entstehen.
+Aktuelle technische Entwicklungsmission:
 
-Mögliche Eingangsdaten:
+    Operation_Levant_Reclamation_DEV.miz
 
-- aktive blaue Basen
-- aktive rote Basen
-- neutrale oder umkämpfte Zonen
-- verfügbare Logistikhubs
-- aktive FOBs
-- bekannte IADS-Stellungen
-- zerstörte IADS-Stellungen
-- aktive rote CAP/GCI-Bedrohung
-- verfügbare Spielerflugzeuge
-- Kampagnenphase
-- bisherige Missionshistorie
+Aktueller Inhalt:
 
-Der Missionsgenerator soll daraus geeignete Aufgaben ableiten.
+    Map: Syria
+    Koalitionspreset: Modern
+    Blue Start: Akrotiri / Zypern
+    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
+    Trigger: Starttest-Variante A vollständig angelegt
+    keine rote Frontlinie
+    keine IADS-Stellungen
+    keine CTLD-Zonen
+    keine Template-Gruppen
+    keine F10-Menüs
 
----
+Diese Mission ist aktuell nur ein technischer Testträger.
 
-## Spielerflugzeug erkennen
-
-Der Missionsgenerator soll später erkennen, welches Flugzeug der Spieler nutzt.
-
-Daraus ergibt sich, welche Missionen sinnvoll sind.
-
-Beispiele:
-
-### F/A-18C
-
-Mögliche Missionen:
-
-- CAP
-- Escort
-- SEAD
-- DEAD
-- Strike
-- CAS
-- Anti-Ship optional
-- Recon optional
+Sie ist noch keine spielbare Kampagnenmission.
 
 ---
 
-### F-16C
+## Verbindung zum Airbase-System
 
-Mögliche Missionen:
+Der erste reale DCS-Test ergab:
 
-- CAP
-- Escort
-- SEAD
-- DEAD
-- Strike
-- Interdiction
-- CAS light
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
 
----
+Dieser Befund ist für den Missionsgenerator besonders wichtig.
 
-### F-15E
+Problem:
 
-Mögliche Missionen:
+    Der Missionsgenerator darf nicht ungefiltert alle 225 Airbase-/Helipad-Objekte als Missionsziele verwenden.
 
-- Strike
-- Deep Strike
-- Interdiction
-- DEAD
-- Escort optional
-- CAS optional
+Nicht jedes von DCS erkannte Airbase-Objekt ist ein sinnvolles Missionsziel.
 
----
+DCS kann unter anderem liefern:
 
-### F-14B
+- große Airfields
+- kleinere Airfields
+- Heliports
+- Helipads
+- Medical Pads
+- FARPs
+- taktische Pads
+- unbekannte Objekte
 
-Mögliche Missionen:
+Folgerung:
 
-- CAP
-- Intercept
-- Fleet Defense
-- Escort
-- Strike optional
-- TARPS-Recon optional, wenn später gewünscht
+    Der Missionsgenerator darf erst produktiv auf Airbase-Daten zugreifen, wenn der Airbase-Scanner diese Objekte klassifiziert.
 
 ---
 
-### A-10C II
-
-Mögliche Missionen:
-
-- CAS
-- Armed Recon
-- FOB Defense
-- Convoy Attack
-- Capture Support
-
-A-10C II wird erst sinnvoll, wenn Blau auf dem Festland oder von einem vorgeschobenen Standort aus operieren kann.
-
----
-
-### AH-64D
-
-Mögliche Missionen:
-
-- CAS
-- Armed Recon
-- FOB Defense
-- Anti-Armor
-- Capture Support
-
-AH-64D wird erst sinnvoll, wenn ein FOB oder eine Festlandbasis aktiv ist.
-
----
-
-### UH-1H und Mi-8
-
-Mögliche Missionen:
-
-- CTLD-Logistik
-- Truppentransport
-- Kistentransport
-- FOB-Aufbau
-- CSAR
-- Versorgung von Capture-Zonen
-
----
-
-## Missionsarten
+## Geplante Missionsarten
 
 Der Missionsgenerator soll später verschiedene Missionsarten erzeugen können.
 
-Geplante Missionsarten:
+Geplante Typen:
 
+    RECON
     CAP
-    INTERCEPT
-    ESCORT
     SEAD
     DEAD
     STRIKE
     CAS
+    INTERDICTION
+    ESCORT
     LOGISTICS
-    FOB_SUPPLY
-    CSAR
-    RECON
-    CONVOY_ATTACK
-    BASE_DEFENSE
-    IADS_ATTACK
+    FOB_SUPPORT
+    AIRBASE_ATTACK
+    AI_SUPPRESSION
 
-Diese Missionsarten werden später schrittweise umgesetzt.
+Diese Typen sind als fachliche Zielstruktur vorgesehen.
 
-Nicht alle Missionsarten werden sofort gebaut.
+Sie müssen schrittweise einzeln implementiert und getestet werden.
 
 ---
 
-## Missionsdatenmodell
+## Recon
 
-Eine Mission soll später als eigene Theater-Command-Struktur geführt werden.
+Recon-Missionen dienen der Aufklärung.
 
-Vorläufiges Datenmodell:
+Mögliche Ziele:
 
-    mission = {
-      id = "MISSION_SEAD_LATTAKIA_01",
-      type = "SEAD",
-      title = "Suppress coastal SAM site near Latakia",
-      status = "AVAILABLE",
-      priority = 80,
-      targetId = "IADS_RED_SAM_SA6_LATTAKIA_01",
-      targetRegion = "SYRIAN_COAST",
-      requiredAircraft = {
-        "FA18C",
-        "F16C"
-      },
-      originBase = "AKROTIRI",
-      campaignEffect = {
-        iadsSuppression = true,
-        unlockLogisticsRoute = false
-      }
-    }
+- unbekannte Airbases
+- verdächtige Zonen
+- IADS-Sektoren
+- rote Logistikbereiche
+- mögliche FOB-Standorte
+- Frontbereiche
+- strategische Ziele
 
-Diese Struktur ist konzeptionell.
+Recon kann später Voraussetzung sein für:
 
-Die genaue technische Umsetzung erfolgt später in Lua.
+- Strike-Missionen
+- SEAD-Missionen
+- Capture-Operationen
+- Airbase-Angriffe
+- Logistikplanung
+
+---
+
+## CAP
+
+CAP-Missionen dienen der Luftüberlegenheit.
+
+Mögliche Einsatzräume:
+
+- über Akrotiri
+- über Seewegen
+- über Frontbereichen
+- über Logistikkorridoren
+- über bedrohten FOBs
+- über späteren Capture-Zonen
+
+CAP-Missionen können später mit dem AI-CAP-Manager verbunden werden.
+
+Aktuelle AI-Datei:
+
+    src/ai/tc_ai_cap_manager.lua
+
+---
+
+## SEAD
+
+SEAD-Missionen dienen der Unterdrückung feindlicher Luftverteidigung.
+
+Mögliche Ziele:
+
+- aktive Radarstellungen
+- SAM-Sites
+- IADS-Knoten
+- EWR-Standorte
+- Verteidigungssektoren
+
+SEAD benötigt später Daten aus:
+
+- IADS-System
+- AI-System
+- World-System
+- Campaign-State
+
+Aktueller Stand:
+
+    Skynet IADS wird geladen.
+    Theater-Command-IADS-Schicht ist noch nicht implementiert.
+
+---
+
+## DEAD
+
+DEAD-Missionen dienen der Zerstörung feindlicher Luftverteidigung.
+
+Mögliche Ziele:
+
+- SAM Launcher
+- Search Radar
+- Track Radar
+- Command Nodes
+- EWR
+- mobile Luftverteidigung
+
+DEAD-Missionen sollen später den IADS-Zustand dauerhaft verändern können.
+
+Dafür wird Persistenz benötigt.
+
+---
+
+## Strike
+
+Strike-Missionen dienen Angriffen auf strategische Ziele.
+
+Mögliche Ziele:
+
+- strategische Airfields
+- Munitionslager
+- Fuel Depots
+- Kommandoposten
+- Radarstandorte
+- Brücken
+- Infrastruktur
+- logistische Knoten
+
+Wichtig:
+
+    Strike-Missionen dürfen nicht zufällig Medical Pads oder einzelne Helipads als strategische Ziele auswählen.
+
+---
+
+## CAS
+
+CAS-Missionen unterstützen spätere Bodenkämpfe oder Capture-Operationen.
+
+Mögliche Einsatzräume:
+
+- Nähe strategischer Basen
+- Nähe von FOBs
+- umkämpfte Zonen
+- Frontabschnitte
+- rote Gegenangriffsachsen
+
+CAS wird erst relevant, wenn Bodenzustände, Capture-Logik oder Frontlogik weiter ausgebaut sind.
+
+---
+
+## Interdiction
+
+Interdiction-Missionen sollen später feindliche Bewegungen, Verstärkungen und Logistik stören.
+
+Mögliche Ziele:
+
+- Konvois
+- Nachschubrouten
+- Brücken
+- Straßenzüge
+- Depots
+- mobile Einheiten
+- Verstärkungskräfte
+
+Interdiction benötigt später Daten aus:
+
+- AI-System
+- Logistics-System
+- Campaign-System
+- World-System
+
+---
+
+## Escort
+
+Escort-Missionen schützen andere Missionen.
+
+Mögliche Schutzaufgaben:
+
+- Logistikflüge
+- Transporthubschrauber
+- Strike-Pakete
+- SEAD-Pakete
+- CSAR-Einsätze
+- FOB-Support
+
+Escort-Missionen werden erst sinnvoll, wenn Missionsketten oder Paketlogik eingeführt werden.
+
+---
+
+## Logistics
+
+Logistics-Missionen unterstützen Versorgung und Operationsfähigkeit.
+
+Mögliche Aufgaben:
+
+- Nachschub nach Akrotiri
+- Nachschub zu FOBs
+- Supply-Flüge
+- Transporthubschrauber-Aufgaben
+- CTLD-Aufgaben
+- Fuel-/Munitionstransport
+- Versorgung von Forward Bases
+
+Abhängigkeit:
+
+    Logistics-Missionen benötigen saubere Logistikdaten und CTLD-Anbindung.
+
+Aktuelle Logistik-Dateien:
+
+    src/logistics/tc_logistics_delivery.lua
+    src/logistics/tc_fob_system.lua
+
+---
+
+## FOB Support
+
+FOB-Support-Missionen unterstützen Aufbau und Betrieb von Forward Operating Bases.
+
+Mögliche Aufgaben:
+
+- Material liefern
+- Truppen liefern
+- Luftsicherung stellen
+- Nahbereich sichern
+- Reparaturmaterial liefern
+- Munition oder Fuel bringen
+- FOB reaktivieren
+
+FOB Support wird später eng mit CTLD verbunden.
+
+---
+
+## Airbase Attack
+
+Airbase-Attack-Missionen greifen strategische Flugplätze an.
+
+Mögliche Ziele:
+
+- Runways
+- Hangars
+- Fuel Depots
+- Munitionslager
+- abgestellte Flugzeuge
+- Radarobjekte
+- Verteidigungsanlagen
+
+Wichtig:
+
+    Nur strategische Airfields und ausgewählte Secondary Airfields dürfen Airbase-Attack-Ziele werden.
+
+Nicht geeignet:
+
+- Medical Pads
+- einzelne Helipads
+- taktische Pads
+- Unknown-Objekte
+
+---
+
+## AI Suppression
+
+AI-Suppression-Missionen sollen später feindliche KI-Aktivität reduzieren.
+
+Mögliche Ziele:
+
+- CAP-Startbasen
+- GCI-Knoten
+- AI-Verstärkungsrouten
+- rote Operationszentren
+- Logistikzentren
+- taktische Sammelpunkte
+
+Diese Missionsart ist erst sinnvoll, wenn der AI Director weiter ausgebaut ist.
 
 ---
 
 ## Missionsstatus
 
-Mögliche Missionsstatus:
+Missionen sollen später einen klaren Status besitzen.
+
+Geplante Statuswerte:
 
     AVAILABLE
     ACTIVE
     COMPLETED
     FAILED
     EXPIRED
-    BLOCKED
+    CANCELLED
 
 Bedeutung:
 
-### AVAILABLE
-
-Mission kann angeboten werden.
-
-### ACTIVE
-
-Mission wurde durch Spieler gewählt oder ist aktiv.
-
-### COMPLETED
-
-Mission wurde erfolgreich abgeschlossen.
-
-### FAILED
-
-Mission wurde nicht erfolgreich abgeschlossen.
-
-### EXPIRED
-
-Mission ist nicht mehr relevant, weil sich die Kampagnenlage verändert hat.
-
-### BLOCKED
-
-Mission ist grundsätzlich möglich, aber aktuell durch Bedingungen blockiert.
+- `AVAILABLE`: Mission ist verfügbar, aber noch nicht aktiv
+- `ACTIVE`: Mission wurde angenommen oder ausgelöst
+- `COMPLETED`: Mission wurde erfolgreich abgeschlossen
+- `FAILED`: Mission wurde nicht erfüllt oder ist gescheitert
+- `EXPIRED`: Mission ist zeitlich abgelaufen
+- `CANCELLED`: Mission wurde durch System oder Spieler abgebrochen
 
 ---
 
-## Missionspriorität
+## Missionsprioritäten
 
-Jede Mission soll später eine Priorität erhalten.
+Missionen sollen später priorisiert werden können.
 
-Mögliche Faktoren:
+Mögliche Prioritäten:
 
-- strategische Bedeutung
-- Nähe zur aktuellen Kampagnenphase
-- Bedrohungswert
-- Auswirkungen auf Logistik
-- Auswirkungen auf Capture
-- Auswirkungen auf IADS
-- verfügbare Spielerflugzeuge
-- Entfernung zu aktiven blauen Basen
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
 
-Beispiel:
+Beispiele:
 
-Eine SEAD-Mission gegen ein Küsten-SAM-System kann hohe Priorität haben, wenn dadurch ein Logistikkorridor geöffnet wird.
-
-Eine Strike-Mission gegen ein Depot kann mittlere Priorität haben, wenn sie rote Ressourcen reduziert.
+- Verteidigung Akrotiri: `CRITICAL`
+- SEAD vor Strike-Paket: `HIGH`
+- optionaler Recon-Auftrag: `LOW`
+- FOB-Nachschub unter Bedrohung: `HIGH`
+- Routine-CAP: `MEDIUM`
 
 ---
 
-## Verbindung zum Airbase-System
+## Geplante Missionsdatenstruktur
 
-Der Missionsgenerator benötigt Airbase-Daten.
+Eine spätere Mission könnte ungefähr so aussehen:
 
-Geplante Verbindung:
+    {
+        id = "MISSION_SEAD_001",
+        type = "SEAD",
+        status = "AVAILABLE",
+        priority = "HIGH",
+        origin = "Akrotiri",
+        target = "SYRIA_IADS_SITE_001",
+        targetType = "IADS_SITE",
+        requiredState = {},
+        rewards = {},
+        penalties = {},
+        createdAt = 1200,
+        expiresAt = 7200
+    }
 
-    src/world/
-        ↓
-    src/missions/
+Diese Struktur ist noch nicht final.
 
-Mögliche Nutzung:
-
-- aktive blaue Startbasen bestimmen
-- rote Airbases als Ziele erkennen
-- umkämpfte Airbases priorisieren
-- Missionen nach Reichweite filtern
-- Missionen nach Kampagnenphase filtern
-- Airbase-Defense-Missionen erzeugen
-
-Beispiel:
-
-Wenn Akrotiri die einzige blaue Basis ist, werden Missionen zunächst von Akrotiri aus geplant.
-
-Wenn später eine Festlandbasis erobert wird, können neue Missionsarten freigeschaltet werden.
+Sie dient als fachliche Orientierung.
 
 ---
 
-## Verbindung zum Capture-System
+## Verbindung zum Campaign-System
 
-Das Capture-System liefert Informationen über Besitz und umkämpfte Räume.
+Der Missionsgenerator soll Missionen aus dem Kampagnenzustand erzeugen.
 
-Geplante Verbindung:
+Campaign liefert später:
 
-    src/campaign/
-        ↓
-    src/missions/
+- Besitzstatus
+- Capture-Zustände
+- verfügbare strategische Basen
+- umkämpfte Zonen
+- Kampagnenphase
+- bisherige Ergebnisse
 
-Mögliche Nutzung:
+Missions meldet später zurück:
 
-- Missionen zur Vorbereitung eines Capture erzeugen
-- Missionen zur Verteidigung einer eroberten Zone erzeugen
-- CAS für umkämpfte Zonen anbieten
-- Logistikmissionen für gefährdete Zonen erzeugen
-- Missionen nach Capture-Fortschritt priorisieren
+- Mission erfolgreich
+- Mission fehlgeschlagen
+- Ziel beschädigt
+- Ziel zerstört
+- Capture vorbereitet
+- Logistik unterstützt
+- IADS geschwächt
+- AI unterdrückt
 
-Beispiel:
+Wichtig:
 
-Eine Zone kann erst erobert werden, wenn feindliche Kräfte reduziert und Logistik geliefert wurde.
-
-Der Missionsgenerator kann dafür Strike-, CAS- und Logistics-Missionen anbieten.
+    Missions verändert strategischen Besitz nicht direkt.
+    Campaign entscheidet über Besitz und Capture.
 
 ---
 
-## Verbindung zum Logistiksystem
+## Verbindung zum Logistics-System
 
-Das Logistiksystem liefert Informationen über Versorgung und FOBs.
+Logistik beeinflusst, welche Missionen möglich sind.
 
-Geplante Verbindung:
+Beispiele:
 
-    src/logistics/
-        ↓
-    src/missions/
+- Ohne FOB keine FOB-Support-Missionen.
+- Ohne Supply keine große Capture-Operation.
+- Erfolgreiche Logistik kann neue Missionen freischalten.
+- Schlechter Nachschub kann Missionen verhindern.
+- CTLD-Aufgaben können Logistikmissionen erzeugen.
 
-Mögliche Nutzung:
+Aktueller Stand:
 
-- Logistikmissionen erzeugen
-- FOB-Aufbau als Mission anbieten
-- Versorgung gefährdeter Basen anbieten
-- Helikopterrouten bewerten
-- neue Missionen nach FOB-Aktivierung freischalten
+    Logistikmodule laden.
+    CTLD ist geladen.
+    Theater Command nutzt CTLD noch nicht produktiv.
 
-Beispiel:
+---
 
-Wenn eine Dropoff-Zone vorbereitet, aber noch nicht versorgt ist, kann der Missionsgenerator eine CTLD-Supply-Mission erzeugen.
+## Verbindung zum AI-System
+
+AI beeinflusst Missionsverfügbarkeit und Missionsrisiko.
+
+Beispiele:
+
+- starke rote CAP erzeugt CAP- oder Escort-Bedarf
+- rote Gegenangriffe erzeugen CAS- oder Interdiction-Missionen
+- GCI-Aktivität beeinflusst Luftüberlegenheitsmissionen
+- AI-Verstärkungen erzeugen Strike- oder Interdiction-Ziele
+
+Aktueller Stand:
+
+    AI-CAP-Manager lädt.
+    Reale MOOSE-CAP-Spawns sind noch nicht implementiert.
 
 ---
 
 ## Verbindung zum IADS-System
 
-Das IADS-System liefert Luftverteidigungsziele und Bedrohungswerte.
+IADS beeinflusst SEAD-, DEAD-, Strike- und Logistics-Missionen.
 
-Geplante Verbindung:
+Beispiele:
 
-    src/iads/
-        ↓
-    src/missions/
+- aktive SAM-Sektoren erzeugen SEAD-Missionen
+- zerstörte Radare öffnen Strike-Korridore
+- gefährliche IADS-Zonen verhindern Logistikmissionen
+- DEAD-Erfolge verändern spätere Missionsauswahl
 
-Mögliche Nutzung:
+Aktueller Stand:
 
-- SEAD-Missionen erzeugen
-- DEAD-Missionen erzeugen
-- Strike gegen Radarstellungen erzeugen
-- IADS-Bedrohung für andere Missionen bewerten
-- Logistikrouten blockieren oder freigeben
-- Missionspriorität aus Bedrohungswert ableiten
-
-Beispiel:
-
-Ein aktiver IADS-Sektor an der Küste kann Logistikmissionen blockieren, bis SEAD/DEAD-Erfolge erzielt wurden.
+    Skynet IADS wird geladen.
+    Theater-Command-IADS-Schicht ist noch nicht implementiert.
 
 ---
 
-## Verbindung zum AI Director
+## Verbindung zum UI-System
 
-Der AI Director und der Missionsgenerator sollen später zusammenarbeiten.
+Missionen sollen später über F10-Menüs sichtbar und nutzbar werden.
 
-Geplante Verbindung:
+Geplante Anzeigen:
 
-    src/ai/
-        ↓
-    src/missions/
+- verfügbare Missionen
+- aktive Missionen
+- Missionsdetails
+- Missionsstatus
+- Priorität
+- Zielgebiet
+- Belohnung oder Kampagneneffekt
+- Missionsabbruch
+- Debuginformationen
 
-Mögliche Nutzung:
+Aktueller Stand:
 
-- rote CAP-Bedrohung in Missionsplanung einbeziehen
-- GCI-Reaktionen berücksichtigen
-- Gegenangriffe als neue Missionen erzeugen
-- Verteidigungsmissionen anbieten
-- Eskalation aus Spielererfolgen ableiten
-
-Beispiel:
-
-Wenn Blau einen FOB aufbaut, kann der AI Director einen roten Gegenangriff planen.
-
-Der Missionsgenerator kann daraus eine Base-Defense- oder CAS-Mission erzeugen.
+    UI-Bereich ist dokumentiert.
+    F10-Menüs sind noch nicht implementiert.
 
 ---
 
 ## Verbindung zur Persistenz
 
-Missionen sollen später zumindest teilweise persistent werden.
+Missionen müssen später persistent gespeichert werden.
 
-Mögliche persistente Werte:
+Zu speichern sind unter anderem:
 
+- verfügbare Missionen
+- aktive Missionen
 - abgeschlossene Missionen
 - fehlgeschlagene Missionen
-- zerstörte Ziele
-- aktive Missionshistorie
-- freigeschaltete Missionsarten
-- blockierte Missionsarten
-- Kampagnenphase
+- Missionsziele
+- Missionswirkungen
+- erzeugte Missionshistorie
+- Kampagneneffekte
+
+Aktueller Stand:
+
+    In-Memory-Persistenz ist vorbereitet.
+    Datei-Persistenz ist noch nicht getestet.
+
+---
+
+## Verbindung zum Debug-System
+
+Später soll ein Missions-Debugreport möglich sein.
 
 Geplante Datei:
 
-    src/campaign/tc_persistence_system.lua
+    src/debug/tc_debug_mission_report.lua
 
-Persistenz wird aber erst gebaut, wenn Missionsdaten stabil definiert sind.
-
----
-
-## F10-Missionsmenü
-
-Missionen sollen später über F10-Menüs auswählbar oder sichtbar sein.
-
-Geplante Datei:
-
-    src/ui/tc_mission_menu.lua
-
-Mögliche Struktur:
-
-    Theater Command
-        Missions
-            Air Superiority
-            Strike
-            SEAD / DEAD
-            CAS
-            Logistics
-            Recon
-            Status
-
-Die erste Version soll einfach bleiben.
-
-Zu Beginn reicht eine einfache Missionsliste oder Statusausgabe.
-
----
-
-## Missionsausgabe
-
-Eine Mission soll später klar beschrieben werden.
-
-Mögliche Informationen:
-
-- Missionstyp
-- Ziel
-- Region
-- empfohlene Flugzeuge
-- Bedrohung
-- erwarteter Effekt
-- Status
-- Priorität
-
-Beispiel:
-
-    Mission: SEAD Latakia Coast
-    Type: SEAD
-    Target: SA-6 site near Latakia
-    Aircraft: F/A-18C, F-16C
-    Effect: Reduces coastal IADS threat
-    Priority: High
-
----
-
-## Erfolgsbewertung
-
-Missionserfolg soll später nicht nur durch DCS-Trigger bestimmt werden.
-
-Theater Command DCS soll eigene Bedingungen auswerten.
-
-Mögliche Erfolgsbedingungen:
-
-- Ziel zerstört
-- Ziel beschädigt
-- Radar deaktiviert
-- SAM-Stellung unterdrückt
-- Kiste geliefert
-- Truppen abgesetzt
-- Zone gesichert
-- Spieler zurückgekehrt optional
-- Missionszeit nicht überschritten optional
-
-Die genaue Logik wird pro Missionstyp definiert.
-
----
-
-## Missionswirkung
-
-Missionen sollen später kampagnenlogische Effekte haben.
-
-Mögliche Effekte:
-
-- IADS-Sektor geschwächt
-- Ziel zerstört
-- Logistikroute geöffnet
-- Capture-Fortschritt erhöht
-- rote Ressourcen reduziert
-- blauer Logistikhub gestärkt
-- neue Missionen freigeschaltet
-- KI-Reaktion ausgelöst
-
-Missionen sollen nicht folgenlos bleiben.
-
----
-
-## Missionen in der ersten Kampagnenphase
-
-Zu Beginn startet Blau auf Akrotiri.
-
-Sinnvolle erste Missionsarten:
-
-- CAP über östlichem Mittelmeer
-- Escort für Strike-Pakete
-- SEAD gegen Küsten-SAMs
-- DEAD gegen Radar-/SAM-Komponenten
-- Strike gegen Radarstellungen
-- Recon entlang der Küste
-- spätere Logistikvorbereitung
-
-Noch nicht sinnvoll zu Beginn:
-
-- A-10C-CAS tief im Inland
-- AH-64D-Einsätze ohne FOB
-- große Inland-Capture-Missionen
-- vollständige Frontlinienmissionen
-
----
-
-## Erste technische Minimalversion
-
-Die erste technische Minimalversion des Missionsgenerators soll sehr klein sein.
-
-Mögliches erstes Ziel:
-
-- Missionsgenerator startet ohne Fehler
-- erkennt Projektstatus
-- gibt eine statische Test-Missionsliste aus
-- zeigt Missionen über Debug oder F10 an
-- filtert noch nicht komplex
-- verändert noch keinen Kampagnenzustand
-
-Erst danach werden echte Kampagnenbedingungen ergänzt.
-
----
-
-## Debug für Missionen
-
-Ein Debugsystem soll später helfen, Missionen zu prüfen.
-
-Geplante Datei:
-
-    src/debug/tc_debug_missions.lua
-
-Mögliche Debug-Ausgaben:
+Mögliche Ausgabe:
 
 - Anzahl verfügbarer Missionen
-- Missionen nach Typ
-- Missionen nach Priorität
-- blockierte Missionen
-- Grund für blockierte Missionen
-- aktive Missionsziele
-- abgeschlossene Missionen
+- Anzahl aktiver Missionen
+- Anzahl abgeschlossener Missionen
+- Anzahl fehlgeschlagener Missionen
+- Missionsarten nach Typ
+- Missionsziele
+- Missionsprioritäten
+- Gründe für Missionserzeugung
+- Gründe für nicht erzeugte Missionen
 
-Beispiel:
-
-    [TC][DEBUG] Mission generator created 4 missions
-    [TC][DEBUG] Mission available: SEAD_LATTAKIA_01
-    [TC][DEBUG] Mission blocked: LOGISTICS_COASTAL_FOB_01 because IADS threat too high
+Aktuell wird dieser Debugreport noch nicht erstellt.
 
 ---
 
-## Testziele
+## Mission-Editor-Anforderungen
 
-Wenn der Missionsgenerator später erstmals eingebunden wird, sollen folgende Punkte getestet werden:
+Später benötigt der Missionsgenerator Mission-Editor-Elemente.
 
-- Mission startet ohne Lua-Fehler
-- Frameworks laden korrekt
-- `src/loader.lua` startet
-- `src/main.lua` startet
-- Missionsgenerator wird geladen
-- einfache Missionsliste wird erzeugt
-- F10-Ausgabe funktioniert
-- Missionen können nach Typ angezeigt werden
-- keine nil-Fehler bei fehlenden Airbase-Daten
-- blockierte Missionen werden nachvollziehbar begründet
-- Debug-Ausgabe erscheint im `dcs.log`
+Mögliche Elemente:
 
----
+- Template-Gruppen
+- Late-Activation-Gruppen
+- statische Zielobjekte
+- manuelle Sonderzonen
+- rote SAM-Stellungen
+- rote Radarstellungen
+- Logistikobjekte
+- FOB-Zonen
+- CTLD-Zonen
 
-## Nicht jetzt umsetzen
+Aktuell noch nicht angelegt:
 
-Aktuell noch nicht bauen:
+    keine roten Template-Gruppen
+    keine roten IADS-Stellungen
+    keine Missionsziele
+    keine CTLD-Zonen
+    keine FOB-Zonen
 
-- vollständiger dynamischer Missionsgenerator
-- komplexes Missionsscoring
-- komplette Flugzeugfilterung
-- vollständige Missionsauswertung
-- persistente Missionshistorie
-- vollständige F10-Menüstruktur
-- automatische KI-Reaktionen auf jede Mission
-- vollständige SEAD/DEAD-Kampagnenlogik
+Grund:
 
-Diese Punkte folgen später.
+    Zuerst muss die Airbase-Klassifizierung stabil sein.
 
 ---
 
-## Erste Entwicklungsreihenfolge
+## Nicht-Ziele im aktuellen Stand
 
-Der Missionsgenerator wird erst nach den Grundsystemen sinnvoll.
+Aktuell wird bewusst nicht umgesetzt:
 
-Vorher müssen entstehen:
+- keine vollständige dynamische Missionsgenerierung
+- keine F10-Missionsauswahl
+- keine Missionserfolgserkennung
+- keine komplexe Zielauswahl
+- keine SEAD-/DEAD-Logik
+- keine Strike-Pakete
+- keine Escort-Pakete
+- keine Capture-Missionen
+- keine Missionspersistenz in Datei
+- keine automatische `.miz`-Erzeugung
 
-1. `src/`-Unterordner
-2. Core-System
-3. Airbase-System
-4. Zonen-System
-5. Capture-System
-6. Logistikgrundlage
-7. IADS-Grundlage
-8. erste UI-/F10-Struktur
+---
 
-Danach kann der Missionsgenerator sinnvoll aus dem Kampagnenzustand arbeiten.
+## Nächster relevanter Schritt
+
+Der nächste relevante Schritt für den Missionsgenerator ist nicht sofort die Erzeugung spielbarer Missionen.
+
+Zuerst erforderlich:
+
+    Airbase-Scanner klassifizieren und filtern.
+
+Warum:
+
+Der Missionsgenerator braucht saubere Ziele.
+
+Erst wenn Theater Command unterscheiden kann zwischen:
+
+- strategischen Airfields
+- Secondary Airfields
+- Heliports
+- Helipads
+- Medical Pads
+- FARPs
+- Tactical Pads
+- Unknown
+
+kann der Missionsgenerator zuverlässig entscheiden, welche Objekte als Missionsziele geeignet sind.
 
 ---
 
 ## Aktueller Status
 
-Aktuell ist der Missionsgenerator nur dokumentiert.
+Der Missionsgenerator ist als Grundstruktur vorhanden und lädt erfolgreich in DCS.
 
-Die eigene Lua-Implementierung ist noch nicht begonnen.
+Er erzeugt noch keine produktiven spielbaren Missionen.
 
-Aktueller Stand:
-
-    Missionsgenerator geplant
-    Missionsregistry noch nicht implementiert
-    Missionsfilter noch nicht implementiert
-    F10-Missionsmenü noch nicht implementiert
-
-Nächster technischer Fokus nach Abschluss der Dokumentationsaktualisierung:
-
-    src-Unterordner und README-Dateien erstellen
-
-Danach:
-
-    src/loader.lua
-    src/main.lua
-    src/core/tc_config.lua
-    src/core/tc_logger.lua
-    src/core/tc_state.lua
+Der nächste übergeordnete technische Schritt bleibt die Airbase-Klassifizierung im World-System.
