@@ -1,781 +1,851 @@
-# Persistence System
+# Persistence
 
 Diese Datei beschreibt das geplante Persistenzsystem von **Theater Command DCS**.
 
-Persistenz bedeutet, dass der Kampagnenzustand über Missions- oder Serverneustarts hinweg erhalten bleibt.
-
 Die erste Kampagne trägt den Arbeitstitel:
 
-**Operation Levant Reclamation**
+    Operation Levant Reclamation
 
 Die Kampagne wird auf der **Syria Map** aufgebaut.
 
-Blau startet auf **Zypern / Akrotiri**.
+Ausgangslage:
 
-Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+    Blue Start: Akrotiri / Zypern
+    Red Start: syrisches Festland vollständig rot kontrolliert
+
+---
+
+## Zweck der Persistenz
+
+Theater Command DCS soll später kein rein temporäres Missionssystem sein.
+
+Der Kampagnenzustand soll über mehrere DCS-Sessions hinweg erhalten bleiben.
+
+Persistenz soll speichern, was in der Kampagne passiert ist.
+
+Dazu gehören später unter anderem:
+
+- Besitzstatus von Airbases
+- Besitzstatus von Zonen
+- Airbase-Klassifizierung
+- aktive Missionen
+- abgeschlossene Missionen
+- fehlgeschlagene Missionen
+- Logistikstatus
+- FOB-Status
+- IADS-Zustand
+- AI-Zustand
+- wichtige Kampagnenereignisse
+- Fortschritt der Operation Levant Reclamation
 
 ---
 
 ## Grundprinzip
 
-Das Persistenzsystem folgt dem Projektprinzip:
+Das zentrale Projektprinzip lautet:
 
     Mission Editor = Bühne
     Lua = Kampagnensystem
     GitHub = Projektgedächtnis
 
-Der Mission Editor stellt den Startzustand bereit.
+Der Mission Editor stellt die Bühne bereit.
 
-Lua verwaltet später den dynamischen Kampagnenzustand.
+Lua verwaltet den Kampagnenzustand.
 
-Persistenz speichert diesen Zustand zwischen Sessions.
+Persistenz soll diesen Zustand später speichern und wieder laden.
 
----
-
-## Ziel des Persistenzsystems
-
-Das Persistenzsystem soll später speichern, was sich in der Kampagne verändert hat.
-
-Mögliche Beispiele:
-
-- welche Basen Blau kontrolliert
-- welche Basen Rot kontrolliert
-- welche Zonen umkämpft sind
-- welche FOBs aktiv sind
-- welche IADS-Komponenten zerstört wurden
-- welche Logistikhubs aktiv sind
-- welche Missionen abgeschlossen wurden
-- welche Ziele zerstört wurden
-- welche Ressourcen verfügbar sind
-- welche Kampagnenphase aktiv ist
-
-Persistenz macht aus einer einzelnen Mission eine fortlaufende Kampagne.
+GitHub dokumentiert Struktur, Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
 
 ---
 
-## Aktueller Projektstand
+## Aktueller technischer Stand
 
-Stand:
+Stand: 2026-06-16
 
-    2026-06-15
-
-Aktuell vorhanden:
-
-- zentrale Projektdokumentation
-- `docs/`-Grundblock
-- `vendor/`-Frameworks
-- `src/README.md`
-
-Aktuell hinterlegte Frameworks:
-
-| Framework | Projektpfad | Stand |
-|---|---|---|
-| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
-| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
-| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
-| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
-
-Noch nicht vorhanden:
-
-- `src/campaign/tc_persistence_system.lua`
-- `save/README.md`
-- `save/example_state.lua`
-- eigenes Airbase-System
-- eigenes Capture-System
-- eigenes Logistiksystem
-- eigenes IADS-State-System
-- eigener Missionsgenerator
-- echte Speicher- und Ladefunktionen
-
----
-
-## Warum Persistenz nicht sofort gebaut wird
-
-Persistenz wird bewusst nicht als erstes System gebaut.
-
-Grund:
-
-Es muss zuerst klar sein, welche Daten überhaupt stabil gespeichert werden müssen.
-
-Vorher müssen mindestens folgende Systeme konzeptionell oder technisch stehen:
-
-- Core-System
-- Airbase-System
-- Zonen-System
-- Capture-System
-- Logistiksystem
-- Missionsgenerator-Grundlage
-- IADS-State-System
-
-Erst dann kann entschieden werden, welche Zustände gespeichert werden sollen.
-
-Persistenz zu früh zu bauen würde zu instabilen Speicherstrukturen führen.
-
----
-
-## Geplante eigene Dateien
-
-Die Persistenzlogik gehört später nach:
-
-    src/campaign/
-
-Geplante Datei:
+Aktuelle Persistenz-Datei:
 
     src/campaign/tc_persistence_system.lua
 
-Zusätzliche geplante Ordner und Dateien:
+Der erste reale DCS-Starttest wurde durchgeführt.
 
-    save/README.md
-    save/example_state.lua
+Test:
 
-Der Ordner `save/` existiert aktuell noch nicht vollständig.
+    Starttest-Variante A — sichere Einzeldatei-Ladung
 
-Er wird später angelegt, wenn die Speicherstruktur konkret definiert wird.
+Ergebnis:
 
----
+    Bestanden
 
-## Nicht gewünschte Dateien
+Bestätigt wurde:
 
-Nicht gewünscht:
+- Campaign-Bereich wird geladen
+- `tc_persistence_system.lua` wird geladen
+- keine schweren Lua-Fehler beim Laden
+- Persistence wird durch Main als Runtime-System berücksichtigt
+- Theater-Command-Startkette läuft sauber weiter
 
-    src/tc_save_system.lua
-    src/tc_persistence_all_in_one.lua
-    src/tc_all_in_one.lua
+Aktueller Stand:
 
-Die eigene Struktur wird nach Aufgaben sortiert.
-
-Persistenz gehört zur Kampagnenlogik und liegt deshalb unter:
-
-    src/campaign/
-
----
-
-## Grundidee des Speicherstands
-
-Ein Speicherstand soll später den strategischen Zustand von Theater Command DCS abbilden.
-
-Nicht gespeichert werden sollen komplette Framework-interne Tabellen.
-
-Nicht gespeichert werden sollen temporäre DCS-Objekte.
-
-Gespeichert werden sollen nur stabile Theater-Command-Daten.
-
-Beispiel:
-
-Nicht speichern:
-
-    DCS-Objekt einer aktiven Unit
-    MOOSE-Wrapper-Objekt
-    komplette CTLD-interne Tabelle
-    komplette Skynet-IADS-interne Struktur
-
-Stattdessen speichern:
-
-    Basis-ID
-    Besitzer
-    Status
-    Ressourcenwert
-    zerstörte Ziel-ID
-    aktiver FOB-Status
-    abgeschlossene Missions-ID
+    In-Memory-Persistenz ist vorbereitet.
+    Datei-Persistenz ist noch nicht getestet.
+    DCS-Sandbox-Verhalten ist noch offen.
 
 ---
 
-## Vorläufiges Speicherformat
+## Aktuelle DEV-Mission
 
-Ein späterer Beispiel-Speicherstand könnte so aussehen:
+Aktuelle technische Entwicklungsmission:
 
-    TC_SAVE_STATE = {
-      version = "0.1.0",
-      campaign = {
-        name = "Operation Levant Reclamation",
-        phase = 1,
-        date = "TBD"
-      },
-      bases = {},
-      zones = {},
-      logistics = {},
-      iads = {},
-      missions = {},
-      ai = {}
-    }
+    Operation_Levant_Reclamation_DEV.miz
 
-Diese Struktur ist konzeptionell.
+Aktueller Inhalt:
 
-Die konkrete Umsetzung erfolgt später.
+    Map: Syria
+    Koalitionspreset: Modern
+    Blue Start: Akrotiri / Zypern
+    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
+    Trigger: Starttest-Variante A vollständig angelegt
+    keine rote Frontlinie
+    keine IADS-Stellungen
+    keine CTLD-Zonen
+    keine Template-Gruppen
+    keine F10-Menüs
 
----
+Diese Mission ist aktuell nur ein technischer Testträger.
 
-## Versionierung des Speicherstands
-
-Jeder Speicherstand soll eine Versionsnummer enthalten.
-
-Grund:
-
-Wenn sich die Datenstruktur später ändert, muss erkennbar sein, welche Save-Version geladen wird.
-
-Beispiel:
-
-    version = "0.1.0"
-
-Mögliche spätere Nutzung:
-
-- alte Speicherstände erkennen
-- inkompatible Speicherstände ablehnen
-- Migration vorbereiten
-- Debug-Ausgaben verbessern
+Sie ist noch keine spielbare Kampagnenmission.
 
 ---
 
-## Kampagnendaten
-
-Der Speicherstand soll später allgemeine Kampagnendaten enthalten.
-
-Mögliche Werte:
-
-    campaign = {
-      name = "Operation Levant Reclamation",
-      phase = 1,
-      blueStart = "AKROTIRI",
-      map = "Syria"
-    }
-
-Mögliche gespeicherte Informationen:
-
-- Kampagnenname
-- Kampagnenphase
-- aktive Region
-- aktueller Fortschritt
-- letzter Speicherzeitpunkt
-- aktive Hauptbasis
-- globale Eskalationsstufe
-
----
-
-## Airbase-Persistenz
-
-Airbase-Daten sind ein zentraler Bestandteil der Persistenz.
-
-Mögliche gespeicherte Werte:
-
-- Airbase-ID
-- aktueller Besitzer
-- initialer Besitzer
-- Betriebsstatus
-- Logistikhub-Status
-- Spielerbasis-Status
-- Capture-Ziel-Status
-- Schadensstatus
-- letzte relevante Änderung
-
-Beispiel:
-
-    bases = {
-      AKROTIRI = {
-        coalition = "BLUE",
-        isOperational = true,
-        isLogisticsHub = true,
-        isPlayerBase = true
-      },
-      LATTAKIA = {
-        coalition = "RED",
-        isOperational = true,
-        isLogisticsHub = false,
-        isCaptureTarget = true
-      }
-    }
-
----
-
-## Zonen-Persistenz
-
-Zonen sollen später ebenfalls gespeichert werden.
-
-Mögliche gespeicherte Werte:
-
-- Zonen-ID
-- Besitzer
-- Status
-- Capture-Fortschritt
-- Versorgungsstatus
-- Bedrohungswert
-- zugehörige Basis
-- letzte Änderung
-
-Beispiel:
-
-    zones = {
-      CAPTURE_RED_LATTAKIA_01 = {
-        coalition = "RED",
-        captureProgress = 0,
-        supplied = false,
-        contested = false
-      }
-    }
-
----
-
-## Capture-Persistenz
-
-Das Capture-System soll später speichern:
-
-- welche Basen erobert wurden
-- welche Zonen umkämpft sind
-- welche Zonen neutralisiert wurden
-- welcher Capture-Fortschritt erreicht wurde
-- welche Bedingungen erfüllt sind
-- welche Garnisonen aktiv sind
-
-Mögliche gespeicherte Werte:
-
-    capture = {
-      activeZones = {},
-      capturedBases = {},
-      contestedZones = {},
-      lastCaptureEvent = {}
-    }
-
-Capture-Persistenz wird erst sinnvoll, wenn das Capture-System stabil definiert ist.
-
----
-
-## Logistik-Persistenz
-
-Logistikzustände sollen später gespeichert werden.
-
-Mögliche gespeicherte Werte:
-
-- aktive Logistikhubs
-- aktive FOBs
-- Ressourcenstatus
-- Versorgungsstatus je Basis
-- Versorgungsstatus je Zone
-- abgeschlossene Lieferungen
-- freigeschaltete Pickup-Zonen
-- freigeschaltete Dropoff-Zonen
-
-Beispiel:
-
-    logistics = {
-      hubs = {
-        AKROTIRI = {
-          active = true,
-          resources = 100
-        }
-      },
-      fobs = {
-        FOB_ALPHA = {
-          active = true,
-          supplied = true,
-          location = "SYRIAN_COAST"
-        }
-      }
-    }
-
-CTLD selbst wird nicht vollständig gespeichert.
-
-Theater Command DCS speichert nur die kampagnenlogische Wirkung von CTLD-Aktionen.
-
----
-
-## IADS-Persistenz
-
-IADS-Zustände sollen später gespeichert werden.
-
-Mögliche gespeicherte Werte:
-
-- aktive IADS-Sektoren
-- zerstörte Radarstellungen
-- zerstörte SAM-Stellungen
-- beschädigte Sektoren
-- deaktivierte Netzwerke
-- wiederhergestellte Standorte
-- Bedrohungswerte pro Region
-
-Beispiel:
-
-    iads = {
-      sectors = {
-        SYRIAN_COAST = {
-          active = true,
-          threatLevel = 75,
-          damaged = false
-        }
-      },
-      sites = {
-        IADS_RED_EWR_LATTAKIA_01 = {
-          alive = true,
-          damaged = false
-        }
-      }
-    }
-
-Skynet IADS steuert taktisch.
-
-Theater Command DCS speichert strategisch.
-
----
-
-## Missions-Persistenz
-
-Der Missionsgenerator soll später teilweise persistent arbeiten.
-
-Mögliche gespeicherte Werte:
-
-- abgeschlossene Missionen
-- fehlgeschlagene Missionen
-- aktive Missionen
-- zerstörte Missionsziele
-- freigeschaltete Missionsarten
-- blockierte Missionsarten
-- Missionshistorie
-
-Beispiel:
-
-    missions = {
-      completed = {
-        "MISSION_SEAD_LATTAKIA_01"
-      },
-      failed = {},
-      active = {},
-      unlockedTypes = {
-        "CAP",
-        "SEAD",
-        "STRIKE"
-      }
-    }
-
-Missions-Persistenz soll nicht zu früh aufgebaut werden.
-
-Zuerst muss das Missionsdatenmodell stabil sein.
-
----
-
-## AI-Persistenz
-
-Der AI Director kann später ebenfalls bestimmte Werte speichern.
-
-Mögliche gespeicherte Werte:
-
-- Eskalationslevel
-- rote Ressourcen
-- aktive Gegenangriffe
-- letzte Reaktionen
-- blockierte Reaktionen
-- aktuelle AI-Phase
-
-Beispiel:
-
-    ai = {
-      escalationLevel = 2,
-      redResources = 80,
-      activeCounterattacks = {},
-      lastReaction = "RED_CAP_LATTAKIA"
-    }
-
-AI-Persistenz wird erst sinnvoll, wenn der AI Director stabil definiert ist.
-
----
-
-## Speicherung von zerstörten Zielen
-
-Zerstörte strategische Ziele sollen später gespeichert werden.
-
-Mögliche Zielarten:
-
-- Radarstellungen
-- SAM-Komponenten
-- Depots
-- Kommandoposten
-- Brücken
-- Hafenanlagen
-- Treibstofflager
-- Munitionslager
-
-Beispiel:
-
-    destroyedTargets = {
-      STATIC_RED_RADAR_LATTAKIA_01 = true,
-      STATIC_RED_DEPOT_TARTUS_01 = true
-    }
-
-Diese Daten können später Missionen, IADS, Logistik und AI-Reaktionen beeinflussen.
-
----
-
-## Speicherung von Ressourcen
-
-Ein späteres Ressourcenmodell kann gespeichert werden.
-
-Mögliche Ressourcen:
-
-- blaue Ressourcen je Hub
-- rote Ressourcen je Region
-- IADS-Reparaturressourcen
-- verfügbare CAP-Pakete
-- verfügbare Bodentruppen
-- verfügbare Logistikpunkte
-
-Ressourcen werden erst eingeführt, wenn die Kampagnenmechanik dafür bereit ist.
-
----
-
-## Speicherort
-
-Der geplante Projektordner für Beispiel- und Test-Speicherstände ist:
-
-    save/
-
-Geplante Dateien:
-
-    save/README.md
-    save/example_state.lua
+## Aktueller Teststatus
+
+Der erste DCS-Starttest hat die technische Ladefähigkeit bestätigt.
+
+Noch nicht getestet wurde:
+
+- State in Datei schreiben
+- State aus Datei lesen
+- Save-Datei erzeugen
+- Save-Datei importieren
+- DCS-Dateizugriff
+- DCS-Sandbox-Anpassung
+- Loader-only mit `dofile`
+- produktive Save-/Load-Logik
 
 Wichtig:
 
-DCS selbst hat besondere Einschränkungen beim Schreiben von Dateien.
-
-Die konkrete technische Umsetzung von Save/Load wird später separat geprüft.
-
-Diese Dokumentation beschreibt zunächst die Projektstruktur und die geplanten Daten.
+    Vor echter Dateipersistenz muss das DCS-Sandbox-Verhalten praktisch geprüft werden.
 
 ---
 
-## DCS-Einschränkungen
+## Verbindung zum Airbase-System
 
-DCS-Missionen können nicht immer ohne Weiteres beliebig Dateien schreiben.
+Der erste reale DCS-Test ergab:
 
-Für Persistenz müssen später geprüft werden:
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
 
-- DCS-Sanitizing
-- Mission Scripting Environment
-- Schreibrechte
-- Serverumgebung
-- Dedicated Server
-- Saved Games Pfade
-- mögliche Lua-Dateischreibfunktionen
-- Sicherheitsrisiken
+Dieser Befund ist für Persistenz wichtig.
 
-Diese technische Prüfung erfolgt später.
+Problem:
 
-Persistenz wird nicht blind vorausgesetzt.
+    Nicht jedes erkannte Airbase-Objekt muss gleichwertig persistent gespeichert werden.
 
----
+DCS liefert auf der Syria Map offenbar viele Airbase-ähnliche Objekte.
 
-## Save-Funktion
+Dazu können gehören:
 
-Eine spätere Save-Funktion könnte konzeptionell folgende Aufgaben haben:
+- strategische Airfields
+- Secondary Airfields
+- Heliports
+- Helipads
+- Medical Pads
+- FARPs
+- taktische Pads
+- unbekannte Objekte
 
-- aktuellen Kampagnenzustand sammeln
-- temporäre Daten entfernen
-- stabile Daten serialisieren
-- Save-Version eintragen
-- Speicherdatei schreiben
-- Erfolg oder Fehler loggen
+Folgerung:
 
-Möglicher Funktionsname:
+    Die Persistenz darf nicht blind alle 225 Objekte als strategische Kampagnenbasen speichern.
 
-    saveCampaignState()
+Zuerst muss der Airbase-Scanner klassifizieren.
 
 ---
 
-## Load-Funktion
+## Geplante Persistenz nach Airbase-Klasse
 
-Eine spätere Load-Funktion könnte konzeptionell folgende Aufgaben haben:
+### Strategische Airfields
 
-- Speicherdatei finden
-- Datei laden
+Strategische Airfields haben höchste Persistenzpriorität.
+
+Zu speichern:
+
+- Besitzerstatus
+- Capture-Status
+- Logistikstatus
+- Beschädigungsstatus
+- Missionshistorie
+- Spawnfähigkeit
+- IADS-Bezug
+- AI-Relevanz
+
+---
+
+### Secondary Airfields
+
+Secondary Airfields können später begrenzt persistent sein.
+
+Zu speichern:
+
+- Besitzerstatus, falls kampagnenrelevant
+- Logistikrolle, falls vorhanden
+- Missionsrelevanz
+- Capture-Fähigkeit, falls aktiviert
+
+---
+
+### Heliports
+
+Heliports können später persistent relevant sein.
+
+Zu speichern:
+
+- Besitzerstatus, falls relevant
+- CTLD-Rolle
+- CSAR-Rolle
+- Logistikrolle
+- FOB-Bezug
+- Helikopteroperationsstatus
+
+---
+
+### Helipads
+
+Helipads sollen nicht automatisch wie strategische Basen gespeichert werden.
+
+Mögliche Persistenz nur bei:
+
+- aktiver CTLD-Nutzung
+- MEDEVAC-/CSAR-Rolle
+- FOB-Bezug
+- spezieller Missionsrolle
+- expliziter Kampagnenrelevanz
+
+---
+
+### Medical Pads
+
+Medical Pads sollen nur dann persistent werden, wenn sie eine definierte Rolle bekommen.
+
+Mögliche Rollen:
+
+- MEDEVAC
+- CSAR
+- humanitäre Mission
+- zivile Infrastruktur
+- Sondermission
+
+---
+
+### FARPs
+
+FARPs sind für Persistenz wichtig, wenn sie mit FOB oder Logistik verbunden sind.
+
+Zu speichern:
+
+- Besitzerstatus
+- Betriebsstatus
+- Fuel
+- Munition
+- Supply
+- Beschädigung
+- CTLD-Funktion
+- FOB-Ausbaustufe
+
+---
+
+### Unknown
+
+Unknown-Objekte sollen zunächst konservativ behandelt werden.
+
+Zu speichern höchstens:
+
+- Name
+- Position
+- DCS-ID
+- erkannte Rohdaten
+- Debug-Status
+
+Unknown-Objekte sollen nicht als strategische Kampagnenbasen gespeichert werden.
+
+---
+
+## Geplante State-Struktur
+
+Der globale Theater-Command-State soll später mehrere Bereiche enthalten.
+
+Mögliche Struktur:
+
+    TC.state = {
+        campaign = {},
+        world = {},
+        airbases = {},
+        zones = {},
+        logistics = {},
+        fobs = {},
+        missions = {},
+        ai = {},
+        iads = {},
+        events = {},
+        metadata = {}
+    }
+
+Diese Struktur ist noch nicht final.
+
+Sie dient als fachliche Orientierung.
+
+---
+
+## Metadata
+
+Metadata beschreibt den Save selbst.
+
+Mögliche Inhalte:
+
+    metadata = {
+        project = "Theater Command DCS",
+        campaign = "Operation Levant Reclamation",
+        map = "Syria",
+        version = "0.1.0",
+        saveVersion = 1,
+        createdAt = 0,
+        updatedAt = 0
+    }
+
+Zweck:
+
+- Save-Datei identifizieren
+- Kampagne prüfen
 - Version prüfen
-- Daten validieren
-- Standardwerte ergänzen
-- Kampagnenzustand wiederherstellen
-- Fehler loggen
-
-Möglicher Funktionsname:
-
-    loadCampaignState()
+- spätere Migration vorbereiten
+- falsche Save-Dateien vermeiden
 
 ---
 
-## Autosave
+## Campaign-State
 
-Ein späteres Autosave-System kann sinnvoll sein.
+Der Campaign-State enthält strategische Grunddaten.
 
-Mögliche Auslöser:
+Mögliche Inhalte:
 
-- Missionsende
-- manuelles F10-Kommando
-- regelmäßiger Zeitintervall
-- Capture-Ereignis
-- wichtiger Missionserfolg
-- FOB-Aufbau
-- IADS-Ziel zerstört
+    campaign = {
+        name = "Operation Levant Reclamation",
+        phase = "INITIAL",
+        blueStart = "Akrotiri",
+        redStart = "Syrian mainland",
+        currentTurn = 0,
+        status = "ACTIVE"
+    }
 
-Autosave wird aber erst später umgesetzt.
+Mögliche Phasen:
 
-Zuerst muss die Save-Struktur stabil sein.
+    INITIAL
+    RECON
+    AIR_SUPERIORITY
+    SEAD
+    LOGISTICS_BUILDUP
+    CAPTURE
+    EXPANSION
+    ESCALATION
+    END_STATE
 
----
-
-## Manuelles Speichern
-
-Ein F10-Menü kann später manuelles Speichern ermöglichen.
-
-Mögliche Menüstruktur:
-
-    Theater Command
-        Debug
-            Save Campaign State
-            Load Campaign State
-
-Für Release-Versionen muss entschieden werden, ob manuelles Speichern für Spieler sichtbar bleibt oder nur als Admin-/Debug-Funktion genutzt wird.
+Diese Phasen sind noch nicht final.
 
 ---
 
-## Fehlerbehandlung
+## Airbase-State
 
-Persistenz muss besonders defensiv programmiert werden.
+Der Airbase-State speichert Airbase-Daten.
 
-Mögliche Fehler:
+Mögliche Inhalte:
 
-- Save-Datei fehlt
-- Save-Datei beschädigt
-- Save-Version inkompatibel
-- Schreibrechte fehlen
-- DCS-Sanitizing verhindert Schreiben
-- erwartete Tabelle fehlt
-- gespeicherte Basis existiert nicht mehr
-- gespeicherte Zone ist ungültig
+    airbases = {
+        strategic = {},
+        secondary = {},
+        heliports = {},
+        helipads = {},
+        medicalPads = {},
+        farps = {},
+        unknown = {}
+    }
 
-Fehler sollen klar im `dcs.log` sichtbar sein.
+Jeder Datensatz kann später enthalten:
 
-Beispiele:
+    id
+    name
+    category
+    coalition
+    owner
+    position
+    isStrategic
+    isCapturable
+    isLogisticsHub
+    isMissionTarget
+    isSpawnBase
+    status
+    lastUpdated
 
-    [TC][ERROR] Save file not found
-    [TC][ERROR] Save version incompatible
-    [TC][WARN] Saved base not found in current mission: LATTAKIA
+Wichtig:
 
----
-
-## Debug für Persistenz
-
-Ein Debugsystem soll später helfen, Persistenz zu prüfen.
-
-Mögliche Debug-Ausgaben:
-
-- Save-Datei geladen
-- Save-Datei geschrieben
-- Save-Version
-- Anzahl gespeicherter Basen
-- Anzahl gespeicherter Zonen
-- Anzahl aktiver FOBs
-- Anzahl zerstörter IADS-Ziele
-- Anzahl abgeschlossener Missionen
-
-Beispiel:
-
-    [TC][DEBUG] Campaign state saved
-    [TC][DEBUG] Saved bases: 42
-    [TC][DEBUG] Saved IADS sites: 12
+    Airbase-Klassifizierung muss vor produktiver Airbase-Persistenz erfolgen.
 
 ---
 
-## Was nicht gespeichert werden soll
+## Zone-State
 
-Nicht speichern:
+Der Zone-State speichert virtuelle Kampagnenzonen.
 
-- MOOSE-Objekte
-- CTLD-interne Live-Objekte
-- Skynet-IADS-interne Runtime-Objekte
-- DCS-Unit-Objekte
-- DCS-Group-Objekte
-- Funktionen
-- Coroutines
-- Scheduler-Objekte
-- temporäre Debugdaten
-- große Framework-Tabellen
+Mögliche Inhalte:
 
-Stattdessen stabile IDs und Zustände speichern.
+    zones = {
+        strategicZones = {},
+        logisticsZones = {},
+        captureZones = {},
+        aiZones = {},
+        debugZones = {}
+    }
 
----
+Zu speichern:
 
-## Testziele
+- Zonenname
+- Typ
+- Besitzer
+- Radius
+- Position
+- verbundene Airbase
+- Status
+- Kampagnenrelevanz
 
-Wenn Persistenz später erstmals umgesetzt wird, sollen folgende Punkte getestet werden:
+Wichtig:
 
-- Save-Datei wird erzeugt
-- Save-Datei enthält Version
-- Basisbesitz wird gespeichert
-- Basisbesitz wird geladen
-- FOB-Status wird gespeichert
-- IADS-Zustand wird gespeichert
-- zerstörte Ziele bleiben zerstört
-- ungültige Save-Dateien erzeugen klare Fehler
-- fehlende Save-Dateien erzeugen klare Fehler
-- Mission startet auch ohne vorhandenen Save-State
-- `dcs.log` enthält nachvollziehbare Meldungen
+    ZoneFactory darf später nicht ungefiltert 225 strategische Zonen speichern.
 
 ---
 
-## Nicht jetzt umsetzen
+## Logistics-State
 
-Aktuell noch nicht bauen:
+Der Logistics-State speichert Versorgung und Lieferungen.
 
-- echtes Save/Load-System
-- DCS-Dateischreiblogik
-- Autosave
-- Save-Migration
-- Persistenz für alle Systeme
-- komplexe Kampagnenwiederherstellung
-- Admin-Menüs für Save/Load
+Mögliche Inhalte:
 
-Diese Dinge kommen später.
+    logistics = {
+        hubs = {},
+        activeDeliveries = {},
+        completedDeliveries = {},
+        failedDeliveries = {},
+        supply = {},
+        fuel = {},
+        ammunition = {},
+        engineering = {}
+    }
+
+Zu speichern:
+
+- aktive Lieferungen
+- abgeschlossene Lieferungen
+- fehlgeschlagene Lieferungen
+- Supply-Werte
+- Fuel-Werte
+- Munitionswerte
+- Engineering-Werte
+- Hub-Status
 
 ---
 
-## Erste Entwicklungsreihenfolge
+## FOB-State
 
-Persistenz wird spät umgesetzt.
+Der FOB-State speichert Forward Operating Bases.
 
-Vorher müssen entstehen:
+Mögliche Inhalte:
 
-1. `src/`-Unterordner
-2. Core-System
-3. Airbase-System
-4. Zonen-System
-5. Capture-System
-6. Logistiksystem
-7. Missionsgenerator-Grundlage
-8. IADS-State-System
-9. stabile State-Struktur
-10. Beispiel-Save-State
+    fobs = {
+        active = {},
+        planned = {},
+        damaged = {},
+        destroyed = {}
+    }
 
-Erst dann wird echte Persistenz sinnvoll.
+Zu speichern:
+
+- FOB-ID
+- Name
+- Position
+- Besitzer
+- Baufortschritt
+- Status
+- Supply
+- Fuel
+- Munition
+- CTLD-Rolle
+- verfügbare Funktionen
+
+Mögliche Statuswerte:
+
+    PLANNED
+    UNDER_CONSTRUCTION
+    OPERATIONAL
+    DAMAGED
+    DESTROYED
+    ABANDONED
+
+---
+
+## Mission-State
+
+Der Mission-State speichert dynamische Missionen.
+
+Mögliche Inhalte:
+
+    missions = {
+        available = {},
+        active = {},
+        completed = {},
+        failed = {},
+        expired = {},
+        cancelled = {}
+    }
+
+Zu speichern:
+
+- Missions-ID
+- Typ
+- Status
+- Priorität
+- Ursprung
+- Ziel
+- Zieltyp
+- Erstellungszeit
+- Ablaufzeit
+- Ergebnis
+- Kampagneneffekt
+
+Mögliche Statuswerte:
+
+    AVAILABLE
+    ACTIVE
+    COMPLETED
+    FAILED
+    EXPIRED
+    CANCELLED
+
+---
+
+## AI-State
+
+Der AI-State speichert KI-Reaktionen.
+
+Mögliche Inhalte:
+
+    ai = {
+        capRequests = {},
+        activeCaps = {},
+        gciRequests = {},
+        counterattacks = {},
+        threatLevels = {},
+        cooldowns = {}
+    }
+
+Zu speichern:
+
+- aktive CAP-Anforderungen
+- aktive CAPs
+- GCI-Status
+- Gegenangriffe
+- Bedrohungsstufen
+- Reaktionscooldowns
+- AI-Aktionshistorie
+
+Aktueller Stand:
+
+    AI-CAP-Manager lädt.
+    Vollständiger AI Director ist noch nicht implementiert.
+
+---
+
+## IADS-State
+
+Der IADS-State speichert Luftverteidigungszustände.
+
+Mögliche Inhalte:
+
+    iads = {
+        sectors = {},
+        sites = {},
+        radars = {},
+        ewr = {},
+        commandNodes = {},
+        knownTargets = {}
+    }
+
+Zu speichern:
+
+- IADS-Sektoren
+- SAM-Sites
+- Radarstatus
+- EWR-Status
+- zerstörte Systeme
+- unterdrückte Systeme
+- Bedrohungsstufen
+- SEAD-/DEAD-Relevanz
+
+Aktueller Stand:
+
+    Skynet IADS wird geladen.
+    Theater-Command-IADS-Schicht ist noch nicht implementiert.
+
+---
+
+## Event-State
+
+Der Event-State speichert wichtige Kampagnenereignisse.
+
+Mögliche Ereignisse:
+
+- Mission abgeschlossen
+- Mission fehlgeschlagen
+- Airbase erobert
+- Zone erobert
+- FOB gebaut
+- FOB beschädigt
+- Lieferung abgeschlossen
+- Lieferung verloren
+- SAM-Site zerstört
+- Radar zerstört
+- AI-Gegenangriff ausgelöst
+- Kampagnenphase geändert
+
+Mögliche Struktur:
+
+    events = {
+        {
+            id = "EVENT_001",
+            type = "MISSION_COMPLETED",
+            time = 1200,
+            data = {}
+        }
+    }
+
+---
+
+## Save-Dateien
+
+Geplanter späterer Ordner:
+
+    save/
+
+Mögliche Dateien:
+
+    save/operation_levant_reclamation_state.lua
+    save/operation_levant_reclamation_backup.lua
+    save/example_state.lua
+
+Aktueller Stand:
+
+    Save-Ordner ist noch nicht produktiv.
+    Datei-Persistenz wurde noch nicht getestet.
+
+---
+
+## DCS-Sandbox
+
+DCS schützt die Mission-Scripting-Umgebung.
+
+Dateizugriff kann eingeschränkt sein.
+
+Vor echter Datei-Persistenz muss geprüft werden:
+
+- ist `io.open` verfügbar?
+- darf in `Saved Games` geschrieben werden?
+- darf aus Projektordner gelesen werden?
+- muss `MissionScripting.lua` angepasst werden?
+- ist das für spätere Nutzer zumutbar?
+- brauchen wir einen alternativen Exportweg?
+- brauchen wir eine Build-/Save-Strategie außerhalb von DCS?
+
+Wichtig:
+
+    Am DCS-Sandbox-Verhalten wird erst gearbeitet, wenn die Grundsysteme stabil sind.
+
+---
+
+## Loader-only-Test und Persistenz
+
+Noch nicht getestet:
+
+    Starttest-Variante B — Loader-only mit dofile
+
+Dieser Test ist indirekt relevant für Persistenz.
+
+Prüffragen:
+
+- Kann `loader.lua` lokale Dateien nachladen?
+- Ist der Script-Root bekannt?
+- Funktioniert Dateizugriff im DCS-Kontext?
+- Gibt es Sandbox-Grenzen?
+- Wird später eine Build-Datei benötigt?
+
+Dieser Test ersetzt keinen Save-/Load-Test, hilft aber beim Verständnis der DCS-Dateiumgebung.
+
+---
+
+## Save/Load-Grundidee
+
+Später soll Theater Command ungefähr so arbeiten:
+
+1. Mission startet
+2. Frameworks werden geladen
+3. Theater Command wird geladen
+4. Persistence prüft, ob ein Save existiert
+5. Save wird geladen
+6. State wird initialisiert
+7. Campaign, World, Logistics, Missions, AI und IADS erhalten Daten
+8. Mission läuft
+9. wichtige Ereignisse verändern den State
+10. State wird gespeichert
+11. nächste Session lädt diesen State wieder
+
+Diese Logik ist noch nicht implementiert.
+
+---
+
+## Manuelle Sicherung
+
+In der frühen Entwicklungsphase bleibt GitHub das wichtigste Projektgedächtnis.
+
+Das bedeutet:
+
+- Code wird in GitHub versioniert
+- Dokumentation wird in GitHub aktualisiert
+- Testergebnisse werden dokumentiert
+- Entscheidungen werden in Markdown-Dateien festgehalten
+
+Die spätere Ingame-Persistenz ersetzt GitHub nicht.
+
+Sie speichert nur den Kampagnenfortschritt.
+
+---
+
+## Verbindung zum UI-System
+
+Später kann Persistenz über F10-Menüs oder Debug-Menüs sichtbar werden.
+
+Mögliche Funktionen:
+
+- Kampagnenstatus anzeigen
+- Save-Status anzeigen
+- letzter Save-Zeitpunkt
+- manuelles Speichern
+- Debug-State anzeigen
+- Save-Fehler anzeigen
+
+Aktueller Stand:
+
+    UI-Bereich ist dokumentiert.
+    F10-Menüs sind noch nicht implementiert.
+
+---
+
+## Verbindung zum Debug-System
+
+Später soll ein State-Debug-Dump möglich sein.
+
+Geplante Datei:
+
+    src/debug/tc_debug_state_dump.lua
+
+Mögliche Ausgabe:
+
+- Campaign-State
+- Airbase-State
+- Zone-State
+- Logistics-State
+- FOB-State
+- Mission-State
+- AI-State
+- IADS-State
+- Event-State
+- Save-Metadata
+
+Aktuell wird dieser Debug-Dump noch nicht erstellt.
+
+---
+
+## Testanforderungen für Persistenz
+
+Persistenz darf erst als funktional gelten, wenn folgende Tests bestanden sind:
+
+- State kann in Memory erzeugt werden
+- State kann serialisiert werden
+- State kann wieder importiert werden
+- Save-Datei kann geschrieben werden
+- Save-Datei kann gelesen werden
+- beschädigte Save-Datei wird erkannt
+- fehlende Save-Datei wird sauber behandelt
+- Versionsunterschied wird erkannt
+- falsche Kampagne wird erkannt
+- DCS startet auch ohne Save-Datei sauber
+- Fehler werden sauber ins `dcs.log` geschrieben
+
+---
+
+## Nicht-Ziele im aktuellen Stand
+
+Aktuell wird bewusst nicht umgesetzt:
+
+- keine echte Datei-Persistenz
+- kein Save-Ordner als produktives System
+- kein automatisches Speichern
+- kein manuelles F10-Speichern
+- kein Save-Import
+- kein Save-Export
+- keine Save-Migration
+- keine Multiplayer-Persistenz
+- keine Datenbank
+- keine externe App-Anbindung
+
+---
+
+## Nächster relevanter Schritt
+
+Der nächste relevante Schritt für Persistenz ist nicht sofort Datei-Speichern.
+
+Zuerst erforderlich:
+
+    Airbase-Scanner klassifizieren und filtern.
+
+Warum:
+
+Persistenz braucht saubere Daten.
+
+Erst wenn Theater Command unterscheiden kann zwischen:
+
+- strategischen Airfields
+- Secondary Airfields
+- Heliports
+- Helipads
+- Medical Pads
+- FARPs
+- Tactical Pads
+- Unknown
+
+kann entschieden werden, welche Objekte dauerhaft im Kampagnenzustand gespeichert werden sollen.
 
 ---
 
 ## Aktueller Status
 
-Aktuell ist Persistenz nur dokumentiert.
+Das Persistenzsystem ist als Grundstruktur vorhanden und lädt erfolgreich in DCS.
 
-Die eigene Lua-Implementierung ist noch nicht begonnen.
+Es ist noch nicht als echte Datei-Persistenz aktiv.
 
-Aktueller Stand:
-
-    Persistenz geplant
-    Save-System noch nicht implementiert
-    Load-System noch nicht implementiert
-    save/ noch nicht vorbereitet
-    example_state.lua noch nicht erstellt
-
-Nächster technischer Fokus nach Abschluss der Dokumentationsaktualisierung:
-
-    src-Unterordner und README-Dateien erstellen
-
-Danach:
-
-    src/loader.lua
-    src/main.lua
-    src/core/tc_config.lua
-    src/core/tc_logger.lua
-    src/core/tc_state.lua
+Der nächste übergeordnete technische Schritt bleibt die Airbase-Klassifizierung im World-System.
