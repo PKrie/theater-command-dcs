@@ -4,13 +4,9 @@ Diese Datei beschreibt, was im DCS Mission Editor für **Theater Command DCS** v
 
 Die erste Kampagne trägt den Arbeitstitel:
 
-**Operation Levant Reclamation**
+    Operation Levant Reclamation
 
-Die Kampagne wird auf der **Syria Map** aufgebaut.
-
-Blau startet auf **Zypern / Akrotiri**.
-
-Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+Die Kampagne wird auf der **Syria Map** aufgebaut. Blau startet auf **Zypern / Akrotiri**. Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
 
 ---
 
@@ -20,7 +16,7 @@ Der Mission Editor ist in Theater Command DCS nicht das eigentliche Kampagnensys
 
 Der Mission Editor stellt nur die physische Bühne bereit.
 
-Die dynamische Kampagne wird später durch Lua gesteuert.
+Die dynamische Kampagne wird durch Lua gesteuert.
 
 Grundprinzip:
 
@@ -36,9 +32,7 @@ Alles, was sinnvoll durch Lua erkannt, berechnet oder gesteuert werden kann, sol
 
 ## Aktueller Projektstand
 
-Stand:
-
-    2026-06-15
+Stand: 2026-06-16
 
 Aktuell vorhanden:
 
@@ -46,20 +40,50 @@ Aktuell vorhanden:
 - `docs/`-Grundblock
 - `vendor/`-Frameworks
 - `src/README.md`
+- `src/loader.lua`
+- `src/main.lua`
+- `src/core/`
+- `src/world/`
+- `src/campaign/`
+- `src/logistics/`
+- `src/missions/`
+- `src/ai/`
+- `src/iads/`
+- `src/ui/`
+- `src/debug/`
+
+Aktuell vorhandene aktive eigene Lua-Module:
+
+- `src/core/tc_config.lua`
+- `src/core/tc_logger.lua`
+- `src/core/tc_state.lua`
+- `src/core/tc_utils.lua`
+- `src/core/tc_scheduler.lua`
+- `src/world/tc_airbase_scanner.lua`
+- `src/world/tc_zone_factory.lua`
+- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/logistics/tc_fob_system.lua`
+- `src/missions/tc_mission_generator.lua`
+- `src/ai/tc_ai_cap_manager.lua`
 
 Aktuell noch nicht vorhanden:
 
 - DEV-Mission
-- `src/loader.lua`
-- `src/main.lua`
 - Mission-Editor-Triggerstruktur
 - Spieler-Slots
 - Template-Gruppen
 - CTLD-Zonen
 - statische Ziele
 - Testumgebung
+- konkrete IADS-Lua-Implementierung
+- konkrete UI-Lua-Implementierung
+- konkrete Debug-Lua-Implementierung
 
-Die Mission-Editor-Arbeit beginnt erst, wenn die minimale Lua-Struktur vorbereitet ist.
+Aktueller technischer Prüfpunkt:
+
+    DCS-Sandbox-Verhalten für dofile prüfen
 
 ---
 
@@ -107,7 +131,7 @@ Nicht im Mission Editor bauen:
 - keine KI-Gegenoffensiven als feste Triggerketten
 - keine manuelle IADS-Kampagnenlogik
 
-Diese Systeme werden später durch Lua-Dateien unter `src/` gesteuert.
+Diese Systeme werden durch Lua-Dateien unter `src/` gesteuert.
 
 ---
 
@@ -121,7 +145,10 @@ Im DCS Mission Editor:
     Rotes Gebiet: syrisches Festland
     Startzeit: 08:00 lokal
     Wetter: zunächst einfach und stabil
-    Mission speichern als: Operation_Levant_Reclamation_DEV.miz
+
+Mission speichern als:
+
+    Operation_Levant_Reclamation_DEV.miz
 
 Geplanter Ablageort im Projekt:
 
@@ -262,7 +289,7 @@ CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gel
 
 ## Framework-Lade-Reihenfolge
 
-Die Frameworks werden später über Mission-Editor-Trigger geladen.
+Die Frameworks werden über Mission-Editor-Trigger geladen.
 
 Geplante Lade-Reihenfolge:
 
@@ -271,7 +298,6 @@ Geplante Lade-Reihenfolge:
     3. vendor/ctld/CTLD-i18n.lua
     4. vendor/ctld/CTLD.lua
     5. vendor/skynet-iads/SkynetIADS.lua
-    6. src/loader.lua
 
 Diese Reihenfolge ist verbindlich.
 
@@ -281,52 +307,249 @@ Wichtig:
 - `CTLD-i18n.lua` muss vor `CTLD.lua` geladen werden.
 - Skynet IADS muss nach MIST geladen werden.
 - Eigene Theater-Command-Logik startet erst nach allen externen Frameworks.
-- `src/loader.lua` wird später der Einstiegspunkt für das eigene Kampagnensystem.
 
 ---
 
-## Empfohlene Trigger-Struktur
+## DCS-Sandbox und `dofile`
 
-Für die erste DEV-Mission wird später eine einfache zeitversetzte Triggerstruktur empfohlen.
+`src/loader.lua` ist aktuell so gebaut, dass eigene Module grundsätzlich per `dofile` nachgeladen werden können.
 
-Geplantes Muster:
+Das ist für ein normales Lua-Projekt sauber.
+
+Im DCS Mission Scripting Environment muss dieses Verhalten aber real getestet werden.
+
+Grund:
+
+DCS-Missionen laufen in einer isolierten Mission-Scripting-Umgebung.
+
+Zusätzlich werden sicherheitsrelevante Module wie `io`, `lfs`, `os`, `require`, `package` oder `loadlib` standardmäßig entfernt oder eingeschränkt.
+
+Deshalb wird für die erste DEV-Prüfung nicht davon ausgegangen, dass `dofile` zuverlässig projektlokale Dateien nachladen kann.
+
+---
+
+## `dofile`-Entscheidung für den ersten Test
+
+Für den ersten realen DCS-Test gilt:
+
+    Nicht auf dofile verlassen.
+
+Stattdessen wird zunächst eine sichere Mission-Editor-Ladevariante genutzt.
+
+Die erste sichere Variante lädt alle aktiven eigenen Lua-Dateien einzeln per `DO SCRIPT FILE`.
+
+Danach wird `src/loader.lua` als letzte eigene Datei geladen.
+
+Vorteil:
+
+    Die Module sind bereits im DCS-Mission-Environment vorhanden.
+    loader.lua erkennt die Module als bereits geladen.
+    loader.lua muss im ersten Test keine eigenen Dateien per dofile nachladen.
+    main.lua wird erst durch loader.lua gestartet.
+
+Diese Variante prüft zuerst, ob die Module grundsätzlich im DCS-Kontext fehlerfrei laufen.
+
+Erst danach wird geprüft, ob der kompakte Loader-only-Ansatz mit `dofile` funktioniert.
+
+---
+
+## Starttest-Variante A — sichere Einzeldatei-Ladung
+
+Diese Variante ist die erste empfohlene DEV-Testvariante.
+
+Sie vermeidet eine harte Abhängigkeit von `dofile`.
+
+### Zweck
+
+Prüfen, ob alle aktuellen Theater-Command-Dateien im DCS Mission Scripting Environment fehlerfrei geladen werden können.
+
+### Reihenfolge
+
+Im Mission Editor werden die Dateien über `DO SCRIPT FILE` geladen:
 
     TIME MORE 1
-        DO SCRIPT FILE: vendor/mist/mist.lua
+    DO SCRIPT FILE: vendor/mist/mist.lua
 
     TIME MORE 2
-        DO SCRIPT FILE: vendor/moose/Moose.lua
+    DO SCRIPT FILE: vendor/moose/Moose.lua
 
     TIME MORE 3
-        DO SCRIPT FILE: vendor/ctld/CTLD-i18n.lua
+    DO SCRIPT FILE: vendor/ctld/CTLD-i18n.lua
 
     TIME MORE 4
-        DO SCRIPT FILE: vendor/ctld/CTLD.lua
+    DO SCRIPT FILE: vendor/ctld/CTLD.lua
 
     TIME MORE 5
-        DO SCRIPT FILE: vendor/skynet-iads/SkynetIADS.lua
+    DO SCRIPT FILE: vendor/skynet-iads/SkynetIADS.lua
 
     TIME MORE 7
-        DO SCRIPT FILE: src/loader.lua
+    DO SCRIPT FILE: src/core/tc_config.lua
 
-Die endgültige Umsetzung wird erst getestet, wenn `src/loader.lua` existiert.
+    TIME MORE 8
+    DO SCRIPT FILE: src/core/tc_logger.lua
+
+    TIME MORE 9
+    DO SCRIPT FILE: src/core/tc_state.lua
+
+    TIME MORE 10
+    DO SCRIPT FILE: src/core/tc_utils.lua
+
+    TIME MORE 11
+    DO SCRIPT FILE: src/core/tc_scheduler.lua
+
+    TIME MORE 12
+    DO SCRIPT FILE: src/world/tc_airbase_scanner.lua
+
+    TIME MORE 13
+    DO SCRIPT FILE: src/world/tc_zone_factory.lua
+
+    TIME MORE 14
+    DO SCRIPT FILE: src/campaign/tc_capture_system.lua
+
+    TIME MORE 15
+    DO SCRIPT FILE: src/campaign/tc_persistence_system.lua
+
+    TIME MORE 16
+    DO SCRIPT FILE: src/logistics/tc_logistics_delivery.lua
+
+    TIME MORE 17
+    DO SCRIPT FILE: src/logistics/tc_fob_system.lua
+
+    TIME MORE 18
+    DO SCRIPT FILE: src/missions/tc_mission_generator.lua
+
+    TIME MORE 19
+    DO SCRIPT FILE: src/ai/tc_ai_cap_manager.lua
+
+    TIME MORE 20
+    DO SCRIPT FILE: src/main.lua
+
+    TIME MORE 22
+    DO SCRIPT FILE: src/loader.lua
+
+### Erwartung
+
+`src/main.lua` wird zwar geladen, startet aber nicht selbst.
+
+`src/loader.lua` wird zuletzt geladen.
+
+`src/loader.lua` erkennt die vorher geladenen Module und startet danach `main.lua`.
+
+Erwartete Logik:
+
+    vendor files load first
+    src modules load next
+    main.lua is available
+    loader.lua starts
+    loader.lua checks frameworks
+    loader.lua detects already loaded modules
+    loader.lua starts main.lua
+    main.lua starts runtime systems
+
+Diese Variante ist die erste technische Sicherheitsprüfung.
 
 ---
 
-## Trigger-Namen
+## Starttest-Variante B — kompakter Loader-only-Test
 
-Empfohlene Trigger-Namen:
+Diese Variante wird erst nach erfolgreicher Variante A getestet.
+
+### Zweck
+
+Prüfen, ob `src/loader.lua` eigenständig über `dofile` die restlichen Source-Dateien nachladen kann.
+
+### Reihenfolge
+
+Im Mission Editor werden nur Frameworks und Loader geladen:
+
+    TIME MORE 1
+    DO SCRIPT FILE: vendor/mist/mist.lua
+
+    TIME MORE 2
+    DO SCRIPT FILE: vendor/moose/Moose.lua
+
+    TIME MORE 3
+    DO SCRIPT FILE: vendor/ctld/CTLD-i18n.lua
+
+    TIME MORE 4
+    DO SCRIPT FILE: vendor/ctld/CTLD.lua
+
+    TIME MORE 5
+    DO SCRIPT FILE: vendor/skynet-iads/SkynetIADS.lua
+
+    TIME MORE 7
+    DO SCRIPT FILE: src/loader.lua
+
+### Erwartung
+
+Diese Variante funktioniert nur, wenn `dofile` im konkreten DCS-Kontext die Projektpfade erfolgreich laden kann.
+
+Mögliche Fehler:
+
+    dofile_unavailable
+    cannot open src/core/tc_config.lua
+    path not found
+    file_executed_but_module_not_detected
+
+Wenn diese Variante fehlschlägt, ist das kein Architekturbruch.
+
+Dann bleibt Variante A die sichere DEV-Ladeweise, bis eine bessere Build- oder Loader-Strategie eingeführt wird.
+
+---
+
+## Konsequenz für `src/loader.lua`
+
+`src/loader.lua` bleibt zunächst unverändert.
+
+Grund:
+
+Der Loader unterstützt beide Varianten.
+
+Variante A:
+
+    Module werden vorher per Mission Editor geladen.
+    Loader erkennt sie als vorhanden.
+    dofile wird für diese Module nicht benötigt.
+
+Variante B:
+
+    Loader lädt Module selbst per dofile.
+    Diese Variante wird separat getestet.
+
+Damit kann der aktuelle Loader im ersten DEV-Test weiterverwendet werden.
+
+---
+
+## Empfohlene Trigger-Struktur für den ersten DEV-Test
+
+Für den ersten realen Test wird Variante A empfohlen.
+
+Trigger-Namen:
 
     TC_LOAD_MIST
     TC_LOAD_MOOSE
     TC_LOAD_CTLD_I18N
     TC_LOAD_CTLD
     TC_LOAD_SKYNET_IADS
-    TC_LOAD_THEATER_COMMAND
+    TC_LOAD_TC_CONFIG
+    TC_LOAD_TC_LOGGER
+    TC_LOAD_TC_STATE
+    TC_LOAD_TC_UTILS
+    TC_LOAD_TC_SCHEDULER
+    TC_LOAD_TC_AIRBASE_SCANNER
+    TC_LOAD_TC_ZONE_FACTORY
+    TC_LOAD_TC_CAPTURE_SYSTEM
+    TC_LOAD_TC_PERSISTENCE_SYSTEM
+    TC_LOAD_TC_LOGISTICS_DELIVERY
+    TC_LOAD_TC_FOB_SYSTEM
+    TC_LOAD_TC_MISSION_GENERATOR
+    TC_LOAD_TC_AI_CAP_MANAGER
+    TC_LOAD_TC_MAIN
+    TC_LOAD_TC_LOADER
 
-Die Namen sollen klar lesbar sein.
+Die Trigger sollen einfach und zeitversetzt bleiben.
 
-Sie sollen später in `mission_editor/trigger_setup.md` dokumentiert werden.
+Keine komplexe Bedingungslogik.
 
 ---
 
@@ -340,7 +563,49 @@ Skynet IADS benötigt ebenfalls MIST-Funktionalität und wird daher nach MIST ge
 
 MOOSE wird früh geladen, damit spätere Theater-Command-Module MOOSE-Klassen nutzen können.
 
-Theater Command DCS wird zuletzt geladen, damit die eigene Logik auf die bereits vorhandenen Frameworks zugreifen kann.
+Theater Command DCS wird zuletzt initialisiert, damit die eigene Logik auf die bereits vorhandenen Frameworks zugreifen kann.
+
+Innerhalb von Theater Command gilt:
+
+    Core vor allen anderen eigenen Systemen.
+    World vor Campaign.
+    Campaign vor Logistics und Missions.
+    Logistics vor Missions.
+    Missions vor AI.
+    Main nach allen aktuell aktiven Modulen.
+    Loader zuletzt, wenn Variante A genutzt wird.
+
+---
+
+## Erwartete erste Log-Ausgaben
+
+Im ersten erfolgreichen Starttest sollen in `dcs.log` sinngemäß Meldungen erscheinen wie:
+
+    [TC] Theater Command loader started
+    [TC] Framework available: MIST
+    [TC] Framework available: MOOSE
+    [TC] Framework available: CTLD
+    [TC] Framework available: Skynet IADS
+    [TC] Core loading started
+    [TC] World loading started
+    [TC] Campaign loading started
+    [TC] Logistics loading started
+    [TC] Missions loading started
+    [TC] AI loading started
+    [TC] Main start requested
+    [TC] Runtime systems initialized
+    [TC] Main initialized
+    [TC] Theater Command loader finished
+
+Die genaue Schreibweise hängt vom Logger und den Modulmeldungen ab.
+
+Wichtig ist:
+
+    keine Lua-Fehler
+    keine fehlenden Frameworks
+    keine fehlenden Pflichtmodule
+    main.lua startet
+    loader.lua beendet erfolgreich
 
 ---
 
@@ -397,7 +662,7 @@ Empfohlene erste blaue Templates:
     TPL_BLUE_GROUND_INF_SECTION_01
     TPL_BLUE_LOGISTICS_CONVOY_01
 
-Diese Templates werden erst benötigt, wenn die ersten eigenen Lua-Systeme entstehen.
+Diese Templates werden erst benötigt, wenn reale Spawns getestet werden.
 
 ---
 
@@ -501,17 +766,17 @@ Theater Command DCS entscheidet, ob ein IADS-Sektor strategisch aktiv, beschädi
 
 ## Airbases im Mission Editor
 
-Airbases sollen später möglichst automatisch durch Lua erkannt werden.
+Airbases sollen möglichst automatisch durch Lua erkannt werden.
 
 Der Mission Editor soll nicht für jede Airbase manuelle Triggerzonen enthalten.
 
 Geplantes Vorgehen:
 
-1. DCS-Airbases über Lua erkennen
-2. Airbase-Daten in Theater-Command-Struktur überführen
-3. wichtige Sonderfälle per Override behandeln
-4. virtuelle Zonen erzeugen
-5. Besitzstatus durch Theater Command verwalten
+    1. DCS-Airbases über Lua erkennen
+    2. Airbase-Daten in Theater-Command-Struktur überführen
+    3. wichtige Sonderfälle per Override behandeln
+    4. virtuelle Zonen erzeugen
+    5. Besitzstatus durch Theater Command verwalten
 
 Dadurch bleibt der Mission Editor schlanker.
 
@@ -561,17 +826,22 @@ Stattdessen:
 
 Persistenz wird nicht im Mission Editor gelöst.
 
-Persistenz wird später unter `src/campaign/` und `save/` vorbereitet.
+Persistenz wird unter `src/campaign/` und später unter `save/` vorbereitet.
+
+Vorhanden:
+
+    src/campaign/tc_persistence_system.lua
 
 Geplante Dateien:
 
-    src/campaign/tc_persistence_system.lua
     save/README.md
     save/example_state.lua
 
 Der Mission Editor liefert nur den Startzustand.
 
 Theater Command DCS verwaltet später den gespeicherten Zustand.
+
+DCS-Dateizugriff wird erst nach dem ersten Starttest gesondert geprüft.
 
 ---
 
@@ -588,12 +858,13 @@ Mögliche Debug-Funktionen:
 - IADS-Status anzeigen
 - aktive Missionen anzeigen
 - Framework-Ladestatus anzeigen
+- Runtime-Systemstatus anzeigen
 
 Der Mission Editor selbst soll nicht mit Debug-Triggern überladen werden.
 
 ---
 
-## Test nach Framework-Ladung
+## Test nach Framework- und Source-Ladung
 
 Nach dem ersten Mission-Editor-Aufbau müssen folgende Punkte geprüft werden:
 
@@ -604,9 +875,32 @@ Nach dem ersten Mission-Editor-Aufbau müssen folgende Punkte geprüft werden:
 - CTLD lädt korrekt
 - Skynet IADS lädt korrekt
 - Lade-Reihenfolge stimmt
+- aktive Theater-Command-Module laden korrekt
+- `src/main.lua` wird geladen
+- `src/loader.lua` wird geladen
+- `src/loader.lua` erkennt Frameworks
+- `src/loader.lua` erkennt bereits geladene Module
+- `src/main.lua` startet Runtime-Systeme
 - `dcs.log` enthält keine Framework-Fehler
-- spätere Datei `src/loader.lua` wird korrekt geladen
-- erste Theater-Command-Debugausgabe erscheint im Log
+- `dcs.log` enthält keine Theater-Command-Fehler
+
+---
+
+## `dofile`-Prüfpunkte
+
+Für die spätere Loader-only-Variante müssen folgende Punkte geprüft werden:
+
+- Ist `dofile` im Mission Scripting Environment verfügbar?
+- Kann `dofile` relative Pfade wie `src/core/tc_config.lua` öffnen?
+- Welches Arbeitsverzeichnis nutzt DCS dabei?
+- Werden Dateien aus der `.miz` heraus oder aus dem Dateisystem gesucht?
+- Muss ein absoluter Pfad gesetzt werden?
+- Ist ein absoluter Pfad für Multiplayer/Dedicated Server überhaupt sinnvoll?
+- Funktioniert das Verhalten auch auf einem Dedicated Server?
+- Funktioniert das Verhalten nach DCS-Updates stabil?
+- Ist diese Variante für spätere Releases vertretbar?
+
+Bis diese Fragen beantwortet sind, bleibt Variante A die sichere erste Testvariante.
 
 ---
 
@@ -620,7 +914,7 @@ Aktuell noch nicht im Mission Editor bauen:
 - komplette IADS-Struktur
 - vollständige rote Großkampagne
 - komplette KI-Logik
-- Persistenz
+- produktive Persistenz
 - Release-Mission
 
 Diese Dinge werden schrittweise vorbereitet.
@@ -629,18 +923,20 @@ Diese Dinge werden schrittweise vorbereitet.
 
 ## Aktueller nächster Schritt
 
-Nach Abschluss der aktuellen Dokumentationsaktualisierung folgt zunächst die weitere `src/`-Grundstruktur.
+Nach dieser Aktualisierung wird `TASKS.md` auf den neuen Mission-Editor- und `dofile`-Prüfstand gebracht.
 
-Nächster technischer Fokus:
+Nächster Dokumentationsschritt:
 
-    src-Unterordner und README-Dateien erstellen
+    TASKS.md
 
-Danach:
+Danach technischer Fokus:
 
-    src/loader.lua
-    src/main.lua
-    src/core/tc_config.lua
-    src/core/tc_logger.lua
-    src/core/tc_state.lua
+    erste DEV-Testvariante im DCS Mission Editor vorbereiten
 
-Die eigentliche Mission-Editor-DEV-Mission wird erst begonnen, wenn die erste minimale Lua-Struktur vorhanden ist.
+Empfohlene erste Testvariante:
+
+    Starttest-Variante A — sichere Einzeldatei-Ladung
+
+Grund:
+
+Diese Variante prüft zuerst die aktuelle Source-Struktur ohne harte Abhängigkeit von `dofile`.
