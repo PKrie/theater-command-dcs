@@ -74,6 +74,10 @@ Aktuell erledigt:
 - `CHANGELOG.md` nach Main-Aktualisierung aktualisiert
 - `TASKS.md` nach Loader-/Main-Startkettenprüfung aktualisiert
 - `MISSION_EDITOR_SETUP.md` für Source-Ladetest und `dofile`-Prüfstrategie aktualisiert
+- `TASKS.md` nach Mission-Editor-Source-Ladeplanung aktualisiert
+- `CHANGELOG.md` nach Mission-Editor-Source-Ladeplanung aktualisiert
+- `mission_editor/README.md` erstellt
+- `mission_editor/trigger_setup.md` erstellt
 
 Aktueller Projektzustand:
 
@@ -84,16 +88,19 @@ Aktueller Projektzustand:
     Loader und Main sind auf die aktuellen Module ausgerichtet.
     Die Loader-/Main-Startkette ist logisch geprüft.
     Die Mission-Editor-Dokumentation beschreibt jetzt eine sichere erste Source-Ladevariante ohne dofile-Abhängigkeit.
-    Der aktuelle Fokus liegt auf der Vorbereitung des ersten realen DCS-Starttests.
+    Die konkrete Trigger-Struktur für Starttest-Variante A ist dokumentiert.
+    Der aktuelle Fokus liegt auf der praktischen Vorbereitung der minimalen DEV-Mission im DCS Mission Editor.
 
 Noch nicht erledigt:
 
-- `TASKS.md` nach Mission-Editor-Setup-Aktualisierung abschließend aktualisieren
+- minimale Syria-DEV-Mission im DCS Mission Editor erstellen
+- Framework-Lade-Trigger nach `mission_editor/trigger_setup.md` anlegen
+- Source-Lade-Trigger nach `mission_editor/trigger_setup.md` anlegen
 - Start aller geladenen Module technisch in DCS verifizieren
-- DCS-Sandbox-Verhalten für `dofile` praktisch testen
 - erster realer DCS-Mission-Starttest durchführen
-- DCS-Mission-Editor-Test vorbereiten
-- DEV-Mission im DCS Mission Editor erstellen
+- `dcs.log` nach Starttest auswerten
+- DCS-Sandbox-Verhalten für `dofile` praktisch testen
+- DEV-Mission unter `mission/dev/` im Repository dokumentieren
 - IADS-Implementierung beginnen
 - UI-Implementierung beginnen
 - Debug-Implementierung beginnen
@@ -121,7 +128,7 @@ CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gel
 
 ## DCS-Lade-Reihenfolge
 
-Die geplante Lade-Reihenfolge im DCS Mission Editor lautet:
+Die geplante externe Lade-Reihenfolge im DCS Mission Editor lautet:
 
     1. vendor/mist/mist.lua
     2. vendor/moose/Moose.lua
@@ -129,7 +136,7 @@ Die geplante Lade-Reihenfolge im DCS Mission Editor lautet:
     4. vendor/ctld/CTLD.lua
     5. vendor/skynet-iads/SkynetIADS.lua
 
-Danach folgt für den ersten realen DEV-Test zunächst die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
+Danach folgt für den ersten realen DEV-Test die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
 
 ---
 
@@ -782,6 +789,7 @@ Diese Aufgaben werden später im DCS Mission Editor erledigt.
 - [ ] erste Template-Gruppen mit Late Activation anlegen
 - [ ] Framework-Lade-Trigger vorbereiten
 - [ ] Source-Lade-Trigger für Starttest-Variante A vorbereiten
+- [ ] `src/main.lua` vor `src/loader.lua` laden
 - [ ] `src/loader.lua` als letzte eigene Datei laden
 - [ ] erster Starttest mit `dcs.log`-Kontrolle durchführen
 - [ ] danach Loader-only-Variante mit `dofile` prüfen
@@ -792,10 +800,10 @@ Diese Aufgaben werden später im DCS Mission Editor erledigt.
 
 Diese Dateien werden später unter `mission_editor/` angelegt.
 
-- [ ] `mission_editor/README.md`
+- [x] `mission_editor/README.md`
 - [ ] `mission_editor/client_slots.md`
 - [ ] `mission_editor/template_groups.md`
-- [ ] `mission_editor/trigger_setup.md`
+- [x] `mission_editor/trigger_setup.md`
 - [ ] `mission_editor/ctld_start_zones.md`
 - [ ] `mission_editor/static_targets.md`
 
@@ -905,28 +913,37 @@ Diese Dateien sind aktuell vorhanden oder perspektivisch erwünscht:
 
 ## Aktuell nächster sinnvoller Einzelschritt
 
-Als nächster Schritt wird `CHANGELOG.md` aktualisiert, damit die Mission-Editor-Setup-Aktualisierung und die `dofile`-Prüfstrategie dokumentiert sind.
+Als nächster Schritt beginnt die praktische Mission-Editor-Arbeit.
 
-Nächste Datei:
+Nächster praktischer Schritt:
 
-    CHANGELOG.md
+    minimale Syria-DEV-Mission im DCS Mission Editor erstellen
+
+Ziel:
+
+    Syria Map öffnen
+    minimale Mission speichern
+    Akrotiri als blaue Startbasis vorbereiten
+    einfache Koalitionen setzen
+    einen ersten blauen Testslot anlegen
+    noch keine komplette Kampagne bauen
 
 Danach:
 
-    DEV-Testvariante A im DCS Mission Editor vorbereiten
+    Framework- und Source-Ladetrigger nach mission_editor/trigger_setup.md anlegen
 
-Prüffokus für DEV-Testvariante A:
+Prüffokus:
 
+    Mission startet
     Frameworks laden
-    aktive Source-Dateien einzeln laden
-    main.lua laden
-    loader.lua zuletzt laden
-    dcs.log prüfen
-    keine dofile-Abhängigkeit im ersten Test
+    aktive Source-Dateien laden
+    main.lua lädt
+    loader.lua startet zuletzt
+    dcs.log zeigt keine schweren Lua-Fehler
 
 Grund:
 
-Die Mission-Editor-Dokumentation ist jetzt auf den Source-Ladetest vorbereitet. Das Changelog muss diesen Stand ebenfalls abbilden, bevor praktisch im Mission Editor weitergearbeitet wird.
+Die Mission-Editor-Dokumentation und die konkrete Trigger-Struktur sind jetzt vorbereitet. Der nächste sinnvolle Schritt ist nicht weitere Lua-Implementierung, sondern der erste praktische DCS-Starttest.
 
 ---
 
@@ -970,4 +987,5 @@ Aktueller Stand in dieser Reihenfolge:
     Debug: dokumentiert
     Startkette: logisch geprüft
     DCS-Sandbox-Prüfstrategie: dokumentiert
-    Starttest: noch offen
+    Trigger-Setup: dokumentiert
+    Starttest: nächster praktischer Schritt
