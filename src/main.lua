@@ -5,6 +5,8 @@
 TC = TC or {}
 
 TC.modules = TC.modules or {}
+TC.Main = TC.Main or {}
+TC.main = TC.main or TC.Main
 
 local Main = {}
 
@@ -16,7 +18,7 @@ Main.started = false
 Main.finished = false
 Main.failed = false
 
-Main.startupPhase = "PHASE_1_CORE_ONLINE"
+Main.startupPhase = "PHASE_1_SOURCE_FOUNDATION"
 
 Main.namespaces = {
   "Core",
@@ -30,77 +32,92 @@ Main.namespaces = {
   "Debug"
 }
 
-Main.futureSystems = {
+Main.runtimeSystems = {
   {
     key = "airbaseScanner",
     name = "Airbase Scanner",
     namespace = "World",
-    moduleName = "AirbaseScanner"
+    moduleName = "AirbaseScanner",
+    required = true
   },
   {
     key = "zoneFactory",
     name = "Zone Factory",
     namespace = "World",
-    moduleName = "ZoneFactory"
+    moduleName = "ZoneFactory",
+    required = true
   },
   {
     key = "captureSystem",
     name = "Capture System",
     namespace = "Campaign",
-    moduleName = "CaptureSystem"
+    moduleName = "CaptureSystem",
+    required = true
+  },
+  {
+    key = "persistenceSystem",
+    name = "Persistence System",
+    namespace = "Campaign",
+    moduleName = "PersistenceSystem",
+    required = true
   },
   {
     key = "logisticsDelivery",
     name = "Logistics Delivery",
     namespace = "Logistics",
-    moduleName = "LogisticsDelivery"
+    moduleName = "Delivery",
+    required = true
   },
   {
     key = "fobSystem",
     name = "FOB System",
     namespace = "Logistics",
-    moduleName = "FobSystem"
+    moduleName = "FobSystem",
+    required = true
   },
   {
     key = "missionGenerator",
     name = "Mission Generator",
     namespace = "Missions",
-    moduleName = "MissionGenerator"
+    moduleName = "Generator",
+    required = true
   },
   {
     key = "aiCapManager",
     name = "AI CAP Manager",
     namespace = "AI",
-    moduleName = "CapManager"
+    moduleName = "CapManager",
+    required = true
   },
   {
     key = "iadsIntegration",
     name = "IADS Integration",
     namespace = "IADS",
-    moduleName = "Network"
-  },
-  {
-    key = "persistence",
-    name = "Persistence System",
-    namespace = "Campaign",
-    moduleName = "PersistenceSystem"
+    moduleName = "Network",
+    required = false
   },
   {
     key = "f10Menu",
     name = "F10 Menu",
     namespace = "UI",
-    moduleName = "F10Menu"
+    moduleName = "F10Menu",
+    required = false
   },
   {
     key = "debugTools",
     name = "Debug Tools",
     namespace = "Debug",
-    moduleName = "Tools"
+    moduleName = "Tools",
+    required = false
   }
 }
 
+Main.startedSystems = {}
+Main.failedSystems = {}
+Main.skippedSystems = {}
+
 local function getConfig()
-  return TC.config or TC.Config or {}
+  return TC.config or TC.Config
 end
 
 local function getLogger()
@@ -240,6 +257,24 @@ local function hasStartFunction(module)
   return module ~= nil and type(module.start) == "function"
 end
 
+local function hasStopFunction(module)
+  return module ~= nil and type(module.stop) == "function"
+end
+
+local function countTableKeys(targetTable)
+  if type(targetTable) ~= "table" then
+    return 0
+  end
+
+  local count = 0
+
+  for _ in pairs(targetTable) do
+    count = count + 1
+  end
+
+  return count
+end
+
 function Main.prepareNamespaces()
   for _, namespaceName in ipairs(Main.namespaces) do
     TC[namespaceName] = TC[namespaceName] or {}
@@ -324,7 +359,7 @@ function Main.applyInitialState()
 end
 
 function Main.printStartupSummary()
-  local config = getConfig()
+  local config = getConfig() or {}
   local campaign = config.campaign or {}
   local project = config.project or {}
 
@@ -339,15 +374,23 @@ function Main.printStartupSummary()
   return true
 end
 
-function Main.markFutureSystemsInactive()
-  for _, systemDefinition in ipairs(Main.futureSystems) do
+function Main.resetRuntimeTracking()
+  Main.startedSystems = {}
+  Main.failedSystems = {}
+  Main.skippedSystems = {}
+
+  return true
+end
+
+function Main.markRuntimeSystemsInactive()
+  for _, systemDefinition in ipairs(Main.runtimeSystems) do
     setFeatureStatus(systemDefinition.key, false)
   end
 
   return true
 end
 
-function Main.startFutureSystem(systemDefinition)
+function Main.startRuntimeSystem(systemDefinition)
   if systemDefinition == nil then
     return false
   end
@@ -355,9 +398,27 @@ function Main.startFutureSystem(systemDefinition)
   local module = getNestedModule(systemDefinition.namespace, systemDefinition.moduleName)
 
   if hasStartFunction(module) ~= true then
-    logDebug("System not available yet: " .. systemDefinition.name)
+    if systemDefinition.required == true then
+      logError("Required system not available: " .. systemDefinition.name)
+      setFeatureStatus(systemDefinition.key, false)
+
+      Main.failedSystems[systemDefinition.key] = {
+        name = systemDefinition.name,
+        reason = "module_or_start_function_missing"
+      }
+
+      return false
+    end
+
+    logDebug("Optional system not available yet: " .. systemDefinition.name)
     setFeatureStatus(systemDefinition.key, false)
-    return false
+
+    Main.skippedSystems[systemDefinition.key] = {
+      name = systemDefinition.name,
+      reason = "optional_system_not_available"
+    }
+
+    return true
   end
 
   local success, result = pcall(module.start)
@@ -365,21 +426,49 @@ function Main.startFutureSystem(systemDefinition)
   if success ~= true then
     logError("System start failed: " .. systemDefinition.name .. " - " .. rawToString(result))
     setFeatureStatus(systemDefinition.key, false)
-    return false
+
+    Main.failedSystems[systemDefinition.key] = {
+      name = systemDefinition.name,
+      reason = rawToString(result)
+    }
+
+    if systemDefinition.required == true then
+      return false
+    end
+
+    return true
   end
 
   logInfo("System started: " .. systemDefinition.name)
   setFeatureStatus(systemDefinition.key, true)
 
+  Main.startedSystems[systemDefinition.key] = {
+    name = systemDefinition.name,
+    namespace = systemDefinition.namespace,
+    moduleName = systemDefinition.moduleName
+  }
+
   return true
 end
 
-function Main.startFutureSystems()
-  for _, systemDefinition in ipairs(Main.futureSystems) do
-    Main.startFutureSystem(systemDefinition)
+function Main.startRuntimeSystems()
+  local allRequiredStarted = true
+
+  for _, systemDefinition in ipairs(Main.runtimeSystems) do
+    local systemStarted = Main.startRuntimeSystem(systemDefinition)
+
+    if systemStarted ~= true and systemDefinition.required == true then
+      allRequiredStarted = false
+    end
   end
 
-  return true
+  if allRequiredStarted == true then
+    logInfo("Runtime systems initialized")
+  else
+    logError("Runtime system initialization failed")
+  end
+
+  return allRequiredStarted
 end
 
 function Main.startSchedulerHeartbeat()
@@ -430,6 +519,8 @@ function Main.start()
 
   logInfo("Main start requested")
 
+  Main.prepareNamespaces()
+
   if Main.checkCore() ~= true then
     Main.failed = true
     setModuleStatus("main", "FAILED")
@@ -437,11 +528,18 @@ function Main.start()
     return false
   end
 
-  Main.prepareNamespaces()
   Main.applyInitialState()
   Main.printStartupSummary()
-  Main.markFutureSystemsInactive()
-  Main.startFutureSystems()
+  Main.resetRuntimeTracking()
+  Main.markRuntimeSystemsInactive()
+
+  if Main.startRuntimeSystems() ~= true then
+    Main.failed = true
+    setModuleStatus("main", "FAILED")
+    logError("Main start stopped because required runtime systems failed")
+    return false
+  end
+
   Main.startSchedulerHeartbeat()
 
   Main.finished = true
@@ -454,8 +552,28 @@ function Main.start()
   return true
 end
 
+function Main.stopRuntimeSystems()
+  for _, systemDefinition in ipairs(Main.runtimeSystems) do
+    local module = getNestedModule(systemDefinition.namespace, systemDefinition.moduleName)
+
+    if hasStopFunction(module) == true then
+      local success, result = pcall(module.stop)
+
+      if success ~= true then
+        logWarn("System stop failed: " .. systemDefinition.name .. " - " .. rawToString(result))
+      else
+        logDebug("System stopped: " .. systemDefinition.name)
+      end
+    end
+  end
+
+  return true
+end
+
 function Main.stop()
   local state = getState()
+
+  Main.stopRuntimeSystems()
 
   if state ~= nil and state.setCampaignRunning ~= nil then
     state.setCampaignRunning(false)
@@ -497,7 +615,6 @@ end
 
 function Main.summary()
   local state = getState()
-
   local stateSummary = nil
 
   if state ~= nil and state.summary ~= nil then
@@ -515,6 +632,12 @@ function Main.summary()
     startupPhase = Main.startupPhase,
     startedAt = Main.startedAt,
     finishedAt = Main.finishedAt,
+    startedSystemCount = countTableKeys(Main.startedSystems),
+    failedSystemCount = countTableKeys(Main.failedSystems),
+    skippedSystemCount = countTableKeys(Main.skippedSystems),
+    startedSystems = Main.startedSystems,
+    failedSystems = Main.failedSystems,
+    skippedSystems = Main.skippedSystems,
     state = stateSummary
   }
 end
