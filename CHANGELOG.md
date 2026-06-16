@@ -6,7 +6,7 @@ Das Projekt befindet sich aktuell in der frühen Aufbauphase.
 
 Aktueller Fokus:
 
-    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Dokumentationsabgleich und Vorbereitung des ersten DCS-Starttests
+    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Main-Initialisierung und Vorbereitung des ersten DCS-Starttests
 
 ---
 
@@ -62,6 +62,9 @@ Aktueller Fokus:
 
 - `src/README.md` nach Source-Ausbau aktualisiert
 - `TASKS.md` nach Source-Ausbau aktualisiert
+- `ROADMAP.md` nach Source-Ausbau aktualisiert
+- `ARCHITECTURE.md` nach Source-Ausbau aktualisiert
+- Root-`README.md` nach Source-Ausbau aktualisiert
 - `src/loader.lua` schrittweise erweitert:
   - Core-Ladung ergänzt
   - World-Ladung ergänzt
@@ -69,6 +72,20 @@ Aktueller Fokus:
   - Logistics-Ladung ergänzt
   - Missions-Ladung ergänzt
   - AI-Ladung ergänzt
+- `src/main.lua` an die aktuellen Modulnamen angepasst:
+  - `TC.World.AirbaseScanner`
+  - `TC.World.ZoneFactory`
+  - `TC.Campaign.CaptureSystem`
+  - `TC.Campaign.PersistenceSystem`
+  - `TC.Logistics.Delivery`
+  - `TC.Logistics.FobSystem`
+  - `TC.Missions.Generator`
+  - `TC.AI.CapManager`
+- `src/main.lua` von Zukunftssystem-Liste auf Runtime-System-Liste umgestellt
+- `src/main.lua` unterscheidet jetzt zwischen erforderlichen und optionalen Systemen
+- `src/main.lua` behandelt IADS, UI und Debug als optionale spätere Systeme
+- `src/main.lua` protokolliert gestartete, fehlgeschlagene und übersprungene Systeme
+- `src/main.lua` kann Runtime-Systeme geordnet stoppen
 - interne Theater-Command-Lade-Reihenfolge konkretisiert:
   - Core
   - World
@@ -193,7 +210,6 @@ Noch nicht umgesetzt:
 - DCS-Sandbox-Prüfung für Dateizugriff
 - DEV-Mission im DCS Mission Editor
 - erster realer DCS-Starttest
-- technische Prüfung von `src/main.lua` gegen alle aktuellen Modulnamen
 - Debug-Menüs
 - Mission-Editor-Dokumentation
 - Mission-Ordnerstruktur
@@ -207,18 +223,16 @@ Diese Version ist noch keine spielbare DCS-Mission.
 
 Der technische Source-Grundaufbau ist begonnen und enthält bereits erste eigene Theater-Command-Lua-Module.
 
+`src/main.lua` ist an die aktuell vorhandenen Module angepasst.
+
 Der nächste technische Prüfpunkt ist:
 
-    src/main.lua gegen aktuelle Modulnamen prüfen
-
-Der nächste Dokumentationsabgleich nach dieser Datei ist:
-
-    ROADMAP.md
+    Loader- und Main-Startkette logisch prüfen
 
 Danach:
 
-    ARCHITECTURE.md
-    README.md
+    DCS-Sandbox-Verhalten für dofile prüfen
+    erster realer DCS-Starttest vorbereiten
 
 ---
 
@@ -251,6 +265,7 @@ Danach:
 - Loader auf modulare Source-Struktur ausgerichtet
 - Source-Dokumentation an die tatsächliche Ordnerstruktur angepasst
 - Tasks an den aktuellen Implementierungsstand angepasst
+- Main-Initialisierung an aktuelle Runtime-Module angepasst
 
 ### Status
 
