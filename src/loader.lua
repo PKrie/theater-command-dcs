@@ -68,11 +68,32 @@ Loader.coreFiles = {
   }
 }
 
+Loader.worldFiles = {
+  {
+    key = "airbaseScanner",
+    name = "tc_airbase_scanner",
+    path = "src/world/tc_airbase_scanner.lua",
+    required = true,
+    isLoaded = function()
+      return TC.World ~= nil and TC.World.AirbaseScanner ~= nil
+    end
+  },
+  {
+    key = "zoneFactory",
+    name = "tc_zone_factory",
+    path = "src/world/tc_zone_factory.lua",
+    required = true,
+    isLoaded = function()
+      return TC.World ~= nil and TC.World.ZoneFactory ~= nil
+    end
+  }
+}
+
 Loader.mainFile = {
   key = "main",
   name = "main",
   path = "src/main.lua",
-  required = false,
+  required = true,
   isLoaded = function()
     return TC.Main ~= nil or TC.main ~= nil
   end
@@ -321,6 +342,28 @@ local function loadFile(item)
   return true
 end
 
+local function loadFileGroup(groupName, fileList)
+  local allRequiredLoaded = true
+
+  logInfo(groupName .. " loading started")
+
+  for _, fileDefinition in ipairs(fileList) do
+    local loaded = loadFile(fileDefinition)
+
+    if loaded ~= true and fileDefinition.required == true then
+      allRequiredLoaded = false
+    end
+  end
+
+  if allRequiredLoaded == true then
+    logInfo(groupName .. " loading finished")
+  else
+    logError(groupName .. " loading failed")
+  end
+
+  return allRequiredLoaded
+end
+
 function Loader.setScriptRoot(scriptRoot)
   Loader.scriptRoot = scriptRoot or ""
   TC.scriptRoot = Loader.scriptRoot
@@ -353,25 +396,11 @@ function Loader.checkFrameworks()
 end
 
 function Loader.loadCore()
-  local allCoreLoaded = true
+  return loadFileGroup("Core", Loader.coreFiles)
+end
 
-  logInfo("Core loading started")
-
-  for _, coreFile in ipairs(Loader.coreFiles) do
-    local loaded = loadFile(coreFile)
-
-    if loaded ~= true and coreFile.required == true then
-      allCoreLoaded = false
-    end
-  end
-
-  if allCoreLoaded == true then
-    logInfo("Core loading finished")
-  else
-    logError("Core loading failed")
-  end
-
-  return allCoreLoaded
+function Loader.loadWorld()
+  return loadFileGroup("World", Loader.worldFiles)
 end
 
 function Loader.loadMain()
@@ -388,7 +417,7 @@ function Loader.loadMain()
   local loaded = loadFile(Loader.mainFile)
 
   if loaded ~= true then
-    logWarn("Main not loaded yet. This is expected until src/main.lua exists.")
+    logError("Main loading failed")
     return false
   end
 
@@ -399,12 +428,12 @@ function Loader.startMain()
   local main = TC.Main or TC.main
 
   if main == nil then
-    logWarn("Main start skipped because main module is not available")
+    logError("Main start failed because main module is not available")
     return false
   end
 
   if type(main.start) ~= "function" then
-    logWarn("Main start skipped because main.start is not available")
+    logError("Main start failed because main.start is not available")
     return false
   end
 
@@ -448,8 +477,29 @@ function Loader.start()
     return false
   end
 
-  Loader.loadMain()
-  Loader.startMain()
+  local worldLoaded = Loader.loadWorld()
+
+  if worldLoaded ~= true then
+    Loader.failed = true
+    logError("Theater Command loader stopped because world loading failed")
+    return false
+  end
+
+  local mainLoaded = Loader.loadMain()
+
+  if mainLoaded ~= true then
+    Loader.failed = true
+    logError("Theater Command loader stopped because main loading failed")
+    return false
+  end
+
+  local mainStarted = Loader.startMain()
+
+  if mainStarted ~= true then
+    Loader.failed = true
+    logError("Theater Command loader stopped because main start failed")
+    return false
+  end
 
   Loader.finished = true
 
@@ -466,7 +516,9 @@ function Loader.summary()
     started = Loader.started,
     finished = Loader.finished,
     failed = Loader.failed,
-    scriptRoot = Loader.scriptRoot
+    scriptRoot = Loader.scriptRoot,
+    coreFileCount = #Loader.coreFiles,
+    worldFileCount = #Loader.worldFiles
   }
 end
 
