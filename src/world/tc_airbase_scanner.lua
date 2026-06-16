@@ -2,22 +2,23 @@
 -- File: src/world/tc_airbase_scanner.lua
 --
 -- Purpose:
---   Scans all DCS airbase-like objects on the active map and converts them
---   into Theater Command world records.
+--   Scan all DCS airbase-like objects on the active map and convert them into
+--   Theater Command world records.
 --
 -- Current focus:
---   Syria returns many Airbase objects, including airfields, heliports,
---   helipads, medical pads, FARPs and other tactical pads. These objects must
---   not all be treated as strategic campaign airfields.
+--   Syria returns many airbase-like objects, including airfields, heliports,
+--   helipads, medical pads, oil pads and other tactical pads. These objects
+--   must not all be treated as strategic campaign airfields.
 --
--- Responsibilities:
---   - scan DCS world airbases safely
---   - classify every detected object
---   - identify Akrotiri as the Blue strategic start base
---   - prepare Syrian mainland major airfields as potential strategic Red bases
---   - calculate strategic relevance
---   - store separate classified lists in TC.State.Bases
---   - keep compatibility with ZoneFactory and later campaign systems
+-- Version:
+--   0.2.1
+--
+-- Fixes:
+--   - Avoids conflict between state.Bases.unknown as owner counter and unknown
+--     airbase classification list.
+--   - Uses logger with the actual one-argument project logger interface.
+--   - Keeps ZoneFactory compatibility through getRegistry(), categoryName,
+--     currentOwner and position.
 
 TC = TC or {}
 TC.modules = TC.modules or {}
@@ -26,17 +27,18 @@ TC.world = TC.world or TC.World
 
 local AirbaseScanner = {}
 
-AirbaseScanner.name = "TC_AirbaseScanner"
+AirbaseScanner.name = "tc_airbase_scanner"
+AirbaseScanner.displayName = "Airbase Scanner"
 AirbaseScanner.path = "src/world/tc_airbase_scanner.lua"
-AirbaseScanner.version = "0.2.0"
+AirbaseScanner.version = "0.2.1"
 
-AirbaseScanner.loaded = false
+AirbaseScanner.loaded = true
 AirbaseScanner.started = false
 AirbaseScanner.finished = false
 AirbaseScanner.failed = false
 
 AirbaseScanner.registry = {}
-AirbaseScanner.lastScanTime = nil
+AirbaseScanner.lastScanTime = 0
 AirbaseScanner.lastScanCount = 0
 
 AirbaseScanner.Categories = {
@@ -80,77 +82,93 @@ AirbaseScanner.cyprusKeywords = {
 }
 
 AirbaseScanner.syrianMainlandKeywords = {
+    "ABU_AL_DUHUR",
+    "ABU AL-DUHUR",
+    "ABU AL DUHUR",
+    "AL_QUSAYR",
+    "AL QUSAYR",
+    "AN_NASIRIYAH",
+    "AN NASIRIYAH",
+    "THA_LAH",
+    "THA'LAH",
+    "THALAH",
+    "MARJ_AS_SULTAN",
+    "MARJ AS SULTAN",
+    "AL_DUMAYR",
+    "AL-DUMAYR",
+    "AD_DUMAYR",
+    "DUMAYR",
     "DAMASCUS",
-    "ALEPPO",
-    "LATAKIA",
-    "LATAKIA",
-    "HMEIMIM",
-    "KHMEIMIM",
-    "BASSEL",
-    "HAMA",
-    "HOMS",
-    "PALMYRA",
-    "TADMUR",
+    "MEZZEH",
+    "SAYQAL",
+    "SHAYRAT",
     "TIYAS",
+    "T_4",
     "T-4",
     "T4",
-    "SHAYRAT",
-    "DUMAYR",
-    "AL-DUMAYR",
-    "AD DUMAYR",
-    "SAYQAL",
-    "MEZZEH",
-    "ABU AL-DUHUR",
-    "ABU DUHUR",
+    "PALMYRA",
+    "TADMUR",
     "KUWEIRES",
+    "KUWAIRES",
     "JIRAH",
-    "TABQA",
-    "DEIR",
-    "DEIR EZ-ZOR",
-    "DEIR EZZOR",
-    "DEIR ZOR",
+    "ALEPPO",
     "MINAKH",
     "MENAGH",
     "TAFTANAZ",
-    "KHALKHALAH",
-    "MARJ",
-    "RUHAYYIL",
-    "RAYAK",
-    "NAJAB"
+    "HAMA",
+    "HOMS",
+    "LATAKIA",
+    "LATTAKIA",
+    "BASSEL",
+    "HMEIMIM",
+    "KHMEIMIM",
+    "DEIR_EZ_ZOR",
+    "DEIR EZ-ZOR",
+    "DEIR_EZZOR",
+    "DEIR EZZOR",
+    "DEIR_ZOR",
+    "DEIR ZOR",
+    "TABQA"
 }
 
 AirbaseScanner.strategicAirfieldKeywords = {
     "AKROTIRI",
     "DAMASCUS",
-    "ALEPPO",
-    "LATAKIA",
-    "HMEIMIM",
-    "KHMEIMIM",
-    "BASSEL",
-    "HAMA",
-    "PALMYRA",
-    "TADMUR",
+    "MEZZEH",
+    "AL_DUMAYR",
+    "AL-DUMAYR",
+    "AD_DUMAYR",
+    "DUMAYR",
+    "SAYQAL",
+    "SHAYRAT",
     "TIYAS",
+    "T_4",
     "T-4",
     "T4",
-    "SHAYRAT",
-    "DUMAYR",
-    "AL-DUMAYR",
-    "AD DUMAYR",
-    "SAYQAL",
-    "MEZZEH",
-    "ABU AL-DUHUR",
-    "ABU DUHUR",
-    "KUWEIRES",
-    "JIRAH",
-    "TABQA",
+    "PALMYRA",
+    "TADMUR",
+    "HAMA",
+    "ALEPPO",
+    "LATAKIA",
+    "LATTAKIA",
+    "BASSEL",
+    "HMEIMIM",
+    "KHMEIMIM",
+    "DEIR_EZ_ZOR",
     "DEIR EZ-ZOR",
+    "DEIR_EZZOR",
     "DEIR EZZOR",
+    "DEIR_ZOR",
     "DEIR ZOR",
+    "KUWEIRES",
+    "KUWAIRES",
+    "TABQA",
+    "ABU_AL_DUHUR",
+    "ABU AL-DUHUR",
+    "ABU AL DUHUR",
     "MINAKH",
     "MENAGH",
-    "TAFTANAZ",
-    "KHALKHALAH"
+    "TAFTANAZ"
 }
 
 AirbaseScanner.secondaryAirfieldKeywords = {
@@ -161,10 +179,15 @@ AirbaseScanner.secondaryAirfieldKeywords = {
     "GEÇITKALE",
     "KINGSFIELD",
     "NICOSIA",
-    "MARJ",
-    "RAYAK",
-    "NAJAB",
-    "RUHAYYIL"
+    "AL_QUSAYR",
+    "AL QUSAYR",
+    "AN_NASIRIYAH",
+    "AN NASIRIYAH",
+    "THA_LAH",
+    "THA'LAH",
+    "THALAH",
+    "MARJ_AS_SULTAN",
+    "MARJ AS SULTAN"
 }
 
 AirbaseScanner.medicalPadKeywords = {
@@ -172,34 +195,48 @@ AirbaseScanner.medicalPadKeywords = {
     "MEDEVAC",
     "CASEVAC",
     "HOSPITAL",
+    "FIELD_HOSPITAL",
     "FIELD HOSPITAL",
     "MASH",
+    "AID_STATION",
     "AID STATION",
+    "MED_PAD",
     "MED PAD",
-    "MEDICAL PAD"
+    "MEDICAL_PAD",
+    "MEDICAL PAD",
+    "HMED",
+    "H_MED"
 }
 
 AirbaseScanner.farpKeywords = {
     "FARP",
+    "FORWARD_ARMING",
     "FORWARD ARMING",
+    "FORWARD_REFUELING",
     "FORWARD REFUELING",
+    "FORWARD_REFUELLING",
     "FORWARD REFUELLING",
+    "FORWARD_OPERATING",
     "FORWARD OPERATING"
 }
 
 AirbaseScanner.heliportKeywords = {
     "HELIPORT",
+    "HELI_PORT",
     "HELI PORT",
     "HELISTATION",
+    "HELI_STATION",
     "HELI STATION",
     "HELIBASE",
+    "HELI_BASE",
     "HELI BASE"
 }
 
 AirbaseScanner.helipadKeywords = {
     "HELIPAD",
+    "HELI_PAD",
     "HELI PAD",
-    "PAD",
+    "LANDING_PAD",
     "LANDING PAD"
 }
 
@@ -208,108 +245,111 @@ AirbaseScanner.tacticalPadKeywords = {
     "OUTPOST",
     "TACTICAL",
     "LZ",
+    "LANDING_ZONE",
     "LANDING ZONE",
     "ROADBASE",
+    "ROAD_BASE",
     "ROAD BASE",
     "CHECKPOINT",
+    "PATROL_BASE",
     "PATROL BASE",
-    "COMBAT OUTPOST"
+    "COMBAT_OUTPOST",
+    "COMBAT OUTPOST",
+    "HOIL",
+    "OIL"
 }
 
+local function getConfig()
+    return TC.config or TC.Config or {}
+end
+
 local function getLogger()
-    if TC and TC.Core and TC.Core.Logger then
-        return TC.Core.Logger
+    return TC.Logger or TC.logger
+end
+
+local function getState()
+    return TC.State or TC.state
+end
+
+local function getUtils()
+    return TC.Utils or TC.utils
+end
+
+local function rawLog(level, message)
+    local prefix = "[TC][AIRBASE_SCANNER]"
+    local formatted = prefix .. " " .. tostring(message)
+
+    if env ~= nil then
+        if level == "ERROR" and env.error ~= nil then
+            env.error(formatted)
+            return
+        end
+
+        if level == "WARN" and env.warning ~= nil then
+            env.warning(formatted)
+            return
+        end
+
+        if env.info ~= nil then
+            env.info(formatted)
+            return
+        end
     end
 
-    if TC and TC.Logger then
-        return TC.Logger
+    if print ~= nil then
+        print(formatted)
     end
-
-    return nil
 end
 
 local function logInfo(message)
     local logger = getLogger()
 
-    if logger and logger.info then
-        logger.info(AirbaseScanner.name, message)
-    else
-        env.info("[" .. AirbaseScanner.name .. "] " .. message)
+    if logger ~= nil and logger.info ~= nil then
+        logger.info("[AirbaseScanner] " .. tostring(message))
+        return
     end
+
+    rawLog("INFO", message)
 end
 
 local function logWarn(message)
     local logger = getLogger()
 
-    if logger and logger.warn then
-        logger.warn(AirbaseScanner.name, message)
-    else
-        env.warning("[" .. AirbaseScanner.name .. "] " .. message)
+    if logger ~= nil and logger.warn ~= nil then
+        logger.warn("[AirbaseScanner] " .. tostring(message))
+        return
     end
+
+    rawLog("WARN", message)
 end
 
 local function logError(message)
     local logger = getLogger()
 
-    if logger and logger.error then
-        logger.error(AirbaseScanner.name, message)
-    else
-        env.error("[" .. AirbaseScanner.name .. "] " .. message)
+    if logger ~= nil and logger.error ~= nil then
+        logger.error("[AirbaseScanner] " .. tostring(message))
+        return
     end
+
+    rawLog("ERROR", message)
 end
 
 local function logDebug(message)
     local logger = getLogger()
 
-    if logger and logger.debug then
-        logger.debug(AirbaseScanner.name, message)
+    if logger ~= nil and logger.debug ~= nil then
+        logger.debug("[AirbaseScanner] " .. tostring(message))
     end
-end
-
-local function getConfig()
-    if TC and TC.Core and TC.Core.Config then
-        return TC.Core.Config
-    end
-
-    if TC and TC.Config then
-        return TC.Config
-    end
-
-    return nil
-end
-
-local function getState()
-    if TC and TC.Core and TC.Core.State then
-        return TC.Core.State
-    end
-
-    if TC and TC.State then
-        return TC.State
-    end
-
-    return nil
-end
-
-local function getUtils()
-    if TC and TC.Core and TC.Core.Utils then
-        return TC.Core.Utils
-    end
-
-    if TC and TC.Utils then
-        return TC.Utils
-    end
-
-    return nil
 end
 
 local function getCurrentTime()
     local utils = getUtils()
 
-    if utils and utils.getCurrentTime then
+    if utils ~= nil and utils.getCurrentTime ~= nil then
         return utils.getCurrentTime()
     end
 
-    if timer and timer.getTime then
+    if timer ~= nil and timer.getTime ~= nil then
         return timer.getTime()
     end
 
@@ -319,60 +359,76 @@ end
 local function normalizeName(value)
     local utils = getUtils()
 
-    if utils and utils.normalizeName then
-        return utils.normalizeName(value)
+    if utils ~= nil and utils.normalizeName ~= nil then
+        local normalizedByUtils = utils.normalizeName(value)
+
+        if normalizedByUtils ~= nil and normalizedByUtils ~= "" then
+            return normalizedByUtils
+        end
     end
 
     if value == nil then
         return "UNKNOWN"
     end
 
-    local text = tostring(value)
-    text = string.upper(text)
-    text = string.gsub(text, "%s+", "_")
-    text = string.gsub(text, "[^A-Z0-9_%-]", "_")
-    text = string.gsub(text, "_+", "_")
-    return text
-end
+    local normalized = tostring(value)
+    normalized = string.upper(normalized)
+    normalized = string.gsub(normalized, "^%s*(.-)%s*$", "%1")
+    normalized = string.gsub(normalized, "[%-/]+", "_")
+    normalized = string.gsub(normalized, "%s+", "_")
+    normalized = string.gsub(normalized, "[^A-Z0-9_]", "_")
+    normalized = string.gsub(normalized, "_+", "_")
+    normalized = string.gsub(normalized, "^_+", "")
+    normalized = string.gsub(normalized, "_+$", "")
 
-local function readableName(value)
-    if value == nil then
+    if normalized == "" then
         return "UNKNOWN"
     end
 
-    return tostring(value)
+    return normalized
 end
 
-local function tableCount(source)
+local function countTableKeys(targetTable)
+    local utils = getUtils()
+
+    if utils ~= nil and utils.countTableKeys ~= nil then
+        return utils.countTableKeys(targetTable)
+    end
+
+    if type(targetTable) ~= "table" then
+        return 0
+    end
+
     local count = 0
 
-    if source then
-        for _ in pairs(source) do
-            count = count + 1
-        end
+    for _ in pairs(targetTable) do
+        count = count + 1
     end
 
     return count
 end
 
-local function containsKeyword(normalizedNameValue, keyword)
-    if normalizedNameValue == nil or keyword == nil then
+local function containsKeyword(normalizedName, keyword)
+    if type(normalizedName) ~= "string" or keyword == nil then
         return false
     end
 
-    local nameValue = tostring(normalizedNameValue)
     local normalizedKeyword = normalizeName(keyword)
 
-    return string.find(nameValue, normalizedKeyword, 1, true) ~= nil
+    if normalizedKeyword == nil or normalizedKeyword == "" then
+        return false
+    end
+
+    return string.find(normalizedName, normalizedKeyword, 1, true) ~= nil
 end
 
-local function containsAnyKeyword(normalizedNameValue, keywords)
-    if normalizedNameValue == nil or keywords == nil then
-        return false
+local function containsAnyKeyword(normalizedName, keywords)
+    if type(keywords) ~= "table" then
+        return false, nil
     end
 
     for _, keyword in ipairs(keywords) do
-        if containsKeyword(normalizedNameValue, keyword) then
+        if containsKeyword(normalizedName, keyword) == true then
             return true, keyword
         end
     end
@@ -380,7 +436,7 @@ local function containsAnyKeyword(normalizedNameValue, keywords)
     return false, nil
 end
 
-local function safeMethodCall(object, methodName)
+local function safeCall(object, methodName)
     if object == nil or methodName == nil then
         return nil
     end
@@ -393,59 +449,23 @@ local function safeMethodCall(object, methodName)
 
     local success, result = pcall(method, object)
 
-    if success then
+    if success == true then
         return result
     end
 
     return nil
 end
 
-local function getAirbaseName(airbaseObject)
-    local name = safeMethodCall(airbaseObject, "getName")
-
-    if name ~= nil and name ~= "" then
-        return tostring(name)
+local function getDcsCategoryName(categoryId)
+    if AirbaseScanner.dcsCategoryNames[categoryId] ~= nil then
+        return AirbaseScanner.dcsCategoryNames[categoryId]
     end
 
-    return "UNKNOWN_AIRBASE"
-end
-
-local function getAirbasePoint(airbaseObject)
-    local point = safeMethodCall(airbaseObject, "getPoint")
-
-    if point ~= nil then
-        return {
-            x = point.x or 0,
-            y = point.y or 0,
-            z = point.z or 0
-        }
-    end
-
-    return {
-        x = 0,
-        y = 0,
-        z = 0
-    }
-end
-
-local function getAirbaseCoalitionId(airbaseObject)
-    local coalitionId = safeMethodCall(airbaseObject, "getCoalition")
-
-    if coalitionId ~= nil then
-        return coalitionId
-    end
-
-    return 0
+    return "UNKNOWN"
 end
 
 local function getCoalitionName(coalitionId)
-    local utils = getUtils()
-
-    if utils and utils.getCoalitionName then
-        return utils.getCoalitionName(coalitionId)
-    end
-
-    if coalition and coalition.side then
+    if coalition ~= nil and coalition.side ~= nil then
         if coalitionId == coalition.side.BLUE then
             return "BLUE"
         end
@@ -474,65 +494,34 @@ local function getCoalitionName(coalitionId)
     return "UNKNOWN"
 end
 
-local function getAirbaseDesc(airbaseObject)
-    local desc = safeMethodCall(airbaseObject, "getDesc")
+local function getConfiguredBlueStartBase()
+    local config = getConfig()
 
-    if type(desc) == "table" then
-        return desc
+    if config.campaign ~= nil and config.campaign.blueStartBase ~= nil then
+        return tostring(config.campaign.blueStartBase)
     end
 
-    return {}
+    return "AKROTIRI"
 end
 
-local function getAirbaseCategory(airbaseObject)
-    local categoryId = safeMethodCall(airbaseObject, "getCategory")
-
-    if categoryId ~= nil then
-        return categoryId
-    end
-
-    local desc = getAirbaseDesc(airbaseObject)
-
-    if desc and desc.category ~= nil then
-        return desc.category
-    end
-
-    return -1
+local function isConfiguredStartBase(normalizedName)
+    return containsKeyword(normalizedName, getConfiguredBlueStartBase())
 end
 
-local function getDcsCategoryName(categoryId)
-    if AirbaseScanner.dcsCategoryNames[categoryId] then
-        return AirbaseScanner.dcsCategoryNames[categoryId]
-    end
-
-    return "UNKNOWN"
-end
-
-local function getTheatreArea(normalizedNameValue)
-    if containsAnyKeyword(normalizedNameValue, AirbaseScanner.cyprusKeywords) then
+local function determineTheatreArea(normalizedName)
+    if containsAnyKeyword(normalizedName, AirbaseScanner.cyprusKeywords) == true then
         return "CYPRUS"
     end
 
-    if containsAnyKeyword(normalizedNameValue, AirbaseScanner.syrianMainlandKeywords) then
+    if containsAnyKeyword(normalizedName, AirbaseScanner.syrianMainlandKeywords) == true then
         return "SYRIAN_MAINLAND"
     end
 
     return "UNKNOWN"
 end
 
-local function isStartBase(normalizedNameValue)
-    local config = getConfig()
-    local configuredStartBase = "AKROTIRI"
-
-    if config and config.campaign and config.campaign.blueStartBase then
-        configuredStartBase = config.campaign.blueStartBase
-    end
-
-    return containsKeyword(normalizedNameValue, configuredStartBase)
-end
-
-local function determineInitialOwner(normalizedNameValue, theatreArea, coalitionName)
-    if isStartBase(normalizedNameValue) then
+local function determineInitialOwner(normalizedName, theatreArea, coalitionName)
+    if isConfiguredStartBase(normalizedName) == true then
         return "BLUE"
     end
 
@@ -551,146 +540,86 @@ local function determineInitialOwner(normalizedNameValue, theatreArea, coalition
     return "UNKNOWN"
 end
 
-local function classifyAirbase(normalizedNameValue, dcsCategoryName, theatreArea)
-    local matched = nil
-    local isConfiguredStartBase = isStartBase(normalizedNameValue)
-
-    if isConfiguredStartBase then
-        return {
-            category = AirbaseScanner.Categories.STRATEGIC_AIRFIELD,
-            reason = "configured_blue_start_base",
-            matchedKeyword = "AKROTIRI"
-        }
+local function classifyAirbase(normalizedName, dcsCategoryName)
+    if isConfiguredStartBase(normalizedName) == true then
+        return AirbaseScanner.Categories.STRATEGIC_AIRFIELD, "configured_blue_start_base", getConfiguredBlueStartBase()
     end
 
     if dcsCategoryName == "AIRDROME" then
-        local isStrategic, strategicKeyword = containsAnyKeyword(normalizedNameValue, AirbaseScanner.strategicAirfieldKeywords)
+        local isStrategic, strategicKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.strategicAirfieldKeywords)
 
-        if isStrategic then
-            return {
-                category = AirbaseScanner.Categories.STRATEGIC_AIRFIELD,
-                reason = "strategic_airfield_keyword",
-                matchedKeyword = strategicKeyword
-            }
+        if isStrategic == true then
+            return AirbaseScanner.Categories.STRATEGIC_AIRFIELD, "strategic_airfield_keyword", strategicKeyword
         end
 
-        local isSecondary, secondaryKeyword = containsAnyKeyword(normalizedNameValue, AirbaseScanner.secondaryAirfieldKeywords)
+        local isSecondary, secondaryKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.secondaryAirfieldKeywords)
 
-        if isSecondary then
-            return {
-                category = AirbaseScanner.Categories.SECONDARY_AIRFIELD,
-                reason = "secondary_airfield_keyword",
-                matchedKeyword = secondaryKeyword
-            }
+        if isSecondary == true then
+            return AirbaseScanner.Categories.SECONDARY_AIRFIELD, "secondary_airfield_keyword", secondaryKeyword
         end
 
-        return {
-            category = AirbaseScanner.Categories.SECONDARY_AIRFIELD,
-            reason = "dcs_airdrome_default",
-            matchedKeyword = nil
-        }
+        return AirbaseScanner.Categories.SECONDARY_AIRFIELD, "dcs_airdrome_default", nil
     end
 
-    matched = nil
-    local isMedical, medicalKeyword = containsAnyKeyword(normalizedNameValue, AirbaseScanner.medicalPadKeywords)
+    local isMedical, medicalKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.medicalPadKeywords)
 
-    if isMedical then
-        return {
-            category = AirbaseScanner.Categories.MEDICAL_PAD,
-            reason = "medical_pad_keyword",
-            matchedKeyword = medicalKeyword
-        }
+    if isMedical == true then
+        return AirbaseScanner.Categories.MEDICAL_PAD, "medical_pad_keyword", medicalKeyword
     end
 
-    local isFarp, farpKeyword = containsAnyKeyword(normalizedNameValue, AirbaseScanner.farpKeywords)
+    local isFarp, farpKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.farpKeywords)
 
-    if isFarp then
-        return {
-            category = AirbaseScanner.Categories.FARP,
-            reason = "farp_keyword",
-            matchedKeyword = farpKeyword
-        }
+    if isFarp == true then
+        return AirbaseScanner.Categories.FARP, "farp_keyword", farpKeyword
     end
 
-    local isHeliport, heliportKeyword = containsAnyKeyword(normalizedNameValue, AirbaseScanner.heliportKeywords)
+    local isHeliport, heliportKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.heliportKeywords)
 
-    if isHeliport then
-        return {
-            category = AirbaseScanner.Categories.HELIPORT,
-            reason = "heliport_keyword",
-            matchedKeyword = heliportKeyword
-        }
+    if isHeliport == true then
+        return AirbaseScanner.Categories.HELIPORT, "heliport_keyword", heliportKeyword
     end
 
-    local isTactical, tacticalKeyword = containsAnyKeyword(normalizedNameValue, AirbaseScanner.tacticalPadKeywords)
+    local isTactical, tacticalKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.tacticalPadKeywords)
 
-    if isTactical then
-        return {
-            category = AirbaseScanner.Categories.TACTICAL_PAD,
-            reason = "tactical_pad_keyword",
-            matchedKeyword = tacticalKeyword
-        }
+    if isTactical == true then
+        return AirbaseScanner.Categories.TACTICAL_PAD, "tactical_pad_keyword", tacticalKeyword
     end
 
-    local isHelipad, helipadKeyword = containsAnyKeyword(normalizedNameValue, AirbaseScanner.helipadKeywords)
+    local isHelipad, helipadKeyword = containsAnyKeyword(normalizedName, AirbaseScanner.helipadKeywords)
 
-    if dcsCategoryName == "HELIPAD" or isHelipad then
-        return {
-            category = AirbaseScanner.Categories.HELIPAD,
-            reason = "dcs_helipad_default",
-            matchedKeyword = helipadKeyword
-        }
+    if dcsCategoryName == "HELIPAD" or isHelipad == true then
+        return AirbaseScanner.Categories.HELIPAD, "dcs_helipad_default", helipadKeyword
     end
 
-    if dcsCategoryName == "SHIP" then
-        return {
-            category = AirbaseScanner.Categories.UNKNOWN,
-            reason = "dcs_ship_category_not_campaign_airbase",
-            matchedKeyword = nil
-        }
-    end
-
-    if theatreArea == "SYRIAN_MAINLAND" then
-        return {
-            category = AirbaseScanner.Categories.UNKNOWN,
-            reason = "unknown_syrian_mainland_airbase_like_object",
-            matchedKeyword = nil
-        }
-    end
-
-    return {
-        category = AirbaseScanner.Categories.UNKNOWN,
-        reason = "unknown_airbase_like_object",
-        matchedKeyword = nil
-    }
+    return AirbaseScanner.Categories.UNKNOWN, "unknown_airbase_like_object", nil
 end
 
-local function calculateStrategicRelevance(classificationCategory, normalizedNameValue, theatreArea, currentOwner, isConfiguredStartBase)
+local function calculateStrategicRelevance(classification, theatreArea, currentOwner, startBase)
     local relevance = 0
 
-    if classificationCategory == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
+    if classification == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
         relevance = 85
-    elseif classificationCategory == AirbaseScanner.Categories.SECONDARY_AIRFIELD then
+    elseif classification == AirbaseScanner.Categories.SECONDARY_AIRFIELD then
         relevance = 60
-    elseif classificationCategory == AirbaseScanner.Categories.HELIPORT then
+    elseif classification == AirbaseScanner.Categories.HELIPORT then
         relevance = 45
-    elseif classificationCategory == AirbaseScanner.Categories.FARP then
+    elseif classification == AirbaseScanner.Categories.FARP then
         relevance = 40
-    elseif classificationCategory == AirbaseScanner.Categories.TACTICAL_PAD then
+    elseif classification == AirbaseScanner.Categories.TACTICAL_PAD then
         relevance = 25
-    elseif classificationCategory == AirbaseScanner.Categories.HELIPAD then
+    elseif classification == AirbaseScanner.Categories.HELIPAD then
         relevance = 20
-    elseif classificationCategory == AirbaseScanner.Categories.MEDICAL_PAD then
+    elseif classification == AirbaseScanner.Categories.MEDICAL_PAD then
         relevance = 10
     else
         relevance = 0
     end
 
-    if isConfiguredStartBase then
+    if startBase == true then
         relevance = 100
-    elseif theatreArea == "SYRIAN_MAINLAND" and classificationCategory == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
+    elseif theatreArea == "SYRIAN_MAINLAND" and classification == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
         relevance = relevance + 10
-    elseif theatreArea == "CYPRUS" and currentOwner == "BLUE" and classificationCategory == AirbaseScanner.Categories.SECONDARY_AIRFIELD then
+    elseif theatreArea == "CYPRUS" and currentOwner == "BLUE" then
         relevance = relevance + 5
     end
 
@@ -705,8 +634,8 @@ local function calculateStrategicRelevance(classificationCategory, normalizedNam
     return relevance
 end
 
-local function getZoneProfile(classificationCategory)
-    if classificationCategory == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
+local function getZoneProfile(classification)
+    if classification == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
         return {
             zoneClass = "STRATEGIC_AIRBASE_ZONE",
             recommendedRadius = 12000,
@@ -716,7 +645,7 @@ local function getZoneProfile(classificationCategory)
         }
     end
 
-    if classificationCategory == AirbaseScanner.Categories.SECONDARY_AIRFIELD then
+    if classification == AirbaseScanner.Categories.SECONDARY_AIRFIELD then
         return {
             zoneClass = "SECONDARY_AIRBASE_ZONE",
             recommendedRadius = 8000,
@@ -726,7 +655,7 @@ local function getZoneProfile(classificationCategory)
         }
     end
 
-    if classificationCategory == AirbaseScanner.Categories.HELIPORT then
+    if classification == AirbaseScanner.Categories.HELIPORT then
         return {
             zoneClass = "HELIPORT_ZONE",
             recommendedRadius = 4000,
@@ -736,7 +665,7 @@ local function getZoneProfile(classificationCategory)
         }
     end
 
-    if classificationCategory == AirbaseScanner.Categories.FARP then
+    if classification == AirbaseScanner.Categories.FARP then
         return {
             zoneClass = "FARP_ZONE",
             recommendedRadius = 3500,
@@ -746,7 +675,7 @@ local function getZoneProfile(classificationCategory)
         }
     end
 
-    if classificationCategory == AirbaseScanner.Categories.TACTICAL_PAD then
+    if classification == AirbaseScanner.Categories.TACTICAL_PAD then
         return {
             zoneClass = "TACTICAL_PAD_ZONE",
             recommendedRadius = 2500,
@@ -756,7 +685,7 @@ local function getZoneProfile(classificationCategory)
         }
     end
 
-    if classificationCategory == AirbaseScanner.Categories.HELIPAD then
+    if classification == AirbaseScanner.Categories.HELIPAD then
         return {
             zoneClass = "HELIPAD_ZONE",
             recommendedRadius = 2000,
@@ -766,7 +695,7 @@ local function getZoneProfile(classificationCategory)
         }
     end
 
-    if classificationCategory == AirbaseScanner.Categories.MEDICAL_PAD then
+    if classification == AirbaseScanner.Categories.MEDICAL_PAD then
         return {
             zoneClass = "MEDICAL_PAD_ZONE",
             recommendedRadius = 1500,
@@ -826,8 +755,8 @@ local function ensureStateTables()
     state.Bases.registry = {}
     state.Bases.byClassification = {}
 
-    for _, categoryName in ipairs(AirbaseScanner.categoryOrder) do
-        state.Bases.byClassification[categoryName] = {}
+    for _, category in ipairs(AirbaseScanner.categoryOrder) do
+        state.Bases.byClassification[category] = {}
     end
 
     state.Bases.strategicAirfields = {}
@@ -837,6 +766,10 @@ local function ensureStateTables()
     state.Bases.medicalPads = {}
     state.Bases.farps = {}
     state.Bases.tacticalPads = {}
+
+    -- Important:
+    -- state.Bases.unknown is already used as an owner counter.
+    -- Therefore unknown classified airbase objects use a separate list name.
     state.Bases.unknownAirbaseObjects = {}
 
     state.Bases.captureCandidates = {}
@@ -857,8 +790,8 @@ local function ensureStateTables()
         unknown = 0
     }
 
-    for _, categoryName in ipairs(AirbaseScanner.categoryOrder) do
-        state.Bases.classificationCounts[categoryName] = 0
+    for _, category in ipairs(AirbaseScanner.categoryOrder) do
+        state.Bases.classificationCounts[category] = 0
     end
 
     state.World.airbaseScan = {
@@ -879,188 +812,268 @@ local function resetScannerTables()
     TC.World.AirbaseClassifications = AirbaseScanner.classificationLists
 end
 
-local function countOwner(state, owner)
-    if state == nil or state.Bases == nil then
-        return
-    end
-
-    if owner == "BLUE" then
-        state.Bases.blue = state.Bases.blue + 1
-    elseif owner == "RED" then
-        state.Bases.red = state.Bases.red + 1
-    elseif owner == "NEUTRAL" then
-        state.Bases.neutral = state.Bases.neutral + 1
-    elseif owner == "CONTESTED" then
-        state.Bases.contested = state.Bases.contested + 1
-    else
-        state.Bases.unknown = state.Bases.unknown + 1
-    end
-end
-
-local function getClassificationListName(classificationCategory)
-    if classificationCategory == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
+local function getScannerListName(classification)
+    if classification == AirbaseScanner.Categories.STRATEGIC_AIRFIELD then
         return "strategicAirfields"
     end
 
-    if classificationCategory == AirbaseScanner.Categories.SECONDARY_AIRFIELD then
+    if classification == AirbaseScanner.Categories.SECONDARY_AIRFIELD then
         return "secondaryAirfields"
     end
 
-    if classificationCategory == AirbaseScanner.Categories.HELIPORT then
+    if classification == AirbaseScanner.Categories.HELIPORT then
         return "heliports"
     end
 
-    if classificationCategory == AirbaseScanner.Categories.HELIPAD then
+    if classification == AirbaseScanner.Categories.HELIPAD then
         return "helipads"
     end
 
-    if classificationCategory == AirbaseScanner.Categories.MEDICAL_PAD then
+    if classification == AirbaseScanner.Categories.MEDICAL_PAD then
         return "medicalPads"
     end
 
-    if classificationCategory == AirbaseScanner.Categories.FARP then
+    if classification == AirbaseScanner.Categories.FARP then
         return "farps"
     end
 
-    if classificationCategory == AirbaseScanner.Categories.TACTICAL_PAD then
+    if classification == AirbaseScanner.Categories.TACTICAL_PAD then
         return "tacticalPads"
     end
 
     return "unknown"
 end
 
-local function addRecordToList(list, key, record)
-    if list ~= nil and key ~= nil and record ~= nil then
-        list[key] = record
+local function getStateListName(classification)
+    if classification == AirbaseScanner.Categories.UNKNOWN then
+        return "unknownAirbaseObjects"
+    end
+
+    return getScannerListName(classification)
+end
+
+local function addRecordToList(targetList, key, record)
+    if type(targetList) ~= "table" then
+        return false
+    end
+
+    if key == nil or record == nil then
+        return false
+    end
+
+    targetList[key] = record
+    return true
+end
+
+local function incrementOwnerCounter(state, owner)
+    if state == nil or state.Bases == nil then
+        return
+    end
+
+    if owner == "BLUE" then
+        state.Bases.blue = (state.Bases.blue or 0) + 1
+    elseif owner == "RED" then
+        state.Bases.red = (state.Bases.red or 0) + 1
+    elseif owner == "NEUTRAL" then
+        state.Bases.neutral = (state.Bases.neutral or 0) + 1
+    elseif owner == "CONTESTED" then
+        state.Bases.contested = (state.Bases.contested or 0) + 1
+    else
+        state.Bases.unknown = (state.Bases.unknown or 0) + 1
     end
 end
 
-local function registerClassification(state, record)
-    local listName = getClassificationListName(record.classification)
-
-    addRecordToList(AirbaseScanner.classificationLists.all, record.key, record)
-    addRecordToList(AirbaseScanner.classificationLists[listName], record.key, record)
-
-    if state and state.Bases then
-        addRecordToList(state.Bases.byClassification[record.classification], record.key, record)
-        addRecordToList(state.Bases[listName], record.key, record)
-
-        state.Bases.classificationCounts.total = state.Bases.classificationCounts.total + 1
-        state.Bases.classificationCounts[record.classification] = state.Bases.classificationCounts[record.classification] + 1
-        state.Bases.classificationCounts[listName] = state.Bases.classificationCounts[listName] + 1
+local function incrementClassificationCounter(state, classification, scannerListName)
+    if state == nil or state.Bases == nil or state.Bases.classificationCounts == nil then
+        return
     end
 
-    if record.isCaptureCandidate then
-        addRecordToList(AirbaseScanner.classificationLists.captureCandidates, record.key, record)
+    state.Bases.classificationCounts.total = (state.Bases.classificationCounts.total or 0) + 1
+    state.Bases.classificationCounts[classification] = (state.Bases.classificationCounts[classification] or 0) + 1
+    state.Bases.classificationCounts[scannerListName] = (state.Bases.classificationCounts[scannerListName] or 0) + 1
+end
 
-        if state and state.Bases then
-            addRecordToList(state.Bases.captureCandidates, record.key, record)
-        end
+local function markStateDirty(reason)
+    local state = getState()
+
+    if state ~= nil and state.markDirty ~= nil then
+        state.markDirty(reason or "airbase_scanner")
+    end
+end
+
+local function setModuleStatus(status)
+    local state = getState()
+
+    if state ~= nil and state.setModuleStatus ~= nil then
+        state.setModuleStatus("airbaseScanner", status)
+    end
+end
+
+local function setFeatureStatus(enabled)
+    local state = getState()
+
+    if state ~= nil and state.setFeatureStatus ~= nil then
+        state.setFeatureStatus("airbaseScanner", enabled)
+    end
+end
+
+local function makeUniqueKey(baseKey, index)
+    local key = baseKey or ("UNKNOWN_AIRBASE_" .. tostring(index or 0))
+
+    if key == "" or key == "UNKNOWN" or key == "UNKNOWN_AIRBASE" then
+        key = "UNKNOWN_AIRBASE_" .. tostring(index or 0)
     end
 
-    if record.isMissionCandidate then
-        addRecordToList(AirbaseScanner.classificationLists.missionCandidates, record.key, record)
-
-        if state and state.Bases then
-            addRecordToList(state.Bases.missionCandidates, record.key, record)
-        end
+    if AirbaseScanner.registry[key] == nil then
+        return key
     end
 
-    if record.isLogisticsCandidate then
-        addRecordToList(AirbaseScanner.classificationLists.logisticsCandidates, record.key, record)
+    local suffix = 2
+    local candidate = key .. "_" .. tostring(suffix)
 
-        if state and state.Bases then
-            addRecordToList(state.Bases.logisticsCandidates, record.key, record)
-        end
+    while AirbaseScanner.registry[candidate] ~= nil do
+        suffix = suffix + 1
+        candidate = key .. "_" .. tostring(suffix)
     end
 
-    if record.isStartBase then
-        addRecordToList(AirbaseScanner.classificationLists.blueStartBases, record.key, record)
+    return candidate
+end
 
-        if state and state.Bases then
-            addRecordToList(state.Bases.blueStartBases, record.key, record)
-            state.Bases.blueStartBase = record
-        end
+local function getAirbaseName(airbaseObject)
+    local name = safeCall(airbaseObject, "getName")
+
+    if name == nil or name == "" then
+        return "UNKNOWN_AIRBASE"
     end
 
-    if record.isPotentialRedStrategicBase then
-        addRecordToList(AirbaseScanner.classificationLists.potentialRedStrategicBases, record.key, record)
+    return tostring(name)
+end
 
-        if state and state.Bases then
-            addRecordToList(state.Bases.potentialRedStrategicBases, record.key, record)
-        end
+local function getAirbasePosition(airbaseObject)
+    local point = safeCall(airbaseObject, "getPoint")
+
+    if type(point) == "table" then
+        return {
+            x = point.x or 0,
+            y = point.y or 0,
+            z = point.z or 0
+        }
     end
+
+    return {
+        x = 0,
+        y = 0,
+        z = 0
+    }
+end
+
+local function getAirbaseCoalitionId(airbaseObject)
+    local coalitionId = safeCall(airbaseObject, "getCoalition")
+
+    if coalitionId ~= nil then
+        return coalitionId
+    end
+
+    return 0
+end
+
+local function getAirbaseDescription(airbaseObject)
+    local description = safeCall(airbaseObject, "getDesc")
+
+    if type(description) == "table" then
+        return description
+    end
+
+    return {}
+end
+
+local function getAirbaseCategoryId(airbaseObject)
+    local categoryId = safeCall(airbaseObject, "getCategory")
+
+    if categoryId ~= nil then
+        return categoryId
+    end
+
+    local description = getAirbaseDescription(airbaseObject)
+
+    if description.category ~= nil then
+        return description.category
+    end
+
+    return -1
 end
 
 local function createAirbaseRecord(airbaseObject, index)
     local name = getAirbaseName(airbaseObject)
-    local normalizedNameValue = normalizeName(name)
-    local key = normalizedNameValue
+    local normalizedName = normalizeName(name)
+    local key = makeUniqueKey(normalizedName, index)
 
-    if key == nil or key == "" or key == "UNKNOWN" or key == "UNKNOWN_AIRBASE" then
-        key = "UNKNOWN_AIRBASE_" .. tostring(index or 0)
-    end
-
-    local point = getAirbasePoint(airbaseObject)
+    local position = getAirbasePosition(airbaseObject)
     local coalitionId = getAirbaseCoalitionId(airbaseObject)
     local coalitionName = getCoalitionName(coalitionId)
-    local dcsCategoryId = getAirbaseCategory(airbaseObject)
+    local dcsCategoryId = getAirbaseCategoryId(airbaseObject)
     local dcsCategoryName = getDcsCategoryName(dcsCategoryId)
-    local desc = getAirbaseDesc(airbaseObject)
-    local theatreArea = getTheatreArea(normalizedNameValue)
-    local configuredStartBase = isStartBase(normalizedNameValue)
-    local initialOwner = determineInitialOwner(normalizedNameValue, theatreArea, coalitionName)
-    local classification = classifyAirbase(normalizedNameValue, dcsCategoryName, theatreArea)
-    local strategicRelevance = calculateStrategicRelevance(
-        classification.category,
-        normalizedNameValue,
-        theatreArea,
-        initialOwner,
-        configuredStartBase
-    )
-    local zoneProfile = getZoneProfile(classification.category)
+    local description = getAirbaseDescription(airbaseObject)
 
-    local isStrategicAirfield = classification.category == AirbaseScanner.Categories.STRATEGIC_AIRFIELD
-    local isSecondaryAirfield = classification.category == AirbaseScanner.Categories.SECONDARY_AIRFIELD
-    local isHeliport = classification.category == AirbaseScanner.Categories.HELIPORT
-    local isHelipad = classification.category == AirbaseScanner.Categories.HELIPAD
-    local isMedicalPad = classification.category == AirbaseScanner.Categories.MEDICAL_PAD
-    local isFarp = classification.category == AirbaseScanner.Categories.FARP
-    local isTacticalPad = classification.category == AirbaseScanner.Categories.TACTICAL_PAD
-    local isUnknown = classification.category == AirbaseScanner.Categories.UNKNOWN
+    local theatreArea = determineTheatreArea(normalizedName)
+    local startBase = isConfiguredStartBase(normalizedName)
+    local initialOwner = determineInitialOwner(normalizedName, theatreArea, coalitionName)
 
-    local isCaptureCandidate = isStrategicAirfield or isSecondaryAirfield
-    local isMissionCandidate = isStrategicAirfield or isSecondaryAirfield
-    local isLogisticsCandidate = configuredStartBase or isStrategicAirfield or isSecondaryAirfield or isHeliport or isFarp or isTacticalPad
-    local isPotentialRedStrategicBase = theatreArea == "SYRIAN_MAINLAND" and initialOwner == "RED" and isStrategicAirfield
+    local classification, classificationReason, classificationKeyword = classifyAirbase(normalizedName, dcsCategoryName)
+    local strategicRelevance = calculateStrategicRelevance(classification, theatreArea, initialOwner, startBase)
+    local zoneProfile = getZoneProfile(classification)
+
+    local isStrategicAirfield = classification == AirbaseScanner.Categories.STRATEGIC_AIRFIELD
+    local isSecondaryAirfield = classification == AirbaseScanner.Categories.SECONDARY_AIRFIELD
+    local isHeliport = classification == AirbaseScanner.Categories.HELIPORT
+    local isHelipad = classification == AirbaseScanner.Categories.HELIPAD
+    local isMedicalPad = classification == AirbaseScanner.Categories.MEDICAL_PAD
+    local isFarp = classification == AirbaseScanner.Categories.FARP
+    local isTacticalPad = classification == AirbaseScanner.Categories.TACTICAL_PAD
+    local isUnknown = classification == AirbaseScanner.Categories.UNKNOWN
+
+    local isCaptureCandidate = isStrategicAirfield == true or isSecondaryAirfield == true
+    local isMissionCandidate = isStrategicAirfield == true or isSecondaryAirfield == true
+    local isLogisticsCandidate =
+        startBase == true
+        or isStrategicAirfield == true
+        or isSecondaryAirfield == true
+        or isHeliport == true
+        or isFarp == true
+        or isTacticalPad == true
+
+    local isPotentialRedStrategicBase =
+        theatreArea == "SYRIAN_MAINLAND"
+        and initialOwner == "RED"
+        and isStrategicAirfield == true
 
     return {
         key = key,
         name = name,
-        displayName = readableName(name),
-        normalizedName = normalizedNameValue,
+        displayName = name,
+        normalizedName = normalizedName,
 
         source = "DCS_WORLD_AIRBASE_SCAN",
         index = index or 0,
         scannedAt = getCurrentTime(),
 
         dcsObject = airbaseObject,
-        dcsDescription = desc,
+        dcsDescription = description,
         dcsCategoryId = dcsCategoryId,
         dcsCategoryName = dcsCategoryName,
 
-        -- Backward-compatible fields used by the current ZoneFactory.
+        -- Compatibility fields for current ZoneFactory.
         categoryId = dcsCategoryId,
         categoryName = dcsCategoryName,
         coalitionId = coalitionId,
         coalitionName = coalitionName,
-        position = point,
+        position = position,
 
-        -- Theater Command classification.
-        classification = classification.category,
-        classificationReason = classification.reason,
-        classificationKeyword = classification.matchedKeyword,
-        airbaseType = classification.category,
+        -- Theater Command classification fields.
+        classification = classification,
+        classificationReason = classificationReason,
+        classificationKeyword = classificationKeyword,
+        airbaseType = classification,
         strategicRelevance = strategicRelevance,
         zoneProfile = zoneProfile,
 
@@ -1070,7 +1083,7 @@ local function createAirbaseRecord(airbaseObject, index)
         owner = initialOwner,
         status = "ACTIVE",
 
-        isStartBase = configuredStartBase,
+        isStartBase = startBase,
         isCyprus = theatreArea == "CYPRUS",
         isSyrianMainland = theatreArea == "SYRIAN_MAINLAND",
 
@@ -1096,65 +1109,98 @@ local function createAirbaseRecord(airbaseObject, index)
     }
 end
 
+local function registerClassification(state, record)
+    local scannerListName = getScannerListName(record.classification)
+    local stateListName = getStateListName(record.classification)
+
+    addRecordToList(AirbaseScanner.classificationLists.all, record.key, record)
+    addRecordToList(AirbaseScanner.classificationLists[scannerListName], record.key, record)
+
+    if state ~= nil and state.Bases ~= nil then
+        addRecordToList(state.Bases.byClassification[record.classification], record.key, record)
+        addRecordToList(state.Bases[stateListName], record.key, record)
+        incrementClassificationCounter(state, record.classification, scannerListName)
+    end
+
+    if record.isCaptureCandidate == true then
+        addRecordToList(AirbaseScanner.classificationLists.captureCandidates, record.key, record)
+
+        if state ~= nil and state.Bases ~= nil then
+            addRecordToList(state.Bases.captureCandidates, record.key, record)
+        end
+    end
+
+    if record.isMissionCandidate == true then
+        addRecordToList(AirbaseScanner.classificationLists.missionCandidates, record.key, record)
+
+        if state ~= nil and state.Bases ~= nil then
+            addRecordToList(state.Bases.missionCandidates, record.key, record)
+        end
+    end
+
+    if record.isLogisticsCandidate == true then
+        addRecordToList(AirbaseScanner.classificationLists.logisticsCandidates, record.key, record)
+
+        if state ~= nil and state.Bases ~= nil then
+            addRecordToList(state.Bases.logisticsCandidates, record.key, record)
+        end
+    end
+
+    if record.isStartBase == true then
+        addRecordToList(AirbaseScanner.classificationLists.blueStartBases, record.key, record)
+
+        if state ~= nil and state.Bases ~= nil then
+            addRecordToList(state.Bases.blueStartBases, record.key, record)
+            state.Bases.blueStartBase = record
+        end
+    end
+
+    if record.isPotentialRedStrategicBase == true then
+        addRecordToList(AirbaseScanner.classificationLists.potentialRedStrategicBases, record.key, record)
+
+        if state ~= nil and state.Bases ~= nil then
+            addRecordToList(state.Bases.potentialRedStrategicBases, record.key, record)
+        end
+    end
+end
+
 local function registerAirbase(state, record)
-    if record == nil then
-        return
+    if record == nil or record.key == nil then
+        return false
     end
 
     AirbaseScanner.registry[record.key] = record
     TC.World.Airbases[record.key] = record
 
-    if state and state.Bases then
+    if state ~= nil and state.Bases ~= nil then
         state.Bases.registry[record.key] = record
-        state.Bases.total = state.Bases.total + 1
-        countOwner(state, record.currentOwner)
+        state.Bases.total = (state.Bases.total or 0) + 1
+        incrementOwnerCounter(state, record.currentOwner)
     end
 
     registerClassification(state, record)
-end
 
-local function markStateDirty()
-    local state = getState()
-
-    if state and state.markDirty then
-        state.markDirty(AirbaseScanner.name)
-    end
-end
-
-local function setModuleStatus(status, details)
-    local state = getState()
-
-    if state and state.setModuleStatus then
-        state.setModuleStatus(AirbaseScanner.name, status, details)
-    end
-end
-
-local function setFeatureStatus(status, details)
-    local state = getState()
-
-    if state and state.setFeatureStatus then
-        state.setFeatureStatus("world.airbaseScanner", status, details)
-    end
+    return true
 end
 
 local function buildClassificationSummary()
     local lists = AirbaseScanner.classificationLists
 
     return {
-        total = tableCount(lists.all),
-        strategicAirfields = tableCount(lists.strategicAirfields),
-        secondaryAirfields = tableCount(lists.secondaryAirfields),
-        heliports = tableCount(lists.heliports),
-        helipads = tableCount(lists.helipads),
-        medicalPads = tableCount(lists.medicalPads),
-        farps = tableCount(lists.farps),
-        tacticalPads = tableCount(lists.tacticalPads),
-        unknown = tableCount(lists.unknown),
-        captureCandidates = tableCount(lists.captureCandidates),
-        missionCandidates = tableCount(lists.missionCandidates),
-        logisticsCandidates = tableCount(lists.logisticsCandidates),
-        blueStartBases = tableCount(lists.blueStartBases),
-        potentialRedStrategicBases = tableCount(lists.potentialRedStrategicBases)
+        total = countTableKeys(lists.all),
+        strategicAirfields = countTableKeys(lists.strategicAirfields),
+        secondaryAirfields = countTableKeys(lists.secondaryAirfields),
+        heliports = countTableKeys(lists.heliports),
+        helipads = countTableKeys(lists.helipads),
+        medicalPads = countTableKeys(lists.medicalPads),
+        farps = countTableKeys(lists.farps),
+        tacticalPads = countTableKeys(lists.tacticalPads),
+        unknown = countTableKeys(lists.unknown),
+        captureCandidates = countTableKeys(lists.captureCandidates),
+        missionCandidates = countTableKeys(lists.missionCandidates),
+        logisticsCandidates = countTableKeys(lists.logisticsCandidates),
+        blueStartBases = countTableKeys(lists.blueStartBases),
+        potentialRedStrategicBases = countTableKeys(lists.potentialRedStrategicBases)
     }
 end
 
@@ -1171,10 +1217,11 @@ local function buildClassificationSummaryText(summary)
         .. ", captureCandidates=" .. tostring(summary.captureCandidates)
         .. ", missionCandidates=" .. tostring(summary.missionCandidates)
         .. ", logisticsCandidates=" .. tostring(summary.logisticsCandidates)
+        .. ", blueStartBases=" .. tostring(summary.blueStartBases)
         .. ", redStrategicCandidates=" .. tostring(summary.potentialRedStrategicBases)
 end
 
-local function updateWorldScanState(state, scanCount)
+local function updateWorldScanState(state, detectedCount)
     if state == nil then
         return
     end
@@ -1184,7 +1231,7 @@ local function updateWorldScanState(state, scanCount)
 
     state.World.airbaseScan.completed = true
     state.World.airbaseScan.scannedAt = AirbaseScanner.lastScanTime
-    state.World.airbaseScan.totalDetected = scanCount
+    state.World.airbaseScan.totalDetected = detectedCount
     state.World.airbaseScan.classificationReady = true
     state.World.airbaseScan.summary = buildClassificationSummary()
 end
@@ -1192,55 +1239,55 @@ end
 function AirbaseScanner.scan()
     if world == nil or world.getAirbases == nil then
         AirbaseScanner.failed = true
-        setModuleStatus("FAILED", "DCS world.getAirbases unavailable")
-        setFeatureStatus("FAILED", "DCS world.getAirbases unavailable")
+        setModuleStatus("FAILED")
+        setFeatureStatus(false)
         logError("Cannot scan airbases: world.getAirbases is unavailable")
         return false
     end
 
     local state = ensureStateTables()
-
     resetScannerTables()
 
     local success, airbases = pcall(world.getAirbases)
 
-    if not success or type(airbases) ~= "table" then
+    if success ~= true or type(airbases) ~= "table" then
         AirbaseScanner.failed = true
-        setModuleStatus("FAILED", "DCS world.getAirbases call failed")
-        setFeatureStatus("FAILED", "DCS world.getAirbases call failed")
-        logError("Cannot scan airbases: DCS world.getAirbases call failed")
+        setModuleStatus("FAILED")
+        setFeatureStatus(false)
+        logError("Cannot scan airbases: world.getAirbases call failed")
         return false
     end
 
-    local scanCount = 0
+    local detectedCount = 0
 
     for index, airbaseObject in ipairs(airbases) do
         local recordSuccess, record = pcall(createAirbaseRecord, airbaseObject, index)
 
-        if recordSuccess and record ~= nil then
-            registerAirbase(state, record)
-            scanCount = scanCount + 1
+        if recordSuccess == true and record ~= nil then
+            if registerAirbase(state, record) == true then
+                detectedCount = detectedCount + 1
+            end
         else
             logWarn("Skipped airbase-like object at index " .. tostring(index) .. " because record creation failed")
         end
     end
 
     AirbaseScanner.lastScanTime = getCurrentTime()
-    AirbaseScanner.lastScanCount = scanCount
+    AirbaseScanner.lastScanCount = detectedCount
     AirbaseScanner.finished = true
     AirbaseScanner.failed = false
 
-    updateWorldScanState(state, scanCount)
-    markStateDirty()
+    updateWorldScanState(state, detectedCount)
+    markStateDirty("airbase_scan_completed")
 
     local summary = buildClassificationSummary()
 
-    logInfo("Airbase scan completed: " .. tostring(scanCount) .. " airbase-like objects registered")
+    logInfo("Airbase scan completed: " .. tostring(detectedCount) .. " airbase-like objects registered")
     logInfo("Airbase classification summary: " .. buildClassificationSummaryText(summary))
 
     local startBase = AirbaseScanner.getStartBase()
 
-    if startBase then
+    if startBase ~= nil then
         logInfo(
             "Blue start base confirmed: "
             .. tostring(startBase.name)
@@ -1253,29 +1300,30 @@ function AirbaseScanner.scan()
         logWarn("Blue start base was not found during airbase scan")
     end
 
-    setModuleStatus("READY", "Registered and classified " .. tostring(scanCount) .. " airbase-like objects")
-    setFeatureStatus("READY", "Airbase classification ready")
+    setModuleStatus("READY")
+    setFeatureStatus(true)
 
     return true
 end
 
 function AirbaseScanner.start()
-    if AirbaseScanner.started then
+    if AirbaseScanner.started == true and AirbaseScanner.finished == true and AirbaseScanner.failed ~= true then
         logDebug("Airbase scanner already started")
         return true
     end
 
     AirbaseScanner.started = true
+    AirbaseScanner.finished = false
     AirbaseScanner.failed = false
 
-    setModuleStatus("STARTING", "Scanning DCS world airbases")
-    setFeatureStatus("STARTING", "Scanning and classifying DCS world airbases")
+    setModuleStatus("STARTING")
+    setFeatureStatus(false)
 
     logInfo("Starting airbase scanner")
 
     local success = AirbaseScanner.scan()
 
-    if success then
+    if success == true then
         logInfo("Airbase scanner started successfully")
         return true
     end
@@ -1283,6 +1331,12 @@ function AirbaseScanner.start()
     AirbaseScanner.failed = true
     logError("Airbase scanner failed")
     return false
+end
+
+function AirbaseScanner.stop()
+    AirbaseScanner.started = false
+    logInfo("Airbase scanner stopped")
+    return true
 end
 
 function AirbaseScanner.getRegistry()
@@ -1302,13 +1356,15 @@ function AirbaseScanner.getAirbase(key)
         return nil
     end
 
-    local normalizedKey = normalizeName(key)
+    local direct = AirbaseScanner.registry[key]
 
-    if AirbaseScanner.registry[normalizedKey] then
-        return AirbaseScanner.registry[normalizedKey]
+    if direct ~= nil then
+        return direct
     end
 
-    return AirbaseScanner.registry[key]
+    local normalizedKey = normalizeName(key)
+
+    return AirbaseScanner.registry[normalizedKey]
 end
 
 function AirbaseScanner.getAirbaseByName(name)
@@ -1323,7 +1379,7 @@ function AirbaseScanner.getAirbaseByName(name)
             return record
         end
 
-        if containsKeyword(record.normalizedName, normalizedSearchName) then
+        if containsKeyword(record.normalizedName, normalizedSearchName) == true then
             return record
         end
     end
@@ -1333,7 +1389,7 @@ end
 
 function AirbaseScanner.getStartBase()
     for _, record in pairs(AirbaseScanner.registry) do
-        if record.isStartBase then
+        if record.isStartBase == true then
             return record
         end
     end
@@ -1342,7 +1398,7 @@ function AirbaseScanner.getStartBase()
 end
 
 function AirbaseScanner.getCount()
-    return tableCount(AirbaseScanner.registry)
+    return countTableKeys(AirbaseScanner.registry)
 end
 
 function AirbaseScanner.getByOwner(owner)
@@ -1381,14 +1437,14 @@ function AirbaseScanner.getByTheatreArea(theatreArea)
     return result
 end
 
-function AirbaseScanner.getByClassification(classificationCategory)
+function AirbaseScanner.getByClassification(classification)
     local result = {}
 
-    if classificationCategory == nil then
+    if classification == nil then
         return result
     end
 
-    local normalizedClassification = string.upper(tostring(classificationCategory))
+    local normalizedClassification = string.upper(tostring(classification))
 
     for key, record in pairs(AirbaseScanner.registry) do
         if record.classification == normalizedClassification then
@@ -1452,6 +1508,8 @@ function AirbaseScanner.summary()
 
     return {
         name = AirbaseScanner.name,
+        displayName = AirbaseScanner.displayName,
+        path = AirbaseScanner.path,
         version = AirbaseScanner.version,
         loaded = AirbaseScanner.loaded,
         started = AirbaseScanner.started,
@@ -1464,10 +1522,17 @@ function AirbaseScanner.summary()
     }
 end
 
-AirbaseScanner.loaded = true
-
 TC.World.AirbaseScanner = AirbaseScanner
 TC.world.AirbaseScanner = AirbaseScanner
-TC.modules.airbaseScanner = AirbaseScanner
 
+TC.modules.airbaseScanner = {
+    name = AirbaseScanner.name,
+    path = AirbaseScanner.path,
+    loaded = true,
+    version = AirbaseScanner.version
+}
+
+setModuleStatus("LOADED")
 logInfo("Loaded " .. AirbaseScanner.path .. " v" .. AirbaseScanner.version)
+
+return AirbaseScanner
