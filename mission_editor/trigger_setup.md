@@ -1,12 +1,12 @@
 # Trigger Setup
 
-Diese Datei beschreibt die konkrete Trigger-Struktur für den ersten Mission-Editor-Starttest von **Theater Command DCS**.
+Diese Datei dokumentiert die konkrete Trigger-Struktur im DCS Mission Editor für **Theater Command DCS**.
 
 Die erste Kampagne trägt den Arbeitstitel:
 
     Operation Levant Reclamation
 
-Die erste technische Entwicklungsmission heißt:
+Die aktuelle technische Entwicklungsmission heißt:
 
     Operation_Levant_Reclamation_DEV.miz
 
@@ -14,987 +14,789 @@ Die erste technische Entwicklungsmission heißt:
 
 ## Zweck dieser Datei
 
-Diese Datei legt fest, welche Trigger im DCS Mission Editor für den ersten technischen Starttest angelegt werden.
+Diese Datei beschreibt die Trigger, die im DCS Mission Editor für den ersten technischen Starttest verwendet wurden.
 
-Der Fokus liegt ausschließlich auf:
+Der Fokus liegt nicht auf Kampagnenlogik.
+
+Der Fokus liegt nur auf:
 
 - Framework-Ladung
 - Source-Ladung
 - Loader-Start
 - Main-Start
-- `dcs.log`-Kontrolle
-
-Es wird noch keine spielbare Kampagne gebaut.
-
-Es wird noch keine vollständige Frontlinie gebaut.
-
-Es wird noch keine IADS-Struktur gebaut.
-
-Es wird noch keine CTLD-Logistik getestet.
+- Prüfung der `dcs.log`
+- technischem Nachweis, dass Theater Command DCS im DCS Mission Scripting Environment startet
 
 ---
 
-## Grundprinzip
+## Grundsatz
 
-Für den ersten realen DCS-Test wird die sichere Einzeldatei-Ladung genutzt.
+Der Mission Editor bleibt in Theater Command DCS die Bühne.
 
-Name:
+Die Kampagnenlogik wird nicht über große Triggerketten gebaut.
 
-    Starttest-Variante A
+Grundprinzip:
 
-Grund:
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis
 
-`src/loader.lua` kann grundsätzlich Dateien per `dofile` nachladen.
+Die Trigger in dieser Datei dienen nur dem technischen Starttest.
 
-Im ersten praktischen DCS-Test wird aber nicht vorausgesetzt, dass `dofile` im DCS Mission Scripting Environment zuverlässig mit Projektpfaden funktioniert.
+Sie sind nicht die finale Kampagnenlogik.
 
-Deshalb werden zuerst alle aktiven Source-Dateien einzeln per Mission Editor geladen.
+---
 
-Danach wird `src/loader.lua` zuletzt geladen.
+## Aktueller Status
+
+Stand: 2026-06-16
+
+Starttest-Variante A wurde im DCS Mission Editor vollständig angelegt und erfolgreich getestet.
+
+Ergebnis:
+
+    Bestanden
+
+Bestätigt wurde:
+
+- MIST wird geladen
+- MOOSE wird geladen
+- CTLD-i18n wird geladen
+- CTLD wird geladen
+- Skynet IADS wird geladen
+- Theater Command Core wird geladen
+- Theater Command World wird geladen
+- Theater Command Campaign wird geladen
+- Theater Command Logistics wird geladen
+- Theater Command Missions wird geladen
+- Theater Command AI wird geladen
+- `src/main.lua` wird geladen
+- `src/loader.lua` wird zuletzt geladen
+- Loader startet
+- Frameworks werden erkannt
+- Main startet
+- Runtime-Systeme werden initialisiert
+- Airbase-Scanner läuft
+- Zone-Factory läuft
+- Loader beendet sauber
+
+Wichtiger Befund:
+
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
+
+Bewertung:
+
+    Die Triggerkette für Starttest-Variante A funktioniert.
+    Die hohe Zahl erkannter Airbase-/Helipad-Objekte ist kein Triggerfehler.
+    Der Airbase-Scanner muss später fachlich filtern und klassifizieren.
+
+---
+
+## Aktuelle DEV-Mission
+
+Dateiname:
+
+    Operation_Levant_Reclamation_DEV.miz
+
+Aktueller Inhalt:
+
+    Map: Syria
+    Koalitionspreset: Modern
+    Blue Start: Akrotiri / Zypern
+    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
+    Trigger: Starttest-Variante A vollständig angelegt
+    keine rote Frontlinie
+    keine IADS-Stellungen
+    keine CTLD-Zonen
+    keine Template-Gruppen
+    keine F10-Menüs
+
+Diese Mission ist aktuell nur ein technischer Testträger.
+
+---
+
+## Lokaler Repository-Pfad
+
+Die lokale Repository-Kopie auf dem DCS-PC liegt aktuell unter:
+
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\
+
+Alle Script-Dateien werden aus dieser lokalen Repository-Kopie geladen.
+
+---
+
+## Allgemeine Trigger-Einstellungen
+
+Jeder Trigger der Starttest-Variante A verwendet diese Grundstruktur:
+
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
+    Bedingung: MEHR ZEIT / TIME MORE
+    Aktion: SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
+
+Die Trigger werden zeitversetzt geladen, damit die Reihenfolge eindeutig bleibt.
+
+---
+
+## Starttest-Variante A
+
+Status:
+
+    Erfolgreich getestet
 
 Ziel:
 
-    keine harte dofile-Abhängigkeit im ersten Test
-    Frameworks laden
-    aktive Source-Dateien laden
-    main.lua verfügbar machen
-    loader.lua zuletzt starten
-    dcs.log prüfen
+    sichere Einzeldatei-Ladung ohne harte dofile-Abhängigkeit
+
+Grund:
+
+- DCS lädt jede Datei direkt über den Mission Editor
+- Fehler lassen sich leichter einer Datei zuordnen
+- die DCS-Sandbox für `dofile` muss noch nicht funktionieren
+- die Source-Dateien werden trotzdem im echten DCS-Kontext getestet
+- die `dcs.log` zeigt klar, welche Systeme starten
 
 ---
 
-## Trigger-Typ
-
-Für den ersten Test werden einfache zeitversetzte Trigger genutzt.
-
-Empfohlener Trigger-Typ:
-
-    ONCE
-
-Empfohlene Bedingung:
-
-    TIME MORE
-
-Empfohlene Aktion:
-
-    DO SCRIPT FILE
-
-Keine komplexen Bedingungen.
-
-Keine Flags.
-
-Keine Randomisierung.
-
-Keine Wiederholtrigger.
-
----
-
-## Allgemeine Trigger-Regeln
-
-Für jeden Lua-Ladeschritt wird ein eigener Trigger angelegt.
-
-Jeder Trigger hat:
-
-- eindeutigen Namen
-- eine `TIME MORE`-Bedingung
-- genau eine `DO SCRIPT FILE`-Aktion
-- keine zusätzliche Logik
-
-Die Trigger werden zeitlich versetzt, damit Fehler im `dcs.log` leichter einer Datei zugeordnet werden können.
-
----
-
-## Trigger-Namensschema
-
-Trigger für Theater Command DCS beginnen mit:
-
-    TC_LOAD_
-
-Beispiele:
-
-    TC_LOAD_MIST
-    TC_LOAD_MOOSE
-    TC_LOAD_TC_CONFIG
-    TC_LOAD_TC_LOADER
-
-Das Namensschema soll klar lesbar sein.
-
-Nicht verwenden:
-
-    Trigger 1
-    Load Script
-    Script Test
-    Lua Start
-    Test Trigger
-
----
-
-## Starttest-Variante A — Gesamtreihenfolge
-
-Die erste sichere Ladevariante lautet:
-
-    1. vendor/mist/mist.lua
-    2. vendor/moose/Moose.lua
-    3. vendor/ctld/CTLD-i18n.lua
-    4. vendor/ctld/CTLD.lua
-    5. vendor/skynet-iads/SkynetIADS.lua
-    6. src/core/tc_config.lua
-    7. src/core/tc_logger.lua
-    8. src/core/tc_state.lua
-    9. src/core/tc_utils.lua
-    10. src/core/tc_scheduler.lua
-    11. src/world/tc_airbase_scanner.lua
-    12. src/world/tc_zone_factory.lua
-    13. src/campaign/tc_capture_system.lua
-    14. src/campaign/tc_persistence_system.lua
-    15. src/logistics/tc_logistics_delivery.lua
-    16. src/logistics/tc_fob_system.lua
-    17. src/missions/tc_mission_generator.lua
-    18. src/ai/tc_ai_cap_manager.lua
-    19. src/main.lua
-    20. src/loader.lua
-
-Wichtig:
-
-`src/loader.lua` wird in dieser Testvariante bewusst zuletzt geladen.
-
----
-
-## Trigger-Liste für Starttest-Variante A
+## Vollständige Trigger-Reihenfolge
 
 ### 1. MIST laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_MIST
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_MIST
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 1
+    MEHR ZEIT / TIME MORE
+    Sekunden: 1
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    vendor/mist/mist.lua
-
-Zweck:
-
-    MIST als technische Grundlage laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\vendor\mist\mist.lua
 
 ---
 
 ### 2. MOOSE laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_MOOSE
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_MOOSE
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 2
+    MEHR ZEIT / TIME MORE
+    Sekunden: 2
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    vendor/moose/Moose.lua
-
-Zweck:
-
-    MOOSE als objektorientierte DCS-Framework-Schicht laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\vendor\moose\Moose.lua
 
 ---
 
-### 3. CTLD-i18n laden
+### 3. CTLD i18n laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_CTLD_I18N
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_CTLD_I18N
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 3
+    MEHR ZEIT / TIME MORE
+    Sekunden: 3
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    vendor/ctld/CTLD-i18n.lua
-
-Zweck:
-
-    CTLD-Sprachdatei vor CTLD laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\vendor\ctld\CTLD-i18n.lua
 
 ---
 
 ### 4. CTLD laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_CTLD
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_CTLD
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 4
+    MEHR ZEIT / TIME MORE
+    Sekunden: 4
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    vendor/ctld/CTLD.lua
-
-Zweck:
-
-    CTLD als Logistik-Framework laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\vendor\ctld\CTLD.lua
 
 ---
 
 ### 5. Skynet IADS laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_SKYNET_IADS
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_SKYNET_IADS
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 5
+    MEHR ZEIT / TIME MORE
+    Sekunden: 5
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    vendor/skynet-iads/SkynetIADS.lua
-
-Zweck:
-
-    Skynet IADS als spätere IADS-Grundlage laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\vendor\skynet-iads\SkynetIADS.lua
 
 ---
 
-### 6. Core Config laden
+## Theater-Command-Core laden
 
-Trigger-Name:
+### 6. TC Config laden
 
-    TC_LOAD_TC_CONFIG
+Trigger:
 
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_CONFIG
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 7
+    MEHR ZEIT / TIME MORE
+    Sekunden: 7
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/core/tc_config.lua
-
-Zweck:
-
-    zentrale Theater-Command-Konfiguration laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\core\tc_config.lua
 
 ---
 
-### 7. Core Logger laden
+### 7. TC Logger laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_TC_LOGGER
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_LOGGER
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 8
+    MEHR ZEIT / TIME MORE
+    Sekunden: 8
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/core/tc_logger.lua
-
-Zweck:
-
-    Logging für Theater Command DCS laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\core\tc_logger.lua
 
 ---
 
-### 8. Core State laden
+### 8. TC State laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_TC_STATE
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_STATE
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 9
+    MEHR ZEIT / TIME MORE
+    Sekunden: 9
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/core/tc_state.lua
-
-Zweck:
-
-    zentralen Theater-Command-State laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\core\tc_state.lua
 
 ---
 
-### 9. Core Utils laden
+### 9. TC Utils laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_TC_UTILS
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_UTILS
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 10
+    MEHR ZEIT / TIME MORE
+    Sekunden: 10
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/core/tc_utils.lua
-
-Zweck:
-
-    Utility-Funktionen laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\core\tc_utils.lua
 
 ---
 
-### 10. Core Scheduler laden
+### 10. TC Scheduler laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_TC_SCHEDULER
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_SCHEDULER
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 11
+    MEHR ZEIT / TIME MORE
+    Sekunden: 11
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/core/tc_scheduler.lua
-
-Zweck:
-
-    Scheduler-Grundfunktionen laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\core\tc_scheduler.lua
 
 ---
 
-### 11. Airbase Scanner laden
+## Theater-Command-World laden
 
-Trigger-Name:
+### 11. TC Airbase Scanner laden
 
-    TC_LOAD_TC_AIRBASE_SCANNER
+Trigger:
 
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_AIRBASE_SCANNER
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 12
+    MEHR ZEIT / TIME MORE
+    Sekunden: 12
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/world/tc_airbase_scanner.lua
-
-Zweck:
-
-    Airbase-Scanner laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\world\tc_airbase_scanner.lua
 
 ---
 
-### 12. Zone Factory laden
+### 12. TC Zone Factory laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_TC_ZONE_FACTORY
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_ZONE_FACTORY
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 13
+    MEHR ZEIT / TIME MORE
+    Sekunden: 13
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/world/tc_zone_factory.lua
-
-Zweck:
-
-    Zone-Factory laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\world\tc_zone_factory.lua
 
 ---
 
-### 13. Capture System laden
+## Theater-Command-Campaign laden
 
-Trigger-Name:
+### 13. TC Capture System laden
 
-    TC_LOAD_TC_CAPTURE_SYSTEM
+Trigger:
 
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_CAPTURE_SYSTEM
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 14
+    MEHR ZEIT / TIME MORE
+    Sekunden: 14
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/campaign/tc_capture_system.lua
-
-Zweck:
-
-    strategisches Capture-System laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\campaign\tc_capture_system.lua
 
 ---
 
-### 14. Persistence System laden
+### 14. TC Persistence System laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_TC_PERSISTENCE_SYSTEM
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_PERSISTENCE_SYSTEM
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 15
+    MEHR ZEIT / TIME MORE
+    Sekunden: 15
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/campaign/tc_persistence_system.lua
-
-Zweck:
-
-    In-Memory-Persistenzsystem laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\campaign\tc_persistence_system.lua
 
 ---
 
-### 15. Logistics Delivery laden
+## Theater-Command-Logistics laden
 
-Trigger-Name:
+### 15. TC Logistics Delivery laden
 
-    TC_LOAD_TC_LOGISTICS_DELIVERY
+Trigger:
 
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_LOGISTICS_DELIVERY
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 16
+    MEHR ZEIT / TIME MORE
+    Sekunden: 16
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/logistics/tc_logistics_delivery.lua
-
-Zweck:
-
-    Logistiklieferungssystem laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\logistics\tc_logistics_delivery.lua
 
 ---
 
-### 16. FOB System laden
+### 16. TC FOB System laden
 
-Trigger-Name:
+Trigger:
 
-    TC_LOAD_TC_FOB_SYSTEM
-
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_FOB_SYSTEM
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 17
+    MEHR ZEIT / TIME MORE
+    Sekunden: 17
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/logistics/tc_fob_system.lua
-
-Zweck:
-
-    FOB-System laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\logistics\tc_fob_system.lua
 
 ---
 
-### 17. Mission Generator laden
+## Theater-Command-Missions laden
 
-Trigger-Name:
+### 17. TC Mission Generator laden
 
-    TC_LOAD_TC_MISSION_GENERATOR
+Trigger:
 
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_MISSION_GENERATOR
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 18
+    MEHR ZEIT / TIME MORE
+    Sekunden: 18
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/missions/tc_mission_generator.lua
-
-Zweck:
-
-    Missionsgenerator laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\missions\tc_mission_generator.lua
 
 ---
 
-### 18. AI CAP Manager laden
+## Theater-Command-AI laden
 
-Trigger-Name:
+### 18. TC AI CAP Manager laden
 
-    TC_LOAD_TC_AI_CAP_MANAGER
+Trigger:
 
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_AI_CAP_MANAGER
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 19
+    MEHR ZEIT / TIME MORE
+    Sekunden: 19
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/ai/tc_ai_cap_manager.lua
-
-Zweck:
-
-    AI-CAP-Manager laden.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\ai\tc_ai_cap_manager.lua
 
 ---
 
-### 19. Main laden
+## Theater-Command-Main laden
 
-Trigger-Name:
+### 19. TC Main laden
 
-    TC_LOAD_TC_MAIN
+Trigger:
 
-Typ:
-
-    ONCE
+    Name: TC_LOAD_TC_MAIN
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
 
 Bedingung:
 
-    TIME MORE 20
+    MEHR ZEIT / TIME MORE
+    Sekunden: 20
 
 Aktion:
 
-    DO SCRIPT FILE
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
-    src/main.lua
-
-Zweck:
-
-    Main-Initialisierung verfügbar machen.
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\main.lua
 
 Wichtig:
 
-`src/main.lua` soll durch das Laden noch nicht selbst starten.
-
-Der Start erfolgt später durch `src/loader.lua`.
-
----
-
-### 20. Loader laden
-
-Trigger-Name:
-
-    TC_LOAD_TC_LOADER
-
-Typ:
-
-    ONCE
-
-Bedingung:
-
-    TIME MORE 22
-
-Aktion:
-
-    DO SCRIPT FILE
-
-Datei:
-
-    src/loader.lua
-
-Zweck:
-
-    Theater-Command-Loader starten.
-
-Der Loader soll:
-
-- Frameworks prüfen
-- bereits geladene Module erkennen
-- Main starten
-- Startstatus protokollieren
-- Fehler sichtbar machen
-
----
-
-## Kompakte Übersicht als Tabelle
-
-| Reihenfolge | Trigger | TIME MORE | Datei |
-|---|---|---:|---|
-| 1 | `TC_LOAD_MIST` | 1 | `vendor/mist/mist.lua` |
-| 2 | `TC_LOAD_MOOSE` | 2 | `vendor/moose/Moose.lua` |
-| 3 | `TC_LOAD_CTLD_I18N` | 3 | `vendor/ctld/CTLD-i18n.lua` |
-| 4 | `TC_LOAD_CTLD` | 4 | `vendor/ctld/CTLD.lua` |
-| 5 | `TC_LOAD_SKYNET_IADS` | 5 | `vendor/skynet-iads/SkynetIADS.lua` |
-| 6 | `TC_LOAD_TC_CONFIG` | 7 | `src/core/tc_config.lua` |
-| 7 | `TC_LOAD_TC_LOGGER` | 8 | `src/core/tc_logger.lua` |
-| 8 | `TC_LOAD_TC_STATE` | 9 | `src/core/tc_state.lua` |
-| 9 | `TC_LOAD_TC_UTILS` | 10 | `src/core/tc_utils.lua` |
-| 10 | `TC_LOAD_TC_SCHEDULER` | 11 | `src/core/tc_scheduler.lua` |
-| 11 | `TC_LOAD_TC_AIRBASE_SCANNER` | 12 | `src/world/tc_airbase_scanner.lua` |
-| 12 | `TC_LOAD_TC_ZONE_FACTORY` | 13 | `src/world/tc_zone_factory.lua` |
-| 13 | `TC_LOAD_TC_CAPTURE_SYSTEM` | 14 | `src/campaign/tc_capture_system.lua` |
-| 14 | `TC_LOAD_TC_PERSISTENCE_SYSTEM` | 15 | `src/campaign/tc_persistence_system.lua` |
-| 15 | `TC_LOAD_TC_LOGISTICS_DELIVERY` | 16 | `src/logistics/tc_logistics_delivery.lua` |
-| 16 | `TC_LOAD_TC_FOB_SYSTEM` | 17 | `src/logistics/tc_fob_system.lua` |
-| 17 | `TC_LOAD_TC_MISSION_GENERATOR` | 18 | `src/missions/tc_mission_generator.lua` |
-| 18 | `TC_LOAD_TC_AI_CAP_MANAGER` | 19 | `src/ai/tc_ai_cap_manager.lua` |
-| 19 | `TC_LOAD_TC_MAIN` | 20 | `src/main.lua` |
-| 20 | `TC_LOAD_TC_LOADER` | 22 | `src/loader.lua` |
-
----
-
-## Erwartete erfolgreiche Startkette
-
-Bei erfolgreichem Test soll die Startkette logisch so ablaufen:
-
-    MIST lädt
-    MOOSE lädt
-    CTLD-i18n lädt
-    CTLD lädt
-    Skynet IADS lädt
-    Core-Dateien laden
-    World-Dateien laden
-    Campaign-Dateien laden
-    Logistics-Dateien laden
-    Missions-Dateien laden
-    AI-Dateien laden
-    main.lua lädt
-    loader.lua lädt
-    loader.lua prüft Frameworks
-    loader.lua erkennt geladene Module
-    loader.lua startet main.lua
-    main.lua startet Runtime-Systeme
-    dcs.log zeigt keine schweren Lua-Fehler
-
----
-
-## Erwartete Pflichtmodule
-
-Der erste Test erwartet diese Theater-Command-Module als Pflichtmodule:
-
-- `TC.Config`
-- `TC.Logger`
-- `TC.State`
-- `TC.Utils`
-- `TC.Scheduler`
-- `TC.World.AirbaseScanner`
-- `TC.World.ZoneFactory`
-- `TC.Campaign.CaptureSystem`
-- `TC.Campaign.PersistenceSystem`
-- `TC.Logistics.Delivery`
-- `TC.Logistics.FobSystem`
-- `TC.Missions.Generator`
-- `TC.AI.CapManager`
-- `TC.Main`
-
-Wenn eines dieser Module fehlt, muss zuerst die Ursache geprüft werden.
-
----
-
-## Optionale Systeme
-
-Diese Systeme sind für den ersten Test noch optional:
-
-- IADS
-- UI
-- Debug
+    main.lua wird vor loader.lua geladen.
 
 Grund:
 
-Diese Bereiche besitzen aktuell README-Dateien, aber noch keine aktiven Lua-Module.
-
-Sie dürfen im ersten Test nicht als Fehler gewertet werden.
+    main.lua definiert TC.Main.
+    loader.lua startet danach die Main-Initialisierung.
 
 ---
 
-## Erwartete Log-Suche
+## Theater-Command-Loader laden
 
-Nach dem Starttest muss `dcs.log` geprüft werden.
+### 20. TC Loader laden
 
-Suchen nach:
+Trigger:
 
-    TC
-    Theater Command
-    ERROR
-    error
-    stack traceback
-    attempt to index
-    nil value
-    cannot open
-    dofile
-    MIST
-    MOOSE
-    CTLD
-    Skynet
+    Name: TC_LOAD_TC_LOADER
+    Typ: EINMALIG / ONCE
+    Ereignis: KEIN EVENT / NO EVENT
+
+Bedingung:
+
+    MEHR ZEIT / TIME MORE
+    Sekunden: 22
+
+Aktion:
+
+    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
+
+Datei:
+
+    C:\Users\Paul\Documents\GitHub\theater-command-dcs\src\loader.lua
 
 Wichtig:
 
-Ein erfolgreicher Test bedeutet nicht, dass die Kampagne spielbar ist.
-
-Ein erfolgreicher Test bedeutet nur:
-
-    Die aktuelle Source-Struktur lädt im DCS Mission Scripting Environment ohne schwere Fehler.
+    loader.lua ist die letzte eigene Datei in Starttest-Variante A.
 
 ---
 
-## Häufige Fehlerbilder
+## Kompakte Übersicht
 
-### Datei nicht gefunden
+Die getestete Reihenfolge lautet:
 
-Mögliche Meldungen:
-
-    cannot open
-    file not found
-    no such file
-
-Mögliche Ursachen:
-
-- Datei wurde im Mission Editor falsch ausgewählt
-- falsche Repository-Struktur lokal verwendet
-- Datei liegt nicht im Missionspaket
-- Pfad im Trigger stimmt nicht zur lokalen Datei
-
----
-
-### Modulname fehlt
-
-Mögliche Meldungen:
-
-    Required system not available
-    module_or_start_function_missing
-
-Mögliche Ursachen:
-
-- Datei wurde nicht geladen
-- Datei wurde in falscher Reihenfolge geladen
-- Modul registriert sich unter anderem Namen
-- Startfunktion fehlt
-- Lua-Fehler hat Dateiausführung vorher abgebrochen
+    1.  TC_LOAD_MIST                   -> TIME MORE 1  -> vendor/mist/mist.lua
+    2.  TC_LOAD_MOOSE                  -> TIME MORE 2  -> vendor/moose/Moose.lua
+    3.  TC_LOAD_CTLD_I18N              -> TIME MORE 3  -> vendor/ctld/CTLD-i18n.lua
+    4.  TC_LOAD_CTLD                   -> TIME MORE 4  -> vendor/ctld/CTLD.lua
+    5.  TC_LOAD_SKYNET_IADS            -> TIME MORE 5  -> vendor/skynet-iads/SkynetIADS.lua
+    6.  TC_LOAD_TC_CONFIG              -> TIME MORE 7  -> src/core/tc_config.lua
+    7.  TC_LOAD_TC_LOGGER              -> TIME MORE 8  -> src/core/tc_logger.lua
+    8.  TC_LOAD_TC_STATE               -> TIME MORE 9  -> src/core/tc_state.lua
+    9.  TC_LOAD_TC_UTILS               -> TIME MORE 10 -> src/core/tc_utils.lua
+    10. TC_LOAD_TC_SCHEDULER           -> TIME MORE 11 -> src/core/tc_scheduler.lua
+    11. TC_LOAD_TC_AIRBASE_SCANNER     -> TIME MORE 12 -> src/world/tc_airbase_scanner.lua
+    12. TC_LOAD_TC_ZONE_FACTORY        -> TIME MORE 13 -> src/world/tc_zone_factory.lua
+    13. TC_LOAD_TC_CAPTURE_SYSTEM      -> TIME MORE 14 -> src/campaign/tc_capture_system.lua
+    14. TC_LOAD_TC_PERSISTENCE_SYSTEM  -> TIME MORE 15 -> src/campaign/tc_persistence_system.lua
+    15. TC_LOAD_TC_LOGISTICS_DELIVERY  -> TIME MORE 16 -> src/logistics/tc_logistics_delivery.lua
+    16. TC_LOAD_TC_FOB_SYSTEM          -> TIME MORE 17 -> src/logistics/tc_fob_system.lua
+    17. TC_LOAD_TC_MISSION_GENERATOR   -> TIME MORE 18 -> src/missions/tc_mission_generator.lua
+    18. TC_LOAD_TC_AI_CAP_MANAGER      -> TIME MORE 19 -> src/ai/tc_ai_cap_manager.lua
+    19. TC_LOAD_TC_MAIN                -> TIME MORE 20 -> src/main.lua
+    20. TC_LOAD_TC_LOADER              -> TIME MORE 22 -> src/loader.lua
 
 ---
 
-### Framework fehlt
+## Ergebnis des ersten Tests
 
-Mögliche Meldungen:
+Starttest-Variante A wurde erfolgreich durchgeführt.
 
-    Framework missing
-    MIST missing
-    MOOSE missing
-    CTLD missing
-    Skynet IADS missing
+`dcs.log` bestätigte:
 
-Mögliche Ursachen:
+    [TC] Theater Command loader started
+    [TC] Framework available: MIST
+    [TC] Framework available: MOOSE
+    [TC] Framework available: CTLD
+    [TC] Framework available: Skynet IADS
+    [TC] Main start requested
+    [TC] Core check passed
+    [TC] Runtime systems initialized
+    [TC] Main initialized
+    [TC] Main started
+    [TC] Theater Command loader finished
 
-- Framework-Datei nicht geladen
-- falsche Reihenfolge
-- Framework-Dateiname falsch
-- Framework-Datei im Mission Editor nicht korrekt eingebunden
+Zusätzlich:
 
----
+    Airbase scan completed: 225 airbases registered
+    Zone factory completed: 225 zones registered
 
-### Lua-Syntaxfehler
+Bewertung:
 
-Mögliche Meldungen:
-
-    unexpected symbol
-    near
-    expected
-    stack traceback
-
-Mögliche Ursachen:
-
-- Kopierfehler
-- unvollständige Datei
-- falsche Zeichen
-- versehentlich beschädigte Lua-Datei
+    Starttest-Variante A bestanden.
 
 ---
 
-## Wenn der Test erfolgreich ist
+## Starttest-Variante B
 
-Wenn Starttest-Variante A erfolgreich ist, wird danach Starttest-Variante B vorbereitet.
+Status:
 
-Variante B lädt nur:
-
-    vendor/mist/mist.lua
-    vendor/moose/Moose.lua
-    vendor/ctld/CTLD-i18n.lua
-    vendor/ctld/CTLD.lua
-    vendor/skynet-iads/SkynetIADS.lua
-    src/loader.lua
-
-Ziel von Variante B:
-
-    prüfen, ob src/loader.lua die restlichen Source-Dateien per dofile selbst nachladen kann
-
----
-
-## Wenn der Test fehlschlägt
-
-Wenn Starttest-Variante A fehlschlägt:
-
-1. Nicht weiterbauen.
-2. `dcs.log` sichern.
-3. Fehlermeldung vollständig prüfen.
-4. Fehler einer konkreten Datei oder Ladephase zuordnen.
-5. Erst die Startkette stabilisieren.
-6. Danach erneut testen.
-
-Keine weiteren Systeme bauen, solange die Startkette nicht stabil ist.
-
----
-
-## Nicht in diesem Schritt bauen
-
-In diesem Schritt nicht bauen:
-
-- keine CTLD-Pickup-Logik
-- keine FOB-Logik im Mission Editor
-- keine IADS-Netzwerke
-- keine CAP-Spawns
-- keine Missionsauswahl
-- keine F10-Menüs
-- keine Debug-Menüs
-- keine Persistenzdateien
-- keine vollständige Frontlinie
-- keine große rote Ausgangsbesetzung
-
-Der Trigger-Test prüft ausschließlich die technische Ladefähigkeit.
-
----
-
-## Nächster Schritt nach dieser Datei
-
-Nach dieser Datei wird `TASKS.md` aktualisiert.
+    Noch nicht durchgeführt
 
 Ziel:
 
-- `mission_editor/trigger_setup.md` als erledigt markieren
-- nächsten praktischen Schritt festlegen
-- Vorbereitung der DEV-Mission als nächsten Arbeitspunkt setzen
+    Loader-only-Test mit dofile
 
-Danach beginnt die praktische Mission-Editor-Arbeit.
+Geplante Idee:
 
-Erster praktischer Schritt:
+Der Mission Editor lädt nur:
 
-    minimale Syria-DEV-Mission erstellen und Framework-/Source-Ladetrigger nach dieser Datei anlegen
+- Frameworks
+- `src/loader.lua`
+
+Danach soll `loader.lua` die restlichen Source-Dateien per `dofile` nachladen.
+
+Geplante Trigger-Reihenfolge:
+
+    1. TC_LOAD_MIST         -> TIME MORE 1 -> vendor/mist/mist.lua
+    2. TC_LOAD_MOOSE        -> TIME MORE 2 -> vendor/moose/Moose.lua
+    3. TC_LOAD_CTLD_I18N    -> TIME MORE 3 -> vendor/ctld/CTLD-i18n.lua
+    4. TC_LOAD_CTLD         -> TIME MORE 4 -> vendor/ctld/CTLD.lua
+    5. TC_LOAD_SKYNET_IADS  -> TIME MORE 5 -> vendor/skynet-iads/SkynetIADS.lua
+    6. TC_LOAD_TC_LOADER    -> TIME MORE 7 -> src/loader.lua
+
+Prüffragen:
+
+- Funktioniert `dofile` im DCS Mission Scripting Environment?
+- Kann `loader.lua` lokale Source-Dateien aus dem Repository nachladen?
+- Wird der Script-Root korrekt erkannt?
+- Blockiert die DCS-Sandbox?
+- Braucht das Projekt später eine Build-Datei?
+- Bleibt Einzeldatei-Ladung für Entwicklung sinnvoller?
+
+Variante B wird erst in einer späteren Session vorbereitet.
+
+---
+
+## Bekannte DCS-/Syria-Meldungen
+
+Während des ersten Tests traten auch DCS-/Syria-interne Meldungen auf.
+
+Beispiele:
+
+    INVALID ATC HI08
+    missing object declaration
+    texture not found
+    DTC_MANAGER Window pointer is null
+
+Bewertung:
+
+    Diese Meldungen sind aktuell kein Theater-Command-Blocker.
+    Entscheidend sind Lua-Fehler mit TC-Bezug, stack tracebacks oder fehlgeschlagene Framework-/Source-Ladung.
+
+---
+
+## Nächster technischer Schritt
+
+Der nächste technische Schritt ist nicht ein weiterer Trigger.
+
+Der nächste technische Schritt ist:
+
+    Airbase-Scanner nach dem Syria-Update fachlich filtern
+
+Grund:
+
+DCS liefert aktuell 225 Airbase-/Helipad-Objekte auf der Syria Map.
+
+Diese Objekte dürfen nicht alle als strategische Kampagnenbasen behandelt werden.
+
+Ziel:
+
+- strategische Airfields erkennen
+- Heliports erkennen
+- Helipads erkennen
+- Medical Pads erkennen
+- FARPs erkennen
+- sonstige Pads trennen
+- Capture-System nur auf strategische Basen anwenden
+- Missionsgenerator nur geeignete Ziele verwenden lassen
+- Zone-Factory an gefilterte Daten koppeln
+
+---
+
+## Aktueller Status
+
+Die Trigger-Struktur für Starttest-Variante A ist vollständig dokumentiert und praktisch getestet.
+
+Die DEV-Mission kann als technischer Testträger weiterverwendet werden.
+
+Der nächste relevante Entwicklungsschritt liegt im Code, nicht im Mission Editor.
