@@ -64,6 +64,7 @@ Aktuell erledigt:
 - AI-CAP-Modul erstellt
 - Loader schrittweise auf Core, World, Campaign, Logistics, Missions und AI erweitert
 - `src/main.lua` gegen aktuelle Modulnamen geprüft und angepasst
+- Loader- und Main-Startkette logisch geprüft
 - `src/README.md` nach Source-Ausbau aktualisiert
 - `TASKS.md` nach Source-Ausbau aktualisiert
 - `CHANGELOG.md` nach Source-Ausbau aktualisiert
@@ -79,12 +80,12 @@ Aktueller Projektzustand:
     Die Source-Grundstruktur ist angelegt.
     Erste eigene Lua-Module sind erstellt.
     Loader und Main sind auf die aktuellen Module ausgerichtet.
-    Der aktuelle Fokus liegt auf der technischen Startkettenprüfung.
+    Die Loader-/Main-Startkette ist logisch geprüft.
+    Der aktuelle Fokus liegt auf der Prüfung des DCS-Sandbox-Verhaltens für dofile.
 
 Noch nicht erledigt:
 
-- Loader- und Main-Startkette logisch prüfen
-- Start aller geladenen Module technisch verifizieren
+- Start aller geladenen Module technisch in DCS verifizieren
 - DCS-Sandbox-Verhalten für `dofile` prüfen
 - erster realer DCS-Mission-Starttest durchführen
 - DCS-Mission-Editor-Test vorbereiten
@@ -396,11 +397,11 @@ Aktiver Stand:
 - [x] Fehlerausgabe für fehlende Frameworks vorbereiten
 - [x] erste sichtbare Ausgabe in `dcs.log` vorbereiten
 - [x] `src/main.lua` gegen aktuelle Modulnamen prüfen und anpassen
+- [x] Loader- und Main-Startkette logisch prüfen
 
 ### Noch zu prüfen
 
-- [ ] Loader- und Main-Startkette logisch prüfen
-- [ ] Start aller geladenen Module technisch verifizieren
+- [ ] Start aller geladenen Module technisch in DCS verifizieren
 - [ ] DCS-Sandbox-Verhalten für `dofile` prüfen
 - [ ] erster realer DCS-Mission-Starttest durchführen
 
@@ -816,30 +817,23 @@ Diese Dateien sind aktuell vorhanden oder perspektivisch erwünscht:
 
 ## Aktuell nächster sinnvoller Einzelschritt
 
-Als nächster technischer Schritt wird die Loader- und Main-Startkette logisch geprüft.
+Als nächster technischer Schritt wird das DCS-Sandbox-Verhalten für `dofile` geprüft.
 
 Nächste Datei:
 
-    src/loader.lua
+    MISSION_EDITOR_SETUP.md
 
 Prüffokus:
 
-    Framework-Prüfung
-    interne Lade-Reihenfolge
-    Modulnamen
-    Startreihenfolge
-    Fehlerverhalten
-    Verhältnis zwischen loader.lua und main.lua
-
-Danach:
-
-    ggf. src/loader.lua aktualisieren
-    ggf. CHANGELOG.md aktualisieren
-    danach DCS-Sandbox-Verhalten für dofile prüfen
+    ob dofile im geplanten DCS-Setup realistisch nutzbar ist
+    ob die Mission-Editor-Ladeweise angepasst werden muss
+    ob src/loader.lua Dateien selbst nachladen kann
+    ob alternativ alle Dateien einzeln im Mission Editor geladen werden müssen
+    welche Starttest-Variante als erste DEV-Prüfung empfohlen wird
 
 Grund:
 
-`src/main.lua` wurde an die aktuellen Modulnamen angepasst. Jetzt muss geprüft werden, ob `src/loader.lua` und `src/main.lua` als gemeinsame Startkette sauber zusammenpassen.
+`src/loader.lua` ist aktuell so gebaut, dass eigene Module per `dofile` geladen werden. Das ist strukturell sauber, muss aber im konkreten DCS-Sandbox-Kontext geprüft werden, bevor wir mit der DEV-Mission weitermachen.
 
 ---
 
@@ -881,5 +875,6 @@ Aktueller Stand in dieser Reihenfolge:
     IADS: dokumentiert
     UI: dokumentiert
     Debug: dokumentiert
-    Startkette: logisch zu prüfen
+    Startkette: logisch geprüft
+    DCS-Sandbox-Prüfung: nächster Schritt
     Starttest: noch offen
