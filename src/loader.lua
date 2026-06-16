@@ -110,6 +110,27 @@ Loader.campaignFiles = {
   }
 }
 
+Loader.logisticsFiles = {
+  {
+    key = "logisticsDelivery",
+    name = "tc_logistics_delivery",
+    path = "src/logistics/tc_logistics_delivery.lua",
+    required = true,
+    isLoaded = function()
+      return TC.Logistics ~= nil and TC.Logistics.Delivery ~= nil
+    end
+  },
+  {
+    key = "fobSystem",
+    name = "tc_fob_system",
+    path = "src/logistics/tc_fob_system.lua",
+    required = true,
+    isLoaded = function()
+      return TC.Logistics ~= nil and TC.Logistics.FobSystem ~= nil
+    end
+  }
+}
+
 Loader.mainFile = {
   key = "main",
   name = "main",
@@ -428,6 +449,10 @@ function Loader.loadCampaign()
   return loadFileGroup("Campaign", Loader.campaignFiles)
 end
 
+function Loader.loadLogistics()
+  return loadFileGroup("Logistics", Loader.logisticsFiles)
+end
+
 function Loader.loadMain()
   if Loader.mainFile == nil then
     return false
@@ -518,6 +543,14 @@ function Loader.start()
     return false
   end
 
+  local logisticsLoaded = Loader.loadLogistics()
+
+  if logisticsLoaded ~= true then
+    Loader.failed = true
+    logError("Theater Command loader stopped because logistics loading failed")
+    return false
+  end
+
   local mainLoaded = Loader.loadMain()
 
   if mainLoaded ~= true then
@@ -552,7 +585,8 @@ function Loader.summary()
     scriptRoot = Loader.scriptRoot,
     coreFileCount = #Loader.coreFiles,
     worldFileCount = #Loader.worldFiles,
-    campaignFileCount = #Loader.campaignFiles
+    campaignFileCount = #Loader.campaignFiles,
+    logisticsFileCount = #Loader.logisticsFiles
   }
 end
 
