@@ -63,7 +63,14 @@ Aktuell erledigt:
 - Missions-Modul erstellt
 - AI-CAP-Modul erstellt
 - Loader schrittweise auf Core, World, Campaign, Logistics, Missions und AI erweitert
+- `src/main.lua` gegen aktuelle Modulnamen geprüft und angepasst
 - `src/README.md` nach Source-Ausbau aktualisiert
+- `TASKS.md` nach Source-Ausbau aktualisiert
+- `CHANGELOG.md` nach Source-Ausbau aktualisiert
+- `ROADMAP.md` nach Source-Ausbau aktualisiert
+- `ARCHITECTURE.md` nach Source-Ausbau aktualisiert
+- Root-`README.md` nach Source-Ausbau aktualisiert
+- `CHANGELOG.md` nach Main-Aktualisierung aktualisiert
 
 Aktueller Projektzustand:
 
@@ -71,12 +78,15 @@ Aktueller Projektzustand:
     Vendor ist funktional abgeschlossen.
     Die Source-Grundstruktur ist angelegt.
     Erste eigene Lua-Module sind erstellt.
-    Der aktuelle Fokus liegt auf Dokumentationsabgleich und anschließender technischer Startprüfung.
+    Loader und Main sind auf die aktuellen Module ausgerichtet.
+    Der aktuelle Fokus liegt auf der technischen Startkettenprüfung.
 
 Noch nicht erledigt:
 
-- zentrale Root-Dokumentation nach Source-Ausbau vollständig aktualisieren
-- `src/main.lua` technisch prüfen und ggf. an die aktuellen Modulnamen anpassen
+- Loader- und Main-Startkette logisch prüfen
+- Start aller geladenen Module technisch verifizieren
+- DCS-Sandbox-Verhalten für `dofile` prüfen
+- erster realer DCS-Mission-Starttest durchführen
 - DCS-Mission-Editor-Test vorbereiten
 - IADS-Implementierung beginnen
 - UI-Implementierung beginnen
@@ -385,10 +395,11 @@ Aktiver Stand:
 - [x] Debug-Ausgabe beim Start vorbereiten
 - [x] Fehlerausgabe für fehlende Frameworks vorbereiten
 - [x] erste sichtbare Ausgabe in `dcs.log` vorbereiten
+- [x] `src/main.lua` gegen aktuelle Modulnamen prüfen und anpassen
 
 ### Noch zu prüfen
 
-- [ ] `src/main.lua` gegen aktuelle Modulnamen prüfen
+- [ ] Loader- und Main-Startkette logisch prüfen
 - [ ] Start aller geladenen Module technisch verifizieren
 - [ ] DCS-Sandbox-Verhalten für `dofile` prüfen
 - [ ] erster realer DCS-Mission-Starttest durchführen
@@ -805,25 +816,30 @@ Diese Dateien sind aktuell vorhanden oder perspektivisch erwünscht:
 
 ## Aktuell nächster sinnvoller Einzelschritt
 
-Als nächster Dokumentationsschritt wird die zentrale Projektänderung im Changelog festgehalten.
+Als nächster technischer Schritt wird die Loader- und Main-Startkette logisch geprüft.
 
 Nächste Datei:
 
-    CHANGELOG.md
+    src/loader.lua
 
-Danach einzeln prüfen und aktualisieren:
+Prüffokus:
 
-    ROADMAP.md
-    ARCHITECTURE.md
-    README.md
+    Framework-Prüfung
+    interne Lade-Reihenfolge
+    Modulnamen
+    Startreihenfolge
+    Fehlerverhalten
+    Verhältnis zwischen loader.lua und main.lua
 
-Anschließender technischer Fokus:
+Danach:
 
-    src/main.lua prüfen und an aktuelle Modulnamen anpassen
+    ggf. src/loader.lua aktualisieren
+    ggf. CHANGELOG.md aktualisieren
+    danach DCS-Sandbox-Verhalten für dofile prüfen
 
 Grund:
 
-Einige Module sind inzwischen vorhanden und werden vom Loader geladen. `main.lua` muss danach sauber kontrolliert werden, damit alle tatsächlich vorhandenen Module korrekt gestartet und nicht nur als Zukunftssysteme behandelt werden.
+`src/main.lua` wurde an die aktuellen Modulnamen angepasst. Jetzt muss geprüft werden, ob `src/loader.lua` und `src/main.lua` als gemeinsame Startkette sauber zusammenpassen.
 
 ---
 
@@ -852,7 +868,7 @@ Grundsatz:
 
 Aktueller Stand in dieser Reihenfolge:
 
-    Dokumentation: teilweise erneut zu aktualisieren
+    Dokumentation: auf Source-Grundstand aktualisiert
     Vendor: abgeschlossen
     src-Struktur: angelegt
     Core: erste Version vorhanden
@@ -865,4 +881,5 @@ Aktueller Stand in dieser Reihenfolge:
     IADS: dokumentiert
     UI: dokumentiert
     Debug: dokumentiert
+    Startkette: logisch zu prüfen
     Starttest: noch offen
