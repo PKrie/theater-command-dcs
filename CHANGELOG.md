@@ -1,208 +1,47 @@
-# Changelog
+# CHANGELOG.md
 
 Alle relevanten Änderungen am Projekt **Theater Command DCS** werden in dieser Datei dokumentiert.
 
-Das Projekt befindet sich aktuell in der frühen Aufbauphase.
-
-Aktueller Fokus:
-
-    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Main-Initialisierung, Mission-Editor-Ladestrategie, erster realer DCS-Starttest und Auswertung der Airbase-Erkennung nach dem aktuellen Syria-Update
+Das Projekt befindet sich aktuell in der frühen Aufbauphase.  
+Die erste spielbare Kampagnenlogik ist noch nicht fertig, aber die zentrale Runtime-Grundlage wurde in DCS erfolgreich getestet und mehrere Kernmodule wurden von einfachen Platzhaltern zu klassifizierten State-Systemen weiterentwickelt.
 
 ---
 
 ## Unreleased
 
+### Projektstand
+
+Aktueller Stand: **2026-06-16**
+
+Erste Kampagne:
+
+- **Operation Levant Reclamation**
+- Map: **Syria**
+- Blue startet auf **Akrotiri / Zypern**
+- Das syrische Festland ist zu Beginn rot kontrolliert
+
+Aktueller technischer Stand:
+
+- Vendor-Frameworks werden im DCS Mission Scripting Environment geladen.
+- Theater-Command-Source-Dateien werden per sicherer Einzeldatei-Ladung im Mission Editor geladen.
+- `src/main.lua` initialisiert die aktiven Runtime-Systeme.
+- `src/loader.lua` prüft Framework-Verfügbarkeit und startet Main.
+- Die Kernsysteme laufen in DCS ohne Theater-Command-Lua-Abbruch.
+- Die Syria-Airbase-Daten werden inzwischen fachlich klassifiziert.
+- ZoneFactory, Capture, Logistics, Mission Generator und AI CAP Manager nutzen die klassifizierten Kampagnendaten.
+
+Aktuelle Einschränkung:
+
+- Das Projekt ist noch keine fertige spielbare dynamische Kampagne.
+- Echte MOOSE-Spawns, CTLD-Integration, Skynet-IADS-Kampagnenlogik, F10-UI und Persistenz sind noch nicht produktiv integriert.
+
+---
+
 ### Added
 
-- `src/core/README.md` erstellt
-- `src/world/README.md` erstellt
-- `src/campaign/README.md` erstellt
-- `src/logistics/README.md` erstellt
-- `src/missions/README.md` erstellt
-- `src/ai/README.md` erstellt
-- `src/iads/README.md` erstellt
-- `src/ui/README.md` erstellt
-- `src/debug/README.md` erstellt
-- `src/loader.lua` erstellt
-- `src/main.lua` erstellt
-- Core-Konfigurationsmodul erstellt:
-  - `src/core/tc_config.lua`
-- Core-Loggingmodul erstellt:
-  - `src/core/tc_logger.lua`
-- Core-State-Modul erstellt:
-  - `src/core/tc_state.lua`
-- Core-Utility-Modul erstellt:
-  - `src/core/tc_utils.lua`
-- Core-Scheduler-Modul erstellt:
-  - `src/core/tc_scheduler.lua`
-- World-Airbase-Scanner erstellt:
-  - `src/world/tc_airbase_scanner.lua`
-- World-Zone-Factory erstellt:
-  - `src/world/tc_zone_factory.lua`
-- Campaign-Capture-System erstellt:
-  - `src/campaign/tc_capture_system.lua`
-- Campaign-Persistence-System erstellt:
-  - `src/campaign/tc_persistence_system.lua`
-- Logistics-Delivery-System erstellt:
-  - `src/logistics/tc_logistics_delivery.lua`
-- Logistics-FOB-System erstellt:
-  - `src/logistics/tc_fob_system.lua`
-- Missionsgenerator erstellt:
-  - `src/missions/tc_mission_generator.lua`
-- AI-CAP-Manager erstellt:
-  - `src/ai/tc_ai_cap_manager.lua`
-- IADS-Bereich dokumentiert:
-  - `src/iads/README.md`
-- UI-Bereich dokumentiert:
-  - `src/ui/README.md`
-- Debug-Bereich dokumentiert:
-  - `src/debug/README.md`
-- `mission_editor/README.md` erstellt
-- `mission_editor/trigger_setup.md` erstellt
-- lokale Repository-Kopie auf dem DCS-PC eingerichtet
-- minimale Syria-DEV-Mission im DCS Mission Editor erstellt
-- erster blauer F/A-18C-Client-Slot auf Akrotiri angelegt
-- Framework-Lade-Trigger im DCS Mission Editor angelegt
-- Source-Lade-Trigger für Starttest-Variante A im DCS Mission Editor angelegt
-- erster realer DCS-Starttest durchgeführt
-- `dcs.log` nach Starttest ausgewertet
+#### Source-Grundstruktur
 
-### Changed
-
-- `src/README.md` nach Source-Ausbau aktualisiert
-- `TASKS.md` nach Source-Ausbau aktualisiert
-- `ROADMAP.md` nach Source-Ausbau aktualisiert
-- `ARCHITECTURE.md` nach Source-Ausbau aktualisiert
-- Root-`README.md` nach Source-Ausbau aktualisiert
-- `src/loader.lua` schrittweise erweitert:
-  - Core-Ladung ergänzt
-  - World-Ladung ergänzt
-  - Campaign-Ladung ergänzt
-  - Logistics-Ladung ergänzt
-  - Missions-Ladung ergänzt
-  - AI-Ladung ergänzt
-- `src/main.lua` an die aktuellen Modulnamen angepasst:
-  - `TC.World.AirbaseScanner`
-  - `TC.World.ZoneFactory`
-  - `TC.Campaign.CaptureSystem`
-  - `TC.Campaign.PersistenceSystem`
-  - `TC.Logistics.Delivery`
-  - `TC.Logistics.FobSystem`
-  - `TC.Missions.Generator`
-  - `TC.AI.CapManager`
-- `src/main.lua` von Zukunftssystem-Liste auf Runtime-System-Liste umgestellt
-- `src/main.lua` unterscheidet jetzt zwischen erforderlichen und optionalen Systemen
-- `src/main.lua` behandelt IADS, UI und Debug als optionale spätere Systeme
-- `src/main.lua` protokolliert gestartete, fehlgeschlagene und übersprungene Systeme
-- `src/main.lua` kann Runtime-Systeme geordnet stoppen
-- Loader- und Main-Startkette logisch geprüft
-- `MISSION_EDITOR_SETUP.md` für den ersten Source-Ladetest aktualisiert
-- `MISSION_EDITOR_SETUP.md` um DCS-Sandbox- und `dofile`-Prüfstrategie erweitert
-- `MISSION_EDITOR_SETUP.md` um sichere Starttest-Variante A ergänzt:
-  - Frameworks per `DO SCRIPT FILE` laden
-  - aktive Source-Dateien einzeln per `DO SCRIPT FILE` laden
-  - `src/main.lua` laden
-  - `src/loader.lua` zuletzt laden
-  - keine harte `dofile`-Abhängigkeit im ersten Test
-- `MISSION_EDITOR_SETUP.md` um spätere Starttest-Variante B ergänzt:
-  - Frameworks laden
-  - nur `src/loader.lua` laden
-  - `dofile`-Nachladen durch den Loader praktisch prüfen
-- `TASKS.md` nach Mission-Editor-Source-Ladeplanung aktualisiert
-- interne Theater-Command-Lade-Reihenfolge konkretisiert:
-  - Core
-  - World
-  - Campaign
-  - Logistics
-  - Missions
-  - AI
-  - IADS
-  - UI
-  - Debug
-  - Main
-- `src/README.md` korrigiert:
-  - Source-Implementierung ist nicht mehr nur geplant
-  - erste aktive Lua-Module sind vorhanden
-  - IADS, UI und Debug sind aktuell dokumentiert, aber noch nicht aktiv implementiert
-- `TASKS.md` korrigiert:
-  - Phase 1 bis Phase 7 teilweise erledigt
-  - Phase 8 bis Phase 10 dokumentarisch vorbereitet
-  - Starttest-Variante A als praktischer Prüfpfad dokumentiert
-- `TASKS.md` nach erfolgreichem DCS-Starttest aktualisiert
-
-### Tested
-
-- Starttest-Variante A im DCS Mission Editor durchgeführt
-- Framework-Ladung erfolgreich geprüft:
-  - MIST
-  - MOOSE
-  - CTLD-i18n
-  - CTLD
-  - Skynet IADS
-- Theater-Command-Source-Ladung erfolgreich geprüft:
-  - Core
-  - World
-  - Campaign
-  - Logistics
-  - Missions
-  - AI
-  - Main
-  - Loader
-- `src/main.lua` wurde im DCS Mission Scripting Environment gestartet
-- `src/loader.lua` wurde im DCS Mission Scripting Environment gestartet
-- Runtime-Systeme wurden durch `src/main.lua` initialisiert
-- Framework-Verfügbarkeit wurde durch den Loader erkannt
-- `dcs.log` zeigte erfolgreiche Theater-Command-Startausgaben
-- Airbase-Scanner wurde in DCS ausgeführt
-- Zone-Factory wurde in DCS ausgeführt
-
-### DCS Start Test Result
-
-Erster realer DCS-Starttest:
-
-    Starttest-Variante A
-    Ergebnis: bestanden
-
-Wichtige bestätigte Logik:
-
-    MIST wurde geladen.
-    MOOSE wurde geladen.
-    CTLD wurde geladen.
-    Skynet IADS wurde geladen.
-    Theater Command Loader wurde gestartet.
-    Frameworks wurden durch den Loader erkannt.
-    Core wurde geladen.
-    World wurde geladen.
-    Campaign wurde geladen.
-    Logistics wurde geladen.
-    Missions wurde geladen.
-    AI wurde geladen.
-    Main wurde gestartet.
-    Runtime-Systeme wurden initialisiert.
-    Loader wurde beendet.
-
-Wichtige technische Beobachtung:
-
-    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
-    Zone-Factory registrierte 225 Zonen.
-
-Bewertung:
-
-    Die Theater-Command-Startkette läuft im DCS Mission Scripting Environment.
-    Die Frameworks werden korrekt geladen und erkannt.
-    Die aktiven eigenen Lua-Module werden korrekt geladen.
-    Es gab keinen schweren Lua-Abbruch der Theater-Command-Startkette.
-    Die Zahl von 225 registrierten Objekten ist kein Startfehler, aber ein wichtiger fachlicher Befund.
-
-Folgerung:
-
-    Das aktuelle Syria-Update liefert sehr viele Airbase-ähnliche Objekte, darunter Airfields, Heliports, Helipads, Medical Pads und ähnliche Objekte.
-    Der Airbase-Scanner muss später zwischen strategischen Basen und rein taktischen/medizinischen Helipads unterscheiden.
-    Capture-, Missions- und Persistenzlogik dürfen 225 erkannte Objekte nicht ungefiltert als strategische Kampagnenbasen verwenden.
-
-### Current Source Modules
-
-Aktuell vorhandene aktive eigene Lua-Module:
+Erstellt wurden:
 
 - `src/loader.lua`
 - `src/main.lua`
@@ -220,7 +59,15 @@ Aktuell vorhandene aktive eigene Lua-Module:
 - `src/missions/tc_mission_generator.lua`
 - `src/ai/tc_ai_cap_manager.lua`
 
-Aktuell vorhandene Source-Dokumentationen:
+Dokumentierte, aber noch nicht aktiv implementierte Bereiche:
+
+- `src/iads/`
+- `src/ui/`
+- `src/debug/`
+
+#### Source-Dokumentation
+
+Erstellt wurden:
 
 - `src/README.md`
 - `src/core/README.md`
@@ -233,127 +80,519 @@ Aktuell vorhandene Source-Dokumentationen:
 - `src/ui/README.md`
 - `src/debug/README.md`
 
-### Current Framework Versions
+#### Mission-Editor-Dokumentation
 
-| Framework | Projektpfad | Stand |
+Erstellt wurden:
+
+- `mission_editor/README.md`
+- `mission_editor/trigger_setup.md`
+
+Dokumentiert wurde:
+
+- sichere Starttest-Variante A
+- spätere Loader-only-Variante B
+- DCS-`DO SCRIPT FILE`-Verhalten
+- manuelles Neuauswählen geänderter Lua-Dateien im Mission Editor
+- Framework-Ladefolge
+- Source-Ladefolge für den ersten sicheren Test
+
+#### DCS-DEV-Mission
+
+Umgesetzt wurde:
+
+- lokale Repository-Kopie auf dem DCS-PC
+- minimale Syria-DEV-Mission
+- modernes Syria-Koalitionspreset
+- Akrotiri als Blue-Startbasis
+- erster blauer F/A-18C-Client-Slot auf Akrotiri
+- Framework-Lade-Trigger
+- Source-Lade-Trigger für Starttest-Variante A
+
+---
+
+### Changed
+
+#### Loader und Main
+
+`src/main.lua` wurde an die vorhandenen Runtime-Module angepasst:
+
+- `TC.World.AirbaseScanner`
+- `TC.World.ZoneFactory`
+- `TC.Campaign.CaptureSystem`
+- `TC.Campaign.PersistenceSystem`
+- `TC.Logistics.Delivery`
+- `TC.Logistics.FobSystem`
+- `TC.Missions.Generator`
+- `TC.AI.CapManager`
+
+Main unterscheidet inzwischen zwischen:
+
+- erforderlichen Runtime-Systemen
+- optionalen Zukunftssystemen
+
+Aktuell erforderliche Runtime-Systeme:
+
+- Airbase Scanner
+- Zone Factory
+- Capture System
+- Persistence System
+- Logistics Delivery
+- FOB System
+- Mission Generator
+- AI CAP Manager
+
+Aktuell optionale Zukunftssysteme:
+
+- IADS
+- UI
+- Debug
+
+`src/loader.lua` wurde erweitert, sodass Framework-Verfügbarkeit geprüft und Main geordnet gestartet wird.
+
+#### Airbase Scanner
+
+Datei:
+
+- `src/world/tc_airbase_scanner.lua`
+
+Aktuelle getestete Version:
+
+- `v0.2.2`
+
+Wesentliche Änderungen:
+
+- Airbase-ähnliche DCS-Objekte werden klassifiziert.
+- Akrotiri wird als Blue-Startbasis erkannt.
+- syrische Hauptflugplätze werden als potenzielle Red Strategic Bases vorbereitet.
+- Medical Pads, einfache Helipads, Tactical Pads und Unknowns werden von strategischen Airfields getrennt.
+- Airbase-Klassifizierung erfolgt primär über normalisierte Namen und erst nachrangig über DCS-Kategorieinformationen.
+- Konflikt zwischen Owner-Counter `unknown` und Unknown-Klassifizierung wurde behoben.
+- Logger-Ausgaben wurden an die tatsächliche `TC.Logger`-Signatur angepasst.
+
+Klassifizierungen:
+
+- `STRATEGIC_AIRFIELD`
+- `SECONDARY_AIRFIELD`
+- `HELIPORT`
+- `HELIPAD`
+- `MEDICAL_PAD`
+- `FARP`
+- `TACTICAL_PAD`
+- `UNKNOWN`
+
+#### Zone Factory
+
+Datei:
+
+- `src/world/tc_zone_factory.lua`
+
+Aktuelle getestete Version:
+
+- `v0.2.0`
+
+Wesentliche Änderungen:
+
+- nutzt die neue Klassifizierung des Airbase Scanners
+- erzeugt nicht mehr für alle 225 Airbase-Rohobjekte Kampagnenzonen
+- erzeugt nur noch relevante klassifizierte Kampagnenzonen
+- trennt Capture-Zonen, Mission-Zonen und Logistics-Zonen
+- überspringt medizinische Pads, einzelne Helipads und Unknowns als Kampagnenzonen
+- unterstützt weiterhin optionale Mission-Editor-Zonen über MIST
+
+#### Capture System
+
+Datei:
+
+- `src/campaign/tc_capture_system.lua`
+
+Aktuelle getestete Version:
+
+- `v0.2.0`
+
+Wesentliche Änderungen:
+
+- Capture-Eligibility wird aus klassifizierten Bases und Zones abgeleitet.
+- Capture wirkt nur noch auf strategische und sekundäre Kampagnenziele.
+- Helipads, Medical Pads, Tactical Pads, FARPs und Unknowns werden als strategische Capture-Ziele ausgeschlossen.
+- Ownership von verknüpften Airbase-/Zone-Records kann synchronisiert werden.
+- Capture Events werden für spätere Persistence-, Debug- und AI-Reaktionen vorbereitet.
+
+#### Logistics Delivery
+
+Datei:
+
+- `src/logistics/tc_logistics_delivery.lua`
+
+Aktuelle getestete Version:
+
+- `v0.2.0`
+
+Wesentliche Änderungen:
+
+- Logistics Hubs werden aus klassifizierten Kampagnenzonen erzeugt.
+- Akrotiri wird als Blue Main Operating Base vorbereitet.
+- Red Strategic Airbase Hubs werden vorbereitet.
+- neutrale/limitierte Hubs werden als State vorbereitet.
+- Logistics-Ressourcen werden als State modelliert:
+  - supply
+  - fuel
+  - ammunition
+  - engineering
+- Delivery Records werden vorbereitet.
+- CTLD wird noch nicht direkt angesprochen, aber spätere CTLD-Anbindung ist vorbereitet.
+
+#### Mission Generator
+
+Datei:
+
+- `src/missions/tc_mission_generator.lua`
+
+Aktuelle getestete Version:
+
+- `v0.2.0`
+
+Wesentliche Änderungen:
+
+- Missionen werden aus klassifizierten Kampagnenzonen erzeugt.
+- Missionen werden priorisiert.
+- Medical Pads, einfache Helipads und Unknowns werden nicht als Strike-Ziele verwendet.
+- Missionen enthalten Zielzone, Zielbasis, Priorität, strategische Relevanz und spätere Effektdaten.
+- Missionseffekte für spätere Capture-/Logistics-/AI-Kopplung sind vorbereitet.
+
+Aktuell erzeugte Missionstypen im Test:
+
+- `AIRBASE_ATTACK`
+- `SEAD`
+- `STRIKE`
+- `CAP`
+
+Weitere Missionstypen sind vorbereitet, aber noch nicht vollständig funktional gekoppelt:
+
+- `RECON`
+- `DEAD`
+- `CAS`
+- `INTERDICTION`
+- `LOGISTICS`
+- `FOB_SUPPORT`
+
+#### AI CAP Manager
+
+Datei:
+
+- `src/ai/tc_ai_cap_manager.lua`
+
+Aktuelle getestete Version:
+
+- `v0.2.0`
+
+Wesentliche Änderungen:
+
+- CAP-Zonen werden aus klassifizierten Kampagnenzonen abgeleitet.
+- Blue- und Red-CAP-Bedarf wird vorbereitet.
+- Blue CAP für Akrotiri wird als State erzeugt.
+- Red CAPs für strategische syrische Flugplätze werden als State erzeugt.
+- CAP Requests werden deterministisch priorisiert.
+- echter MOOSE-Spawn ist noch nicht aktiv.
+- `spawn=MOOSE_PENDING` ist aktuell erwartetes Verhalten.
+
+#### TASKS.md
+
+`TASKS.md` wurde deutlich erweitert und als operatives Projektgedächtnis aktualisiert.
+
+Dokumentiert wurden:
+
+- aktuelles Projektziel
+- Arbeitsweise
+- Vendor-Regeln
+- Lade- und Startstruktur
+- getestete Kernbefunde
+- Modulstand je aktiver Datei
+- offene Systembereiche
+- aktuelle Prioritäten
+- Spielerrolle als Teilnehmer einer laufenden Blue-vs-Red-Kampagne
+- noch offene AI-Director-Architektur
+
+---
+
+### Fixed
+
+#### Airbase Scanner Unknown-State-Konflikt
+
+Behoben wurde ein Fehler im Airbase Scanner:
+
+- `state.Bases.unknown` wurde gleichzeitig als Owner-Counter und als Klassifizierungs-Liste verwendet.
+- Dadurch entstand ein Lua-Fehler beim Indexieren eines Zahlenwerts.
+- Die Unknown-Klassifizierung wird jetzt getrennt geführt.
+
+Vorheriger Fehler:
+
+- `attempt to index local 'list' (a number value)`
+
+Ergebnis:
+
+- Airbase Scanner startet sauber.
+- Runtime-Systeme werden nicht mehr durch diesen Fehler gestoppt.
+
+#### Logger-Aufrufsignaturen
+
+Mehrere Module wurden so angepasst, dass sie mit dem vorhandenen `TC.Logger` kompatibel sind.
+
+Statt mehrerer Parameter wird jetzt ein einzelner formatierter String übergeben.
+
+Beispiel:
+
+- vorher sinngemäß: `logger.info(moduleName, message)`
+- jetzt sinngemäß: `logger.info("[ModuleName] " .. message)`
+
+#### ZoneFactory-Rohobjektproblem
+
+Vorher:
+
+- ZoneFactory erzeugte 225 Zonen aus allen Airbase-ähnlichen Objekten.
+
+Nachher:
+
+- ZoneFactory erzeugt 46 relevante Kampagnenzonen.
+- 179 nicht relevante Airbase-ähnliche Objekte werden übersprungen.
+
+#### Capture-Zielproblem
+
+Vorher:
+
+- Capture konnte konzeptionell auf zu viele Rohobjekte wirken.
+
+Nachher:
+
+- Capture ist auf 32 relevante Bases/Zones beschränkt.
+
+---
+
+### Tested
+
+#### Starttest Variante A
+
+Status:
+
+- **bestanden**
+
+Bestätigt wurde:
+
+- MIST lädt
+- MOOSE lädt
+- CTLD-i18n lädt
+- CTLD lädt
+- Skynet IADS lädt
+- Theater-Command-Source-Dateien laden
+- Loader startet
+- Frameworks werden erkannt
+- Main startet
+- Runtime-Systeme werden initialisiert
+- Loader beendet sauber
+
+#### Framework-Versionen
+
+Bestätigte Framework-Stände:
+
+| Framework | Pfad | bestätigter Stand |
 |---|---|---|
 | MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
 | MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
 | CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
 | Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
 
-### Current DCS Load Order
+#### Airbase Scanner v0.2.2
 
-Die externe Framework-Lade-Reihenfolge im DCS Mission Editor bleibt:
+Status:
 
-1. `vendor/mist/mist.lua`
-2. `vendor/moose/Moose.lua`
-3. `vendor/ctld/CTLD-i18n.lua`
-4. `vendor/ctld/CTLD.lua`
-5. `vendor/skynet-iads/SkynetIADS.lua`
+- **bestanden**
 
-Danach folgt für Starttest-Variante A die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
+Bestätigte Testwerte:
 
-### Current Recommended Start Test
+- total: 225
+- strategic: 19
+- secondary: 13
+- heliports: 1
+- helipads: 95
+- medical: 40
+- farps: 0
+- tactical: 13
+- unknown: 44
+- captureCandidates: 32
+- missionCandidates: 32
+- logisticsCandidates: 46
+- blueStartBases: 1
+- redStrategicCandidates: 18
 
-Die erste Testvariante wurde erfolgreich durchgeführt:
+Bestätigt:
 
-    Starttest-Variante A — sichere Einzeldatei-Ladung
+- Akrotiri wird als Blue-Startbasis erkannt.
+- Akrotiri wird als `STRATEGIC_AIRFIELD` klassifiziert.
+- Akrotiri erhält `strategicRelevance=100`.
 
-Dabei wurden zuerst die Frameworks geladen.
+#### Zone Factory v0.2.0
 
-Danach wurden die aktiven Source-Dateien einzeln im Mission Editor geladen.
+Status:
 
-Danach wurde `src/main.lua` geladen.
+- **bestanden**
 
-Zuletzt wurde `src/loader.lua` geladen.
+Bestätigte Testwerte:
 
-Ziel:
+- total zones: 46
+- classified airbase zones: 46
+- Mission Editor zones: 0
+- skipped airbase-like objects: 179
+- strategic zones: 19
+- secondary zones: 13
+- heliport zones: 1
+- farp zones: 0
+- tactical zones: 13
+- captureZones: 32
+- missionZones: 32
+- logisticsZones: 46
+- startBaseZones: 1
 
-    keine harte dofile-Abhängigkeit im ersten Test
-    alle Module im DCS-Kontext laden
-    Framework-Verfügbarkeit prüfen
-    Loader-/Main-Startkette prüfen
-    dcs.log auf Lua-Fehler prüfen
+Bewertung:
 
-Ergebnis:
+- ZoneFactory nutzt die Airbase-Klassifizierung korrekt.
+- Es werden nicht mehr 225 ungefilterte Zonen erzeugt.
 
-    Bestanden.
+#### Capture System v0.2.0
 
-### Current Internal Source Load Order
+Status:
 
-Die interne Source-Lade-Reihenfolge lautet:
+- **bestanden**
 
-1. Core
-2. World
-3. Campaign
-4. Logistics
-5. Missions
-6. AI
-7. IADS
-8. UI
-9. Debug
-10. Main
+Bestätigte Testwerte:
 
-Aktuell aktiv vom Loader geladen:
+- eligibleBases: 32
+- eligibleZones: 32
+- nonCaptureBases: 193
+- nonCaptureZones: 14
 
-- Core
-- World
-- Campaign
-- Logistics
-- Missions
-- AI
-- Main
+Bewertung:
 
-Noch nicht aktiv vom Loader geladen:
+- Capture arbeitet nur noch auf strategisch relevanten Kampagnenzielen.
 
-- IADS
-- UI
-- Debug
+#### Logistics Delivery v0.2.0
 
-Grund:
+Status:
 
-Diese Bereiche besitzen aktuell nur README-Dateien und noch keine konkreten Lua-Implementierungen.
+- **bestanden**
 
-### Not Yet Implemented
+Bestätigte Testwerte:
 
-Noch nicht umgesetzt:
+- logistics hubs: 46
+- blue hubs: 7
+- red hubs: 24
+- neutral hubs: 15
+- active hubs: 31
+- limited hubs: 15
+- locked hubs: 0
 
-- praktische DCS-Prüfung der Loader-only-Variante mit `dofile`
-- Airbase-Klassifizierung nach strategischen Basen, Heliports, Helipads, Medical Pads und sonstigen Airbase-Objekten
-- konkrete IADS-Lua-Implementierung
-- konkrete UI-/F10-Lua-Implementierung
-- konkrete Debug-Lua-Implementierung
-- reale MOOSE-CAP-Spawns
-- reale CTLD-Ereignisauswertung
-- reale Skynet-IADS-Kampagnenbrücke
-- DCS-Dateipersistenz
-- DCS-Sandbox-Prüfung für Dateizugriff
-- Debug-Menüs
-- Mission-Ordnerstruktur
-- Save-Ordnerstruktur
-- Tools-Ordnerstruktur
-- Assets-Ordnerstruktur
+Bewertung:
 
-### Status
+- Logistics Delivery nutzt die klassifizierten Kampagnenzonen.
+- CTLD ist noch nicht produktiv angebunden.
 
-Diese Version ist noch keine spielbare DCS-Mission.
+#### Mission Generator v0.2.0
 
-Der technische Source-Grundaufbau ist begonnen und enthält bereits erste eigene Theater-Command-Lua-Module.
+Status:
 
-`src/main.lua` ist an die aktuell vorhandenen Module angepasst.
+- **bestanden**
 
-Die Loader- und Main-Startkette ist logisch geprüft und im DCS Mission Scripting Environment erfolgreich gestartet.
+Bestätigte Testwerte:
 
-Die Mission-Editor-Ladestrategie für den ersten sicheren Source-Test ist dokumentiert und praktisch erfolgreich getestet.
+- mission candidates: 74
+- generated missions: 10
 
-Der nächste technische Schwerpunkt ist:
+Im Test erzeugte Missionstypen:
 
-    Airbase-Scanner nach dem Syria-Update fachlich filtern
+- `AIRBASE_ATTACK`
+- `SEAD`
+- `STRIKE`
+- `CAP`
 
-Danach:
+Bewertung:
 
-    Loader-only-Variante mit dofile praktisch testen
+- Mission Generator nutzt klassifizierte Zonen.
+- Missionen werden priorisiert erzeugt.
+- Nicht geeignete Objekte werden nicht als Strike-Ziele verwendet.
+
+#### AI CAP Manager v0.2.0
+
+Status:
+
+- **bestanden**
+
+Bestätigte Testwerte:
+
+- cap zone candidates: 31
+- auto-registered CAP zones: 12
+- CAP requests: 12
+- reactionState: `AIR_REACTION_REQUESTED`
+- threatLevel: `HIGH`
+
+Bewertung:
+
+- Blue- und Red-CAP-Bedarf wird als State vorbereitet.
+- Echter MOOSE-Spawn ist noch nicht aktiv.
+
+---
+
+### Known Limitations
+
+Aktuell noch nicht umgesetzt:
+
+- echte MOOSE-CAP-Spawns
+- echte MOOSE-Strike-/SEAD-/CAS-Spawns
+- echte CTLD-Pickup-/Dropoff-Integration
+- echte CTLD-FOB-Integration
+- echte Skynet-IADS-Kampagnenbrücke
+- eigenes IADS-Modul unter `src/iads/`
+- eigenes UI-/F10-System unter `src/ui/`
+- eigenes Debug-System unter `src/debug/`
+- AI Director für beidseitige Kampagnenlogik
+- echte Blue-vs-Red-Operationen unabhängig vom Spieler
+- Missionsauswahl über F10
+- Missionsabschluss über DCS-Events/Trigger
+- Capture-Fortschritt durch Missionserfolge
+- Logistics-Verbrauch
+- FOB-System-Anbindung an neue Logistics-Hubs
+- Persistence-Save/Load im DCS-Dateisystem
+- DCS-Sandbox-Schreibtest
+- Loader-only-Variante B über `dofile`
+
+Aktuelle technische Einschränkung:
+
+- Die sichere Einzeldatei-Ladung per `DO SCRIPT FILE` bleibt Standard, bis die Loader-only-Variante praktisch geprüft wurde.
+
+---
+
+### Current Recommended Next Steps
+
+Unmittelbar nächste Dokumentationsschritte:
+
+1. `README.md` aktualisieren
+2. `ROADMAP.md` aktualisieren
+3. `ARCHITECTURE.md` aktualisieren
+4. relevante Systemdokumente in `docs/` aktualisieren
+
+Wahrscheinlicher nächster Code-Schritt nach der Dokumentationsrunde:
+
+- `src/logistics/tc_fob_system.lua`
+
+Ziel des nächsten Code-Schritts:
+
+- FOB-System an die neuen Logistics-Hubs anbinden
+- FOB-Kandidaten aus geeigneten Blue-/Contested-Zonen ableiten
+- FOB-Support-Missionen und Logistics Delivery vorbereiten
+
+Noch nicht sofort:
+
+- echte CTLD-Spawns
+- echte MOOSE-Spawns
+- echte AI-Director-Entscheidungen
+- echte IADS-Kampagnenlogik
 
 ---
 
@@ -425,11 +664,11 @@ Sie stellt die erste eigene Lua-Grundstruktur für Theater Command DCS bereit.
 
 Aktive MIST-Version:
 
-    MIST 4.5.128-DYNSLOTS-02
+- MIST `4.5.128-DYNSLOTS-02`
 
 Grund:
 
-    CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
+- CTLD weist darauf hin, dass für korrektes dynamisches Spawning die mit CTLD gelieferte MIST-Version verwendet werden soll.
 
 ### Removed
 
@@ -456,11 +695,9 @@ Sie stellt die lokale Framework-Basis für die weitere Entwicklung bereit.
 - syrisches Festland als vollständig rot kontrollierter Ausgangszustand definiert
 - Grundidee einer persistenten dynamischen DCS-Kampagne dokumentiert
 - Leitprinzip festgelegt:
-
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis
-
+  - Mission Editor = Bühne
+  - Lua = Kampagnensystem
+  - GitHub = Projektgedächtnis
 - erste zentrale Projektdateien angelegt:
   - `README.md`
   - `ROADMAP.md`
