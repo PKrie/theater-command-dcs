@@ -89,6 +89,27 @@ Loader.worldFiles = {
   }
 }
 
+Loader.campaignFiles = {
+  {
+    key = "captureSystem",
+    name = "tc_capture_system",
+    path = "src/campaign/tc_capture_system.lua",
+    required = true,
+    isLoaded = function()
+      return TC.Campaign ~= nil and TC.Campaign.CaptureSystem ~= nil
+    end
+  },
+  {
+    key = "persistenceSystem",
+    name = "tc_persistence_system",
+    path = "src/campaign/tc_persistence_system.lua",
+    required = true,
+    isLoaded = function()
+      return TC.Campaign ~= nil and TC.Campaign.PersistenceSystem ~= nil
+    end
+  }
+}
+
 Loader.mainFile = {
   key = "main",
   name = "main",
@@ -403,6 +424,10 @@ function Loader.loadWorld()
   return loadFileGroup("World", Loader.worldFiles)
 end
 
+function Loader.loadCampaign()
+  return loadFileGroup("Campaign", Loader.campaignFiles)
+end
+
 function Loader.loadMain()
   if Loader.mainFile == nil then
     return false
@@ -485,6 +510,14 @@ function Loader.start()
     return false
   end
 
+  local campaignLoaded = Loader.loadCampaign()
+
+  if campaignLoaded ~= true then
+    Loader.failed = true
+    logError("Theater Command loader stopped because campaign loading failed")
+    return false
+  end
+
   local mainLoaded = Loader.loadMain()
 
   if mainLoaded ~= true then
@@ -518,7 +551,8 @@ function Loader.summary()
     failed = Loader.failed,
     scriptRoot = Loader.scriptRoot,
     coreFileCount = #Loader.coreFiles,
-    worldFileCount = #Loader.worldFiles
+    worldFileCount = #Loader.worldFiles,
+    campaignFileCount = #Loader.campaignFiles
   }
 end
 
