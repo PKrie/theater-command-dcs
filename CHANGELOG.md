@@ -6,7 +6,7 @@ Das Projekt befindet sich aktuell in der frühen Aufbauphase.
 
 Aktueller Fokus:
 
-    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Main-Initialisierung und Vorbereitung des ersten DCS-Starttests
+    Source-Grundstruktur, erste Lua-Module, Loader-Kette, Main-Initialisierung, Mission-Editor-Ladestrategie und Vorbereitung des ersten DCS-Starttests
 
 ---
 
@@ -86,6 +86,20 @@ Aktueller Fokus:
 - `src/main.lua` behandelt IADS, UI und Debug als optionale spätere Systeme
 - `src/main.lua` protokolliert gestartete, fehlgeschlagene und übersprungene Systeme
 - `src/main.lua` kann Runtime-Systeme geordnet stoppen
+- Loader- und Main-Startkette logisch geprüft
+- `MISSION_EDITOR_SETUP.md` für den ersten Source-Ladetest aktualisiert
+- `MISSION_EDITOR_SETUP.md` um DCS-Sandbox- und `dofile`-Prüfstrategie erweitert
+- `MISSION_EDITOR_SETUP.md` um sichere Starttest-Variante A ergänzt:
+  - Frameworks per `DO SCRIPT FILE` laden
+  - aktive Source-Dateien einzeln per `DO SCRIPT FILE` laden
+  - `src/main.lua` laden
+  - `src/loader.lua` zuletzt laden
+  - keine harte `dofile`-Abhängigkeit im ersten Test
+- `MISSION_EDITOR_SETUP.md` um spätere Starttest-Variante B ergänzt:
+  - Frameworks laden
+  - nur `src/loader.lua` laden
+  - `dofile`-Nachladen durch den Loader praktisch prüfen
+- `TASKS.md` nach Mission-Editor-Source-Ladeplanung aktualisiert
 - interne Theater-Command-Lade-Reihenfolge konkretisiert:
   - Core
   - World
@@ -104,7 +118,7 @@ Aktueller Fokus:
 - `TASKS.md` korrigiert:
   - Phase 1 bis Phase 7 teilweise erledigt
   - Phase 8 bis Phase 10 dokumentarisch vorbereitet
-  - nächster Fokus auf Dokumentationsabgleich und technischen Starttest verschoben
+  - Starttest-Variante A als nächster praktischer Prüfpfad dokumentiert
 
 ### Current Source Modules
 
@@ -150,16 +164,37 @@ Aktuell vorhandene Source-Dokumentationen:
 
 ### Current DCS Load Order
 
-Die externe Lade-Reihenfolge im DCS Mission Editor bleibt:
+Die externe Framework-Lade-Reihenfolge im DCS Mission Editor bleibt:
 
     1. vendor/mist/mist.lua
     2. vendor/moose/Moose.lua
     3. vendor/ctld/CTLD-i18n.lua
     4. vendor/ctld/CTLD.lua
     5. vendor/skynet-iads/SkynetIADS.lua
-    6. src/loader.lua
 
-Danach übernimmt `src/loader.lua` die interne Theater-Command-Ladung.
+Danach folgt für den ersten realen DEV-Test die sichere Einzeldatei-Ladung der aktiven Theater-Command-Module.
+
+### Current Recommended Start Test
+
+Empfohlene erste Testvariante:
+
+    Starttest-Variante A — sichere Einzeldatei-Ladung
+
+Dabei werden zuerst die Frameworks geladen.
+
+Danach werden die aktiven Source-Dateien einzeln im Mission Editor geladen.
+
+Danach wird `src/main.lua` geladen.
+
+Zuletzt wird `src/loader.lua` geladen.
+
+Ziel:
+
+    keine harte dofile-Abhängigkeit im ersten Test
+    alle Module im DCS-Kontext laden
+    Framework-Verfügbarkeit prüfen
+    Loader-/Main-Startkette prüfen
+    dcs.log auf Lua-Fehler prüfen
 
 ### Current Internal Source Load Order
 
@@ -200,6 +235,8 @@ Diese Bereiche besitzen aktuell nur README-Dateien und noch keine konkreten Lua-
 
 Noch nicht umgesetzt:
 
+- praktische DCS-Prüfung der Starttest-Variante A
+- praktische DCS-Prüfung der Loader-only-Variante mit `dofile`
 - konkrete IADS-Lua-Implementierung
 - konkrete UI-/F10-Lua-Implementierung
 - konkrete Debug-Lua-Implementierung
@@ -225,14 +262,18 @@ Der technische Source-Grundaufbau ist begonnen und enthält bereits erste eigene
 
 `src/main.lua` ist an die aktuell vorhandenen Module angepasst.
 
-Der nächste technische Prüfpunkt ist:
+Die Loader- und Main-Startkette ist logisch geprüft.
 
-    Loader- und Main-Startkette logisch prüfen
+Die Mission-Editor-Ladestrategie für den ersten sicheren Source-Test ist dokumentiert.
+
+Der nächste praktische Prüfpunkt ist:
+
+    DEV-Testvariante A im DCS Mission Editor vorbereiten
 
 Danach:
 
-    DCS-Sandbox-Verhalten für dofile prüfen
-    erster realer DCS-Starttest vorbereiten
+    dcs.log prüfen
+    Loader-only-Variante mit dofile praktisch testen
 
 ---
 
@@ -266,6 +307,7 @@ Danach:
 - Source-Dokumentation an die tatsächliche Ordnerstruktur angepasst
 - Tasks an den aktuellen Implementierungsstand angepasst
 - Main-Initialisierung an aktuelle Runtime-Module angepasst
+- Mission-Editor-Setup an die Source-Ladeteststrategie angepasst
 
 ### Status
 
