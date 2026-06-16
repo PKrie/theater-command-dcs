@@ -71,12 +71,12 @@ Nach jeder Lua-Änderung gilt:
 
 Für saubere Logtests:
 
-- DCS beenden
-- `Saved Games\DCS.openbeta\Logs\dcs.log` löschen oder umbenennen
-- DCS neu starten
-- Mission testen
-- DCS beenden
-- frische `dcs.log` hochladen
+1. DCS beenden
+2. `Saved Games\DCS.openbeta\Logs\dcs.log` löschen oder umbenennen
+3. DCS neu starten
+4. Mission testen
+5. DCS beenden
+6. frische `dcs.log` hochladen
 
 ---
 
@@ -671,8 +671,9 @@ Der nächste logische Schritt ist direkte Missionsauswahl.
 Noch nicht sofort:
 
 - komplexes UI-System
-- verschachtelte dynamische Missionseinträge pro generierter Mission, falls DCS-Menü-Reload instabil ist
 - echte Missionserfolgsauswertung
+- echte DCS-Spawns
+- echte CTLD-Aktionen
 
 ---
 
@@ -756,15 +757,13 @@ Noch nicht sofort:
 
 ## 9. Dokumentationsstand
 
-Heute aktualisierte zentrale Dokumentation:
+Am Ende dieser Session wurden bzw. werden zentrale Dokumentationsdateien auf den aktuellen Teststand gebracht:
 
 - `TASKS.md`
 - `CHANGELOG.md`
 - `README.md`
 - `ROADMAP.md`
 - `ARCHITECTURE.md`
-
-Am Ende dieser Session wurde `TASKS.md` nochmals auf den neuesten Teststand gebracht.
 
 Wichtig für zukünftige Arbeit:
 
@@ -774,17 +773,11 @@ Eine größere Dokumentationsrunde soll bevorzugt am Ende einer Session erfolgen
 
 Noch später nachzuziehen:
 
-- `CHANGELOG.md` um FobSystem `v0.2.0`, MissionGenerator `v0.2.1` und F10Menu `v0.1.0` ergänzen
-- ggf. `README.md` um F10Menu bestätigen
-- ggf. `ROADMAP.md` und `ARCHITECTURE.md` um F10Menu/Fob/MissionGenerator finalisieren
-- relevante Systemdokumente aktualisieren:
-  - `docs/05_logistics_system.md`
-  - `docs/06_mission_generator.md`
-  - `docs/07_ai_director.md`
-  - `docs/10_testing.md`
-  - `src/ui/README.md`
-  - `src/logistics/README.md`
-  - `src/missions/README.md`
+- relevante Systemdokumente in `docs/`
+- `src/ui/README.md`
+- `src/logistics/README.md`
+- `src/missions/README.md`
+- `src/README.md`
 
 Diese vollständige Dokumentationsrunde muss nicht zwischen jedem Code-Schritt erfolgen.
 
@@ -829,7 +822,7 @@ Empfohlenes Ziel:
 - Mission 1 bis Mission 10 über F10 aktivierbar machen
 - Missionsliste und Aktivierung stabil halten
 - weiter state-only bleiben
-- keine echte DCS-Spawns auslösen
+- keine echten DCS-Spawns auslösen
 
 Danach mögliche Folgeschritte:
 
