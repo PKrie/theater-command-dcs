@@ -4,649 +4,638 @@ Diese Datei beschreibt das Kampagnendesign der ersten Theater-Command-DCS-Kampag
 
 Die erste Kampagne trägt den Arbeitstitel:
 
-**Operation Levant Reclamation**
+    Operation Levant Reclamation
 
 Die Kampagne wird auf der **Syria Map** aufgebaut.
 
-Blau startet auf **Zypern / Akrotiri**.
+Ausgangslage:
 
-Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+    Blue Start: Akrotiri / Zypern
+    Red Start: syrisches Festland vollständig rot kontrolliert
 
 ---
 
 ## Grundidee der Kampagne
 
-Operation Levant Reclamation soll keine lineare Einzelmission werden.
+**Operation Levant Reclamation** soll keine lineare Einzelmission werden.
 
-Ziel ist eine dynamische Kampagne, in der sich der Zustand des Einsatzraums schrittweise verändert.
+Ziel ist eine dynamische Kampagne, in der der Spieler durch Missionen, Logistik, Luftüberlegenheit, SEAD/DEAD, Capture-Operationen und Unterstützungseinsätze den Kampagnenzustand verändert.
 
-Spieleraktionen sollen später Auswirkungen haben auf:
+Die Kampagne soll später aus einem zentralen Zustand heraus arbeiten.
 
-- Basenbesitz
-- Luftverteidigung
-- Logistik
-- Missionsangebot
-- KI-Reaktionen
-- Frontentwicklung
-- Persistenz
-- strategische Kontrolle
+Dieser Zustand soll unter anderem enthalten:
 
-Die Kampagne soll nicht nur aus einzelnen vordefinierten Missionen bestehen.
-
-Sie soll aus einem Kampagnenzustand heraus Missionen erzeugen.
-
----
-
-## Ausgangslage
-
-Blau startet auf:
-
-    Akrotiri / Zypern
-
-Rot kontrolliert zu Beginn:
-
-    syrisches Festland vollständig
-
-Die erste operative Richtung ist:
-
-    syrische Küste
-
-Die erste strategische Herausforderung für Blau ist der Aufbau eines sicheren Zugangs zum syrischen Festland.
-
-Dafür müssen mehrere Dinge zusammenspielen:
-
-- Luftüberlegenheit
-- Schwächung der roten Luftverteidigung
-- Aufbau einer Logistikverbindung
-- Sicherung eines Küsten-Brückenkopfes
-- spätere Eroberung und Stabilisierung von Basen
+- Besitzstatus von Airbases
+- Besitzstatus von Zonen
+- verfügbare Missionen
+- aktive Missionen
+- abgeschlossene Missionen
+- Logistikstatus
+- FOB-Status
+- AI-Reaktionen
+- IADS-Zustand
+- Persistenzdaten
 
 ---
 
-## Projektprinzip
+## Architekturprinzip
 
-Das Kampagnendesign folgt dem technischen Projektprinzip:
+Das zentrale Prinzip lautet:
 
     Mission Editor = Bühne
     Lua = Kampagnensystem
     GitHub = Projektgedächtnis
 
-Der Mission Editor stellt die Karte, Slots, Templates und Startbedingungen bereit.
+Der DCS Mission Editor stellt die physische Umgebung bereit.
 
-Lua steuert später den dynamischen Kampagnenverlauf.
+Lua übernimmt die eigentliche Kampagnenlogik.
 
-GitHub hält fest, welche Regeln, Systeme und Entscheidungen gelten.
+GitHub dokumentiert Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
 
 ---
 
 ## Aktueller Projektstand
 
-Stand:
-
-    2026-06-15
+Stand: 2026-06-16
 
 Aktuell vorhanden:
 
-- zentrale Projektdateien
-- `docs/`-Grundblock
-- `vendor/`-Frameworks
-- `src/README.md`
+- Repository-Grundstruktur
+- zentrale Projektdokumentation
+- `docs/`-Dokumentation
+- `mission_editor/`-Dokumentation
+- `vendor/`-Frameworkstruktur
+- MIST
+- MOOSE
+- CTLD
+- Skynet IADS
+- `src/`-Grundstruktur
+- erste eigene Theater-Command-Lua-Module
+- Loader
+- Main-Initialisierung
+- Core-System
+- World-System
+- Campaign-System
+- Logistics-System
+- Missions-System
+- AI-CAP-System
+- IADS-, UI- und Debug-Bereiche dokumentiert
+- minimale Syria-DEV-Mission
+- erster blauer F/A-18C-Client-Slot auf Akrotiri
+- vollständige Triggerkette für Starttest-Variante A
+- erster realer DCS-Starttest
+- erfolgreiche `dcs.log`-Auswertung
 
-Aktuell hinterlegte Frameworks:
+Aktueller Teststatus:
 
-| Framework | Projektpfad | Stand |
-|---|---|---|
-| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
-| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
-| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
-| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
+    Starttest-Variante A ist bestanden.
 
-Noch nicht vorhanden:
+Wichtiges Testergebnis:
 
-- eigene Lua-Core-Dateien
-- `src/loader.lua`
-- `src/main.lua`
-- Airbase-System
-- Capture-System
-- Logistiksystem
-- Missionsgenerator
-- AI Director
-- IADS-Kampagnenlogik
-- Persistenz
-- DEV-Mission im DCS Mission Editor
+    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
+    Zone-Factory registrierte 225 Zonen.
 
----
+Folgerung für das Kampagnendesign:
 
-## Strategische Ausgangssituation
-
-Die blaue Seite verfügt zu Beginn über eine sichere Basis auf Zypern.
-
-Diese Basis ist:
-
-    Akrotiri
-
-Akrotiri dient zunächst als:
-
-- Hauptbasis
-- Luftoperationsbasis
-- erster Logistikhub
-- Ausgangspunkt für CTLD-Logistik
-- sicherer Rückzugsraum
-- späterer HQ-Knoten im Kampagnenzustand
-
-Die rote Seite kontrolliert zu Beginn das syrische Festland.
-
-Rot verfügt perspektivisch über:
-
-- Airbases
-- IADS
-- SAM-Stellungen
-- Radarstellungen
-- Bodentruppen
-- Logistikknoten
-- statische Ziele
-- mögliche Gegenangriffskräfte
+    Die Kampagne darf nicht alle von DCS erkannten Airbase-Objekte gleich behandeln.
+    Strategische Airfields müssen von Helipads, Medical Pads, FARPs und taktischen Pads getrennt werden.
 
 ---
 
-## Kampagnenziel
+## Aktuelle DEV-Mission
 
-Langfristiges Ziel von Blau:
+Aktuelle technische Entwicklungsmission:
 
-    schrittweise Rückeroberung und Stabilisierung relevanter Bereiche des syrischen Festlands
+    Operation_Levant_Reclamation_DEV.miz
 
-Erstes operatives Ziel:
+Aktueller Inhalt:
 
-    rote Luftverteidigung an der Küste schwächen
+    Map: Syria
+    Koalitionspreset: Modern
+    Blue Start: Akrotiri / Zypern
+    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
+    Trigger: Starttest-Variante A vollständig angelegt
+    keine rote Frontlinie
+    keine IADS-Stellungen
+    keine CTLD-Zonen
+    keine Template-Gruppen
+    keine F10-Menüs
 
-Erstes logistisches Ziel:
+Diese Mission ist aktuell nur ein technischer Testträger.
 
-    Brückenkopf oder FOB an der syrischen Küste aufbauen
-
-Erstes strategisches Ziel:
-
-    sichere Grundlage für weitere Operationen auf dem Festland schaffen
-
----
-
-## Kampagnenphasen
-
-Die Kampagne soll später in dynamische Phasen gegliedert werden.
-
-Diese Phasen sind zunächst konzeptionell.
-
-Die konkrete Umsetzung erfolgt später über Lua.
+Sie ist noch keine spielbare Kampagnenmission.
 
 ---
 
-### Phase 1 — Initial Air Operations
+## Strategische Ausgangslage
 
-Blau startet ausschließlich von Akrotiri.
+Zu Kampagnenbeginn kontrolliert Blau nur den Startbereich auf Zypern.
 
-Schwerpunkte:
+Blauer Startpunkt:
 
-- Aufklärung
-- CAP
-- Escort
-- erste SEAD-/DEAD-Missionen
-- Angriffe auf Radarstellungen
-- Schwächung der Küsten-IADS
-- Vorbereitung eines späteren Brückenkopfes
+    Akrotiri / Zypern
 
-Mögliche Spielerrollen:
+Roter Ausgangsraum:
 
-- F/A-18C
-- F-16C
-- F-14B
-- F-15E
+    syrisches Festland vollständig rot kontrolliert
 
-Ziel:
+Die Kampagne beginnt damit aus einer asymmetrischen Ausgangslage:
 
-    sichere Luftoperationsfenster über der syrischen Küste schaffen
+- Blau besitzt eine sichere Offshore-Startbasis
+- Rot hält das syrische Festland
+- Blau muss zunächst Aufklärung, Luftüberlegenheit, SEAD/DEAD und logistische Voraussetzungen schaffen
+- Rot besitzt zu Beginn die operative Tiefe auf dem Festland
+- Fortschritt entsteht durch dynamische Missionen und spätere Capture-/Logistikmechanik
 
 ---
 
-### Phase 2 — Coastal Suppression
+## Politische und militärische Grundannahme
 
-Die rote Küstenverteidigung wird gezielt geschwächt.
+Die genaue Story wird später weiter ausgearbeitet.
 
-Schwerpunkte:
+Aktuelle Grundannahme:
 
-- SEAD
-- DEAD
-- Strike gegen SAM-Komponenten
-- Strike gegen Radarstellungen
-- CAP zur Absicherung von Strike-Paketen
-- erste Logistikvorbereitung
+Eine internationale Koalition startet von Akrotiri aus eine Operation zur Rückgewinnung und Stabilisierung des östlichen Mittelmeerraums und der syrischen Küstenregion.
 
-Ziel:
+Das syrische Festland ist zu Kampagnenbeginn unter roter Kontrolle.
 
-    rote Luftverteidigung soweit schwächen, dass Helikopter- und Logistikoperationen möglich werden
+Die blaue Koalition muss schrittweise:
 
----
-
-### Phase 3 — Logistics Entry
-
-Blau beginnt mit Logistikoperationen Richtung syrischer Küste.
-
-Schwerpunkte:
-
-- CTLD-Kistenflüge
-- Truppentransport
-- Versorgung vorbereiteter Dropoff-Zonen
-- Aufbau eines ersten FOB
-- Sicherung von Helikopterrouten
-- Schutz durch CAP und SEAD
-
-Mögliche Spielerrollen:
-
-- UH-1H
-- Mi-8
-- F/A-18C
-- F-16C
-- F-14B
-- F-15E
-
-Ziel:
-
-    ersten blauen Brückenkopf auf dem Festland kampagnenlogisch vorbereiten
+- Luftlage aufklären
+- feindliche Luftverteidigung schwächen
+- Luftüberlegenheit herstellen
+- logistische Korridore sichern
+- erste Brückenköpfe vorbereiten
+- FOBs aufbauen
+- strategische Basen angreifen oder erobern
+- Missionsdruck auf rote Systeme erhöhen
+- den Kampagnenzustand dauerhaft verändern
 
 ---
 
-### Phase 4 — First Capture Operations
+## Geplanter Kampagnenverlauf
 
-Blau beginnt mit ersten Capture-Operationen.
+Der Kampagnenverlauf soll nicht als feste Missionskette gebaut werden.
 
-Schwerpunkte:
+Stattdessen soll er durch den Kampagnenzustand entstehen.
 
-- Sicherung von Capture-Zonen
-- Unterstützung durch CAS
-- Luftnahunterstützung für Bodentruppen
-- Logistiklieferungen
-- Eroberung oder Neutralisierung erster Schlüsselräume
-- Stabilisierung des Brückenkopfes
+Geplante Eskalationslogik:
 
-Mögliche spätere Spielerrollen:
-
-- A-10C II
-- AH-64D
-- UH-1H
-- Mi-8
-- F/A-18C
-- F-16C
-
-Ziel:
-
-    dauerhafte blaue Präsenz auf dem syrischen Festland herstellen
+1. Aufklärungs- und Orientierungsphase
+2. Luftüberlegenheitsphase
+3. SEAD-/DEAD-Phase
+4. Logistik- und FOB-Aufbau
+5. Angriffe auf strategische Ziele
+6. Capture-Operationen gegen wichtige Basen
+7. Ausweitung der blauen Operationszone
+8. rote Gegenreaktionen
+9. IADS-Neuordnung und Gegenmaßnahmen
+10. persistenter Kampagnenfortschritt
 
 ---
 
-### Phase 5 — Expansion Inland
+## Phase 1 — Initiale Lage
 
-Nach erfolgreichem Brückenkopf kann Blau weiter ins Landesinnere vorstoßen.
+Zu Beginn:
 
-Schwerpunkte:
+    Blau startet auf Akrotiri.
+    Rot kontrolliert das syrische Festland.
+    Es gibt noch keine blaue Frontlinie auf dem Festland.
+    Es gibt noch keine aktiven blauen FOBs.
+    Es gibt noch keine produktive Capture-Logik.
+    Es gibt noch keine produktive Persistenz.
 
-- weitere Airbases bedrohen oder erobern
-- rote Logistik schwächen
-- IADS-Lücken ausnutzen
-- FOBs ausbauen
-- neue Logistikhubs freischalten
-- KI-Gegenangriffe abwehren
+Ziel dieser Phase:
 
-Ziel:
+- technische Startkette stabilisieren
+- Airbase- und Zonenlogik sauber aufbauen
+- strategische Basen erkennen
+- Kampagnenzustand initialisieren
+- spätere Missionen aus echten Daten ableiten
 
-    Kampagnenraum dynamisch erweitern
+Aktueller Stand:
 
----
-
-## Spielerrollen
-
-Die Kampagne soll mehrere Spielerrollen sinnvoll einbinden.
-
-### Fighter / Air Superiority
-
-Mögliche Aufgaben:
-
-- CAP
-- Intercept
-- Escort
-- Fleet Defense
-- Schutz von Strike-Paketen
-- Schutz von Logistikrouten
-
-Mögliche Module:
-
-- F-14B
-- F/A-18C
-- F-16C
-- F-15E
+    Technische Startkette bestanden.
+    Airbase-Erkennung funktioniert.
+    Airbase-Klassifizierung fehlt noch.
 
 ---
 
-### Strike / SEAD / DEAD
+## Phase 2 — Airbase- und Zonenverständnis
 
-Mögliche Aufgaben:
+Der erste reale DCS-Test hat gezeigt:
 
-- Angriff auf Radarstellungen
-- Angriff auf SAM-Stellungen
-- Angriff auf Kommandoposten
-- Angriff auf Depots
-- Schwächung der roten Luftverteidigung
+    225 Airbase-/Helipad-Objekte werden erkannt.
 
-Mögliche Module:
+Für das Kampagnendesign ist das entscheidend.
 
-- F/A-18C
-- F-16C
-- F-15E
+Diese Objekte müssen unterschieden werden in:
 
----
+- strategische Airfields
+- Secondary Airfields
+- Heliports
+- Helipads
+- Medical Pads
+- FARPs
+- Tactical Pads
+- Unknown
 
-### CAS
+Nur strategische Airfields und ausgewählte Secondary Airfields sollen später als echte Kampagnenbasen dienen.
 
-Mögliche Aufgaben:
-
-- Unterstützung von Capture-Zonen
-- Bekämpfung roter Bodentruppen
-- Verteidigung eigener FOBs
-- Unterstützung eigener Gegenangriffe
-
-Mögliche Module:
-
-- A-10C II
-- AH-64D
-- F/A-18C
-- F-16C
-
-A-10C II und AH-64D werden erst sinnvoll, wenn Blau auf dem Festland eine nutzbare Struktur aufgebaut hat.
+Helipads, Medical Pads und taktische Pads können später für Spezialrollen genutzt werden, aber nicht als vollwertige strategische Basen.
 
 ---
 
-### Logistics / Helicopter
+## Strategische Airfields
 
-Mögliche Aufgaben:
+Strategische Airfields sind zentrale Kampagnenobjekte.
 
-- CTLD-Kistentransport
-- Truppentransport
-- FOB-Aufbau
-- Versorgung von Capture-Zonen
-- CSAR
-- Verlegung von Material
+Sie können später:
 
-Mögliche Module:
+- Besitzerstatus haben
+- erobert werden
+- als Logistikhub dienen
+- als Missionsziel dienen
+- als Spawn-/Startpunkt dienen
+- in Persistenz gespeichert werden
+- AI-Reaktionen auslösen
+- IADS- und CAP-Logik beeinflussen
 
-- UH-1H
-- Mi-8
+Akrotiri ist die erste fest definierte strategische blaue Basis.
 
----
-
-## Airbase-Design
-
-Airbases sollen später nicht komplett manuell im Mission Editor verwaltet werden.
-
-Geplantes Prinzip:
-
-1. Airbases per Lua erkennen
-2. Airbases als Theater-Command-BaseNodes registrieren
-3. Besitzstatus verwalten
-4. virtuelle Zonen erzeugen
-5. Airbases mit Logistik, Missionen und Capture verbinden
-
-Akrotiri ist der erste fest definierte blaue Ausgangspunkt.
-
-Syrische Airbases sind zu Beginn rot.
-
-Spätere Airbase-Logik entsteht unter:
-
-    src/world/
-    src/campaign/
+Syrische Hauptflugplätze sollen später als rote strategische Basen klassifiziert werden.
 
 ---
 
-## Zonen-Design
+## Sekundäre Airfields
 
-Zonen sollen später soweit möglich virtuell durch Lua erzeugt werden.
+Sekundäre Airfields können je nach Lage eine reduzierte Kampagnenrolle erhalten.
 
-Geplante Zonentypen:
+Mögliche Rollen:
 
-- Capture-Zonen
-- Logistik-Zonen
-- Defense-Zonen
-- IADS-Sektoren
-- Missions-Zielräume
-- FOB-Zonen
+- Zwischenziel
+- Forward Operating Location
+- logistischer Zwischenpunkt
+- Helikopterstützpunkt
+- begrenztes Missionsziel
 
-Nicht jede Zone soll manuell im Mission Editor angelegt werden.
+Ob Secondary Airfields capturable werden, wird später entschieden.
 
-Manuelle Zonen werden nur genutzt, wenn CTLD oder DCS sie technisch benötigt.
+---
+
+## Heliports, Helipads und Medical Pads
+
+Diese Objekte sollen nicht ignoriert werden.
+
+Sie sind aber keine vollwertigen strategischen Basen.
+
+Mögliche spätere Rollen:
+
+- CTLD-Zonen
+- CSAR-Punkte
+- MEDEVAC-Szenarien
+- FOB-Unterstützung
+- Helikoptermissionen
+- taktische Landezonen
+
+Nicht geeignet als Standard:
+
+- strategische Capture-Ziele
+- Hauptlogistikhubs
+- CAP-Zentren
+- zufällige Strike-Ziele des Missionsgenerators
+
+---
+
+## FARPs und FOBs
+
+FARPs und FOBs gehören fachlich eng zusammen.
+
+FARPs können später wichtig werden für:
+
+- AH-64D-Operationen
+- Transporthubschrauber
+- CTLD
+- Forward Refuel/Rearm
+- logistische Frontunterstützung
+- temporäre Kampagnenpräsenz
+
+FOBs sollen später durch Logistik aufgebaut und verbessert werden können.
+
+Der FOB-Aufbau wird nicht rein im Mission Editor entschieden, sondern durch Theater-Command-Logik gesteuert.
 
 ---
 
 ## Capture-Design
 
-Das Capture-System soll später entscheiden, wann eine Zone oder Basis den Besitzer wechselt.
+Das Capture-System soll später den strategischen Besitz von Basen und Zonen verwalten.
 
-Mögliche Capture-Faktoren:
+Grundregel:
 
-- eigene Kräfte in der Zone
-- feindliche Kräfte reduziert
-- Logistikversorgung vorhanden
-- FOB aufgebaut
-- IADS-Bedrohung reduziert
-- Airbase gesichert
-- Missionserfolge erreicht
+    Capture darf nur auf geeignete strategische Kampagnenobjekte angewendet werden.
 
-Capture soll nicht durch einfache DCS-AutoCapture-Logik bestimmt werden.
+Nicht standardmäßig capturable:
 
-Theater Command DCS soll den Besitz kampagnenlogisch verwalten.
+- Medical Pads
+- einzelne Helipads
+- unbekannte Objekte
+- rein taktische Pads
 
----
+Potentiell capturable:
 
-## Logistik-Design
+- strategische Airfields
+- ausgewählte Secondary Airfields
+- ausgewählte militärische Heliports
+- definierte FOB-Standorte
 
-Logistik soll ein zentraler Fortschrittsfaktor sein.
+Capture soll später abhängig sein von:
 
-CTLD übernimmt technische Transportfunktionen.
-
-Theater Command DCS bewertet die Wirkung.
-
-Beispiele:
-
-Eine gelieferte Kiste kann später:
-
-- Ressourcen erhöhen
-- einen FOB-Aufbau unterstützen
-- eine Zone versorgen
-- eine Basis stabilisieren
-- neue Missionen freischalten
-- Capture-Bedingungen erfüllen
-
-Erster Logistikhub:
-
-    Akrotiri
-
-Mögliche erste CTLD-Zonen:
-
-    CTLD_PICKUP_BLUE_AKROTIRI_01
-    CTLD_PICKUP_BLUE_AKROTIRI_02
-    CTLD_DROPOFF_BLUE_COASTAL_FOB_01
-
----
-
-## IADS-Design
-
-Die rote Luftverteidigung soll ein wichtiger Kampagnenfaktor sein.
-
-Skynet IADS steuert taktisches Verhalten.
-
-Theater Command DCS bewertet den strategischen IADS-Zustand.
-
-Mögliche IADS-Auswirkungen:
-
-- SEAD/DEAD-Missionen werden sinnvoll
-- Helikopterrouten werden gefährlicher oder sicherer
-- Strike-Fenster entstehen
-- Capture wird durch Luftverteidigung erschwert
-- zerstörte Radarstellungen beeinflussen Folgeoperationen
-- IADS-Schäden werden später persistent gespeichert
-
-Mögliche erste IADS-Region:
-
-    syrische Küste
+- Missionsfortschritt
+- Bodennähe oder Triggerlogik
+- Logistikstatus
+- FOB-Unterstützung
+- AI-Widerstand
+- IADS-Zustand
+- Kampagnenphase
 
 ---
 
 ## Missionsdesign
 
-Missionen sollen später aus dem Kampagnenzustand entstehen.
-
-Missionen werden nicht einfach als feste Triggerliste gebaut.
-
-Der Missionsgenerator soll berücksichtigen:
-
-- Spielerflugzeug
-- aktuelle Frontlage
-- Basenbesitz
-- Logistikstatus
-- IADS-Zustand
-- verfügbare Ziele
-- Kampagnenphase
+Missionen sollen später dynamisch aus dem Kampagnenzustand entstehen.
 
 Mögliche Missionstypen:
 
+- Recon
 - CAP
-- Escort
-- Intercept
 - SEAD
 - DEAD
 - Strike
 - CAS
+- Interdiction
+- Escort
 - Logistics
-- FOB Supply
-- CSAR
-- Recon
+- FOB Support
+- Airbase Attack
+- AI Suppression
+
+Missionen sollen nicht zufällig aus allen DCS-Objekten erzeugt werden.
+
+Der Missionsgenerator muss geeignete Ziele wählen.
+
+Beispiele:
+
+- SEAD/DEAD gegen IADS-Ziele
+- Strike gegen strategische Infrastruktur
+- CAP über Front- oder Bedrohungsräumen
+- Logistics zu FOBs oder Basen
+- Airbase Attack nur gegen relevante Airfields
+- FOB Support für definierte Forward Sites
 
 ---
 
-## AI Director
+## Logistikdesign
 
-Der AI Director soll die Welt reaktiver machen.
+Logistik soll später ein Kernbestandteil der Kampagne werden.
 
-Mögliche Aufgaben:
+Logistik beeinflusst:
 
-- rote CAP erzeugen
-- rote GCI erzeugen
-- Gegenangriffe vorbereiten
-- Reaktion auf Capture-Ereignisse
+- FOB-Aufbau
+- Versorgung von Basen
+- Operationsreichweite
+- Missionsverfügbarkeit
+- Capture-Fähigkeit
+- Verteidigungsfähigkeit
+- AI-Reaktionen
+
+Aktuelle Logistik-Module:
+
+    src/logistics/tc_logistics_delivery.lua
+    src/logistics/tc_fob_system.lua
+
+Aktuell ist nur die Grundstruktur vorhanden.
+
+Die CTLD-Anbindung folgt später.
+
+---
+
+## AI-Design
+
+Die AI soll später auf den Kampagnenzustand reagieren.
+
+Aktuelles AI-Modul:
+
+    src/ai/tc_ai_cap_manager.lua
+
+Geplante AI-Rollen:
+
+- CAP-Verwaltung
+- GCI-Reaktionen
+- Verstärkungen
+- Gegenangriffe
+- Luftlageanpassung
+- Reaktion auf Capture
 - Reaktion auf IADS-Schäden
 - Reaktion auf Logistikfortschritt
-- Eskalation je nach Kampagnenphase
 
-Der AI Director soll nicht alles zufällig machen.
+Die AI soll nicht isoliert arbeiten.
 
-Er soll aus dem Kampagnenzustand sinnvolle Reaktionen ableiten.
+Sie soll Daten aus Campaign, World, Missions, Logistics und IADS nutzen.
 
 ---
 
-## Persistenz-Design
+## IADS-Design
 
-Persistenz wird erst später gebaut.
+Skynet IADS wird als externes Framework genutzt.
 
-Vorher müssen Airbase-, Capture- und Logistiksystem stabil sein.
+Theater Command soll später eine eigene Kampagnenschicht darüber legen.
 
-Mögliche persistente Werte:
+Geplante IADS-Funktionen:
 
-- Basenbesitz
-- Zonenbesitz
-- aktive FOBs
-- Ressourcen
+- IADS-Sektoren
+- SAM-Site-Status
+- Radarstatus
+- beschädigte oder zerstörte Systeme
+- SEAD-/DEAD-Missionsziele
+- IADS-Wiederaufbau oder Reaktion
+- Persistenz des IADS-Zustands
+
+Aktueller Stand:
+
+    Skynet IADS wird geladen.
+    Theater-Command-IADS-Modul ist noch nicht implementiert.
+
+---
+
+## Spielerinteraktion
+
+Spielerinteraktion soll später über F10-Menüs erfolgen.
+
+Geplante Inhalte:
+
+- Kampagnenstatus anzeigen
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Mission annehmen
+- Logistikstatus anzeigen
+- FOB-Status anzeigen
+- AI-/CAP-Status anzeigen
+- IADS-Status anzeigen
+- Debug-Menüs optional aktivieren
+
+Aktueller Stand:
+
+    UI-Bereich ist dokumentiert.
+    F10-Menüs sind noch nicht implementiert.
+
+---
+
+## Persistenzdesign
+
+Die Kampagne soll später persistent werden.
+
+Persistenz soll speichern:
+
+- Besitzstatus von Basen
+- Besitzstatus von Zonen
+- Airbase-Klassifizierung
+- aktive Missionen
+- abgeschlossene Missionen
 - Logistikstatus
+- FOB-Status
+- AI-Zustand
 - IADS-Zustand
-- zerstörte Ziele
-- Missionshistorie
-- Kampagnenphase
+- wichtige Kampagnenereignisse
 
-Persistenz wird nicht am Anfang umgesetzt.
+Aktueller Stand:
 
-Zuerst muss klar sein, welche Daten stabil gespeichert werden müssen.
+    In-Memory-Persistenz ist vorbereitet.
+    Datei-Persistenz ist noch nicht getestet.
 
----
+Wichtig:
 
-## Mission-Editor-Design
-
-Der Mission Editor stellt später nur die Bühne bereit.
-
-Geplante Mission:
-
-    Operation_Levant_Reclamation_DEV.miz
-
-Der Mission Editor enthält später:
-
-- Syria Map
-- Koalitionen
-- Spieler-Slots
-- Lade-Trigger
-- Template-Gruppen
-- CTLD-Zonen
-- statische Ziele
-- erste Testumgebung
-
-Der Mission Editor enthält nicht:
-
-- große Kampagnenlogik
-- große Basen-Triggerketten
-- manuelle Frontlinienlogik
-- manuelle Missionsgeneratorlogik
-- Persistenzlogik
+    DCS-Sandbox-Verhalten muss vor echter Dateipersistenz geprüft werden.
 
 ---
 
-## Erster spielbarer Zielzustand
+## Kampagnenstart auf Akrotiri
 
-Ein erster spielbarer Zielzustand könnte sein:
+Akrotiri ist der zentrale blaue Startpunkt.
 
-- Mission lädt alle Frameworks korrekt
-- Theater Command Loader startet
-- Akrotiri wird als blaue Startbasis erkannt
-- erste Spieler-Slots funktionieren
-- erste CTLD-Pickup-Zone funktioniert
-- einfache Statusausgabe über F10 funktioniert
-- erste Airbase-Liste wird erkannt
-- erste Debug-Ausgabe erscheint im `dcs.log`
+Fachliche Rolle:
 
-Dieser Zustand ist noch keine vollständige Kampagne.
+- Blue Main Operating Base
+- sicherer Startpunkt
+- erster Logistikhub
+- Ausgangspunkt für Luftoperationen
+- Ausgangspunkt für spätere See-/Luftbrücke
+- nicht initial capturable
+- nicht erstes feindliches Missionsziel
 
-Er ist der erste technische Meilenstein.
+Aktuell im Mission Editor vorhanden:
 
----
-
-## Nicht jetzt umsetzen
-
-Aktuell noch nicht bauen:
-
-- komplette rote Großkampagne
-- komplette Frontlinie
-- alle syrischen Airbases manuell konfigurieren
-- vollständiges IADS-Netz
-- vollständige Persistenz
-- große Mission-Editor-Triggerketten
-- komplette dynamische Missionslogik
-- vollständige KI-Gegenoffensive
-
-Diese Systeme werden schrittweise aufgebaut.
+    erster F/A-18C Lot 20 Client-Slot auf Akrotiri
 
 ---
 
-## Aktueller nächster technischer Schritt
+## Roter Ausgangsraum
 
-Nach Abschluss der aktuellen Dokumentationsaktualisierung:
+Der rote Ausgangsraum umfasst zu Beginn das syrische Festland.
 
-    src-Unterordner und README-Dateien erstellen
+Fachliche Rolle:
 
-Danach:
+- rote strategische Tiefe
+- rote Airbases
+- rote IADS
+- rote Logistik
+- rote AI-Reaktionen
+- rote Missionsziele
+- spätere Capture-Ziele
 
-    src/loader.lua
-    src/main.lua
-    src/core/tc_config.lua
-    src/core/tc_logger.lua
-    src/core/tc_state.lua
+Aktuell noch nicht gebaut:
+
+- keine rote Frontlinie
+- keine rote IADS-Struktur
+- keine roten Template-Gruppen
+- keine roten Logistikobjekte
+- keine roten Mission Targets
+
+Diese Elemente werden erst ergänzt, wenn die Airbase- und State-Grundlage stabil ist.
+
+---
+
+## Kampagnenfortschritt
+
+Kampagnenfortschritt soll später nicht nur über zerstörte Einheiten entstehen.
+
+Mögliche Fortschrittsfaktoren:
+
+- Airbase-Zustand
+- Zone-Zustand
+- Missionserfolg
+- Logistiklieferungen
+- FOB-Aufbau
+- IADS-Schäden
+- AI-Verluste
+- Capture-Ereignisse
+- persistente Zustandsänderungen
+
+---
+
+## Nicht-Ziele im aktuellen Stand
+
+Aktuell wird bewusst nicht gebaut:
+
+- keine vollständige Kampagnenstory
+- keine komplette rote Frontlinie
+- keine komplette Syria-Befüllung
+- keine komplette IADS-Struktur
+- keine vollständige CTLD-Logistik
+- keine F10-Menüs
+- keine produktive Persistenz
+- keine automatische `.miz`-Generierung
+- keine Multiplayer-Synchronisation
+- keine kommerzielle Release-Struktur
+
+Grund:
+
+    Zuerst muss die technische Grundlage stabil bleiben.
+    Danach muss die Airbase-Klassifizierung gelöst werden.
+
+---
+
+## Nächster Kampagnendesign-Schritt
+
+Der nächste fachliche und technische Schritt ist:
+
+    Airbase-Klassifizierung
+
+Warum:
+
+Der Kampagnenzustand hängt davon ab, welche DCS-Airbase-Objekte echte strategische Kampagnenbasen sind.
+
+Ohne diese Klassifizierung wären Capture, Missionen, Logistik und AI fehleranfällig.
+
+Ziel:
+
+- strategische Airfields identifizieren
+- Secondary Airfields erkennen
+- Heliports erkennen
+- Helipads erkennen
+- Medical Pads erkennen
+- FARPs erkennen
+- Unknown-Objekte zurückstellen
+- Akrotiri korrekt als Blue Start Base markieren
+- rote strategische Basen für spätere Kampagnenlogik vorbereiten
+
+---
+
+## Aktueller Status
+
+Das Kampagnendesign ist als dynamisches System angelegt.
+
+Die erste technische DCS-Prüfung ist bestanden.
+
+Die Kampagne ist noch nicht spielbar.
+
+Der nächste notwendige Schritt ist die Airbase-Klassifizierung im World-System.
