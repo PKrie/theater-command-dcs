@@ -2,11 +2,13 @@
 
 Diese Datei beschreibt den geplanten AI Director von **Theater Command DCS**.
 
-Die erste Kampagne trägt den Arbeitstitel:
+Erste Kampagne:
 
     Operation Levant Reclamation
 
-Die Kampagne wird auf der **Syria Map** aufgebaut.
+Map:
+
+    Syria
 
 Ausgangslage:
 
@@ -15,696 +17,983 @@ Ausgangslage:
 
 ---
 
-## Zweck des AI Directors
+## 1. Zweck des AI Directors
 
-Der AI Director soll später dynamische KI-Reaktionen auf den aktuellen Kampagnenzustand steuern.
+Der AI Director soll langfristig die strategische und operative KI-Entscheidungsebene von Theater Command DCS werden.
 
-Er soll nicht einfach zufällig Einheiten spawnen.
+Er soll nicht nur einzelne Flugzeuge oder Gruppen spawnen.
 
-Stattdessen soll er aus dem Zustand der Kampagne ableiten, welche KI-Reaktionen sinnvoll sind.
+Er soll aus dem Kampagnenzustand ableiten, welche Seite welche Operationen plant, priorisiert und ausführt.
 
-Mögliche Reaktionen:
+Ziel:
 
-- CAP starten
-- GCI starten
-- Verstärkungen schicken
-- Gegenangriffe vorbereiten
-- bedrohte Basen verteidigen
-- Logistikziele angreifen
-- IADS-Sektoren schützen
-- rote Luftaktivität anpassen
-- Missionsdruck auf Blau erhöhen
-- Eskalationslogik auslösen
+    Blue und Red sollen eigene Operationen durchführen.
+    Spieler sollen Teilnehmer einer laufenden Kampagne sein.
+    Die Kampagne soll nicht ausschließlich durch Spieleraktionen angetrieben werden.
+
+Der AI Director ist aktuell noch nicht implementiert.
+
+Der vorhandene `AICapManager` ist ein erstes vorbereitendes Teilmodul für CAP-State, aber noch kein vollständiger AI Director.
 
 ---
 
-## Grundprinzip
+## 2. Aktueller technischer Stand
 
-Das zentrale Projektprinzip lautet:
+Stand:
 
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis
+    2026-06-29
 
-Der Mission Editor stellt nur die Bühne bereit.
-
-Die eigentliche KI-Logik liegt in Lua.
-
-GitHub dokumentiert Struktur, Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
-
----
-
-## Aktueller technischer Stand
-
-Stand: 2026-06-16
-
-Aktuelle AI-Datei:
+Aktive AI-Datei:
 
     src/ai/tc_ai_cap_manager.lua
 
-Der erste reale DCS-Starttest wurde durchgeführt.
+Getestete Version:
 
-Test:
+    v0.2.0
 
-    Starttest-Variante A — sichere Einzeldatei-Ladung
+Status:
 
-Ergebnis:
+    bestanden
 
-    Bestanden
-
-Bestätigt wurde:
-
-- AI-Bereich wird geladen
-- `tc_ai_cap_manager.lua` wird geladen
-- keine schweren Lua-Fehler beim Laden
-- AI wird durch Main als Runtime-System berücksichtigt
-- Theater-Command-Startkette läuft sauber weiter
-
-Aktueller Stand:
-
-    AI-CAP-Manager ist technisch ladbar.
-    Funktionale AI-Tests wurden noch nicht durchgeführt.
-    Es werden noch keine realen MOOSE-CAPs gespawnt.
-    Es gibt noch keinen vollständigen AI Director.
-
----
-
-## Aktuelle DEV-Mission
-
-Aktuelle technische Entwicklungsmission:
-
-    Operation_Levant_Reclamation_DEV.miz
-
-Aktueller Inhalt:
-
-    Map: Syria
-    Koalitionspreset: Modern
-    Blue Start: Akrotiri / Zypern
-    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
-    Trigger: Starttest-Variante A vollständig angelegt
-    keine rote Frontlinie
-    keine IADS-Stellungen
-    keine CTLD-Zonen
-    keine Template-Gruppen
-    keine F10-Menüs
-
-Diese Mission ist aktuell nur ein technischer Testträger.
-
-Sie ist noch keine spielbare Kampagnenmission.
-
----
-
-## Verbindung zum Airbase-System
-
-Der erste reale DCS-Test ergab:
-
-    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
-    Zone-Factory registrierte 225 Zonen.
-
-Dieser Befund ist für den AI Director wichtig.
-
-Problem:
-
-    Die AI darf nicht jedes von DCS erkannte Airbase-/Helipad-Objekt als strategisch relevante Basis behandeln.
-
-DCS kann unter anderem liefern:
-
-- große Airfields
-- kleinere Airfields
-- Heliports
-- Helipads
-- Medical Pads
-- FARPs
-- taktische Pads
-- unbekannte Objekte
-
-Folgerung:
-
-    AI-Reaktionen dürfen erst produktiv auf Airbase-Daten zugreifen, wenn der Airbase-Scanner diese Objekte klassifiziert.
-
----
-
-## Geplante Airbase-Relevanz für AI
-
-### Strategische Airfields
-
-Strategische Airfields können später AI-Reaktionen auslösen.
-
-Beispiele:
-
-- CAP zum Schutz wichtiger Basen
-- GCI von roten Flugplätzen
-- Verstärkung bei Bedrohung
-- Gegenangriff bei Capture-Fortschritt
-- Verteidigung nach SEAD-/Strike-Erfolg
-- Priorisierung wichtiger Sektoren
-
----
-
-### Secondary Airfields
-
-Secondary Airfields können später begrenzte AI-Reaktionen auslösen.
-
-Beispiele:
-
-- lokale CAP
-- Hubschrauberreaktion
-- leichte Verstärkung
-- begrenzte Verteidigung
-- temporäre Nutzung als Forward Base
-
----
-
-### Heliports und Helipads
-
-Heliports und Helipads können für spezielle KI-Reaktionen relevant sein.
-
-Beispiele:
-
-- Hubschrauberoperationen
-- CSAR-Reaktion
-- taktische Verstärkung
-- lokale Reaktion
-- Transporthubschrauber
-
-Sie sollen aber nicht automatisch wie strategische Airfields behandelt werden.
-
----
-
-### Medical Pads
-
-Medical Pads sollen normalerweise keine militärische AI-Priorität erzeugen.
-
-Mögliche spätere Sonderrollen:
-
-- MEDEVAC-Szenario
-- humanitäre Lage
-- CSAR-Bezug
-
-Nicht vorgesehen als Standard:
-
-- CAP-Zentrum
-- GCI-Basis
-- strategischer Gegenangriffspunkt
-- Strike-Ziel
-
----
-
-### FARPs
-
-FARPs können für AI wichtig werden, besonders bei Hubschrauber- und Frontlogik.
-
-Mögliche Rollen:
-
-- rote Forward Helicopter Base
-- blaue Forward Base
-- AI-Angriffsziel
-- logistischer Knoten
-- FOB-Verteidigung
-- Hubschrauber-CAP oder Escort
-
-FARPs gehören fachlich eng zum Logistics- und FOB-System.
-
----
-
-## Aktuelles AI-Modul
-
-### `src/ai/tc_ai_cap_manager.lua`
-
-Aufgabe:
-
-- CAP-Anforderungen vorbereiten
-- CAP-Zonen verwalten
-- aktive CAPs verwalten
-- CAP-Status speichern
-- spätere MOOSE-Anbindung vorbereiten
-- AI-Luftreaktionen vorbereiten
-
-Aktueller Stand:
-
-    Datei vorhanden.
-    Datei wird geladen.
-    Keine schweren Lua-Fehler beim Starttest.
-    Noch keine realen CAP-Spawns.
-
----
-
-## Geplante spätere AI-Module
-
-Mögliche spätere Dateien:
+Geplante spätere Datei:
 
     src/ai/tc_ai_director.lua
-    src/ai/tc_ai_gci_manager.lua
-    src/ai/tc_ai_counterattack.lua
-    src/ai/tc_ai_reinforcement_manager.lua
-    src/ai/tc_ai_threat_evaluator.lua
 
-Diese Dateien werden aktuell noch nicht erstellt.
+Aktuell vorhanden:
+
+- AI-Ordnerstruktur
+- `src/ai/README.md`
+- `src/ai/tc_ai_cap_manager.lua`
+- CAP-Zonen-Kandidaten
+- CAP-Requests
+- Blue-/Red-CAP-State
+- MOOSE-Hooks vorbereitet
+- `spawn=MOOSE_PENDING` als erwarteter Zustand
+
+Noch nicht vorhanden:
+
+- vollständiger AI Director
+- strategisches Entscheidungsmodell
+- Blue-Offensivplanung
+- Red-Verteidigungsplanung
+- Red-Gegenangriffe
+- dynamische Ressourcenbewertung
+- echte MOOSE-Spawns
+- echte AI-Flüge
+- echte AI-Mission Packages
+- echte GCI-Reaktion
+- Verlustauswertung
+- AI-Persistenz
+
+---
+
+## 3. Aktueller getesteter AI-CAP-Stand
+
+AICapManager:
+
+    Datei: src/ai/tc_ai_cap_manager.lua
+    Version: v0.2.0
+    Status: bestanden
+
+Bestätigte Werte:
+
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
+
+Bewertung:
+
+    AICapManager erzeugt einen ersten AI-bezogenen State.
+    CAP-Bedarf wird aus Kampagnenzonen abgeleitet.
+    Es werden noch keine echten MOOSE-CAP-Flüge gespawnt.
+    `spawn=MOOSE_PENDING` ist aktuell korrekt und erwartet.
+
+---
+
+## 4. Verhältnis zwischen AICapManager und AI Director
+
+Der AICapManager ist nicht der vollständige AI Director.
+
+AICapManager:
+
+- bereitet CAP-Zonen vor
+- erzeugt CAP-Requests
+- bewertet Luftbedrohung state-only
+- bereitet spätere MOOSE-CAP-Anbindung vor
+
+AI Director soll später:
+
+- Gesamtstrategie bewerten
+- Blue-Operationen planen
+- Red-Operationen planen
+- Missionsbedarf erzeugen
+- CAP-Bedarf priorisieren
+- Logistikbedarf bewerten
+- FOB-Bedarf bewerten
+- IADS-Zustand berücksichtigen
+- Capture-Pressure bewerten
+- Missionsresultate verarbeiten
+- Ressourcen verwalten
+- Eskalation und Gegenreaktionen steuern
+
+Kurz:
+
+    AICapManager ist ein Fachmodul.
+    AI Director wird die strategische Koordinationsschicht.
+
+---
+
+## 5. State-first-Grundsatz
+
+Auch für den AI Director gilt:
+
+    erst State
+    dann Sichtbarkeit
+    dann Tests
+    dann echte Framework-Aktionen
+
+Der AI Director soll im ersten Schritt keine echten DCS-Gruppen spawnen.
+
+Er soll zunächst nur State erzeugen:
+
+- geplante Operationen
+- priorisierte Ziele
+- AI-Absichten
+- CAP-Bedarf
+- Strike-Bedarf
+- SEAD-/DEAD-Bedarf
+- Logistikbedarf
+- FOB-Bedarf
+- Verteidigungsbedarf
+- Gegenangriffsbedarf
+- Reaktionszustände
+
+Echte MOOSE- oder CTLD-Aktionen folgen erst später.
 
 Grund:
 
-    Zuerst müssen Airbase-Klassifizierung, World-Daten und grundlegender Campaign-State stabil sein.
+    DCS-Framework-Ausführung erzeugt komplexe Nebenwirkungen.
+    Vor echten Spawns muss die AI-Entscheidung im State sichtbar und testbar sein.
 
 ---
 
-## AI Director
+## 6. Datenquellen des späteren AI Directors
 
-Der AI Director soll später die zentrale Entscheidungslogik für KI-Reaktionen werden.
+Der AI Director soll später Daten aus mehreren Theater-Command-Systemen lesen.
 
-Aufgaben:
+Wichtige Datenquellen:
 
-- Kampagnenzustand auswerten
-- Bedrohungen bewerten
-- rote Reaktionen planen
-- blaue Fortschritte berücksichtigen
-- Missionsergebnisse auswerten
-- Luftlage beeinflussen
-- Logistiklage berücksichtigen
-- IADS-Zustand berücksichtigen
-- Prioritäten setzen
-- andere AI-Subsysteme anstoßen
+- Airbase Scanner
+- ZoneFactory
+- CaptureSystem
+- LogisticsDelivery
+- FobSystem
+- MissionGenerator
+- AICapManager
+- IADS System
+- PersistenceSystem
+- F10/UI
+- spätere Debug-Reports
+- spätere DCS-Event-Auswertung
 
-Der AI Director soll nicht jedes Detail selbst ausführen.
+Aktuelle vorgelagerte bestätigte Werte:
 
-Er soll andere Manager ansteuern.
+    Syria airbase-like objects: 225
+    relevante Kampagnenzonen: 46
+    capture-fähige Ziele: 32
+    Capture-Pressure-Records: 32
+    Capture-Progress-Records: 32
+    Logistics Hubs: 46
+    FOB-Kandidaten: 6
+    Blue FOBs: 2
+    Mission candidates: 69
+    verfügbare Missionen: 10
+    CAP-Zonen-Kandidaten: 31
+    CAP Requests: 12
 
-Beispiele:
-
-    AI Director entscheidet: rote CAP erforderlich.
-    CAP Manager verwaltet die konkrete CAP-Anforderung.
-
-    AI Director entscheidet: Gegenangriff sinnvoll.
-    Counterattack Manager bereitet Gegenangriff vor.
-
-    AI Director entscheidet: IADS-Sektor bedroht.
-    IADS Bridge oder Mission Generator erzeugt passende Reaktion.
-
----
-
-## CAP-Management
-
-CAP steht für Combat Air Patrol.
-
-CAP soll später genutzt werden für:
-
-- Schutz roter Basen
-- Schutz blauer Basen
-- Schutz von IADS-Sektoren
-- Schutz von Logistikkorridoren
-- Luftüberlegenheit über Frontbereichen
-- Reaktion auf Spieleraktivität
-
-Geplante CAP-Daten:
-
-    id
-    coalition
-    originBase
-    patrolZone
-    status
-    priority
-    requestedBy
-    createdAt
-    expiresAt
-
-Mögliche Statuswerte:
-
-    REQUESTED
-    ACTIVE
-    COMPLETED
-    FAILED
-    CANCELLED
+Diese Datenbasis ist inzwischen stabil genug, um den AI Director später sinnvoll aufzubauen.
 
 ---
 
-## GCI-Management
+## 7. Verhältnis zu Airbase Scanner
 
-GCI steht für Ground Controlled Intercept.
+Airbase Scanner liefert die klassifizierte Airbase-Basis.
 
-GCI soll später genutzt werden für:
+Aktuelle Werte:
 
-- gezielte Abfangreaktionen
-- Reaktion auf blaue Eindringlinge
-- Schutz strategischer Basen
-- Schutz von IADS-Sektoren
-- Eskalation bei hoher Bedrohung
+    total: 225
+    strategic: 19
+    secondary: 13
+    heliports: 1
+    helipads: 95
+    medical: 40
+    farps: 0
+    tactical: 13
+    unknown: 44
+    captureCandidates: 32
+    missionCandidates: 32
+    logisticsCandidates: 46
+    blueStartBases: 1
+    redStrategicCandidates: 18
 
-GCI benötigt später:
+AI Director soll später daraus ableiten:
 
-- aktive Radar-/IADS-Daten
-- verfügbare rote Flugplätze
-- verfügbare rote Flugzeuge
-- Bedrohungsbewertung
-- MOOSE-Anbindung
+- strategische Schlüsselbasen
+- operative Achsen
+- rote Schwerpunktbasen
+- blaue Ausgangsbasen
+- mögliche Angriffsräume
+- mögliche Verteidigungsräume
+- lohnende Missionsziele
+- gefährdete eigene Basen
+- Logistikschwerpunkte
 
-Aktueller Stand:
+Aktuell:
 
-    GCI-Manager ist noch nicht implementiert.
-
----
-
-## Gegenangriffe
-
-Gegenangriffe sollen später rote Reaktionen auf blauen Fortschritt darstellen.
-
-Mögliche Auslöser:
-
-- Blau erobert strategische Basis
-- Blau baut FOB auf
-- IADS-Sektor wird zerstört
-- rote Logistik wird geschwächt
-- wichtige Mission scheitert oder gelingt
-- Blau überschreitet Operationsgrenze
-- Campaign-State erreicht Eskalationsschwelle
-
-Mögliche Gegenangriffe:
-
-- Luftangriff
-- Bodenangriff
-- Artillerieangriff
-- Angriff auf FOB
-- Angriff auf Logistikkorridor
-- erhöhte CAP-Aktivität
-- IADS-Verstärkung
-
-Aktueller Stand:
-
-    Gegenangriffssystem ist noch nicht implementiert.
+    AI Director nutzt diese Daten noch nicht direkt.
+    AICapManager nutzt bereits Zonen-/Airbase-Daten zur CAP-State-Vorbereitung.
 
 ---
 
-## Verstärkungen
+## 8. Verhältnis zu ZoneFactory
 
-Verstärkungen sollen später dynamisch auf Lageänderungen reagieren.
+ZoneFactory erzeugt relevante Kampagnenzonen.
 
-Mögliche Verstärkungen:
+Aktuelle Werte:
 
-- zusätzliche CAP-Flüge
-- zusätzliche SAM-Systeme
-- mobile Luftverteidigung
-- Bodeneinheiten
-- Logistikfahrzeuge
-- Hubschrauber
-- Reserveeinheiten
+    total zones: 46
+    classified airbase zones: 46
+    Mission Editor zones: 0
+    skipped airbase-like objects: 179
+    strategic zones: 19
+    secondary zones: 13
+    captureZones: 32
+    missionZones: 32
+    logisticsZones: 46
+    startBaseZones: 1
 
-Verstärkungen dürfen nicht zufällig oder beliebig erscheinen.
+AI Director soll später Zonen bewerten nach:
 
-Sie sollen abhängig sein von:
-
-- Kampagnenphase
-- Besitzstatus
-- Airbase-Klassifizierung
-- Logistiklage
-- IADS-Zustand
-- Missionsverlauf
-- Bedrohungsbewertung
-
----
-
-## Bedrohungsbewertung
-
-Der AI Director soll später Bedrohungen bewerten.
-
-Mögliche Faktoren:
-
-- Nähe blauer Kräfte zu roter Basis
-- aktive blaue Missionen
-- IADS-Schäden
-- verlorene rote Basen
-- aktiver FOB-Aufbau
-- zerstörte Logistikhubs
-- Luftüberlegenheitslage
-- verfügbare rote Flugplätze
-- verfügbare rote CAPs
-- offene Kampagnenziele
-
-Mögliche Bedrohungsstufen:
-
-    LOW
-    MEDIUM
-    HIGH
-    CRITICAL
-
-Diese Stufen können später Missionen, CAPs, GCI oder Gegenangriffe beeinflussen.
-
----
-
-## Verbindung zum Campaign-System
-
-Der AI Director soll stark vom Campaign-System abhängen.
-
-Campaign liefert:
-
-- Besitzstatus
-- Capture-Zustände
-- strategische Basen
-- umkämpfte Zonen
-- Kampagnenphase
-- bisherige Fortschritte
-- wichtige Ereignisse
-
-AI liefert zurück:
-
-- Reaktionsereignisse
-- aktive CAPs
-- aktive Gegenangriffe
-- Bedrohungsstatus
-- Eskalationsstatus
-- mögliche Missionsvorschläge
+- Besitzer
+- strategischer Relevanz
+- Nähe zu Front oder Operationsachse
+- Capture-Status
+- Logistics-Status
+- IADS-Abdeckung
+- CAP-Bedarf
+- FOB-Nähe
+- Missionslage
+- Bedrohung
 
 Wichtig:
 
-    AI entscheidet nicht allein über strategischen Besitz.
-    Campaign bleibt führend für Besitz- und Capture-Zustände.
+    Der AI Director darf nicht auf allen 225 DCS-Airbase-like Objects planen.
+    Er soll die gefilterten 46 Kampagnenzonen nutzen.
 
 ---
 
-## Verbindung zum Mission Generator
+## 9. Verhältnis zu CaptureSystem
 
-AI und Missionsgenerator sollen später zusammenarbeiten.
+CaptureSystem liefert Ownership, Capture-Eligibility, Capture-Pressure und Capture-Progress.
 
-Beispiele:
+Aktuelle Werte:
 
-- starke rote CAP erzeugt blaue CAP- oder Escort-Mission
-- rote Verstärkungen erzeugen Interdiction-Mission
-- IADS-Schutz erzeugt SEAD-Mission
-- Gegenangriff erzeugt CAS-Mission
-- Bedrohter FOB erzeugt FOB-Defense-Mission
-- rote Logistikbewegung erzeugt Strike- oder Interdiction-Mission
+    eligibleBases: 32
+    eligibleZones: 32
+    nonCaptureBases: 193
+    nonCaptureZones: 14
+    pressureRecords: 32
+    progressRecords: 32
+    appliedMissionEffects: 0
+    ready: 0
+    contested: 0
 
-Der Missionsgenerator erzeugt daraus spielbare Aufträge.
+AI Director soll später daraus ableiten:
 
-Der AI Director liefert Lageimpulse.
+- welche Zonen angegriffen werden sollen
+- welche Zonen verteidigt werden sollen
+- welche Zonen kurz vor Capture stehen
+- welche Zonen durch Missionen vorbereitet werden müssen
+- wo Red Gegenmaßnahmen priorisiert
+- wo Blue weiter Druck aufbauen soll
+- wo Logistik oder FOBs nötig sind
 
----
+Aktuell:
 
-## Verbindung zum Logistics-System
-
-Logistik beeinflusst AI-Reaktionen.
-
-Beispiele:
-
-- Blau baut FOB auf → Rot reagiert
-- blauer Nachschub läuft → Rot versucht Interdiction
-- roter Hub wird zerstört → rote AI-Reaktion sinkt oder verschiebt sich
-- Versorgung einer Basis sinkt → Verteidigung wird schwächer
-- Logistikkorridor wird wichtig → CAP- oder GCI-Reaktion möglich
-
-Aktueller Stand:
-
-    Logistics-Module laden.
-    Keine reale AI-Logistics-Verbindung implementiert.
+    CaptureSystem erzeugt Pressure und Progress.
+    AI Director verarbeitet diese Daten noch nicht produktiv.
+    Nächster Schritt ist zunächst F10-Sichtbarkeit für Capture-/Pressure-Daten.
 
 ---
 
-## Verbindung zum IADS-System
+## 10. Verhältnis zu LogisticsDelivery
 
-IADS beeinflusst AI stark.
+LogisticsDelivery liefert Logistics Hubs.
 
-Beispiele:
+Aktuelle Werte:
 
-- aktive Radarstellungen ermöglichen GCI
-- zerstörte SAM-Sektoren schwächen rote Verteidigung
-- SEAD-Erfolge erzwingen AI-Reaktion
-- intakte IADS-Sektoren erhöhen Risiko für blaue Missionen
-- wichtige SAM-Verluste können Gegenangriffe auslösen
+    logistics hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
+
+AI Director soll später daraus ableiten:
+
+- welche Hubs geschützt werden müssen
+- welche Hubs angegriffen werden sollen
+- wo Versorgungslücken bestehen
+- wo FOB-Aufbau sinnvoll ist
+- welche Hubs Missionen erzeugen sollen
+- wo Interdiction sinnvoll ist
+- wo CAP zur Sicherung nötig ist
+
+Aktuell:
+
+    Logistics Hubs existieren im State.
+    AI Director nutzt sie noch nicht produktiv.
+
+---
+
+## 11. Verhältnis zu FobSystem
+
+FobSystem liefert FOB-Kandidaten und state-only Blue-FOBs.
+
+Aktuelle Werte:
+
+    FOB candidates: 6
+    stored candidates: 6
+    auto-planned FOBs: 2
+    skipped candidates: 4
+    Blue FOBs: 2
+
+Aktuelle Blue-FOBs:
+
+    FOB Ercan
+    FOB Gecitkale
+
+Status:
+
+    UNDER_CONSTRUCTION
+
+AI Director soll später daraus ableiten:
+
+- FOBs schützen
+- FOB-Aufbau priorisieren
+- FOB-Support-Missionen anfordern
+- Red-Angriffe auf FOBs planen
+- Blue-Operationen aus FOBs heraus planen
+- CAP über FOBs anfordern
+- Logistikbedarf erzeugen
+
+Aktuell:
+
+    FOBs sind state-only.
+    MissionGenerator nutzt FOBs bereits für FOB-Support.
+    AI Director nutzt FOBs noch nicht produktiv.
+
+---
+
+## 12. Verhältnis zu MissionGenerator
+
+MissionGenerator erzeugt Missionen aus Kampagnenzustand.
+
+Aktuelle Werte:
+
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 30
+
+AI Director soll später mit MissionGenerator zusammenarbeiten.
+
+Mögliche Rollenverteilung:
+
+MissionGenerator:
+
+- erzeugt mögliche Missionen
+- verwaltet Mission Records
+- verwaltet Mission Status
+- bereitet Mission Effects vor
+- stellt Missionen im F10 bereit
+
+AI Director:
+
+- bewertet Prioritäten
+- entscheidet, welche Operationen sinnvoll sind
+- fordert Missionstypen an
+- priorisiert Blue- und Red-Bedarf
+- reagiert auf Missionsergebnisse
+- steuert Eskalation und Gegenreaktionen
+
+Aktuell:
+
+    MissionGenerator arbeitet state-only.
+    F10Menu kann Missionen aktivieren.
+    AI Director ist noch nicht angebunden.
+
+---
+
+## 13. Verhältnis zu AICapManager
+
+AICapManager ist aktuell das aktive AI-Teilmodul.
+
+AI Director soll später AICapManager nutzen oder steuern.
+
+Mögliche spätere Aufgabenverteilung:
+
+AICapManager:
+
+- CAP-Zonen verwalten
+- CAP-Requests erzeugen
+- CAP-State pflegen
+- MOOSE-CAP-Hooks vorbereiten oder auslösen
+
+AI Director:
+
+- entscheidet, welche CAP-Requests Priorität haben
+- entscheidet Blue-/Red-Schwerpunkt
+- entscheidet defensive oder offensive CAP
+- bewertet Bedrohung und Ressourcen
+- koppelt CAP an Missionen, Capture und IADS
+
+Aktuell:
+
+    AICapManager läuft eigenständig state-only.
+    AI Director existiert noch nicht.
+
+---
+
+## 14. Verhältnis zu IADS
+
+IADS ist für die spätere AI-Entscheidung zentral.
 
 Aktueller Stand:
 
     Skynet IADS wird geladen.
-    Theater-Command-IADS-Schicht ist noch nicht implementiert.
+    Theater-Command-IADS-Modul ist noch nicht implementiert.
+    MissionGenerator reserviert Skynet-Hooks.
+    Keine produktive IADS-Kampagnenlogik aktiv.
+
+AI Director soll später IADS-Daten nutzen:
+
+- SAM-Abdeckung
+- Radarstatus
+- IADS-Sektoren
+- beschädigte SAM-Sites
+- zerstörte EWR
+- sichere Korridore
+- gefährdete Luftkorridore
+- SEAD-/DEAD-Bedarf
+- Red-Verteidigungsfähigkeit
+- Blue-Angriffsrisiko
+
+Aktuell:
+
+    AI Director kann IADS noch nicht bewerten, weil das eigene IADS-System noch fehlt.
 
 ---
 
-## Verbindung zum UI-System
+## 15. Blue AI Design
 
-Später sollen AI-Daten über F10- oder Debug-Menüs sichtbar werden.
+Blue AI soll später eigene Operationen planen.
 
-Mögliche Anzeigen:
+Mögliche Blue-Prioritäten:
 
-- aktuelle Bedrohungsstufe
-- aktive rote CAPs
-- aktive GCI-Reaktionen
-- bekannte Gegenangriffe
-- AI-Prioritäten
-- bedrohte Zonen
-- gefährdete FOBs
-- Debug-Ausgaben
+- Akrotiri sichern
+- Luftüberlegenheit aufbauen
+- CAP-Korridore etablieren
+- SEAD/DEAD gegen rote IADS-Knoten planen
+- Recon gegen strategische Ziele durchführen
+- FOB-Aufbau unterstützen
+- Logistics Hubs sichern
+- Capture-Pressure aufbauen
+- Missionen gegen rote Airbases priorisieren
+- Gegenreaktionen auf rote Operationen einleiten
+
+Blue AI soll nicht den Spieler ersetzen.
+
+Sie soll die Kampagne lebendig halten und sinnvolle Operationen erzeugen.
+
+---
+
+## 16. Red AI Design
+
+Red AI soll später eigene Operationen planen.
+
+Mögliche Red-Prioritäten:
+
+- syrisches Festland halten
+- strategische Airbases verteidigen
+- IADS-Sektoren schützen
+- CAP gegen Blue-Korridore anfordern
+- Blue FOBs angreifen
+- Blue Logistics stören
+- Gegenangriffe auf umkämpfte Zonen planen
+- Red Logistics Hubs schützen
+- Schwächen im Blue-Fortschritt ausnutzen
+- Missionen gegen Blue-Druck auslösen
+
+Red AI soll nicht nur passiv Zielkulisse sein.
+
+Sie soll auf Blue-Fortschritt reagieren und eigene Prioritäten verfolgen.
+
+---
+
+## 17. Operationsarten
+
+Der spätere AI Director soll unterschiedliche Operationstypen planen können.
+
+Mögliche Blue-Operationen:
+
+- Air Superiority Operation
+- SEAD Preparation
+- DEAD Strike
+- Recon Sweep
+- Logistics Push
+- FOB Support Operation
+- Airbase Attack
+- Capture Preparation
+- CAP Corridor
+- Interdiction Package
+
+Mögliche Red-Operationen:
+
+- Defensive CAP
+- IADS Reinforcement
+- Counter CAP
+- FOB Attack
+- Logistics Interdiction
+- Airbase Defense
+- Counterattack Preparation
+- Strike Against Blue Hub
+- SAM Ambush
+- Pressure Relief Operation
+
+Aktuell:
+
+    Diese Operationstypen sind konzeptionell.
+    Es gibt noch keinen AI Director, der sie plant.
+
+---
+
+## 18. AI-State-Modell
+
+Der spätere AI Director soll eigenen State erzeugen.
+
+Mögliche State-Bereiche:
+
+    State.AI.Director
+    State.AI.Operations
+    State.AI.Intentions
+    State.AI.Priorities
+    State.AI.Requests
+    State.AI.ThreatAssessment
+    State.AI.ResourceAssessment
+    State.AI.Decisions
+    State.AI.History
+
+Mögliche Einträge:
+
+- currentPhase
+- blueIntent
+- redIntent
+- priorityZones
+- threatenedZones
+- targetZones
+- defensiveZones
+- activeOperations
+- pendingOperations
+- completedOperations
+- failedOperations
+- resourcePressure
+- airThreat
+- iadsThreat
+- logisticsPressure
+- capturePressure
+- decisionTimestamp
+
+Aktuell:
+
+    AICapManager erzeugt bereits AI-CAP-State.
+    Ein Director-State ist noch nicht implementiert.
+
+---
+
+## 19. Entscheidungsfaktoren
+
+Der AI Director soll später Entscheidungen anhand mehrerer Faktoren treffen.
+
+Wichtige Faktoren:
+
+- Zone Ownership
+- Base Ownership
+- Capture-Pressure
+- Capture-Progress
+- Mission Availability
+- Active Missions
+- Completed Missions
+- Failed Missions
+- Logistics Hub Status
+- FOB Status
+- Supply Levels
+- CAP Requests
+- Air Threat
+- IADS Threat
+- Strategic Value
+- Distance from Akrotiri
+- Distance from Red Core Areas
+- Current Campaign Phase
+- Losses
+- Resources
+- Time Since Last Operation
+
+Aktuell:
+
+    Viele dieser Daten existieren bereits state-first.
+    Sie sind aber noch nicht in einem AI-Director-Modell zusammengeführt.
+
+---
+
+## 20. Ressourcenmodell
+
+Der AI Director soll später nicht unbegrenzt handeln.
+
+Mögliche Ressourcen:
+
+- Aircraft Availability
+- Pilot Availability
+- Fuel
+- Ammo
+- Supply
+- Engineering
+- IADS Readiness
+- CAP Capacity
+- Strike Capacity
+- Logistics Capacity
+- FOB Construction Capacity
 
 Aktueller Stand:
 
-    UI-Bereich ist dokumentiert.
-    F10-Menüs sind noch nicht implementiert.
+    Es gibt noch kein produktives Ressourcenmodell.
+    Logistics Hubs und FOBs liefern aber eine Grundlage.
+    MissionGenerator und AICapManager liefern Missions- und CAP-State.
 
 ---
 
-## Verbindung zur Persistenz
+## 21. Reaktionsmodell
 
-AI-Zustände müssen später persistent gespeichert werden.
+Der AI Director soll später auf Ereignisse reagieren.
 
-Mögliche Daten:
+Mögliche Ereignisse:
 
-- aktive CAP-Anforderungen
-- aktive CAPs
-- aktive Gegenangriffe
-- AI-Bedrohungsstufen
-- Eskalationsstatus
-- Reaktionscooldowns
-- bisherige AI-Aktionen
-- gesperrte oder erschöpfte Ressourcen
+- Mission aktiviert
+- Mission abgeschlossen
+- Mission fehlgeschlagen
+- Zone unter Druck
+- Capture Ready
+- Zone erobert
+- FOB gebaut
+- FOB beschädigt
+- Logistics Hub geschwächt
+- IADS-Site zerstört
+- CAP Request offen
+- CAP verloren
+- Airbase beschädigt
+- Red Hub bedroht
+- Blue Hub bedroht
 
 Aktueller Stand:
 
-    In-Memory-Persistenz ist vorbereitet.
-    Datei-Persistenz ist noch nicht getestet.
+    Mission Activation ist bestätigt.
+    Mission completed/failed ist noch nicht produktiv.
+    CaptureSystem erzeugt Pressure/Progress.
+    Ereignisbasierte AI-Reaktionen sind noch nicht aktiv.
 
 ---
 
-## Verbindung zum Debug-System
+## 22. F10 und AI
 
-Später soll ein AI-Debugreport möglich sein.
+F10Menu ist aktuell aktiv.
 
-Geplante Datei:
+F10Menu v0.2.0 kann anzeigen:
 
-    src/debug/tc_debug_ai_report.lua
+- verfügbare Missionen
+- aktive Missionen
+- Missionsdetails
+- Kampagnenstatus
+- Logistics Status
+- FOB Status
+- AI CAP Status
 
-Mögliche Ausgabe:
+F10Menu kann aktuell:
 
-- aktive AI-Reaktionen
-- CAP-Anforderungen
-- CAP-Zonen
-- GCI-Status
-- Bedrohungsstufe
-- AI-Prioritäten
-- Gegenangriffsstatus
-- Verstärkungsstatus
-- Gründe für AI-Entscheidungen
+- Mission 1 bis Mission 10 aktivieren
 
-Aktuell wird dieser Debugreport noch nicht erstellt.
+AI-bezogene aktuelle F10-Funktion:
 
----
+    Show AI CAP Status
 
-## MOOSE-Anbindung
+Spätere AI-F10-Funktionen:
 
-MOOSE wird bereits als externes Framework geladen.
+- Show AI Director Status
+- Show Blue AI Intent
+- Show Red AI Intent
+- Show AI Priority Zones
+- Show AI Active Operations
+- Show AI Pending Operations
+- Show AI Threat Assessment
+- Show AI Resource Assessment
+- Debug Force AI Tick
+- Debug Pause AI Director
+- Debug Resume AI Director
 
-Aktueller Framework-Pfad:
+Aktuell nächster UI-Schritt:
 
-    vendor/moose/Moose.lua
-
-MOOSE kann später genutzt werden für:
-
-- CAP-Spawns
-- GCI-Spawns
-- Dispatcher-Systeme
-- Detection
-- Spawn-Templates
-- AI-Management
-- Patrol-Zonen
-
-Aktueller Stand:
-
-    MOOSE wird geladen.
-    Theater Command erkennt MOOSE.
-    AI-CAP-Manager nutzt MOOSE noch nicht produktiv.
-
----
-
-## Mission-Editor-Anforderungen für AI
-
-Später werden im Mission Editor wahrscheinlich benötigt:
-
-- Late-Activation-Template-Gruppen
-- rote CAP-Templates
-- rote GCI-Templates
-- blaue AI-Support-Templates
-- Patrol-Zonen
-- Spawn-Basen
-- Triggerzonen für Testzwecke
-- statische Ziele
-- Debug-Testobjekte
-
-Aktuell noch nicht angelegt:
-
-    keine AI-Templates
-    keine CAP-Zonen
-    keine GCI-Zonen
-    keine Dispatcher-Struktur
+    Capture-/Pressure-Status anzeigen, nicht AI Director.
 
 Grund:
 
-    Zuerst müssen Airbase-Klassifizierung und World-Daten stabil sein.
+    AI Director braucht sichtbare Capture-/Pressure-Daten als spätere Entscheidungsgrundlage.
 
 ---
 
-## Nicht-Ziele im aktuellen Stand
+## 23. Mission Effects und AI
 
-Aktuell wird bewusst nicht umgesetzt:
+Mission Effects sollen später AI-Entscheidungen beeinflussen.
 
-- kein vollständiger AI Director
-- keine realen MOOSE-CAP-Spawns
-- keine GCI-Logik
-- keine Gegenangriffe
-- keine Verstärkungslogik
-- keine AI-Persistenz
-- keine AI-F10-Menüs
-- keine komplexe Bedrohungsberechnung
-- keine roten Template-Gruppen
+Beispiele:
 
----
+- erfolgreiche SEAD-Mission senkt IADS Threat
+- erfolgreiche FOB-Support-Mission erhöht Blue Operations Capability
+- gescheiterte Strike-Mission erhöht Red Confidence
+- erfolgreiche Interdiction senkt Red Logistics
+- erfolgreiche CAP-Mission senkt Air Threat
+- Capture-Progress löst Red Counteraction aus
+- FOB-Bau löst Red Attack Plan aus
 
-## Nächster relevanter Schritt
+Aktueller Stand:
 
-Der nächste relevante Schritt für den AI Director ist nicht sofort die MOOSE-CAP-Implementierung.
-
-Zuerst erforderlich:
-
-    Airbase-Scanner klassifizieren und filtern.
-
-Warum:
-
-AI braucht saubere World-Daten.
-
-Erst wenn Theater Command unterscheiden kann zwischen:
-
-- strategischen Airfields
-- Secondary Airfields
-- Heliports
-- Helipads
-- Medical Pads
-- FARPs
-- Tactical Pads
-- Unknown
-
-kann AI sinnvoll entscheiden, wo CAP, GCI, Verteidigung oder Gegenangriffe entstehen sollen.
+    Mission Effects sind im MissionGenerator vorbereitet.
+    CaptureSystem kann Mission Effects state-only vorbereiten.
+    AI Director verarbeitet Mission Effects noch nicht.
 
 ---
 
-## Aktueller Status
+## 24. Framework-Integration
 
-Der AI-Bereich ist als Grundstruktur vorhanden.
+Der AI Director soll später Frameworks nicht direkt als Architekturordnung verwenden.
 
-Der AI-CAP-Manager lädt erfolgreich in DCS.
+Frameworks bleiben Werkzeuge.
 
-Ein vollständiger AI Director ist noch nicht implementiert.
+Geplante Zuordnung:
 
-Der nächste übergeordnete technische Schritt bleibt die Airbase-Klassifizierung im World-System.
+- MOOSE für CAP, Strike, SEAD, DEAD, CAS und Mission Packages
+- CTLD für Cargo, Transport und FOB-Support
+- Skynet IADS für Luftverteidigung
+- MIST nach Bedarf für Utility, Events oder Datenzugriff
+
+Regel:
+
+    AI Director trifft Entscheidungen.
+    Fachmodule oder Bridges lösen später konkrete Framework-Aktionen aus.
+
+Aktuell:
+
+    keine echte Framework-Ausführung durch AI Director.
+
+---
+
+## 25. Geplante Datei
+
+Geplante Datei:
+
+    src/ai/tc_ai_director.lua
+
+Mögliche erste Version:
+
+    v0.1.0
+
+Erster sinnvoller Umfang:
+
+- Modul lädt
+- State initialisiert
+- AI Director Status erzeugt
+- Blue Intent berechnet
+- Red Intent berechnet
+- Priority Zones aus bestehendem State ableitet
+- keine echten Spawns
+- keine Missionen automatisch aktiviert
+- keine CTLD-Aktionen
+- keine Skynet-Aktionen
+- Logsummary erzeugt
+- F10-/Debug-Anzeige später möglich
+
+Noch nicht jetzt:
+
+    Der AI Director sollte erst nach besserer F10-/Debug-Sichtbarkeit begonnen werden.
+
+---
+
+## 26. Warum der AI Director noch nicht der nächste Schritt ist
+
+Der AI Director ist ein zentrales System, aber aktuell noch nicht der nächste sinnvolle Schritt.
+
+Gründe:
+
+- Capture-Pressure ist zwar vorhanden, aber im Spiel noch nicht sichtbar.
+- Capture Ready Zones sind noch nicht über F10 sichtbar.
+- Pressure Contested Zones sind noch nicht über F10 sichtbar.
+- Mission completed/failed ist noch nicht testbar.
+- Mission Effects sind noch nicht praktisch geprüft.
+- Persistence ist noch nicht getestet.
+- IADS-System ist noch nicht angebunden.
+- echte Framework-Aktionen sind noch deaktiviert.
+
+Deshalb gilt:
+
+    Erst Capture-/Pressure-Sichtbarkeit.
+    Dann Mission completed/failed.
+    Dann Mission Effects testen.
+    Danach AI Director state-only beginnen.
+
+---
+
+## 27. Risiken
+
+Risiken bei zu frühem AI-Director-Bau:
+
+- AI trifft Entscheidungen auf unsichtbaren State-Daten
+- falsche Prioritäten bleiben unbemerkt
+- Missionen werden unkontrolliert erzeugt oder aktiviert
+- Capture-Druck wird falsch interpretiert
+- Logistikzustand wird falsch gewichtet
+- F10/Debug zeigt nicht genug zur Fehlersuche
+- MOOSE-Spawns werden zu früh ausgelöst
+- Red und Blue Verhalten wird schwer reproduzierbar
+- Persistenz speichert inkonsistente AI-Entscheidungen
+
+Gegenmaßnahmen:
+
+- AI Director zunächst state-only
+- keine echten Spawns in v0.1.0
+- klare Logmarker
+- F10-/Debug-Sichtbarkeit
+- kleine Entscheidungsmodelle
+- keine parallelen Großsysteme
+- Tests mit frischer dcs.log
+
+---
+
+## 28. Aktuelle Akzeptanzkriterien für AICapManager
+
+Aktuell bestanden:
+
+- AICapManager lädt.
+- AICapManager startet.
+- CAP-Zonen-Kandidaten werden erkannt.
+- 12 CAP-Zonen werden registriert.
+- 12 CAP Requests werden erzeugt.
+- reactionState wird gesetzt.
+- threatLevel wird gesetzt.
+- keine MOOSE-Spawns.
+- keine Lua-Fehler.
+- keine Theater-Command-Fehler.
+
+Noch offen:
+
+- echte MOOSE-CAP-Flüge
+- AI Director
+- GCI-Logik
+- Blue-/Red-Operationsplanung
+- Ressourcenmodell
+- Verlustauswertung
+- AI-Persistenz
+
+---
+
+## 29. Aktueller getesteter Systemstand
+
+| System | Datei | Version | Status |
+|---|---|---:|---|
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+
+---
+
+## 30. Nächster sinnvoller Schritt
+
+Der nächste sinnvolle Schritt liegt nicht direkt beim AI Director.
+
+Empfohlene nächste Datei:
+
+    src/ui/tc_f10_menu.lua
+
+Ziel:
+
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+
+Geplante neue F10-Funktionen:
+
+    Show Capture Status
+    Show Capture Ready Zones
+    Show Pressure Contested Zones
+
+Akzeptanzkriterien:
+
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
+
+---
+
+## 31. Aktueller Status
+
+AI-seitig ist aktuell nur der AICapManager aktiv und bestanden.
+
+Der vollständige AI Director ist noch nicht implementiert.
+
+Aktuelle Fähigkeit:
+
+- CAP-Zonen-Kandidaten werden erkannt.
+- CAP-Requests werden erzeugt.
+- AI-CAP-State ist vorhanden.
+- F10Menu kann AI CAP Status anzeigen.
+- MOOSE-CAP-Spawns sind vorbereitet, aber nicht aktiv.
+
+Nächster notwendiger Zwischenschritt:
+
+    Capture-/Pressure-Sichtbarkeit im F10-Menü.
+
+Danach sinnvoll:
+
+    Mission completed/failed testbar machen.
+    Mission Effects kontrolliert testen.
+    Erst danach AI Director state-only beginnen.
