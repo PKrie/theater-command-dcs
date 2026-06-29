@@ -1,45 +1,83 @@
-# AI
+# src/ai/README.md
 
-Dieser Ordner enthält die KI-Reaktionslogik von **Theater Command DCS**.
+Diese Datei beschreibt den AI-Bereich von **Theater Command DCS**.
 
-`src/ai/` steuert später dynamische feindliche und freundliche Reaktionen auf den aktuellen Kampagnenzustand.
-
-Die erste Kampagne trägt den Arbeitstitel:
-
-    Operation Levant Reclamation
-
-Die Kampagne wird auf der **Syria Map** aufgebaut. Blau startet auf **Zypern / Akrotiri**. Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+Der AI-Bereich enthält eigene Lua-Logik für KI-bezogene Kampagnenentscheidungen, CAP-State und spätere AI-Director-Funktionen.
 
 ---
 
-## Zweck von `src/ai/`
+## 1. Zweck des AI-Bereichs
 
-`src/ai/` ist für dynamische KI-Reaktionen zuständig.
+`src/ai/` ist für die KI-bezogene Lagebewertung und spätere KI-Operationsplanung zuständig.
 
-Geplante Aufgaben:
+Langfristig soll dieser Bereich ermöglichen, dass Blue und Red eigene dynamische Operationen planen und ausführen.
 
-- AI Director vorbereiten
-- CAP-Manager vorbereiten
-- GCI-Logik vorbereiten
-- feindliche Reaktionen auf Missionen vorbereiten
-- freundliche Unterstützung vorbereiten
-- Eskalationslogik vorbereiten
-- Verstärkungen vorbereiten
-- Luftlage dynamisch anpassen
-- spätere Verbindung zu MOOSE-Dispatcher-Systemen herstellen
+Ziel:
 
-Der AI-Bereich entscheidet nicht selbst über den strategischen Besitz von Basen oder Zonen.
+    Die Kampagne soll nicht ausschließlich durch Spieleraktionen laufen.
+    Blue und Red sollen eigene Absichten, Reaktionen und Operationen entwickeln.
+    Spieler sollen Teil einer laufenden Kampagne sein.
 
-Diese Daten kommen aus:
+Aktuell ist noch kein vollständiger AI Director implementiert.
 
-    src/campaign/
-    src/world/
-
-Der AI-Bereich nutzt diese Daten, um glaubwürdige Reaktionen zu erzeugen.
+Der erste aktive AI-Baustein ist der AICapManager.
 
 ---
 
-## Architekturregel
+## 2. Aktueller technischer Stand
+
+Stand:
+
+    2026-06-29
+
+Aktive Datei:
+
+    src/ai/tc_ai_cap_manager.lua
+
+Getestete Version:
+
+    v0.2.0
+
+Status:
+
+    bestanden
+
+Bestätigt durch DCS-Logtests:
+
+- AICapManager lädt.
+- AICapManager startet.
+- CAP-Zonen-Kandidaten werden erkannt.
+- CAP-Zonen werden state-only registriert.
+- CAP-Requests werden erzeugt.
+- reactionState wird gesetzt.
+- threatLevel wird gesetzt.
+- MOOSE-Hooks bleiben vorbereitet.
+- Es werden keine echten MOOSE-CAP-Flüge gespawnt.
+- Es gab keinen Theater-Command-Lua-Fehler.
+- Es gab keinen Lua-Stacktrace.
+
+---
+
+## 3. Aktuelle bestätigte Werte
+
+AICapManager:
+
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
+
+Bewertung:
+
+    AICapManager ist state-first bestanden.
+    CAP-Bedarf wird im Theater-Command-State abgebildet.
+    Echte MOOSE-CAP-Spawns sind noch nicht aktiv.
+    spawn=MOOSE_PENDING ist aktuell erwartetes Verhalten.
+
+---
+
+## 4. Architekturregel
 
 Externe Frameworks liegen unter:
 
@@ -53,443 +91,607 @@ Der AI-Bereich gehört zur eigenen Theater-Command-Logik.
 
 Frameworks werden nicht verändert.
 
-Die Dateien in `src/ai/` werden nach Aufgaben benannt, nicht nach Frameworks.
+Dateien in `src/ai/` werden nach Theater-Command-Aufgaben benannt, nicht nach Frameworks.
 
 Nicht gewünscht:
 
-    src/ai/tc_moose.lua
     src/ai/tc_moose_ai.lua
+    src/ai/tc_mist_ai.lua
     src/ai/tc_ai_all_in_one.lua
-    src/ai/tc_dispatcher_all_in_one.lua
+    src/ai/tc_dynamic_ai_everything.lua
 
 Gewünscht:
 
     src/ai/tc_ai_cap_manager.lua
+    src/ai/tc_ai_director.lua
 
-Eine AI-Datei darf intern MOOSE, MIST oder DCS-API nutzen.
+Eine AI-Datei darf später MOOSE, MIST, CTLD oder Skynet nutzen.
 
-Der Dateiname richtet sich aber immer nach der Theater-Command-Aufgabe.
+Der Dateiname richtet sich aber nach der Theater-Command-Aufgabe.
 
 ---
 
-## Geplante Dateien
+## 5. Aktive Datei
 
-Für `src/ai/` sind zunächst folgende Dateien geplant:
+Aktuell aktive Datei:
 
-    src/ai/README.md
     src/ai/tc_ai_cap_manager.lua
 
-Später können bei Bedarf weitere Dateien ergänzt werden, zum Beispiel:
+Aktuelle Version:
+
+    v0.2.0
+
+Aufgaben:
+
+- CAP-Zonen aus Kampagnenlage ableiten
+- CAP-Zonen state-only registrieren
+- CAP-Requests erzeugen
+- Luftbedrohung vorbereitend bewerten
+- reactionState setzen
+- threatLevel setzen
+- spätere MOOSE-CAP-Anbindung vorbereiten
+- F10-AI-CAP-Status ermöglichen
+
+Wichtig:
+
+    AICapManager spawnt aktuell keine Flugzeuge.
+    AICapManager startet aktuell keine echten MOOSE-Dispatcher.
+    AICapManager erzeugt state-only CAP-Daten.
+
+---
+
+## 6. Geplante spätere Datei
+
+Geplante spätere Datei:
 
     src/ai/tc_ai_director.lua
-    src/ai/tc_ai_gci_manager.lua
-    src/ai/tc_ai_reinforcement_manager.lua
-    src/ai/tc_ai_escalation.lua
 
-Diese Zusatzdateien werden erst angelegt, wenn sie wirklich benötigt werden.
+Der AI Director soll später die strategische KI-Entscheidungsebene werden.
 
----
+Mögliche Aufgaben:
 
-## `tc_ai_cap_manager.lua`
+- Blue-Absicht berechnen
+- Red-Absicht berechnen
+- Prioritätszonen berechnen
+- Operationsbedarf erzeugen
+- Missionsbedarf an MissionGenerator melden
+- CAP-Bedarf priorisieren
+- Logistikbedarf bewerten
+- FOB-Bedarf bewerten
+- Capture-Pressure auswerten
+- IADS-Bedrohung berücksichtigen
+- Missionsergebnisse verarbeiten
+- Ressourcen bewerten
+- Gegenreaktionen erzeugen
+- AI-State persistenzfähig machen
 
-`tc_ai_cap_manager.lua` wird später Combat Air Patrols verwalten.
+Aktueller Stand:
 
-Geplante Aufgaben:
-
-- CAP-Zonen bestimmen
-- CAP-Bedarf aus Kampagnenzustand ableiten
-- rote CAPs über kontrollierten roten Gebieten vorbereiten
-- blaue CAPs über kontrollierten blauen Gebieten vorbereiten
-- CAP-Status im State speichern
-- spätere MOOSE-Anbindung vorbereiten
-- spätere Verbindung zum Missionsgenerator herstellen
-- spätere Verbindung zu IADS und AI Director herstellen
-
-Der CAP-Manager soll keine Basen scannen.
-
-Der CAP-Manager soll keine Zonen erzeugen.
-
-Der CAP-Manager soll keine Kampagnenbesitzstände direkt ändern.
-
-Er steuert nur KI-Luftreaktionen auf Grundlage vorhandener Daten.
+    AI Director ist noch nicht implementiert.
+    AICapManager ist nur ein erstes AI-Fachmodul.
 
 ---
 
-## Beziehung zu MOOSE
+## 7. Verhältnis zwischen AICapManager und AI Director
 
-MOOSE liegt extern unter:
+AICapManager:
 
-    vendor/moose/Moose.lua
+- arbeitet auf CAP-State
+- erzeugt CAP-Requests
+- bewertet Luftlage vorbereitend
+- bereitet MOOSE-CAP-Hooks vor
 
-MOOSE wird nicht verändert.
+AI Director später:
 
-Theater Command DCS nutzt MOOSE später für komplexe KI-Steuerung.
+- bewertet Gesamtstrategie
+- entscheidet Prioritäten
+- steuert oder beeinflusst AICapManager
+- fordert Missionen an
+- reagiert auf Capture-, Logistics-, FOB- und IADS-Lage
+- plant Blue- und Red-Operationen
 
-Mögliche spätere MOOSE-Bereiche:
+Kurz:
 
-    SET_GROUP
-    SET_ZONE
-    ZONE
-    SPAWN
-    AI_A2A_DISPATCHER
-    DETECTION_AREAS
-    AI_CAP_ZONE
-
-Die genaue MOOSE-Nutzung wird erst in der jeweiligen AI-Datei umgesetzt.
-
-Wichtig ist die Trennung:
-
-    MOOSE stellt technische KI-Funktionen bereit.
-    Theater Command entscheidet, wann und warum KI reagieren soll.
+    AICapManager ist ein spezialisierter Baustein.
+    AI Director wird später die übergeordnete Entscheidungsschicht.
 
 ---
 
-## Beziehung zum Core
+## 8. Verhältnis zum Core
 
 `src/ai/` nutzt den Core.
 
 Erlaubte Core-Abhängigkeiten:
 
-    TC.Config
-    TC.Logger
-    TC.State
-    TC.Utils
-    TC.Scheduler
+- `TC.Config`
+- `TC.Logger`
+- `TC.State`
+- `TC.Utils`
+- `TC.Scheduler`
 
 Der AI-Bereich darf davon ausgehen, dass der Core bereits geladen ist.
 
-Die interne Lade-Reihenfolge sieht vor:
+Aktuelle Ladeposition:
 
-    1. Core
-    2. World
-    3. Campaign
-    4. Logistics
-    5. Missions
-    6. AI
-    7. IADS
-    8. UI
-    9. Debug
-    10. Main
-
-AI-Dateien dürfen deshalb auf Core-Funktionen zugreifen.
+    nach Missions
+    vor UI, Main und Loader
 
 ---
 
-## Beziehung zum World-Bereich
+## 9. Verhältnis zum World-Bereich
 
 Der AI-Bereich nutzt Daten aus:
 
     src/world/
 
-Besonders wichtig sind:
+Besonders wichtig:
 
-    TC.World.AirbaseScanner
-    TC.World.ZoneFactory
-    TC.State.Bases
-    TC.State.Zones
+- `TC.World.AirbaseScanner`
+- `TC.World.ZoneFactory`
+- `TC.State.Bases`
+- `TC.State.Zones`
 
-World liefert die räumliche Grundlage.
+Aktuelle World-Werte:
 
-AI nutzt diese Daten für:
+    Syria airbase-like objects: 225
+    relevante Kampagnenzonen: 46
+    missionCandidates: 32
+    logisticsCandidates: 46
 
-    CAP-Zonen
-    Startbasen
-    Zielgebiete
-    Reaktionsräume
-    Frontnähe
-    Luftraumprioritäten
+AICapManager nutzt diese Daten, um CAP-Zonen-Kandidaten abzuleiten.
 
-AI soll nicht selbst Airbases scannen.
+Aktuell bestätigt:
 
-AI soll nicht selbst Kampagnenzonen erzeugen.
-
----
-
-## Beziehung zum Campaign-Bereich
-
-Der AI-Bereich nutzt Daten aus:
-
-    src/campaign/
-
-Besonders wichtig sind:
-
-    TC.Campaign.CaptureSystem
-    TC.State.Campaign
-    TC.State.Bases
-    TC.State.Zones
-
-Campaign liefert den strategischen Zustand.
-
-AI nutzt diesen Zustand für Reaktionen.
-
-Beispiele:
-
-    rote Zonen erzeugen rote Verteidigungsprioritäten
-    blaue Zonen erzeugen blaue Schutzprioritäten
-    contested Zonen erzeugen erhöhte Luftaktivität
-    neu eroberte Zonen können Gegenangriffe auslösen
-    strategisch wichtige Basen erhalten stärkere CAP-Abdeckung
-
-Besitzwechsel bleiben Aufgabe des Capture-Systems.
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
 
 ---
 
-## Beziehung zum Missionsbereich
+## 10. Verhältnis zum Campaign-Bereich
 
-Der AI-Bereich nutzt Daten aus:
+Der AI-Bereich soll später Daten aus `src/campaign/` nutzen.
 
-    src/missions/
+Besonders wichtig:
 
-Besonders wichtig sind:
+- Capture-Eligibility
+- Capture-Pressure
+- Capture-Progress
+- Zone Ownership
+- Mission Effects
+- Persistence State
 
-    TC.Missions.Generator
-    TC.State.Missions
+Aktuelle Capture-Werte:
 
-Missionen können AI-Reaktionen auslösen.
+    eligibleBases: 32
+    eligibleZones: 32
+    pressureRecords: 32
+    progressRecords: 32
+    appliedMissionEffects: 0
+    ready: 0
+    contested: 0
 
-Beispiele:
+Spätere AI-Nutzung:
 
-    aktive Strike-Mission erhöht feindliche CAP-Wahrscheinlichkeit
-    aktive SEAD-Mission kann IADS-Reaktion auslösen
-    aktive Logistics-Mission kann Intercept- oder CAP-Druck erzeugen
-    abgeschlossene Missionen können Eskalation oder Entlastung bewirken
+- bedrohte Zonen priorisieren
+- Capture-Pressure bewerten
+- Gegenangriffe planen
+- Verteidigung verstärken
+- CAP über umkämpften Zonen priorisieren
+- Missionen gegen Druckräume anfordern
 
-Der AI-Bereich soll Missionen nicht selbst erzeugen.
+Aktuell:
 
-Das bleibt Aufgabe des Missionsgenerators.
-
----
-
-## Beziehung zum IADS-Bereich
-
-Der AI-Bereich wird später eng mit `src/iads/` verbunden.
-
-Beispiele:
-
-    IADS-Sektor aktiv -> höhere CAP-Priorität
-    IADS-Sektor geschwächt -> weniger rote Luftdeckung
-    SEAD-/DEAD-Druck -> veränderte AI-Reaktion
-    Radarstandorte können CAP-Reaktion beeinflussen
-
-Skynet IADS selbst bleibt unter:
-
-    vendor/skynet-iads/
-
-Eigene IADS-Kampagnenlogik liegt später unter:
-
-    src/iads/
+    AICapManager nutzt CaptureSystem noch nicht produktiv für strategische Entscheidungen.
+    Capture-/Pressure-Daten sollen zuerst im F10 sichtbar werden.
 
 ---
 
-## Geplanter Namespace
+## 11. Verhältnis zum Logistics-Bereich
 
-Der AI-Bereich wird später unter der zentralen Projekttabelle `TC` abgelegt.
+Der AI-Bereich soll später Daten aus `src/logistics/` nutzen.
 
-Geplante Struktur:
+Aktuelle Logistics-Werte:
 
-    TC.AI
-    ├── CapManager
-    ├── Director
-    ├── GciManager
-    ├── ReinforcementManager
-    └── Escalation
+    logistics hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
 
-Die globale Projekttabelle bleibt:
+Aktuelle FOB-Werte:
 
-    TC
+    FOB candidates: 6
+    Blue FOBs: 2
+    FOB Ercan
+    FOB Gecitkale
+    Status: UNDER_CONSTRUCTION
 
-Nicht verwenden:
+Spätere AI-Nutzung:
 
-    TheaterCommandAI
-    AiTC
-    tc_ai_global
-    _G_TC_AI
+- FOBs schützen
+- FOBs angreifen
+- Logistikhubs priorisieren
+- Nachschubbedarf erkennen
+- Interdiction planen
+- CAP über Logistikrouten anfordern
+- Red-Reaktionen auf Blue-FOBs erzeugen
 
----
+Aktuell:
 
-## Geplante State-Bereiche
-
-Der AI-Bereich arbeitet später vor allem mit:
-
-    TC.State.AI
-    TC.State.Campaign
-    TC.State.Bases
-    TC.State.Zones
-    TC.State.Missions
-    TC.State.IADS
-
-Geplante Daten in `TC.State.AI`:
-
-    enabled
-    directorEnabled
-    capManagerEnabled
-    lastUpdate
-    threatLevel
-    capZones
-    activeCaps
-    reactionState
-    escalationLevel
-
-Geplante Daten für CAPs:
-
-    id
-    key
-    side
-    status
-    zone
-    sourceBase
-    priority
-    spawnedGroup
-    createdAt
-    activatedAt
-    completedAt
-
-Der genaue Datenaufbau wird mit `tc_ai_cap_manager.lua` festgelegt.
+    Logistics und FOBs existieren state-only.
+    AI Director ist noch nicht implementiert.
 
 ---
 
-## Anfangszustand der Kampagne
+## 12. Verhältnis zum Missionsbereich
 
-Für **Operation Levant Reclamation** gilt als Grundannahme:
+Der AI-Bereich soll später eng mit `src/missions/` zusammenarbeiten.
 
-    Blau startet auf Zypern / Akrotiri.
-    Das syrische Festland ist zu Beginn rot kontrolliert.
+Aktuelle MissionGenerator-Datei:
 
-Daraus folgt für den AI-Bereich:
+    src/missions/tc_mission_generator.lua
 
-- blaue CAPs schützen zunächst Akrotiri und den zyprischen Ausgangsraum.
-- rote CAPs schützen zunächst syrische Festlandzonen und wichtige rote Basen.
-- feindliche Luftreaktionen sollen zu Beginn stärker vom Festland ausgehen.
-- blaue Luftaktivität wird zunächst aus Akrotiri heraus gedacht.
-- spätere FOBs und eroberte Basen können neue Reaktionsräume ermöglichen.
+Getestete Version:
 
-Die konkrete CAP-Logik wird später einzeln implementiert.
+    v0.2.2
+
+Aktuelle MissionGenerator-Werte:
+
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 30
+
+Spätere Kopplung:
+
+- AI Director fordert Missionstypen an
+- MissionGenerator erzeugt passende Missionen
+- AI Director priorisiert Missionen
+- Missionsergebnisse beeinflussen AI-State
+- AI reagiert auf aktive Missionen
+- AI reagiert auf fehlgeschlagene Missionen
+- AI erzeugt Red-Gegenmaßnahmen
+
+Aktuell:
+
+    MissionGenerator arbeitet state-only.
+    F10Menu kann Missionen aktivieren.
+    AI Director nutzt MissionGenerator noch nicht produktiv.
 
 ---
 
-## AI-Grundidee
+## 13. Verhältnis zum IADS-Bereich
 
-Die KI soll nicht statisch sein.
+Der AI-Bereich soll später IADS-Daten nutzen.
 
-Sie soll auf den Kampagnenzustand reagieren.
+Aktueller IADS-Stand:
 
-Beispiele:
+    Skynet IADS wird geladen.
+    Theater-Command-IADS-Modul ist noch nicht implementiert.
+    MissionGenerator reserviert Skynet-Hooks.
 
-    Wenn Blau eine Zone erobert, steigt dort rote Reaktionswahrscheinlichkeit.
-    Wenn eine rote Airbase bedroht wird, kann rote CAP verstärkt werden.
-    Wenn eine Logistics-Mission aktiv ist, kann feindlicher Luftdruck entstehen.
-    Wenn ein IADS-Sektor geschwächt ist, kann die rote Verteidigung abnehmen.
-    Wenn Blau Fortschritt macht, kann die Kampagne eskalieren.
+Spätere AI-Nutzung:
 
-Die erste Version darf einfach sein.
+- IADS-Bedrohung bewerten
+- SEAD-/DEAD-Bedarf ableiten
+- Red-IADS-Sektoren verteidigen
+- Blue-Korridore bewerten
+- CAP über IADS-Lücken planen
+- Red-CAP bei IADS-Schäden verstärken
+- AI-Operationen an SAM-/EWR-Status anpassen
 
-Wichtig ist, dass die Struktur dynamisch und erweiterbar bleibt.
+Aktuell:
+
+    IADS-State existiert noch nicht produktiv.
+    AI nutzt IADS noch nicht produktiv.
 
 ---
 
-## Abgrenzung
+## 14. Verhältnis zum UI-Bereich
+
+F10Menu zeigt bereits AI-CAP-Status an.
+
+Aktive UI-Datei:
+
+    src/ui/tc_f10_menu.lua
+
+Getestete Version:
+
+    v0.2.0
+
+Aktuelle F10-Funktion:
+
+    Show AI CAP Status
+
+F10Menu kann außerdem:
+
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Missionsdetails anzeigen
+- Missionen aktivieren
+- Kampagnenstatus anzeigen
+- Logistics Status anzeigen
+- FOB Status anzeigen
+
+Bewertung:
+
+    AI-CAP-State ist über F10 erreichbar.
+    Ein vollständiger AI-Director-Status existiert noch nicht.
+
+Spätere F10-Funktionen:
+
+- Show AI Director Status
+- Show Blue AI Intent
+- Show Red AI Intent
+- Show AI Priority Zones
+- Show AI Active Operations
+- Show AI Pending Operations
+- Show AI Threat Assessment
+- Show AI Resource Assessment
+
+---
+
+## 15. State-first-Regel
+
+Der AI-Bereich folgt aktuell strikt der state-first-Architektur.
+
+Das bedeutet:
+
+- AI erzeugt State.
+- AI bewertet State.
+- AI zeigt Status über F10 oder Log.
+- AI löst noch keine echten MOOSE-Spawns aus.
+- AI löst keine CTLD-Aktionen aus.
+- AI löst keine Skynet-Aktionen aus.
+- AI verändert keine Vendor-Dateien.
+
+Nicht aktiv:
+
+- echte CAP-Flüge
+- echte GCI
+- echte Strike Packages
+- echte Red-Operationen
+- echte Blue-Operationen
+- echte AI-Director-Entscheidungen
+
+Grund:
+
+    KI-Entscheidungen müssen zuerst sichtbar und reproduzierbar sein.
+    Echte DCS-Aktionen werden erst später kontrolliert angebunden.
+
+---
+
+## 16. Spätere MOOSE-Rolle
+
+MOOSE ist das geplante Hauptframework für viele AI-Flugoperationen.
+
+Mögliche spätere MOOSE-Nutzung:
+
+- AI_A2A_DISPATCHER
+- AI_A2G_DISPATCHER
+- CAP
+- GCI
+- Squadron Management
+- Detection Networks
+- Tasking
+- Mission Packages
+
+Aktuell:
+
+    MOOSE ist geladen.
+    AICapManager erzeugt state-only CAP-Requests.
+    MOOSE-CAP-Spawns sind noch nicht aktiv.
+    spawn=MOOSE_PENDING ist erwartbar.
+
+---
+
+## 17. Blue AI Zielbild
+
+Blue AI soll später eigene Operationen unterstützen.
+
+Mögliche Blue-AI-Aufgaben:
+
+- Akrotiri sichern
+- CAP über Zypern und Operationskorridoren anfordern
+- SEAD-/DEAD-Vorbereitung priorisieren
+- FOB-Aufbau unterstützen
+- Logistics Push sichern
+- Capture-Pressure gegen rote Airbases aufbauen
+- Red-IADS-Schwächen ausnutzen
+- Missionen nach Kampagnenphase priorisieren
+
+Aktuell:
+
+    Blue AI ist noch nicht als Director implementiert.
+    AICapManager erzeugt nur CAP-State.
+
+---
+
+## 18. Red AI Zielbild
+
+Red AI soll später eigene Operationen durchführen.
+
+Mögliche Red-AI-Aufgaben:
+
+- syrisches Festland verteidigen
+- strategische Airbases schützen
+- CAP gegen Blue-Korridore anfordern
+- Blue-FOBs angreifen
+- Blue-Logistik stören
+- IADS-Sektoren verteidigen
+- Gegenangriffe auf umkämpfte Zonen planen
+- Missionen gegen Blue-Druck erzeugen
+
+Aktuell:
+
+    Red AI ist noch nicht als Director implementiert.
+    AICapManager erzeugt nur vorbereitenden CAP-State.
+
+---
+
+## 19. AI-State
+
+Mögliche spätere State-Bereiche:
+
+    State.AI
+    State.AI.CAP
+    State.AI.Director
+    State.AI.Operations
+    State.AI.Intentions
+    State.AI.Priorities
+    State.AI.Requests
+    State.AI.ThreatAssessment
+    State.AI.ResourceAssessment
+    State.AI.DecisionHistory
+
+Aktuell vorhandener Schwerpunkt:
+
+    State.AI.CAP
+
+Aktuelle Werte:
+
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
+
+---
+
+## 20. Testziele
+
+AICapManager v0.2.0 gilt aktuell als bestanden, wenn:
+
+- Datei lädt.
+- Version wird im Log angezeigt.
+- AICapManager startet.
+- CAP-Zonen-Kandidaten werden erkannt.
+- 12 CAP-Zonen werden registriert.
+- 12 CAP-Requests werden erzeugt.
+- reactionState wird gesetzt.
+- threatLevel wird gesetzt.
+- keine echten MOOSE-Spawns ausgelöst werden.
+- keine CTLD-Aktionen ausgelöst werden.
+- keine Skynet-Aktionen ausgelöst werden.
+- keine Theater-Command-Lua-Fehler auftreten.
+- keine Lua-Stacktraces auftreten.
+
+Noch offen:
+
+- echte MOOSE-CAP-Flüge
+- GCI
+- AI Director
+- Blue-/Red-Operationsplanung
+- Ressourcenmodell
+- Missionsergebnis-Reaktion
+- AI-Persistenz
+
+---
+
+## 21. Erwartete Logmarker
+
+Aktuelle erwartete Logmarker:
+
+    [TC] [AICapManager] Loaded src/ai/tc_ai_cap_manager.lua v0.2.0
+    [TC] [AICapManager] CAP zone candidates:
+    [TC] [AICapManager] CAP requests:
+    [TC] [AICapManager] AI CAP state updated
+    [TC] System started: AI CAP Manager
+
+Zusätzlich über F10:
+
+    [TC] [F10Menu] AI CAP status shown through F10
+
+Der genaue Wortlaut einzelner Summary-Logs kann je nach Implementierung variieren.
+
+Wichtig ist:
+
+    Version korrekt.
+    CAP-State vorhanden.
+    keine echten Spawns.
+    keine Fehler.
+
+---
+
+## 22. Abgrenzung
 
 Nicht Aufgabe von `src/ai/`:
 
-    Airbases aus DCS auslesen
-    Zonen geometrisch erzeugen
-    Basenbesitz direkt festlegen
-    Zonenbesitz direkt festlegen
-    CTLD-Lieferungen auswerten
-    FOBs bauen
-    Missionen generieren
-    IADS-Netzwerke aufbauen
-    F10-Menüs erzeugen
-    Debug-Zeichnungen erzeugen
-    Framework-Dateien verändern
+- Airbases scannen
+- Zonen erzeugen
+- Capture direkt durchführen
+- FOBs direkt bauen
+- CTLD-Cargo direkt ausführen
+- Missionen direkt im F10 anzeigen
+- IADS-Netzwerke direkt konfigurieren
+- Save-Dateien schreiben
+- Vendor-Dateien verändern
 
 Diese Aufgaben gehören in andere Bereiche.
 
-AI reagiert auf vorhandene Kampagnendaten.
+AI bewertet, priorisiert und erzeugt später Entscheidungs-State.
 
 ---
 
-## Verbindung zu späteren Systemen
+## 23. Nächster sinnvoller Schritt
 
-Spätere Systeme nutzen AI-Daten.
+Der nächste sinnvolle Schritt liegt nicht direkt im AI-Bereich.
 
-Beispiele:
+Empfohlene nächste Datei:
 
-    Missions kann AI-Reaktion abhängig vom Auftrag berücksichtigen.
-    IADS kann AI-Reaktionsräume beeinflussen.
-    UI kann aktive CAPs und Bedrohungsniveau anzeigen.
-    Debug kann AI-Zustand sichtbar machen.
-    Persistence speichert AI-Zustand und Eskalation.
-    Campaign kann Eskalationslevel bewerten.
+    src/ui/tc_f10_menu.lua
 
-Der AI-Bereich ist damit die Reaktionsschicht von Theater Command DCS.
+Ziel:
 
----
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
 
-## Testziele
+Geplante neue F10-Funktionen:
 
-Der AI-Bereich gilt später als funktionsfähig, wenn folgende Punkte erfüllt sind:
+    Show Capture Status
+    Show Capture Ready Zones
+    Show Pressure Contested Zones
 
-    TC.AI ist vorhanden.
-    TC.AI.CapManager ist vorhanden.
-    TC.State.AI wird korrekt vorbereitet.
-    CAP-Zonen können bestimmt werden.
-    CAP-Bedarf kann aus State-Daten abgeleitet werden.
-    CAPs können als State-Objekte angelegt werden.
-    CAPs können aktiviert werden.
-    CAPs können beendet werden.
-    keine Lua-Fehler beim Missionsstart.
-    keine Framework-Dateien werden verändert.
+Akzeptanzkriterien:
 
-Erwartete spätere Beispielausgaben in `dcs.log`:
-
-    [TC] AI loading started
-    [TC] AI CAP manager loaded
-    [TC] AI initialized
-    [TC] CAP zone registered
-    [TC] CAP requested
-    [TC] CAP activated
-    [TC] CAP completed
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
 
 ---
 
-## Entwicklungsregel
+## 24. Zielbild
 
-Der AI-Bereich wird schrittweise aufgebaut.
+`src/ai/` wird langfristig die KI-Entscheidungsschicht von Theater Command DCS.
 
-Empfohlene Reihenfolge:
+Aktueller Status:
 
-    1. src/ai/README.md
-    2. src/ai/tc_ai_cap_manager.lua
+    AICapManager v0.2.0 ist state-first bestanden.
+    Vollständiger AI Director ist noch nicht implementiert.
+    Echte MOOSE-AI-Aktionen sind noch nicht aktiv.
 
-Jede Datei wird einzeln erstellt und geprüft.
+Nächster notwendiger Zwischenschritt im Gesamtprojekt:
 
-Keine parallelen Großbaustellen.
+    F10Menu v0.2.1 mit Capture-/Pressure-Sichtbarkeit.
 
-Keine All-in-one-Dateien.
+Danach sinnvoll:
 
----
-
-## Zielbild
-
-`src/ai/` soll dynamische KI-Reaktionen aus dem strategischen Kampagnenzustand ableiten.
-
-Der AI-Bereich ist die Verbindung zwischen:
-
-    World-Daten
-    Campaign-State
-    Missions
-    IADS
-    MOOSE-KI-Steuerung
-    Eskalation
-    Persistenz
-
-Damit bleibt das Projekt:
-
-    modular
-    lesbar
-    testbar
-    erweiterbar
-    wartbar
-
-`src/ai/` ist die Reaktionsschicht von **Theater Command DCS**.
+    Mission completed/failed testbar machen.
+    Mission Effects kontrolliert testen.
+    Danach AI Director state-only beginnen.
