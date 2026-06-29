@@ -1,40 +1,146 @@
-# World
+# src/world/README.md
 
-Dieser Ordner enthält die Abbildung der DCS-Welt in Theater-Command-Strukturen.
+Diese Datei beschreibt den World-Bereich von **Theater Command DCS**.
 
-`src/world/` ist zuständig für alles, was aus der Mission Editor-Welt ausgelesen, normalisiert oder in eigene Theater-Command-Datenstrukturen überführt wird.
+Der World-Bereich bildet die DCS-Welt in eigene Theater-Command-Strukturen ab.
 
-Die erste Kampagne trägt den Arbeitstitel:
+---
+
+## 1. Zweck des World-Bereichs
+
+`src/world/` ist für Karten-, Airbase- und Zoneninformationen zuständig.
+
+Dieser Bereich liest oder erzeugt keine strategischen Entscheidungen.
+
+Er stellt fest, was in der DCS-Welt vorhanden ist und welche Objekte für Theater Command fachlich relevant sind.
+
+Aufgaben:
+
+- DCS-Airbase-Objekte erfassen
+- Airbase-like Objects klassifizieren
+- Akrotiri als Blue Start Base erkennen
+- relevante Kampagnenobjekte identifizieren
+- virtuelle Kampagnenzonen erzeugen
+- Airbase-Daten und Zonendaten in Theater-Command-State überführen
+- Grundlage für Campaign, Logistics, Missions, AI, IADS und UI schaffen
+
+Der World-Bereich ist die Karten- und Raumgrundlage des Projekts.
+
+---
+
+## 2. Kampagnenkontext
+
+Erste Kampagne:
 
     Operation Levant Reclamation
 
-Die Kampagne wird auf der **Syria Map** aufgebaut. Blau startet auf **Zypern / Akrotiri**. Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+Map:
+
+    Syria
+
+Ausgangslage:
+
+    Blue Start: Akrotiri / Zypern
+    Red Start: syrisches Festland vollständig rot kontrolliert
+
+Grundannahme:
+
+    Akrotiri ist initial die blaue Startbasis.
+    Zypern ist initial blauer Ausgangsraum.
+    Syrische Festlandbasen sind initial rot kontrolliert.
+    Neutrale oder Sonderfälle werden später ausdrücklich definiert.
 
 ---
 
-## Zweck von `src/world/`
+## 3. Aktueller technischer Stand
 
-`src/world/` bildet die DCS-Missionswelt für Theater Command DCS ab.
+Stand:
 
-Geplante Aufgaben:
+    2026-06-29
 
-- Airbases erkennen
-- Airbases registrieren
-- Airbase-Besitz vorbereiten
-- virtuelle Kampagnenzonen erzeugen
-- Zonen registrieren
-- Kartenlogik vorbereiten
-- spätere Verknüpfung zwischen Basen, Zonen, Frontlinie und Missionsgenerator ermöglichen
+Aktive Dateien:
 
-`src/world/` trifft keine strategischen Kampagnenentscheidungen.
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_zone_factory.lua
 
-Der Ordner beschreibt, was in der DCS-Welt vorhanden ist.
+Getesteter Stand:
 
-Was mit diesen Informationen passiert, entscheidet später `src/campaign/`, `src/missions/`, `src/logistics/` oder `src/ai/`.
+    Airbase Scanner: v0.2.2 bestanden
+    ZoneFactory: v0.2.0 bestanden
+
+Bestätigt durch DCS-Logtests:
+
+- Airbase Scanner lädt.
+- Airbase Scanner startet.
+- Airbase Scanner erkennt Syria-Airbase-like Objects.
+- Airbase Scanner klassifiziert Airbase-like Objects.
+- Akrotiri wird als Blue Start Base erkannt.
+- ZoneFactory lädt.
+- ZoneFactory startet.
+- ZoneFactory erzeugt relevante Kampagnenzonen.
+- ZoneFactory filtert ungeeignete Airbase-like Objects aus.
+- nachfolgende Systeme können World-Daten nutzen.
+- Es gab keinen Theater-Command-Lua-Fehler.
+- Es gab keinen Lua-Stacktrace.
 
 ---
 
-## Architekturregel
+## 4. Aktuelle bestätigte Airbase-Werte
+
+Airbase Scanner v0.2.2:
+
+    total: 225
+    strategic: 19
+    secondary: 13
+    heliports: 1
+    helipads: 95
+    medical: 40
+    farps: 0
+    tactical: 13
+    unknown: 44
+    captureCandidates: 32
+    missionCandidates: 32
+    logisticsCandidates: 46
+    blueStartBases: 1
+    redStrategicCandidates: 18
+
+Bewertung:
+
+    225 airbase-like objects sind auf der Syria Map erwartbar.
+    Das ist kein Fehler.
+    Entscheidend ist die fachliche Klassifizierung.
+    Nicht alle 225 Objekte sind Kampagnenziele.
+
+---
+
+## 5. Aktuelle bestätigte ZoneFactory-Werte
+
+ZoneFactory v0.2.0:
+
+    total zones: 46
+    classified airbase zones: 46
+    Mission Editor zones: 0
+    skipped airbase-like objects: 179
+    strategic zones: 19
+    secondary zones: 13
+    heliport zones: 1
+    farp zones: 0
+    tactical zones: 13
+    captureZones: 32
+    missionZones: 32
+    logisticsZones: 46
+    startBaseZones: 1
+
+Bewertung:
+
+    ZoneFactory erzeugt nicht 225 ungefilterte Zonen.
+    ZoneFactory erzeugt 46 relevante Kampagnenzonen.
+    179 Airbase-like Objects werden bewusst übersprungen.
+    Das ist korrekt und gewollt.
+
+---
+
+## 6. Architekturregel
 
 Externe Frameworks liegen unter:
 
@@ -48,7 +154,7 @@ Der World-Bereich gehört zur eigenen Theater-Command-Logik.
 
 Frameworks werden nicht verändert.
 
-Die Dateien in `src/world/` werden nach Aufgaben benannt, nicht nach Frameworks.
+Dateien in `src/world/` werden nach Theater-Command-Aufgaben benannt, nicht nach Frameworks.
 
 Nicht gewünscht:
 
@@ -64,123 +170,590 @@ Gewünscht:
 
 Eine World-Datei darf intern DCS-API, MIST oder MOOSE nutzen.
 
-Der Dateiname richtet sich aber nach der Theater-Command-Aufgabe.
+Der Dateiname richtet sich aber immer nach der Theater-Command-Aufgabe.
 
 ---
 
-## Geplante Dateien
+## 7. Aktive Dateien
 
-Für `src/world/` sind zunächst folgende Dateien geplant:
+Aktuell aktive Dateien:
 
-    src/world/README.md
     src/world/tc_airbase_scanner.lua
     src/world/tc_zone_factory.lua
 
-Später können bei Bedarf weitere Dateien ergänzt werden, zum Beispiel:
+`tc_airbase_scanner.lua`:
+
+    aktives Airbase-Erkennungs- und Klassifikationsmodul
+    Version v0.2.2
+    bestanden
+
+`tc_zone_factory.lua`:
+
+    aktives Zonen-Erzeugungsmodul
+    Version v0.2.0
+    bestanden
+
+Mögliche spätere Dateien:
 
     src/world/tc_airbase_registry.lua
     src/world/tc_zone_registry.lua
     src/world/tc_map_data.lua
+    src/world/tc_theater_geometry.lua
 
 Diese Zusatzdateien werden erst angelegt, wenn sie wirklich benötigt werden.
 
 ---
 
-## `tc_airbase_scanner.lua`
+## 8. Airbase Scanner
 
-`tc_airbase_scanner.lua` wird später die vorhandenen DCS-Airbases erfassen.
+Datei:
 
-Geplante Aufgaben:
+    src/world/tc_airbase_scanner.lua
 
-- Airbases aus der DCS-Welt auslesen
-- Namen normalisieren
-- Koalitionsstatus erfassen
-- Positionen erfassen
-- Airbase-Kategorie erfassen
-- Startbasis Akrotiri erkennen
-- Airbases in `TC.State.Bases.registry` eintragen
-- Grundlage für spätere Capture- und Missionslogik schaffen
+Getestete Version:
 
-Der Airbase-Scanner soll keine Basen erobern.
+    v0.2.2
 
-Der Airbase-Scanner soll keine Missionen erzeugen.
+Status:
 
-Der Airbase-Scanner erkennt nur, welche Basen vorhanden sind und welchen Anfangszustand sie haben.
+    bestanden
 
----
+Aktuelle Aufgaben:
 
-## `tc_zone_factory.lua`
+- DCS-Airbase-like Objects erfassen
+- Objekte klassifizieren
+- strategische Airfields erkennen
+- sekundäre Airfields erkennen
+- Heliports erkennen
+- Helipads erkennen
+- Medical Pads erkennen
+- Tactical Pads erkennen
+- Unknown Objects konservativ behandeln
+- Akrotiri als Blue Start Base erkennen
+- Capture Candidates vorbereiten
+- Mission Candidates vorbereiten
+- Logistics Candidates vorbereiten
+- Red Strategic Candidates vorbereiten
+- State für spätere Systeme bereitstellen
 
-`tc_zone_factory.lua` wird später virtuelle Kampagnenzonen erzeugen.
+Wichtig:
 
-Geplante Aufgaben:
-
-- Zonen aus Airbases ableiten
-- Zonen aus Mission-Editor-Triggerzonen vorbereiten
-- Zonen benennen
-- Zonen normalisieren
-- Zonen in `TC.State.Zones.registry` eintragen
-- spätere Frontlinienlogik vorbereiten
-- spätere Missionsauswahl vorbereiten
-
-Die Zone Factory soll keine Capture-Entscheidung treffen.
-
-Die Zone Factory soll keine Missionen erzeugen.
-
-Sie stellt nur die räumlichen Strukturen bereit, mit denen andere Systeme arbeiten.
+    Airbase Scanner erobert keine Basen.
+    Airbase Scanner erzeugt keine Missionen.
+    Airbase Scanner führt keine CTLD-, MOOSE- oder Skynet-Aktionen aus.
 
 ---
 
-## Beziehung zum Core
+## 9. Airbase-Kategorien
+
+Aktuelle Kategorien:
+
+- Strategic Airfield
+- Secondary Airfield
+- Heliport
+- Helipad
+- Medical Pad
+- Tactical Pad
+- FARP
+- Unknown
+
+Aktuelle Werte:
+
+    strategic: 19
+    secondary: 13
+    heliports: 1
+    helipads: 95
+    medical: 40
+    farps: 0
+    tactical: 13
+    unknown: 44
+
+Bedeutung:
+
+    Strategic und Secondary sind aktuell die wichtigsten Kampagnenziele.
+    Helipads und Medical Pads sind nicht automatisch strategische Ziele.
+    Unknown Objects werden konservativ behandelt.
+
+---
+
+## 10. Akrotiri
+
+Akrotiri ist die bestätigte Blue Start Base.
+
+Aktuelle Werte:
+
+    blueStartBases: 1
+
+Rolle von Akrotiri:
+
+- Blue Main Operating Base
+- sichere Startbasis
+- erster Blue Logistics Hub
+- Ausgangspunkt für Spieler
+- Ausgangspunkt für spätere Blue-Operationen
+- Ausgangspunkt für spätere Logistik- und FOB-Unterstützung
+
+Akrotiri ist fachlich der erste blaue Ankerpunkt der Kampagne.
+
+---
+
+## 11. Capture Candidates
+
+Aktuell bestätigt:
+
+    captureCandidates: 32
+
+Capture Candidates sind Objekte, die später eroberbar sein können.
+
+Aktuell capture-fähig:
+
+- Strategic Airfields
+- Secondary Airfields
+- später ausdrücklich freigegebene Sonderzonen
+
+Nicht automatisch capture-fähig:
+
+- einfache Helipads
+- Medical Pads
+- Tactical Pads ohne ausdrückliche Freigabe
+- Unknown Objects
+- technische Sonderobjekte
+
+Diese Filterung verhindert, dass die Kampagne 225 unsinnige Capture-Ziele erzeugt.
+
+---
+
+## 12. Mission Candidates
+
+Aktuell bestätigt:
+
+    missionCandidates: 32
+
+Mission Candidates sind geeignete Ziele für MissionGenerator.
+
+Mögliche spätere Missionstypen gegen diese Ziele:
+
+- RECON
+- STRIKE
+- SEAD
+- DEAD
+- CAS
+- INTERDICTION
+- AIRBASE_ATTACK
+- IADS_SUPPRESSION
+- CAP im Umfeld
+- LOGISTICS im Umfeld
+- FOB_SUPPORT im Umfeld
+
+MissionGenerator nutzt diese Daten bereits.
+
+---
+
+## 13. Logistics Candidates
+
+Aktuell bestätigt:
+
+    logisticsCandidates: 46
+
+Logistics Candidates bilden die Grundlage für LogisticsDelivery.
+
+Logistics ist bewusst breiter als Capture.
+
+Grund:
+
+    Ein Ort kann logistischer Knoten sein, ohne ein klassisches Capture-Ziel zu sein.
+
+LogisticsDelivery erzeugt daraus aktuell:
+
+    46 Logistics Hubs
+
+---
+
+## 14. Red Strategic Candidates
+
+Aktuell bestätigt:
+
+    redStrategicCandidates: 18
+
+Diese Objekte bilden die erste strategische Grundlage für rote Festlandziele.
+
+Mögliche spätere Rollen:
+
+- rote Hauptbasen
+- rote Logistikhubs
+- rote Missionsziele
+- rote IADS-nahe Räume
+- AI-Director-Schwerpunkte
+- Capture-Ziele
+
+Aktuell:
+
+    Red Strategic Candidates sind State-Daten.
+    Es werden noch keine echten roten Operationen gespawnt.
+
+---
+
+## 15. ZoneFactory
+
+Datei:
+
+    src/world/tc_zone_factory.lua
+
+Getestete Version:
+
+    v0.2.0
+
+Status:
+
+    bestanden
+
+Aktuelle Aufgaben:
+
+- Airbase-Daten in Theater-Command-Zonen überführen
+- relevante Kampagnenzonen erzeugen
+- ungeeignete Airbase-like Objects überspringen
+- strategische Zonen markieren
+- sekundäre Zonen markieren
+- Capture-Zonen markieren
+- Mission-Zonen markieren
+- Logistics-Zonen markieren
+- Startbase-Zonen markieren
+- State für spätere Systeme bereitstellen
+
+Wichtig:
+
+    ZoneFactory entscheidet nicht über Capture.
+    ZoneFactory erzeugt keine Missionen.
+    ZoneFactory führt keine CTLD-, MOOSE- oder Skynet-Aktionen aus.
+
+---
+
+## 16. Warum ZoneFactory nicht 225 Zonen erzeugt
+
+DCS Syria liefert 225 airbase-like objects.
+
+Darin enthalten sind viele Objekte, die keine strategischen Kampagnenzonen sein sollen.
+
+Beispiele:
+
+- einfache Helipads
+- Medical Pads
+- technische Pads
+- unbekannte Sonderobjekte
+- nicht relevante DCS-Objekte
+
+ZoneFactory filtert diese Objekte.
+
+Aktuelles Ergebnis:
+
+    225 erkannte Airbase-like Objects
+    46 relevante Kampagnenzonen
+    179 übersprungene Objekte
+
+Diese Filterung ist korrekt.
+
+Die frühere Aussage, dass ZoneFactory 225 Zonen registriert, ist veraltet.
+
+---
+
+## 17. Mission Editor Zones
+
+Aktueller Stand:
+
+    Mission Editor zones: 0
+
+Das bedeutet:
+
+    Aktuell erzeugt ZoneFactory die relevanten Kampagnenzonen aus klassifizierten Airbase-Daten.
+    Es sind noch keine produktiven Mission-Editor-Triggerzonen eingebunden.
+
+Spätere Mission-Editor-Zonen:
+
+- CAPTURE-Zonen
+- Frontlinienzonen
+- CTLD Pickup Zones
+- CTLD Dropoff Zones
+- FOB Build Zones
+- IADS Sectors
+- Debug-Zonen
+- Custom Mission Areas
+
+Diese werden später nach klarer Namenskonvention ergänzt.
+
+---
+
+## 18. Verhältnis zum Core
 
 `src/world/` nutzt den Core.
 
 Erlaubte Core-Abhängigkeiten:
 
-    TC.Config
-    TC.Logger
-    TC.State
-    TC.Utils
-    TC.Scheduler
+- `TC.Config`
+- `TC.Logger`
+- `TC.State`
+- `TC.Utils`
+- `TC.Scheduler`
 
 Der World-Bereich darf davon ausgehen, dass der Core bereits geladen ist.
 
-Die interne Lade-Reihenfolge sieht vor:
+Aktuelle Ladeposition:
 
-    1. Core
-    2. World
-    3. Campaign
-    4. Logistics
-    5. Missions
-    6. AI
-    7. IADS
-    8. UI
-    9. Debug
-    10. Main
+    nach Core
+    vor Campaign, Logistics, Missions, AI, UI, Main und Loader
 
-World-Dateien dürfen deshalb auf Core-Funktionen zugreifen.
+World-Dateien dürfen auf Core-Funktionen zugreifen.
 
 World-Dateien sollen aber nicht direkt von späteren Systemen abhängig sein.
 
-Nicht erlaubt als direkte Pflichtabhängigkeit:
+Nicht als direkte Pflichtabhängigkeit:
 
-    Campaign
-    Logistics
-    Missions
-    AI
-    IADS
-    UI
-    Debug
+- Campaign
+- Logistics
+- Missions
+- AI
+- IADS
+- UI
+- Debug
 
 Diese Systeme greifen später auf World-Daten zu, nicht umgekehrt.
 
 ---
 
-## Geplanter Namespace
+## 19. Verhältnis zu Campaign
 
-Der World-Bereich wird später unter der zentralen Projekttabelle `TC` abgelegt.
+Campaign nutzt World-Daten.
 
-Geplante Struktur:
+Aktive Campaign-Dateien:
+
+    src/campaign/tc_capture_system.lua
+    src/campaign/tc_persistence_system.lua
+
+CaptureSystem nutzt:
+
+- Airbase-Klassifikation
+- Capture Candidates
+- ZoneFactory-Zonen
+- Capture-Zonen
+- Mission-Zonen
+- Logistics-Zonen
+
+Aktuelle Capture-Werte:
+
+    eligibleBases: 32
+    eligibleZones: 32
+    pressureRecords: 32
+    progressRecords: 32
+    appliedMissionEffects: 0
+
+World entscheidet nicht über Besitzwechsel.
+
+Campaign entscheidet später über Capture, Pressure, Progress und Persistenz.
+
+---
+
+## 20. Verhältnis zu Logistics
+
+Logistics nutzt World-Daten.
+
+Aktive Logistics-Dateien:
+
+    src/logistics/tc_logistics_delivery.lua
+    src/logistics/tc_fob_system.lua
+
+LogisticsDelivery nutzt:
+
+- Logistics Candidates
+- Logistics Zones
+- Besitzerstatus
+- strategische Zonen
+- geeignete FOB-Kandidaten
+
+Aktuelle Logistics-Werte:
+
+    logistics hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
+
+Aktuelle FOB-Werte:
+
+    FOB candidates: 6
+    Blue FOBs: 2
+    FOB Ercan
+    FOB Gecitkale
+    Status: UNDER_CONSTRUCTION
+
+World erzeugt keine Logistics Hubs selbst.
+
+World liefert die Raumdaten für Logistics.
+
+---
+
+## 21. Verhältnis zu Missions
+
+MissionGenerator nutzt World-Daten.
+
+Aktive Missions-Datei:
+
+    src/missions/tc_mission_generator.lua
+
+Getestete Version:
+
+    v0.2.2
+
+MissionGenerator nutzt:
+
+- Mission Candidates
+- Capture Zones
+- Logistics Zones
+- strategische Zonen
+- sekundäre Zonen
+- FOB-bezogene Zonen
+- Startbase-Zonen
+
+Aktuelle MissionGenerator-Werte:
+
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 30
+
+World erzeugt keine Missionen.
+
+World liefert geeignete Ziele und Räume.
+
+---
+
+## 22. Verhältnis zu AI
+
+AI nutzt World-Daten.
+
+Aktive AI-Datei:
+
+    src/ai/tc_ai_cap_manager.lua
+
+Getestete Version:
+
+    v0.2.0
+
+AICapManager nutzt:
+
+- Zonen
+- CAP-Zonen-Kandidaten
+- strategische Räume
+- Airbase-/Zone-Informationen
+
+Aktuelle AI-Werte:
+
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
+
+World erzeugt keine AI-Entscheidungen.
+
+World liefert Räume für AI-Bewertung.
+
+---
+
+## 23. Verhältnis zu UI
+
+F10Menu zeigt World-abgeleitete Daten indirekt an.
+
+Aktive UI-Datei:
+
+    src/ui/tc_f10_menu.lua
+
+Getestete Version:
+
+    v0.2.0
+
+F10Menu zeigt aktuell:
+
+- Missionen
+- Missionsdetails
+- Campaign Status
+- Logistics Status
+- FOB Status
+- AI CAP Status
+
+Nächster UI-Schritt:
+
+    Capture-/Pressure-Status anzeigen.
+
+Diese Daten basieren indirekt auf World-Daten, weil CaptureSystem aus World-/ZoneFactory-Daten arbeitet.
+
+---
+
+## 24. Verhältnis zu IADS
+
+IADS soll später World-Daten nutzen.
+
+Aktueller IADS-Stand:
+
+    Skynet IADS wird geladen.
+    eigenes Theater-Command-IADS-Modul ist noch nicht implementiert.
+    MissionGenerator reserviert Skynet-Hooks.
+
+Spätere IADS-Nutzung:
+
+- IADS-Sektoren an Zonen koppeln
+- SAM-Sites an Zonen koppeln
+- EWR-Standorte an Zonen koppeln
+- IADS-Ziele mit Airbase- und Mission-Zonen verbinden
+- IADS-Zustand für MissionGenerator und AI bereitstellen
+
+Aktuell:
+
+    IADS nutzt World-Daten noch nicht produktiv.
+
+---
+
+## 25. Verhältnis zu Persistence
+
+Persistence soll später World-Daten speichern oder validieren.
+
+Aktuelle Persistence-Datei:
+
+    src/campaign/tc_persistence_system.lua
+
+Status:
+
+    Grundstruktur lädt/startet
+    produktiver Dateischreibtest offen
+
+Persistenz soll später speichern:
+
+- Airbase Keys
+- Zone Keys
+- Besitzstatus
+- Capture-Progress
+- Capture-Pressure
+- Logistics Status
+- Mission State
+- AI State
+- IADS State
+
+Wichtig:
+
+    Save-Dateien müssen gegen aktuelle World-Daten validiert werden.
+    Gespeicherte Zonen oder Airbase-Keys dürfen nicht blind geladen werden, wenn die Mission geändert wurde.
+
+---
+
+## 26. Namespace
+
+Der World-Bereich nutzt die zentrale Projekttabelle:
+
+    TC
+
+Geplante und aktuelle Struktur:
 
     TC.World
     ├── AirbaseScanner
@@ -188,9 +761,11 @@ Geplante Struktur:
     ├── Airbases
     └── Zones
 
-Die globale Projekttabelle bleibt:
+State-Bereiche:
 
-    TC
+    TC.State.World
+    TC.State.Bases
+    TC.State.Zones
 
 Nicht verwenden:
 
@@ -201,78 +776,110 @@ Nicht verwenden:
 
 ---
 
-## Geplante State-Bereiche
+## 27. State-first-Regel
 
-Der World-Bereich schreibt später vor allem in:
+Der World-Bereich folgt aktuell strikt der state-first-Architektur.
 
-    TC.State.World
-    TC.State.Bases
-    TC.State.Zones
+Das bedeutet:
 
-Geplante Daten in `TC.State.World`:
+- Airbase Scanner erzeugt State.
+- ZoneFactory erzeugt State.
+- nachfolgende Systeme lesen State.
+- World löst keine echten Framework-Aktionen aus.
+- World verändert keine Vendor-Dateien.
+- World spawnt keine Einheiten.
+- World erzeugt keine Missionen.
 
-    map
-    scanned
-    airbaseScanComplete
-    zoneFactoryComplete
-    status
+Nicht aktiv:
 
-Geplante Daten in `TC.State.Bases`:
-
-    total
-    blue
-    red
-    neutral
-    contested
-    registry
-
-Geplante Daten in `TC.State.Zones`:
-
-    total
-    blue
-    red
-    neutral
-    contested
-    registry
-
-Der genaue Datenaufbau wird mit den jeweiligen Lua-Dateien festgelegt.
+- echte Frontlinien
+- echte Capture-Änderung
+- echte CTLD-Zonen
+- echte IADS-Sektoren
+- echte MOOSE-Spawns
+- produktive Persistenz
 
 ---
 
-## Anfangszustand der Kampagne
+## 28. Testziele
 
-Für **Operation Levant Reclamation** gilt als Grundannahme:
+Airbase Scanner v0.2.2 gilt aktuell als bestanden, wenn:
 
-    Blau startet auf Zypern / Akrotiri.
-    Das syrische Festland ist zu Beginn rot kontrolliert.
+- Datei lädt.
+- Version wird im Log angezeigt.
+- Airbase Scanner startet.
+- 225 airbase-like objects erkannt werden.
+- 19 strategic Objekte erkannt werden.
+- 13 secondary Objekte erkannt werden.
+- Akrotiri als Blue Start Base erkannt wird.
+- 32 captureCandidates erzeugt werden.
+- 32 missionCandidates erzeugt werden.
+- 46 logisticsCandidates erzeugt werden.
+- 18 redStrategicCandidates erzeugt werden.
+- keine Theater-Command-Lua-Fehler auftreten.
+- keine Lua-Stacktraces auftreten.
 
-Daraus folgt für den World-Bereich:
+ZoneFactory v0.2.0 gilt aktuell als bestanden, wenn:
 
-- Akrotiri ist die initiale blaue Startbasis.
-- Zypern ist initial blauer Ausgangsraum.
-- Syrische Festlandbasen werden initial als rot betrachtet, sofern keine spätere Ausnahme definiert wird.
-- Neutrale oder Sonderbasen werden später ausdrücklich behandelt.
-
-Diese Grundannahme dient nur der Initialisierung.
-
-Die spätere Änderung des Besitzstatus gehört in das Capture-System unter `src/campaign/`.
+- Datei lädt.
+- Version wird im Log angezeigt.
+- ZoneFactory startet.
+- 46 relevante Kampagnenzonen erzeugt werden.
+- 179 ungeeignete Airbase-like Objects übersprungen werden.
+- 32 captureZones erzeugt werden.
+- 32 missionZones erzeugt werden.
+- 46 logisticsZones erzeugt werden.
+- 1 startBaseZone erzeugt wird.
+- keine Theater-Command-Lua-Fehler auftreten.
+- keine Lua-Stacktraces auftreten.
 
 ---
 
-## Abgrenzung
+## 29. Erwartete Logmarker
+
+Aktuelle erwartete Airbase-Logmarker:
+
+    [TC] [AirbaseScanner] Loaded src/world/tc_airbase_scanner.lua v0.2.2
+    [TC] [AirbaseScanner] Airbase scan completed:
+    [TC] [AirbaseScanner] Airbase classification summary:
+    [TC] [AirbaseScanner] Campaign candidates summary:
+
+Aktuelle erwartete ZoneFactory-Logmarker:
+
+    [TC] [ZoneFactory] Loaded src/world/tc_zone_factory.lua v0.2.0
+    [TC] [ZoneFactory] Zone factory completed:
+    [TC] [ZoneFactory] Zone classification summary:
+    [TC] [ZoneFactory] Zone capability summary:
+
+Der genaue Wortlaut einzelner Summary-Logs kann je nach Implementierung variieren.
+
+Wichtig ist:
+
+    Version korrekt.
+    Werte korrekt.
+    46 relevante Kampagnenzonen.
+    keine 225 ungefilterten Kampagnenzonen.
+    keine Fehler.
+
+---
+
+## 30. Abgrenzung
 
 Nicht Aufgabe von `src/world/`:
 
-    Basen erobern
-    Zonen erobern
-    Frontlinien entscheiden
-    Logistiklieferungen auswerten
-    FOBs bauen
-    Missionen erzeugen
-    CAPs starten
-    IADS aktivieren
-    Spielstände speichern
-    F10-Menüs erzeugen
+- Basen erobern
+- Zonen erobern
+- Capture-Pressure berechnen
+- Capture-Progress berechnen
+- Missionen erzeugen
+- Missionen aktivieren
+- Logistiklieferungen auswerten
+- FOBs bauen
+- CAPs starten
+- IADS aktivieren
+- Spielstände speichern
+- F10-Menüs erzeugen
+- Vendor-Dateien verändern
 
 Diese Aufgaben gehören in andere Bereiche.
 
@@ -280,87 +887,73 @@ World liefert die Grundlage.
 
 ---
 
-## Verbindung zu späteren Systemen
+## 31. Nächster sinnvoller Schritt
 
-Spätere Systeme nutzen World-Daten.
+Der nächste sinnvolle Schritt liegt nicht direkt im World-Bereich.
 
-Beispiele:
+Empfohlene nächste Datei:
 
-    Campaign nutzt Airbase- und Zonenstatus.
-    Logistics nutzt Basen und Zonen für Versorgungslinien.
-    Missions nutzt Airbases und Zonen für Zielauswahl.
-    AI nutzt Airbases und Zonen für Reaktionslogik.
-    IADS nutzt Zonen für Sektorlogik.
-    UI nutzt World-Daten für Statusanzeigen.
-    Debug nutzt World-Daten für Prüfausgaben.
+    src/ui/tc_f10_menu.lua
 
-World bleibt dabei die Datenquelle für Karten- und Raumstrukturen.
+Ziel:
 
----
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
 
-## Testziele
+Geplante neue F10-Funktionen:
 
-Der World-Bereich gilt später als funktionsfähig, wenn folgende Punkte erfüllt sind:
+    Show Capture Status
+    Show Capture Ready Zones
+    Show Pressure Contested Zones
 
-    TC.World ist vorhanden.
-    TC.World.AirbaseScanner ist vorhanden.
-    TC.World.ZoneFactory ist vorhanden.
-    Airbases können erkannt werden.
-    Akrotiri wird als blaue Startbasis erkannt.
-    syrische Festlandbasen können initial rot markiert werden.
-    Zonen können aus Basen oder Triggerzonen erzeugt werden.
-    TC.State.Bases.registry wird gefüllt.
-    TC.State.Zones.registry wird gefüllt.
-    keine Lua-Fehler beim Missionsstart.
-    keine Framework-Dateien werden verändert.
+Akzeptanzkriterien:
 
-Erwartete spätere Beispielausgaben in `dcs.log`:
-
-    [TC] World loading started
-    [TC] Airbase scanner loaded
-    [TC] Zone factory loaded
-    [TC] Airbase scan completed
-    [TC] Zone factory completed
-    [TC] World initialized
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
 
 ---
 
-## Entwicklungsregel
+## 32. Zielbild
 
-Der World-Bereich wird schrittweise aufgebaut.
+`src/world/` ist die Karten- und Raumgrundlage von Theater Command DCS.
 
-Empfohlene Reihenfolge:
+Der World-Bereich verbindet:
 
-    1. src/world/README.md
-    2. src/world/tc_airbase_scanner.lua
-    3. src/world/tc_zone_factory.lua
+- DCS-Welt
+- Mission Editor
+- Airbase-Daten
+- Kampagnenzonen
+- Theater-Command-State
+- Campaign
+- Logistics
+- Missions
+- AI
+- IADS
+- UI
+- Persistence
 
-Jede Datei wird einzeln erstellt und geprüft.
+Aktueller Status:
 
-Keine parallelen Großbaustellen.
+    Airbase Scanner v0.2.2 ist state-first bestanden.
+    ZoneFactory v0.2.0 ist state-first bestanden.
+    225 DCS-Airbase-like Objects werden erkannt.
+    46 relevante Kampagnenzonen werden erzeugt.
+    32 Capture-/Mission-Ziele werden vorbereitet.
+    46 Logistics-Ziele werden vorbereitet.
 
-Keine All-in-one-Dateien.
-
----
-
-## Zielbild
-
-`src/world/` soll die DCS-Welt so erfassen, dass Theater Command DCS daraus eine dynamische Kampagne aufbauen kann.
-
-Der World-Bereich ist damit die Brücke zwischen:
-
-    Mission Editor
-    DCS-Welt
-    Theater-Command-Kampagnenzustand
-
-Er sorgt dafür, dass spätere Systeme nicht direkt und unstrukturiert in der DCS-Welt suchen müssen.
-
-Damit bleibt das Projekt:
-
-    modular
-    lesbar
-    testbar
-    erweiterbar
-    wartbar
-
-`src/world/` ist die Karten- und Raumgrundlage von **Theater Command DCS**.
+Damit ist der World-Bereich stabil genug für den nächsten UI-/Debug-Schritt.
