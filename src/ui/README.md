@@ -1,507 +1,704 @@
-# UI
+# src/ui/README.md
 
-Dieser Ordner enthält die Spielerinteraktion von **Theater Command DCS**.
+Diese Datei beschreibt den UI-Bereich von **Theater Command DCS**.
 
-`src/ui/` verbindet später den Kampagnenzustand mit sichtbaren und bedienbaren Elementen im Spiel.
-
-Die erste Kampagne trägt den Arbeitstitel:
-
-    Operation Levant Reclamation
-
-Die Kampagne wird auf der **Syria Map** aufgebaut. Blau startet auf **Zypern / Akrotiri**. Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+Der UI-Bereich enthält eigene Lua-Logik für Spielerinteraktion, F10-Menüs, Statusanzeigen und spätere Debug-/Kampagnensteuerung.
 
 ---
 
-## Zweck von `src/ui/`
+## 1. Zweck des UI-Bereichs
 
-`src/ui/` ist für Spielerinteraktion, Statusanzeigen und spätere F10-Menüs zuständig.
+Der UI-Bereich stellt die Schnittstelle zwischen Spieler und Theater-Command-Kampagnenzustand bereit.
 
-Geplante Aufgaben:
+Langfristig soll UI ermöglichen:
 
-- F10-Menüs vorbereiten
 - Kampagnenstatus anzeigen
 - verfügbare Missionen anzeigen
 - aktive Missionen anzeigen
+- Missionen auswählen
+- Missionen aktivieren
+- Missionsdetails anzeigen
 - Logistikstatus anzeigen
 - FOB-Status anzeigen
-- AI- und CAP-Status anzeigen
-- IADS-Status anzeigen
-- einfache Spielerkommandos vorbereiten
-- Debug-Menüs später optional anbinden
+- AI-Status anzeigen
+- Capture-Status anzeigen
+- Debug-Informationen anzeigen
+- später Save/Load- oder Admin-Funktionen anbieten
 
-Der UI-Bereich entscheidet nicht selbst über Kampagnenlogik.
+Aktuell ist der UI-Bereich nicht mehr nur geplant.
 
-Er zeigt Daten an und nimmt Spieleraktionen entgegen.
-
-Die eigentliche Fachlogik bleibt in den jeweiligen Systemordnern.
+Das erste F10-Menü ist aktiv und getestet.
 
 ---
 
-## Architekturregel
+## 2. Aktueller technischer Stand
 
-Externe Frameworks liegen unter:
+Stand:
 
-    vendor/
+    2026-06-29
 
-Eigene Theater-Command-Logik liegt unter:
-
-    src/
-
-Der UI-Bereich gehört zur eigenen Theater-Command-Logik.
-
-Frameworks werden nicht verändert.
-
-Die Dateien in `src/ui/` werden nach Aufgaben benannt, nicht nach Frameworks.
-
-Nicht gewünscht:
-
-    src/ui/tc_moose_menu.lua
-    src/ui/tc_mist_menu.lua
-    src/ui/tc_ui_all_in_one.lua
-    src/ui/tc_f10_everything.lua
-
-Spätere mögliche Dateien:
+Aktive Datei:
 
     src/ui/tc_f10_menu.lua
-    src/ui/tc_status_display.lua
-    src/ui/tc_mission_menu.lua
-    src/ui/tc_logistics_menu.lua
-    src/ui/tc_debug_menu.lua
 
-Diese Dateien werden erst angelegt, wenn sie wirklich benötigt werden.
+Getestete Version:
+
+    v0.2.0
+
+Status:
+
+    bestanden
+
+Bestätigt durch DCS-Logtests:
+
+- F10Menu lädt.
+- F10Menu startet.
+- F10Menu erzeugt 26 Commands.
+- F10-Menü ist in DCS sichtbar.
+- F10-Menü ist navigierbar.
+- Missionen können angezeigt werden.
+- Missionsdetails können pro Slot angezeigt werden.
+- Missionen können direkt aktiviert werden.
+- MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+- Aktivierung bleibt state-only.
+- Es werden keine echten Spawns ausgelöst.
+- Es gab keinen Theater-Command-Lua-Fehler.
+- Es gab keinen Lua-Stacktrace.
 
 ---
 
-## Geplante Dateien
+## 3. Aktuelle Menüstruktur
 
-Für `src/ui/` ist zunächst nur diese Dokumentationsdatei geplant:
+Aktuelle F10-Struktur:
 
-    src/ui/README.md
+    F10
+    └── Theater Command
+        ├── Missions
+        │   ├── Show Available Missions
+        │   ├── Show Active Missions
+        │   ├── Mission Details
+        │   │   ├── Show Mission 1 Details
+        │   │   ├── Show Mission 2 Details
+        │   │   ├── Show Mission 3 Details
+        │   │   ├── Show Mission 4 Details
+        │   │   ├── Show Mission 5 Details
+        │   │   ├── Show Mission 6 Details
+        │   │   ├── Show Mission 7 Details
+        │   │   ├── Show Mission 8 Details
+        │   │   ├── Show Mission 9 Details
+        │   │   └── Show Mission 10 Details
+        │   └── Activate Mission
+        │       ├── Activate Mission 1
+        │       ├── Activate Mission 2
+        │       ├── Activate Mission 3
+        │       ├── Activate Mission 4
+        │       ├── Activate Mission 5
+        │       ├── Activate Mission 6
+        │       ├── Activate Mission 7
+        │       ├── Activate Mission 8
+        │       ├── Activate Mission 9
+        │       └── Activate Mission 10
+        ├── Status
+        │   └── Show Campaign Status
+        ├── Logistics
+        │   ├── Show Logistics Status
+        │   └── Show FOB Status
+        └── AI
+            └── Show AI CAP Status
 
-Spätere mögliche Implementierungsdateien:
+Bestätigte Commands:
+
+    commands: 26
+
+---
+
+## 4. Aktuelle F10-Funktionen
+
+Aktuell unterstützt F10Menu v0.2.0:
+
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Mission 1 Details anzeigen
+- Mission 2 Details anzeigen
+- Mission 3 Details anzeigen
+- Mission 4 Details anzeigen
+- Mission 5 Details anzeigen
+- Mission 6 Details anzeigen
+- Mission 7 Details anzeigen
+- Mission 8 Details anzeigen
+- Mission 9 Details anzeigen
+- Mission 10 Details anzeigen
+- Mission 1 aktivieren
+- Mission 2 aktivieren
+- Mission 3 aktivieren
+- Mission 4 aktivieren
+- Mission 5 aktivieren
+- Mission 6 aktivieren
+- Mission 7 aktivieren
+- Mission 8 aktivieren
+- Mission 9 aktivieren
+- Mission 10 aktivieren
+- Kampagnenstatus anzeigen
+- Logistikstatus anzeigen
+- FOB-Status anzeigen
+- AI-CAP-Status anzeigen
+
+Bestätigt getestet:
+
+- Mission Details Slot 1
+- Mission Details Slot 2
+- Mission Details Slot 5
+- Mission 1 aktivieren
+- Mission 5 aktivieren
+
+---
+
+## 5. Verhältnis zu MissionGenerator
+
+F10Menu ist aktuell eng mit MissionGenerator verbunden.
+
+Aktive MissionGenerator-Datei:
+
+    src/missions/tc_mission_generator.lua
+
+Getestete Version:
+
+    v0.2.2
+
+MissionGenerator liefert:
+
+- verfügbare Missionen
+- aktive Missionen
+- Missionsdetails
+- Mission Status
+- Mission Objectives
+- Mission Briefings
+- Mission Progress
+- Activation Metadata
+- reserved Spawn Hooks
+
+F10Menu nutzt diese Daten, um:
+
+- Missionen zu sortieren
+- Mission Slots 1 bis 10 darzustellen
+- Missionsdetails pro Slot anzuzeigen
+- Missionen über F10 zu aktivieren
+- Aktivierung an MissionGenerator weiterzugeben
+
+Bestätigte MissionGenerator-Werte:
+
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 30
+
+Bestätigte Aktivierung:
+
+    Mission status changed: MISSION_1 [ACTIVE]
+    Mission status changed: MISSION_4 [ACTIVE]
+    Mission activation prepared: stateOnly=true spawnHooks=reserved
+
+Wichtig:
+
+    F10Menu aktiviert Missionen aktuell nur state-only.
+    Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
+
+---
+
+## 6. Verhältnis zu CaptureSystem
+
+CaptureSystem ist aktuell vorbereitet, aber noch nicht im F10-Menü sichtbar.
+
+Aktive Capture-Datei:
+
+    src/campaign/tc_capture_system.lua
+
+Getestete Version:
+
+    v0.2.1
+
+Bestätigte Werte:
+
+    eligibleBases: 32
+    eligibleZones: 32
+    nonCaptureBases: 193
+    nonCaptureZones: 14
+    pressureRecords: 32
+    progressRecords: 32
+    appliedMissionEffects: 0
+    ready: 0
+    contested: 0
+
+Nächster UI-Schritt:
+
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+
+Geplante neue F10-Funktionen:
+
+    Show Capture Status
+    Show Capture Ready Zones
+    Show Pressure Contested Zones
+
+Warum:
+
+    CaptureSystem erzeugt inzwischen Pressure- und Progress-Daten.
+    Diese Daten sind im State vorhanden.
+    Ohne F10-/Debug-Sichtbarkeit sind spätere MissionEffect- und Capture-Tests schwer bewertbar.
+
+---
+
+## 7. Verhältnis zu LogisticsDelivery
+
+F10Menu zeigt bereits Logistikstatus an.
+
+Aktive Logistics-Datei:
+
+    src/logistics/tc_logistics_delivery.lua
+
+Getestete Version:
+
+    v0.2.0
+
+Bestätigte Werte:
+
+    logistics hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
+
+Aktuelle F10-Funktion:
+
+    Show Logistics Status
+
+Bewertung:
+
+    Logistics-Status ist über F10 erreichbar.
+    Die Darstellung kann später erweitert werden.
+    CTLD-Aktionen sind noch nicht produktiv angebunden.
+
+---
+
+## 8. Verhältnis zu FobSystem
+
+F10Menu zeigt bereits FOB-Status an.
+
+Aktive FOB-Datei:
+
+    src/logistics/tc_fob_system.lua
+
+Getestete Version:
+
+    v0.2.0
+
+Bestätigte Werte:
+
+    FOB candidates: 6
+    stored candidates: 6
+    auto-planned FOBs: 2
+    skipped candidates: 4
+    Blue FOBs: 2
+
+Erzeugte FOBs:
+
+    FOB Ercan
+    FOB Gecitkale
+
+Status:
+
+    UNDER_CONSTRUCTION
+
+Aktuelle F10-Funktion:
+
+    Show FOB Status
+
+Bewertung:
+
+    FOB-Status ist über F10 erreichbar.
+    FOBs sind aktuell state-only.
+    Es werden noch keine echten CTLD-FOBs erzeugt.
+
+---
+
+## 9. Verhältnis zu AICapManager
+
+F10Menu zeigt bereits AI-CAP-Status an.
+
+Aktive AI-Datei:
+
+    src/ai/tc_ai_cap_manager.lua
+
+Getestete Version:
+
+    v0.2.0
+
+Bestätigte Werte:
+
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
+
+Aktuelle F10-Funktion:
+
+    Show AI CAP Status
+
+Bewertung:
+
+    AI-CAP-State ist über F10 erreichbar.
+    Echte MOOSE-CAP-Spawns sind noch nicht aktiv.
+    spawn=MOOSE_PENDING ist erwartetes Verhalten.
+
+---
+
+## 10. Verhältnis zu Campaign State
+
+F10Menu zeigt aktuell einen einfachen Kampagnenstatus.
+
+Aktuelle F10-Funktion:
+
+    Show Campaign Status
+
+Campaign State enthält oder soll enthalten:
+
+- Airbase-/Zone-Ownership
+- Capture-Eligibility
+- Capture-Pressure
+- Capture-Progress
+- Mission State
+- Logistics State
+- FOB State
+- AI State
+- später IADS State
+- später Persistence State
+
+Aktueller Stand:
+
+    F10Menu zeigt grundlegende Campaign-Informationen.
+    Capture-/Pressure-Details fehlen noch und sind der nächste geplante UI-Ausbauschritt.
+
+---
+
+## 11. Verhältnis zu Persistence
+
+F10Menu enthält aktuell keine Save-/Load-Funktionen.
+
+PersistenceSystem:
+
+    src/campaign/tc_persistence_system.lua
+
+Status:
+
+    Grundstruktur vorhanden
+    lädt/startet
+    produktiver Dateischreibtest offen
+
+Spätere mögliche F10-Funktionen:
+
+- Save Campaign
+- Load Campaign
+- Show Save Status
+- Debug Save Test
+- Debug Load Test
+
+Aktuell nicht vorgesehen:
+
+    Persistence-F10-Funktionen sind noch nicht der nächste Schritt.
+
+Grund:
+
+    Zuerst müssen Capture-/Pressure-Daten sichtbar werden.
+    Danach Mission completed/failed.
+    Danach Mission Effects.
+    Danach Persistence-Sandbox-Test.
+
+---
+
+## 12. Verhältnis zu IADS
+
+F10Menu enthält aktuell keine IADS-Anzeige.
+
+IADS-Stand:
+
+    Skynet IADS wird geladen.
+    Theater-Command-IADS-Modul ist noch nicht implementiert.
+    MissionGenerator reserviert Skynet-Hooks.
+
+Spätere mögliche F10-Funktionen:
+
+- Show IADS Status
+- Show IADS Sectors
+- Show Active SAM Sites
+- Show Suppressed SAM Sites
+- Show Destroyed SAM Sites
+- Show SEAD Targets
+
+Aktuell nicht vorgesehen:
+
+    IADS-F10-Funktionen werden erst nach eigenem IADS-State sinnvoll.
+
+---
+
+## 13. UI-State
+
+F10Menu schreibt oder nutzt UI-bezogenen State.
+
+Mögliche UI-State-Daten:
+
+- Menüstatus
+- registrierte Commands
+- letzte angezeigte Mission
+- Anzahl verfügbarer Missionen
+- Anzahl aktiver Missionen
+- letzte Aktivierung
+- letzte Statusabfrage
+- UI-Version
+
+Aktuell bestätigt:
+
+    F10Menu initialisiert 26 Commands.
+    F10Menu kann Mission Details anzeigen.
+    F10Menu kann Mission Activation auslösen.
+    UI bleibt state-only.
+
+---
+
+## 14. State-only-Regel
+
+F10Menu folgt aktuell strikt der state-first-Architektur.
+
+Das bedeutet:
+
+- F10 liest State.
+- F10 zeigt State an.
+- F10 ruft sichere Theater-Command-Funktionen auf.
+- F10 aktiviert Missionen state-only.
+- F10 löst keine echten DCS-Spawns aus.
+- F10 ruft CTLD nicht produktiv auf.
+- F10 ruft Skynet nicht produktiv auf.
+- F10 verändert keine Vendor-Dateien.
+
+Diese Regel bleibt auch für die nächste Version wichtig.
+
+---
+
+## 15. Warum F10Menu aktuell wichtig ist
+
+F10Menu ist aktuell die wichtigste Sichtbarkeitsfläche.
+
+Grund:
+
+- DCS-Logauswertung allein reicht nicht für spätere Kampagnensteuerung.
+- Spieler brauchen Zugriff auf Missionen.
+- Entwickler brauchen Zugriff auf State-Zusammenfassungen.
+- Mission Activation ist über F10 bereits bestätigt.
+- Capture-Pressure und Capture-Progress müssen sichtbar werden.
+- Spätere MissionEffects brauchen UI-/Debug-Kontrolle.
+
+F10Menu ist damit aktuell die Brücke zwischen State-Systemen und praktischer DCS-Bewertung.
+
+---
+
+## 16. Versionen und erwartete Logmarker
+
+Aktuelle Version:
+
+    F10Menu v0.2.0
+
+Erwartete aktuelle Logmarker:
+
+    [TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.0
+    [TC] [F10Menu] F10 menu started
+    [TC] [F10Menu] F10 menu initialized: commands=26
+    [TC] System started: F10 Menu
+    [TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_1
+    [TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_1
+    [TC] [F10Menu] Mission activated through F10: slot=5 key=MISSION_4
+
+Erwartete nächste Version:
+
+    F10Menu v0.2.1
+
+Erwartete neue Logmarker nach nächstem Schritt:
+
+    [TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.1
+    [TC] [F10Menu] F10 menu initialized:
+    [TC] [F10Menu] Capture status shown through F10
+    [TC] [F10Menu] Capture ready zones shown through F10
+    [TC] [F10Menu] Pressure contested zones shown through F10
+
+---
+
+## 17. Aktuelle Akzeptanzkriterien
+
+F10Menu v0.2.0 gilt als bestanden, weil:
+
+- Datei lädt.
+- Version wird im Log angezeigt.
+- Menü startet.
+- 26 Commands werden erzeugt.
+- F10-Menü ist sichtbar.
+- F10-Menü ist navigierbar.
+- Mission Details sind abrufbar.
+- Mission Activation funktioniert.
+- MissionGenerator setzt Missionen auf ACTIVE.
+- Aktivierung bleibt state-only.
+- keine echten Spawns.
+- keine CTLD-Aktionen.
+- keine Skynet-Aktionen.
+- keine Theater-Command-Lua-Fehler.
+- keine Lua-Stacktraces.
+
+---
+
+## 18. Nächster UI-Schritt
+
+Empfohlene nächste Datei:
 
     src/ui/tc_f10_menu.lua
-    src/ui/tc_status_display.lua
-    src/ui/tc_mission_menu.lua
-    src/ui/tc_logistics_menu.lua
-    src/ui/tc_debug_menu.lua
 
-Die konkrete Lua-Implementierung wird später separat begonnen.
+Ziel:
 
----
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
 
-## Beziehung zum Core
+Geplante neue F10-Funktionen:
 
-`src/ui/` nutzt den Core.
+    Show Capture Status
+    Show Capture Ready Zones
+    Show Pressure Contested Zones
 
-Erlaubte Core-Abhängigkeiten:
+Akzeptanzkriterien:
 
-    TC.Config
-    TC.Logger
-    TC.State
-    TC.Utils
-    TC.Scheduler
-
-Der UI-Bereich darf davon ausgehen, dass der Core bereits geladen ist.
-
-Die interne Lade-Reihenfolge sieht vor:
-
-    1. Core
-    2. World
-    3. Campaign
-    4. Logistics
-    5. Missions
-    6. AI
-    7. IADS
-    8. UI
-    9. Debug
-    10. Main
-
-UI-Dateien dürfen deshalb auf Core-Funktionen zugreifen.
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
 
 ---
 
-## Beziehung zum World-Bereich
+## 19. Spätere UI-Schritte
 
-Der UI-Bereich nutzt Daten aus:
+Nach Capture-/Pressure-Sichtbarkeit:
 
-    src/world/
+1. Mission completed/failed manuell über F10 oder Debug testbar machen
+2. Mission Effects kontrolliert testen
+3. CaptureSystem.applyMissionEffect praktisch testen
+4. Persistence-Sandbox-Test optional über Debug-F10 vorbereiten
+5. AI Director Status später anzeigen
+6. IADS Status später anzeigen
+7. Debug-Menü getrennt aufbauen
 
-Besonders wichtig sind:
+Mögliche spätere Menüs:
 
-    TC.World.AirbaseScanner
-    TC.World.ZoneFactory
-    TC.State.Bases
-    TC.State.Zones
+    Theater Command
+    Theater Command Debug
+    Theater Command Admin
+    Theater Command Persistence
 
-World liefert die Karten- und Raumdaten.
-
-UI kann diese Daten später anzeigen.
-
-Beispiele:
-
-    Anzahl blauer Basen
-    Anzahl roter Basen
-    Anzahl kontrollierter Zonen
-    Startbasis Akrotiri
-    Zonenstatus
-    Kartenbereich
-
-UI soll nicht selbst Airbases scannen.
-
-UI soll nicht selbst Kampagnenzonen erzeugen.
+Diese Struktur ist noch nicht final.
 
 ---
 
-## Beziehung zum Campaign-Bereich
+## 20. Risiken
 
-Der UI-Bereich nutzt Daten aus:
+Risiken im UI-Bereich:
 
-    src/campaign/
+- zu viele F10-Commands werden unübersichtlich
+- Mission Slots können veralten, wenn Missionen dynamisch wechseln
+- F10-Auswahl kann falsche Mission aktivieren, wenn Sortierung instabil ist
+- Statusanzeigen können zu lang für DCS-Textausgabe werden
+- F10-Funktionen können zu früh echte Framework-Aktionen auslösen
+- UI kann Kampagnenlogik versehentlich selbst übernehmen
+- Debug- und Spielerfunktionen können vermischt werden
 
-Besonders wichtig sind:
+Aktuelle Gegenmaßnahmen:
 
-    TC.Campaign.CaptureSystem
-    TC.Campaign.PersistenceSystem
-    TC.State.Campaign
-    TC.State.Bases
-    TC.State.Zones
-    TC.State.Persistence
-
-Campaign liefert den strategischen Zustand.
-
-UI zeigt diesen Zustand später für den Spieler an.
-
-Beispiele:
-
-    Kampagnenname
-    aktuelle Phase
-    kontrollierte Basen
-    kontrollierte Zonen
-    contested Zonen
-    Save-/Load-Status
-    Persistenzstatus
-
-Besitzwechsel bleiben Aufgabe des Capture-Systems.
+- stabile Missionssortierung
+- feste Slots 1 bis 10
+- state-only Aktivierung
+- keine echten Framework-Aktionen
+- klare Logmarker
+- kleine UI-Schritte
+- Debug später getrennt behandeln
 
 ---
 
-## Beziehung zum Logistics-Bereich
+## 21. Nicht-Ziele im aktuellen UI-Stand
 
-Der UI-Bereich nutzt Daten aus:
+Aktuell nicht vorgesehen:
 
-    src/logistics/
+- vollständige Spieleroberfläche
+- komplexe Pagination
+- vollständiger Debug-Viewer
+- IADS-Menü
+- Persistence-Menü
+- AI Director-Menü
+- CTLD-Cargo-Menü
+- echte Spawn-Auslösung über F10
+- Admin-Kommandos für produktive Kampagnenänderungen
 
-Besonders wichtig sind:
+Grund:
 
-    TC.Logistics.Delivery
-    TC.Logistics.FobSystem
-    TC.State.Logistics
-
-Logistics liefert den Versorgungszustand.
-
-UI kann diese Daten später anzeigen.
-
-Beispiele:
-
-    verfügbare Lieferungen
-    aktive Lieferungen
-    abgeschlossene Lieferungen
-    FOBs im Aufbau
-    aktive FOBs
-    FOBs ohne Versorgung
-    Logistikhubs
-
-UI soll keine CTLD-Logik ausführen.
-
-UI zeigt Logistikdaten an oder löst definierte Logistikaktionen aus.
+    Zuerst muss die State-Sichtbarkeit stabil wachsen.
+    Der nächste kleine Schritt ist Capture-/Pressure-Status.
 
 ---
 
-## Beziehung zum Missionsbereich
+## 22. Aktueller getesteter Systemstand
 
-Der UI-Bereich nutzt Daten aus:
-
-    src/missions/
-
-Besonders wichtig sind:
-
-    TC.Missions.Generator
-    TC.State.Missions
-
-Missions liefert verfügbare und aktive Aufträge.
-
-UI kann diese Daten später über F10-Menüs verfügbar machen.
-
-Beispiele:
-
-    verfügbare Missionen anzeigen
-    aktive Missionen anzeigen
-    Mission aktivieren
-    Missionsstatus abfragen
-    Missionsdetails anzeigen
-    Missionsabschluss später debuggen oder testen
-
-Die Missionserzeugung bleibt Aufgabe des Missionsgenerators.
+| System | Datei | Version | Status |
+|---|---|---:|---|
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
 
 ---
 
-## Beziehung zum AI-Bereich
+## 23. Aktueller Status
 
-Der UI-Bereich nutzt Daten aus:
+Der UI-Bereich ist aktiv.
 
-    src/ai/
+F10Menu v0.2.0 ist bestanden.
 
-Besonders wichtig sind:
+Aktuelle Fähigkeit:
 
-    TC.AI.CapManager
-    TC.State.AI
+- F10-Menü erscheint in DCS.
+- Theater Command-Menü ist navigierbar.
+- verfügbare Missionen können angezeigt werden.
+- aktive Missionen können angezeigt werden.
+- Missionsdetails können angezeigt werden.
+- Missionen können direkt aktiviert werden.
+- Kampagnenstatus kann angezeigt werden.
+- Logistikstatus kann angezeigt werden.
+- FOB-Status kann angezeigt werden.
+- AI-CAP-Status kann angezeigt werden.
+- Mission Activation bleibt state-only.
 
-AI liefert Reaktions- und CAP-Zustände.
+Nächster notwendiger Schritt:
 
-UI kann diese Daten später anzeigen.
-
-Beispiele:
-
-    aktive CAPs
-    angeforderte CAPs
-    Bedrohungsniveau
-    Reaktionsstatus
-    Eskalationslevel
-    CAP-Zonen
-
-AI-Entscheidungen bleiben Aufgabe des AI-Bereichs.
-
----
-
-## Beziehung zum IADS-Bereich
-
-Der UI-Bereich nutzt später Daten aus:
-
-    src/iads/
-
-Besonders wichtig sind:
-
-    TC.State.IADS
-    TC.IADS
-
-IADS liefert Luftverteidigungszustände.
-
-UI kann diese Daten später anzeigen.
-
-Beispiele:
-
-    aktive IADS-Sektoren
-    beschädigte IADS-Sites
-    zerstörte SAM-Stellungen
-    SEAD-relevante Ziele
-    DEAD-relevante Ziele
-    Bedrohungsstatus
-
-Die IADS-Logik bleibt Aufgabe des IADS-Bereichs.
-
----
-
-## Geplanter Namespace
-
-Der UI-Bereich wird später unter der zentralen Projekttabelle `TC` abgelegt.
-
-Geplante Struktur:
-
-    TC.UI
-    ├── F10Menu
-    ├── StatusDisplay
-    ├── MissionMenu
-    ├── LogisticsMenu
-    └── DebugMenu
-
-Die globale Projekttabelle bleibt:
-
-    TC
-
-Nicht verwenden:
-
-    TheaterCommandUI
-    UiTC
-    tc_ui_global
-    _G_TC_UI
-
----
-
-## Geplante State-Bereiche
-
-Der UI-Bereich arbeitet später vor allem mit:
-
-    TC.State.UI
-    TC.State.Campaign
-    TC.State.Bases
-    TC.State.Zones
-    TC.State.Logistics
-    TC.State.Missions
-    TC.State.AI
-    TC.State.IADS
-    TC.State.Debug
-
-Geplante Daten in `TC.State.UI`:
-
-    enabled
-    f10Enabled
-    statusDisplayEnabled
-    lastUpdate
-    menuRootCreated
-    menuItems
-    playerCommands
-    lastMessage
-
-Der genaue Datenaufbau wird mit späteren Lua-Dateien festgelegt.
-
----
-
-## Anfangszustand der Kampagne
-
-Für **Operation Levant Reclamation** gilt als Grundannahme:
-
-    Blau startet auf Zypern / Akrotiri.
-    Das syrische Festland ist zu Beginn rot kontrolliert.
-
-Daraus folgt für den UI-Bereich:
-
-- Akrotiri soll später als blaue Startbasis angezeigt werden können.
-- rote Festlandzonen sollen später als feindlich angezeigt werden können.
-- verfügbare Missionen sollen aus dem Missionsgenerator kommen.
-- Logistikstatus soll aus dem Logistics-Bereich kommen.
-- AI- und IADS-Zustand sollen später optional angezeigt werden.
-- Debug-Funktionen sollen klar von normalen Spielerfunktionen getrennt bleiben.
-
-Die konkrete F10-Menüstruktur wird später einzeln implementiert.
-
----
-
-## UI-Grundidee
-
-Die UI soll den Spieler nicht mit Rohdaten überladen.
-
-Sie soll den Kampagnenzustand verständlich machen.
-
-Beispiele:
-
-    Welche Missionen sind verfügbar?
-    Welche Mission ist aktiv?
-    Welche Zone ist bedroht?
-    Welche Basis gehört wem?
-    Wo wird Nachschub benötigt?
-    Welche FOBs sind aktiv?
-    Wie stark ist die feindliche Luftreaktion?
-    Gibt es relevante IADS-Ziele?
-
-Die erste Version darf einfach sein.
-
-Wichtig ist, dass UI nicht zur All-in-one-Schaltzentrale für Fachlogik wird.
-
----
-
-## Abgrenzung
-
-Nicht Aufgabe von `src/ui/`:
-
-    Airbases aus DCS auslesen
-    Zonen geometrisch erzeugen
-    Basenbesitz direkt festlegen
-    Zonenbesitz direkt festlegen
-    CTLD-Lieferungen direkt auswerten
-    FOBs direkt bauen
-    Missionen selbst generieren
-    CAPs dauerhaft verwalten
-    IADS-Netzwerke aufbauen
-    Framework-Dateien verändern
-
-Diese Aufgaben gehören in andere Bereiche.
-
-UI zeigt an, bündelt Spielerinteraktion und ruft definierte Funktionen anderer Systeme auf.
-
----
-
-## Verbindung zu späteren Systemen
-
-Spätere Systeme liefern Daten an UI oder werden über UI ausgelöst.
-
-Beispiele:
-
-    Missions liefert verfügbare Missionen.
-    Logistics liefert Liefer- und FOB-Status.
-    Campaign liefert Kampagnenfortschritt.
-    AI liefert Reaktionsstatus.
-    IADS liefert Luftverteidigungsstatus.
-    Debug liefert Testfunktionen.
-    Persistence liefert Save-/Load-Status.
-
-Der UI-Bereich ist damit die Bedien- und Anzeigeschicht von Theater Command DCS.
-
----
-
-## Testziele
-
-Der UI-Bereich gilt später als funktionsfähig, wenn folgende Punkte erfüllt sind:
-
-    TC.UI ist vorhanden.
-    TC.State.UI wird korrekt vorbereitet.
-    F10-Menü kann erzeugt werden.
-    Kampagnenstatus kann angezeigt werden.
-    Missionsliste kann angezeigt werden.
-    Logistikstatus kann angezeigt werden.
-    Spielerkommandos können definierte Systemfunktionen auslösen.
-    Debug-Funktionen bleiben getrennt.
-    keine Lua-Fehler beim Missionsstart.
-    keine Framework-Dateien werden verändert.
-
-Erwartete spätere Beispielausgaben in `dcs.log`:
-
-    [TC] UI loading started
-    [TC] F10 menu loaded
-    [TC] UI initialized
-    [TC] Campaign status menu created
-    [TC] Mission menu created
-    [TC] Logistics menu created
-
----
-
-## Entwicklungsregel
-
-Der UI-Bereich wird schrittweise aufgebaut.
-
-Empfohlene Reihenfolge:
-
-    1. src/ui/README.md
-    2. spätere konkrete UI-Implementierungsdatei nach Bedarf
-
-Jede Datei wird einzeln erstellt und geprüft.
-
-Keine parallelen Großbaustellen.
-
-Keine All-in-one-Dateien.
-
----
-
-## Zielbild
-
-`src/ui/` soll Theater Command DCS für Spieler bedienbar und verständlich machen.
-
-Der UI-Bereich ist die Verbindung zwischen:
-
-    Kampagnenzustand
-    Missionen
-    Logistik
-    AI-Reaktion
-    IADS-Zustand
-    Spielerkommandos
-    Debugfunktionen
-
-Damit bleibt das Projekt:
-
-    modular
-    lesbar
-    testbar
-    erweiterbar
-    wartbar
-
-`src/ui/` ist die Bedien- und Anzeigeschicht von **Theater Command DCS**.
+    F10Menu v0.2.1
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
