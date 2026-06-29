@@ -2,11 +2,13 @@
 
 Diese Datei beschreibt das Logistiksystem von **Theater Command DCS**.
 
-Die erste Kampagne trägt den Arbeitstitel:
+Erste Kampagne:
 
     Operation Levant Reclamation
 
-Die Kampagne wird auf der **Syria Map** aufgebaut.
+Map:
+
+    Syria
 
 Ausgangslage:
 
@@ -15,660 +17,887 @@ Ausgangslage:
 
 ---
 
-## Zweck des Logistiksystems
+## 1. Zweck des Logistiksystems
 
-Das Logistiksystem soll später Versorgung, Nachschub, FOB-Aufbau und operative Reichweite der Kampagne steuern.
+Das Logistiksystem soll langfristig Versorgung, FOB-Aufbau, Transportmissionen und operative Reichweite der Kampagne steuern.
 
-Logistik soll nicht nur ein Nebensystem sein.
+Logistik soll nicht nur Dekoration sein.
 
-Sie soll später direkten Einfluss haben auf:
+Sie soll später Einfluss haben auf:
 
-- verfügbare Missionen
 - FOB-Aufbau
+- FOB-Versorgung
 - Capture-Fähigkeit
-- Operationsreichweite
-- Nachschubstatus
-- Basisversorgung
-- Helikopteroperationen
-- CTLD-Aufgaben
-- AI-Reaktionen
-- Kampagnenfortschritt
+- Missionsverfügbarkeit
+- Reparaturfähigkeit
+- Nachschub
+- Operationsradius
+- AI-Entscheidungen
+- Persistenz
+- CTLD-Cargo-Flüge
+
+Aktuell ist das System bewusst state-first aufgebaut.
+
+Das bedeutet:
+
+    Logistikdaten werden im Theater-Command-State erzeugt.
+    Es werden noch keine echten CTLD-Aktionen ausgelöst.
 
 ---
 
-## Grundprinzip
+## 2. Aktueller technischer Stand
 
-Das zentrale Projektprinzip lautet:
+Stand:
 
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis
+    2026-06-29
 
-Der Mission Editor stellt nur die Bühne bereit.
-
-Die eigentliche Logistiklogik liegt in Lua.
-
-GitHub dokumentiert Struktur, Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
-
----
-
-## Aktueller technischer Stand
-
-Stand: 2026-06-16
-
-Aktuelle Logistik-Dateien:
+Aktive Dateien:
 
     src/logistics/tc_logistics_delivery.lua
     src/logistics/tc_fob_system.lua
 
-Der erste reale DCS-Starttest wurde durchgeführt.
+Getestete Versionen:
 
-Test:
+    LogisticsDelivery: v0.2.0
+    FobSystem: v0.2.0
 
-    Starttest-Variante A — sichere Einzeldatei-Ladung
+Status:
 
-Ergebnis:
+    bestanden
 
-    Bestanden
+Bestätigt durch DCS-Logtests:
 
-Bestätigt wurde:
-
-- Logistics-Bereich wird geladen
-- `tc_logistics_delivery.lua` wird geladen
-- `tc_fob_system.lua` wird geladen
-- keine schweren Lua-Fehler beim Laden
-- Logistics wird durch Main als Runtime-System berücksichtigt
-- Theater-Command-Startkette läuft sauber weiter
-
-Aktueller Stand:
-
-    Logistikmodule sind technisch ladbar.
-    Funktionale Logistiktests wurden noch nicht durchgeführt.
-    CTLD ist geladen, aber noch nicht produktiv mit Theater Command verbunden.
-
----
-
-## Aktuelle DEV-Mission
-
-Aktuelle technische Entwicklungsmission:
-
-    Operation_Levant_Reclamation_DEV.miz
-
-Aktueller Inhalt:
-
-    Map: Syria
-    Koalitionspreset: Modern
-    Blue Start: Akrotiri / Zypern
-    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
-    Trigger: Starttest-Variante A vollständig angelegt
-    keine rote Frontlinie
-    keine IADS-Stellungen
-    keine CTLD-Zonen
-    keine Template-Gruppen
-    keine F10-Menüs
-
-Diese Mission ist aktuell nur ein technischer Testträger.
-
-Sie ist noch keine spielbare Kampagnenmission.
+- LogisticsDelivery lädt.
+- LogisticsDelivery startet.
+- LogisticsDelivery erzeugt Logistics Hubs.
+- FobSystem lädt.
+- FobSystem startet.
+- FobSystem erzeugt FOB-Kandidaten.
+- FobSystem plant erste Blue-FOBs.
+- FOBs werden state-only erzeugt.
+- MissionGenerator erkennt FOB-Support-Kandidaten.
+- F10Menu kann Logistik- und FOB-Status anzeigen.
+- Es gab keinen Theater-Command-Lua-Fehler.
+- Es gab keinen Lua-Stacktrace.
 
 ---
 
-## Rolle von Akrotiri
+## 3. Aktuelle bestätigte Werte
 
-Akrotiri ist zu Kampagnenbeginn die wichtigste blaue Logistikbasis.
+LogisticsDelivery:
 
-Fachliche Rolle:
+    logistics hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
 
-- Blue Main Operating Base
-- initialer Nachschubknoten
-- Startpunkt für Luftoperationen
-- Startpunkt für spätere Logistikflüge
-- möglicher CTLD-Pickup-Bereich
-- Ausgangspunkt für FOB-Aufbau
-- nicht initial capturable
-- nicht erstes feindliches Missionsziel
+FobSystem:
 
-Aktuell ist Akrotiri bereits als blauer Startbereich im Mission Editor vorhanden.
+    FOB candidates: 6
+    stored candidates: 6
+    auto-planned FOBs: 2
+    skipped candidates: 4
+    Blue FOBs: 2
 
-Die konkrete Logistikrolle wird später im Code und durch passende Mission-Editor-Zonen ausgebaut.
+Erzeugte Blue-FOBs:
 
----
+    FOB Ercan
+    FOB Gecitkale
 
-## Verbindung zum Airbase-System
+Status der erzeugten FOBs:
 
-Der erste DCS-Test ergab:
+    UNDER_CONSTRUCTION
 
-    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
-    Zone-Factory registrierte 225 Zonen.
+MissionGenerator-Verknüpfung:
 
-Dieser Befund ist für das Logistiksystem wichtig.
+    fobSupportCandidates: 2
+    reservedCreated: 1
 
-Problem:
+Bewertung:
 
-    Nicht jedes Airbase-Objekt darf automatisch ein Logistikhub werden.
-
-DCS meldet auf der Syria Map offenbar viele Airbase-ähnliche Objekte.
-
-Dazu können gehören:
-
-- große Airfields
-- kleinere Airfields
-- Heliports
-- Helipads
-- Medical Pads
-- FARPs
-- taktische Pads
-- unbekannte Objekte
-
-Folgerung:
-
-    Das Logistiksystem darf erst produktiv auf Airbase-Daten zugreifen, wenn der Airbase-Scanner diese Objekte klassifiziert.
+    LogisticsDelivery und FobSystem sind state-first funktionsfähig.
+    CTLD ist geladen, aber noch nicht produktiv mit diesen Systemen verbunden.
+    FOB-Support ist bereits im MissionGenerator sichtbar.
 
 ---
 
-## Geplante Logistikrollen nach Airbase-Klasse
+## 4. Designprinzip
 
-### Strategische Airfields
+Das Logistiksystem folgt dem gleichen Grundprinzip wie die restliche Architektur:
 
-Strategische Airfields können später große Logistikhubs sein.
+    erst State
+    dann Sichtbarkeit
+    dann Tests
+    dann echte Framework-Aktionen
 
-Mögliche Funktionen:
+Aktuell gilt:
 
-- Supply-Lager
-- Fuel-Lager
-- Munition
-- Ersatzteile
-- Engineering-Kapazität
-- FOB-Unterstützung
-- Startpunkt für Logistikmissionen
-- Zielpunkt für Nachschubmissionen
-
----
-
-### Secondary Airfields
-
-Secondary Airfields können später begrenzte Logistikfunktionen erhalten.
-
-Mögliche Funktionen:
-
-- Forward Supply Point
-- begrenzter Fuel-Bestand
-- begrenzte Munitionsversorgung
-- Zwischenlandeplatz
-- temporärer Hub
-
----
-
-### Heliports
-
-Heliports können später für Hubschrauberlogistik genutzt werden.
-
-Mögliche Funktionen:
-
-- CTLD-Pickup
-- CTLD-Dropoff
-- CSAR-Unterstützung
-- MEDEVAC-Unterstützung
-- AH-64D-Operationen
-- Transporthubschrauber-Aufträge
-
----
-
-### Helipads
-
-Helipads sind taktische Landeplätze.
-
-Mögliche Funktionen:
-
-- Dropoff-Punkt
-- MEDEVAC-Punkt
-- CSAR-Punkt
-- taktische Landezone
-- temporärer Missionspunkt
-
-Nicht vorgesehen als Standard:
-
-- großer Logistikhub
-- strategisches Capture-Ziel
-- primärer Missionsgenerator-Airbase-Zielpunkt
-
----
-
-### Medical Pads
-
-Medical Pads können später für spezielle Szenarien genutzt werden.
-
-Mögliche Funktionen:
-
-- MEDEVAC
-- CSAR
-- humanitäre Missionen
-- zivile Infrastruktur
-- medizinische Evakuierung
-
-Nicht vorgesehen:
-
-- strategischer Logistikhub
-- Standard-Capture-Ziel
-- Strike-Ziel
-- CAP-Zentrum
-
----
-
-### FARPs
-
-FARPs sind für das Logistiksystem besonders relevant.
-
-Mögliche Funktionen:
-
-- Forward Arming and Refueling
-- AH-64D-Versorgung
-- Hubschrauberlogistik
-- CTLD-Knoten
-- temporärer Frontstützpunkt
-- FOB-Ausbaustufe
-
-FARPs gehören fachlich eng zum FOB-System.
-
----
-
-## Aktuelle Logistikmodule
-
-### `src/logistics/tc_logistics_delivery.lua`
-
-Aufgabe:
-
-- Lieferungen vorbereiten
-- Lieferstatus verwalten
-- Lieferungen registrieren
-- Lieferungen abschließen
-- Lieferungen fehlschlagen lassen
-- spätere CTLD-Anbindung vorbereiten
-
-Aktueller Stand:
-
-    Datei vorhanden.
-    Datei wird geladen.
-    Noch kein funktionaler DCS-Logistiktest durchgeführt.
-
----
-
-### `src/logistics/tc_fob_system.lua`
-
-Aufgabe:
-
-- FOB-Daten vorbereiten
-- FOB-Aufbau verwalten
-- FOB-Status speichern
-- spätere Verbindung zu CTLD und Logistics Delivery vorbereiten
-
-Aktueller Stand:
-
-    Datei vorhanden.
-    Datei wird geladen.
-    Noch kein funktionaler FOB-Test durchgeführt.
-
----
-
-## Geplante spätere Logistikmodule
-
-Mögliche spätere Dateien:
-
-    src/logistics/tc_supply_manager.lua
-    src/logistics/tc_ctld_bridge.lua
-    src/logistics/tc_logistics_hub.lua
-    src/logistics/tc_farp_manager.lua
-
-Diese Dateien werden noch nicht erstellt.
+- keine echten CTLD-Crates
+- keine echten CTLD-Pickup-Zonen
+- keine echten CTLD-Dropoff-Zonen
+- keine echten CTLD-FOBs
+- keine echten Cargo-Flüge
+- kein echter Supply-Verbrauch
+- keine produktive Persistenz
 
 Grund:
 
-    Zuerst müssen Airbase-Klassifizierung und World-Daten stabil sein.
+    CTLD erzeugt in DCS echte Nebenwirkungen.
+    Diese Nebenwirkungen sollen erst aktiviert werden, wenn State, UI und Debug ausreichend stabil sind.
 
 ---
 
-## CTLD-Anbindung
+## 5. Beziehung zu Airbase Scanner und ZoneFactory
 
-CTLD ist bereits als externes Framework im Projekt vorhanden.
+LogisticsDelivery nutzt Daten aus:
 
-Aktuelle Dateien:
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_zone_factory.lua
+
+Aktuelle vorgelagerte Werte:
+
+    Airbase-like Objects: 225
+    relevante Kampagnenzonen: 46
+    logisticsCandidates: 46
+
+ZoneFactory erzeugt aktuell:
+
+    logisticsZones: 46
+
+LogisticsDelivery erzeugt daraus:
+
+    logistics hubs: 46
+
+Bedeutung:
+
+    Logistik basiert nicht auf allen 225 DCS-Airbase-like Objects.
+    Logistik nutzt die 46 relevanten Kampagnenzonen.
+    Diese Filterung verhindert fehlerhafte Logistikhubs auf ungeeigneten DCS-Sonderobjekten.
+
+---
+
+## 6. Logistics Hubs
+
+Logistics Hubs sind die zentralen logistischen Knoten im Theater-Command-State.
+
+Ein Logistics Hub kann später enthalten:
+
+- Supply
+- Fuel
+- Ammo
+- Engineering
+- Repair Capacity
+- Cargo Demand
+- Cargo Delivered
+- Build Progress
+- Owner
+- Status
+- Linked Zone
+- Linked Base
+- CTLD Pickup Capability
+- CTLD Dropoff Capability
+- FOB Support Capability
+
+Aktuell werden Logistics Hubs state-only erzeugt.
+
+Bestätigte Werte:
+
+    total hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+
+---
+
+## 7. Hub Status
+
+Aktuelle Hub-Statuswerte:
+
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
+
+Bedeutung:
+
+- `ACTIVE` bedeutet: Hub ist grundsätzlich nutzbar.
+- `LIMITED` bedeutet: Hub ist eingeschränkt oder noch nicht voll nutzbar.
+- `LOCKED` bedeutet: Hub ist nicht nutzbar.
+
+Aktuelle Bewertung:
+
+    Die Hub-Statuslogik ist vorbereitet.
+    Sie hat noch keine produktiven Auswirkungen auf echte CTLD- oder MOOSE-Aktionen.
+
+Spätere mögliche Auswirkungen:
+
+- nur aktive Hubs können Cargo senden
+- eingeschränkte Hubs senden reduzierte Versorgung
+- locked Hubs erzeugen keine Logistikmissionen
+- Hub-Status beeinflusst FOB-Bau
+- Hub-Status beeinflusst Capture-Fähigkeit
+- Hub-Status beeinflusst AI-Director-Entscheidungen
+
+---
+
+## 8. Blue Hubs
+
+Aktuell bestätigt:
+
+    blue hubs: 7
+
+Blue Hubs bilden die frühe blaue Versorgungsbasis.
+
+Wichtigster Blue Hub:
+
+    Akrotiri
+
+Mögliche Rollen:
+
+- Main Logistics Base
+- erster Supply-Knoten
+- Ausgangspunkt für Transportmissionen
+- Quelle für FOB-Aufbau
+- Quelle für Engineering und Repair
+- Quelle für spätere CTLD-Cargo-Operationen
+
+Aktuelle Einschränkung:
+
+    Blue Hubs erzeugen noch keine echten CTLD-Cargo-Aufträge.
+    Blue Hubs sind State-Daten.
+
+---
+
+## 9. Red Hubs
+
+Aktuell bestätigt:
+
+    red hubs: 24
+
+Red Hubs bilden die rote Logistikstruktur auf dem syrischen Festland.
+
+Mögliche spätere Rollen:
+
+- rote Versorgungsknoten
+- rote Operationsbasis
+- rote Missionsquellen
+- Ziele für Interdiction
+- Ziele für Strike
+- Ziele für SEAD/DEAD im Umfeld
+- Ziele für AI-Director-Logik
+- Ziele für Capture-Vorbereitung
+
+Aktuelle Einschränkung:
+
+    Red Hubs erzeugen noch keine echten roten Operationen.
+    Red Hubs sind State-Daten.
+
+---
+
+## 10. Neutral Hubs
+
+Aktuell bestätigt:
+
+    neutral hubs: 15
+
+Neutral Hubs sind noch nicht eindeutig einer Seite als aktive operative Logistikbasis zugeordnet.
+
+Mögliche Rollen:
+
+- spätere Capture-Ziele
+- spätere Forward Locations
+- logistische Zwischenräume
+- durch Missionen aktivierbare Knoten
+- neutrale Infrastruktur
+- zukünftige FOB-/LZ-Kandidaten
+
+Aktuelle Einschränkung:
+
+    Neutral Hubs beeinflussen die Kampagne noch nicht produktiv.
+
+---
+
+## 11. FOB-System
+
+Das FOB-System ist Teil des Logistics Layers.
+
+Aktive Datei:
+
+    src/logistics/tc_fob_system.lua
+
+Getestete Version:
+
+    v0.2.0
+
+Aufgaben:
+
+- FOB-Kandidaten aus Logistics Hubs ableiten
+- geeignete Blue-FOBs automatisch planen
+- FOB-State erzeugen
+- Baufortschritt vorbereiten
+- Versorgung vorbereiten
+- CTLD-Hooks vorbereiten
+- MissionGenerator mit FOB-Support-Daten versorgen
+
+Aktuelle Bewertung:
+
+    Das FOB-System ist state-first funktionsfähig.
+    FOBs existieren im Theater-Command-State.
+    Es werden noch keine echten CTLD-FOBs erzeugt.
+
+---
+
+## 12. FOB Candidates
+
+Aktuell bestätigt:
+
+    FOB candidates: 6
+    stored candidates: 6
+    skipped candidates: 4
+
+FOB Candidates entstehen aus geeigneten Logistics Hubs.
+
+Mögliche Kriterien:
+
+- geeigneter Besitzerstatus
+- geeignete Zone
+- geeignete Lage
+- logistischer Bedarf
+- Nähe zur Operationsrichtung
+- zukünftige Relevanz für Blue
+- Eignung als Vorwärtsbasis
+
+Aktuelle Einschränkung:
+
+    Die Auswahl ist state-only.
+    Mission Editor, CTLD-Zonen und echte Cargo-Mechanik sind noch nicht angebunden.
+
+---
+
+## 13. Automatisch geplante FOBs
+
+Aktuell bestätigt:
+
+    auto-planned FOBs: 2
+    Blue FOBs: 2
+
+Erzeugte FOBs:
+
+    FOB Ercan
+    FOB Gecitkale
+
+Status:
+
+    UNDER_CONSTRUCTION
+
+Wichtig:
+
+    `planned=0` in älteren Statuszusammenfassungen ist kein Fehler.
+    Automatisch geplante FOBs wechseln direkt in UNDER_CONSTRUCTION, sobald initialer Baufortschritt gesetzt wurde.
+
+Bewertung:
+
+    Blue besitzt jetzt zwei state-only FOB-Projekte.
+    Diese können bereits für Missionslogik genutzt werden.
+    CTLD-Bau ist noch nicht aktiv.
+
+---
+
+## 14. FOB Status
+
+Aktuelle FOBs stehen auf:
+
+    UNDER_CONSTRUCTION
+
+Mögliche spätere Statuswerte:
+
+- PLANNED
+- UNDER_CONSTRUCTION
+- ACTIVE
+- DAMAGED
+- SUPPLY_LOW
+- ABANDONED
+- DESTROYED
+
+Aktuelle Bedeutung von UNDER_CONSTRUCTION:
+
+    FOB existiert als geplanter logistischer State.
+    FOB ist noch nicht produktiv einsatzbereit.
+    FOB benötigt später Cargo, Engineering oder Missionserfolg.
+
+---
+
+## 15. FOB Support Missions
+
+MissionGenerator nutzt den FOB-State bereits.
+
+Aktuell bestätigt:
+
+    fobSupportCandidates: 2
+    reservedCreated: 1
+
+Bedeutung:
+
+    FOB-Support wird im Missionspool berücksichtigt.
+    Mindestens eine FOB-Support-Mission wird reserviert.
+    FOB-Support wird nicht durch andere Missionstypen verdrängt.
+
+Mögliche spätere FOB-Support-Missionen:
+
+- Cargo Delivery
+- Engineering Support
+- Convoy Escort
+- Helicopter Lift
+- FOB Defense
+- Repair Support
+- Fuel Delivery
+- Ammo Delivery
+
+Aktuelle Einschränkung:
+
+    FOB-Support-Missionen sind state-only.
+    Sie lösen noch keine CTLD-Cargo-Aktion aus.
+
+---
+
+## 16. CTLD-Rolle
+
+CTLD ist das geplante Framework für echte Logistikinteraktion.
+
+Aktuelle Vendor-Dateien:
 
     vendor/ctld/CTLD-i18n.lua
     vendor/ctld/CTLD.lua
 
-CTLD wurde im ersten Starttest geladen.
+CTLD ist aktuell:
 
-Aktueller Status:
+    geladen
+    vom Loader erkannt
+    noch nicht produktiv angebunden
 
-    CTLD wird geladen.
-    CTLD wird durch den Loader erkannt.
-    Theater Command nutzt CTLD noch nicht produktiv.
+Geplante CTLD-Aufgaben:
 
-Geplante spätere CTLD-Aufgaben:
+- Cargo aufnehmen
+- Cargo transportieren
+- Cargo absetzen
+- FOBs bauen
+- FOBs versorgen
+- Engineering-Crates transportieren
+- Repair-Crates transportieren
+- Supply-Crates transportieren
+- Fuel-/Ammo-Logik vorbereiten
+- Transporthelikopter einbinden
 
-- Pickup-Zonen
-- Dropoff-Zonen
-- FOB-Bau
-- Transport von Versorgungsgütern
-- Transport von Truppen
-- Slingload
-- Hubschrauberlogistik
-- Rückmeldung von CTLD-Ereignissen an Theater Command
+Aktuelle Einschränkung:
 
----
-
-## Logistikdaten im Kampagnenzustand
-
-Später soll der Kampagnenzustand Logistikdaten enthalten.
-
-Mögliche Daten:
-
-    supply
-    fuel
-    ammunition
-    engineering
-    medical
-    spareParts
-    activeDeliveries
-    completedDeliveries
-    failedDeliveries
-    activeFobs
-    fobConstructionProgress
-    logisticsHubs
-    ctldZones
-
-Diese Daten werden später von mehreren Systemen genutzt:
-
-- Campaign
-- Missions
-- AI
-- UI
-- Persistence
-- Debug
+    Keine CTLD-Zonen im Mission Editor produktiv definiert.
+    Keine CTLD-Crates produktiv definiert.
+    Keine Theater-Command-CTLD-Brücke aktiv.
 
 ---
 
-## Beispiel für eine spätere Lieferung
+## 17. Warum CTLD noch nicht produktiv ist
 
-Beispielhafte spätere Datenstruktur:
+CTLD wird bewusst noch nicht aktiv ausgelöst.
 
-    {
-        id = "DELIVERY_AKROTIRI_FOB_001",
-        origin = "Akrotiri",
-        destination = "FOB_SITE_01",
-        type = "SUPPLY",
-        amount = 100,
-        status = "ACTIVE",
-        createdAt = 1200,
-        completedAt = nil
-    }
+Gründe:
 
-Statuswerte könnten später sein:
+- zuerst müssen Logistics Hubs stabil sein
+- zuerst muss FOB-State stabil sein
+- zuerst muss F10-/Debug-Sichtbarkeit vorhanden sein
+- zuerst müssen CTLD-Zonen im Mission Editor sauber definiert werden
+- echte Cargo-Aktionen erzeugen DCS-Nebenwirkungen
+- DCS-Fehlerdiagnose wird mit echten Framework-Aktionen komplexer
 
-    PLANNED
-    ACTIVE
-    COMPLETED
-    FAILED
-    CANCELLED
+Aktuelle Entscheidung:
+
+    CTLD bleibt geladen und vorbereitet.
+    Produktive CTLD-Integration folgt später.
 
 ---
 
-## FOB-System
+## 18. Spätere CTLD-Zonen
 
-FOBs sollen später durch Logistik aufgebaut werden.
+Später im Mission Editor anzulegen:
 
-Mögliche FOB-Zustände:
+- CTLD Pickup Zones
+- CTLD Dropoff Zones
+- FOB Build Zones
+- FOB Supply Zones
+- Forward Logistics Zones
+- Helicopter Loading Zones
+- Helicopter Unloading Zones
 
-    PLANNED
-    UNDER_CONSTRUCTION
-    OPERATIONAL
-    DAMAGED
-    DESTROYED
-    ABANDONED
+Mögliche Namenskonvention:
 
-FOBs können später freischalten:
+    CTLD_PICKUP_BLUE_AKROTIRI
+    CTLD_DROPOFF_FOB_ERCAN
+    CTLD_DROPOFF_FOB_GECITKALE
+    CTLD_BUILD_FOB_ERCAN
+    CTLD_BUILD_FOB_GECITKALE
 
-- Helikopterlandeplatz
-- CTLD-Dropoff
-- Munition
-- Fuel
-- Reparatur
-- Forward Spawn
-- CAS-Missionen
-- Capture-Unterstützung
-- lokale Verteidigung
+Diese Namen sind noch nicht final.
+
+Sie müssen später mit `NAMING_CONVENTIONS.md` und der CTLD-Konfiguration abgestimmt werden.
 
 ---
 
-## Verbindung zum Capture-System
+## 19. Spätere Cargo-Typen
+
+Mögliche Theater-Command-Cargo-Typen:
+
+- SUPPLY
+- FUEL
+- AMMO
+- ENGINEERING
+- REPAIR
+- FOB_CORE
+- FOB_DEFENSE
+- FOB_COMMS
+- FOB_MEDICAL
+- FOB_AIR_DEFENSE
+
+Diese Typen sind konzeptionell.
+
+Sie sind noch nicht produktiv in CTLD umgesetzt.
+
+Spätere Zuordnung:
+
+- Cargo-Typ zu CTLD-Crate
+- Gewicht
+- Transportfähigkeit
+- Baufortschritt
+- Versorgungseffekt
+- Persistenzwirkung
+
+---
+
+## 20. Logistik und Capture
 
 Logistik soll später Capture beeinflussen.
 
-Beispiele:
+Mögliche Logistik-Auswirkungen auf Capture:
 
-- Ein Angriff auf eine Basis ist nur möglich, wenn ausreichend Versorgung vorhanden ist.
-- Ein FOB in der Nähe erleichtert Capture.
-- Fehlender Nachschub verzögert Capture.
-- Erfolgreiche Logistikmissionen erhöhen Operationsreichweite.
-- Zerstörte Logistik senkt Kampagnenfähigkeit.
-
-Wichtig:
-
-    Logistics entscheidet nicht allein über Besitz.
-    Campaign entscheidet über Besitz und Capture.
-    Logistics liefert dafür relevante Zustandsdaten.
-
----
-
-## Verbindung zum Missionsgenerator
-
-Der Missionsgenerator soll später Logistikmissionen erzeugen können.
-
-Mögliche Missionstypen:
-
-- Logistics
-- FOB Support
-- Convoy Escort
-- Airlift
-- Helicopter Supply
-- CSAR Support
-- MEDEVAC
-- Forward Resupply
-
-Der Missionsgenerator darf Logistikziele erst dann sinnvoll auswählen, wenn:
-
-- Airbases klassifiziert sind
-- FOB-Standorte definiert sind
-- CTLD-Zonen vorhanden sind
-- Logistikzustand im State gespeichert ist
-
----
-
-## Verbindung zur AI
-
-Die AI kann später auf Logistik reagieren.
-
-Mögliche Reaktionen:
-
-- rote Angriffe auf blaue FOBs
-- Interdiction gegen Nachschub
-- CAP über wichtigen Logistikkorridoren
-- GCI gegen Transportflüge
-- Verteidigung wichtiger roter Hubs
-- Gegenangriffe bei schwacher blauer Versorgung
+- gut versorgte Zonen sind schwerer zu erobern
+- unterversorgte Zonen verlieren Verteidigungsfähigkeit
+- FOBs erhöhen Blue Capture Pressure
+- Supply Delivery erhöht Capture Progress
+- Engineering Delivery ermöglicht FOB-Aktivierung
+- zerstörte Logistik senkt rote Reaktionsfähigkeit
+- Interdiction kann rote Hubs schwächen
 
 Aktueller Stand:
 
-    AI-CAP-Manager ist geladen.
-    Keine reale Logistik-AI-Verbindung implementiert.
+    CaptureSystem erzeugt Pressure- und Progress-Records.
+    LogisticsDelivery erzeugt Hubs.
+    FobSystem erzeugt FOBs.
+    Eine produktive Logistik-Capture-Kopplung ist noch nicht aktiv.
+
+Nächster logischer Zwischenschritt:
+
+    Capture-/Pressure-Daten im F10-Menü sichtbar machen.
 
 ---
 
-## Verbindung zur IADS
+## 21. Logistik und MissionGenerator
 
-IADS kann später Logistik beeinflussen.
+MissionGenerator nutzt Logistikdaten bereits teilweise.
 
-Beispiele:
+Aktuelle Nutzung:
 
-- aktive SAM-Sites erschweren Logistikflüge
-- SEAD-Erfolge öffnen Korridore
-- zerstörte Radare erleichtern Transport
-- IADS-Sektoren bestimmen Risiko von Logistikmissionen
+- Logistics Hubs als Missionsgrundlage
+- FOBs als FOB-Support-Ziele
+- FOB-Support-Kandidaten
+- Reservierung mindestens einer FOB-Support-Mission
+
+Aktuelle Werte:
+
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+
+Spätere Missionsarten aus Logistik:
+
+- LOGISTICS
+- FOB_SUPPORT
+- CONVOY_ESCORT
+- SUPPLY_INTERDICTION
+- HELICOPTER_TRANSPORT
+- BASE_REPAIR
+- ENGINEERING_SUPPORT
+- FUEL_DELIVERY
+- AMMO_DELIVERY
+
+Aktuelle Einschränkung:
+
+    Missionen lösen noch keine echten Cargo-, Spawn- oder CTLD-Aktionen aus.
+
+---
+
+## 22. Logistik und AI
+
+AI soll später Logistikdaten nutzen.
+
+Mögliche AI-Entscheidungen:
+
+- rote Hubs verteidigen
+- blaue FOBs angreifen
+- schwache Hubs priorisieren
+- CAP über logistisch wichtigen Zonen anfordern
+- Interdiction gegen Nachschubrouten planen
+- Verstärkung zu bedrohten Hubs senden
+- Rückzug bei Versorgungsausfall
+- Gegenangriff auf aktive FOBs
 
 Aktueller Stand:
 
-    Skynet IADS ist geladen.
-    Theater-Command-IADS-Schicht ist noch nicht implementiert.
+    AICapManager erzeugt CAP-State.
+    AI Director ist noch nicht implementiert.
+    Logistik beeinflusst AI noch nicht produktiv.
 
 ---
 
-## Verbindung zur Persistenz
+## 23. Logistik und Persistenz
 
-Logistik muss später persistent gespeichert werden.
+Logistik muss später persistent werden.
 
-Zu speichern sind unter anderem:
+Zu speichern:
 
-- aktive Lieferungen
-- abgeschlossene Lieferungen
-- fehlgeschlagene Lieferungen
-- FOB-Status
-- FOB-Ausbaustufen
-- Supply-Werte
-- Fuel-Werte
-- Munitionswerte
-- Logistikhubs
-- CTLD-Zonenstatus
+- Hub-ID
+- Hub-Name
+- Besitzer
+- Status
+- Supply
+- Fuel
+- Ammo
+- Engineering
+- Repair Capacity
+- Linked Zone
+- Linked Base
+- Cargo Delivered
+- Cargo Required
+- FOB Links
+- Delivery History
+- Last Update
+- Damage State
+
+FOB-Persistenz:
+
+- FOB-ID
+- FOB-Name
+- Besitzer
+- Status
+- Build Progress
+- Supply
+- Fuel
+- Ammo
+- Engineering
+- Linked Hub
+- Linked Zone
+- CTLD Build State
+- Active Facilities
+- Damage State
 
 Aktueller Stand:
 
-    In-Memory-Persistenz vorbereitet.
-    Datei-Persistenz noch nicht getestet.
-
-Wichtig:
-
-    DCS-Dateizugriff und Sandbox-Verhalten müssen vor echter Dateipersistenz geprüft werden.
+    PersistenceSystem-Grundstruktur existiert.
+    Produktiver Dateischreibtest ist offen.
 
 ---
 
-## Verbindung zum UI-System
+## 24. F10-Status für Logistik
 
-Später sollen Logistikdaten über F10-Menüs sichtbar werden.
+F10Menu `v0.2.0` kann aktuell Logistikstatus und FOB-Status anzeigen.
 
-Mögliche Anzeigen:
+Aktuelle F10-Funktionen im Bereich Logistik:
 
-- aktuelle Supply-Lage
-- verfügbare Logistikmissionen
-- aktive Lieferungen
-- FOB-Baufortschritt
-- verfügbare CTLD-Aufgaben
-- gefährdete Logistikkorridore
-- abgeschlossene Lieferungen
+    Show Logistics Status
+    Show FOB Status
 
-Aktueller Stand:
+Bestätigt:
 
-    UI-Bereich ist dokumentiert.
-    F10-Menüs sind noch nicht implementiert.
+    F10Menu ist sichtbar.
+    F10Menu ist navigierbar.
+    F10Menu erzeugt 26 Commands.
+    Missionen können angezeigt und aktiviert werden.
+    Logistik- und FOB-Status sind Bestandteil der UI-Struktur.
 
----
+Spätere F10-Erweiterungen für Logistik:
 
-## Debug-Anforderungen
+- Show Logistics Hubs
+- Show Blue Logistics Hubs
+- Show Red Logistics Hubs
+- Show FOB Construction
+- Show FOB Supply
+- Show Cargo Requests
+- Show Delivery Queue
+- Request FOB Support
+- Request Cargo Mission
 
-Später soll ein Logistik-Debugreport möglich sein.
+Aktuell nächster F10-Schritt:
 
-Geplante Datei:
-
-    src/debug/tc_debug_logistics_report.lua
-
-Mögliche Ausgabe:
-
-- Anzahl aktiver Lieferungen
-- Anzahl abgeschlossener Lieferungen
-- Anzahl fehlgeschlagener Lieferungen
-- FOB-Liste
-- FOB-Status
-- Supply-Werte pro Hub
-- CTLD-Zonenstatus
-- Logistikfehler
-- offene Logistikmissionen
-
-Aktuell wird dieser Debugreport noch nicht erstellt.
-
----
-
-## Mission-Editor-Anforderungen für spätere Logistik
-
-Später werden im Mission Editor wahrscheinlich benötigt:
-
-- CTLD-Pickup-Zonen
-- CTLD-Dropoff-Zonen
-- FOB-Bauzonen
-- statische Logistikobjekte
-- Lagerobjekte
-- Transporthubschrauber-Slots
-- mögliche Konvoi-Templates
-- mögliche Transportflugzeug-Templates
-
-Aktuell noch nicht angelegt:
-
-    keine CTLD-Zonen
-    keine FOB-Zonen
-    keine Logistik-Templates
-    keine Logistikobjekte
+    nicht Logistics, sondern Capture-/Pressure-Status sichtbar machen.
 
 Grund:
 
-    Zuerst muss die Airbase-Klassifizierung stabil sein.
+    CaptureSystem v0.2.1 erzeugt neue Pressure-/Progress-Daten, die vor Missionseffekt-Tests sichtbar sein müssen.
 
 ---
 
-## Nicht-Ziele im aktuellen Stand
+## 25. Nicht-Ziele des aktuellen Logistiksystems
 
-Aktuell wird bewusst nicht umgesetzt:
+Aktuell nicht vorgesehen:
 
-- keine produktive CTLD-Anbindung
-- keine FOB-Baumechanik
-- keine komplexen Lieferketten
-- keine Konvois
-- keine Supply-Berechnung
-- keine Fuel-Berechnung
-- keine Munitionswirtschaft
-- keine UI-Anzeige
-- keine Persistenz in Datei
-- keine roten Logistikziele
-- keine Logistik-AI-Reaktionen
+- CTLD direkt aus LogisticsDelivery produktiv auslösen
+- echte Crates automatisch spawnen
+- echte Cargo-Flüge starten
+- echte FOBs im DCS-Sinn bauen
+- Supply-Verbrauch automatisch berechnen
+- rote Logistik automatisch bewegen
+- Blue-Logistik automatisch bewegen
+- AI-Director-Entscheidungen aus Logistik ableiten
+- Logistik persistieren
+
+Grund:
+
+    Die State-Grundlage ist zuerst aufgebaut worden.
+    Produktive Framework-Aktionen folgen später.
 
 ---
 
-## Nächster relevanter Schritt
+## 26. Risiken
 
-Der nächste relevante Schritt für das Logistiksystem ist nicht die direkte CTLD-Anbindung.
+Wichtige Risiken bei späterer Logistikintegration:
 
-Zuerst erforderlich:
+- CTLD-Konfiguration ist empfindlich gegenüber Zonen- und Gruppenbenennung
+- falsche Zonen führen zu nicht funktionierenden Cargo-Aktionen
+- echte CTLD-FOBs können schwer zu debuggen sein
+- Cargo-Zustand und Theater-Command-State müssen synchron bleiben
+- Multiplayer-Verhalten muss später separat geprüft werden
+- Persistenz muss sauber mit CTLD-Zustand umgehen
+- DCS-Sandbox kann Dateizugriffe einschränken
 
-    Airbase-Scanner klassifizieren und filtern.
+Gegenmaßnahmen:
+
+- CTLD erst nach stabiler State- und UI-Schicht aktivieren
+- Mission-Editor-Zonen klar benennen
+- kleine Einzeltests durchführen
+- Logausgaben pro Cargo-Aktion erzeugen
+- State-Dumps vorbereiten
+- keine großen CTLD-Schritte parallel bauen
+
+---
+
+## 27. Aktuelle Akzeptanzkriterien für das Logistiksystem
+
+Aktuell bestanden:
+
+- LogisticsDelivery lädt.
+- LogisticsDelivery startet.
+- 46 Logistics Hubs werden erzeugt.
+- Hub-Verteilung wird geloggt.
+- FobSystem lädt.
+- FobSystem startet.
+- 6 FOB-Kandidaten werden erkannt.
+- 2 Blue-FOBs werden state-only erzeugt.
+- FOBs stehen auf UNDER_CONSTRUCTION.
+- MissionGenerator erkennt 2 FOB-Support-Kandidaten.
+- mindestens eine FOB-Support-Mission wird reserviert.
+- keine CTLD-Fehler durch Theater Command.
+- keine Lua-Stacktraces.
+
+Noch offen:
+
+- CTLD-Zonen definieren
+- CTLD-Cargo produktiv anbinden
+- FOB-Baufortschritt durch Cargo verändern
+- Logistik mit Capture koppeln
+- Logistik mit AI koppeln
+- Logistik persistieren
+
+---
+
+## 28. Aktueller getesteter Systemstand
+
+| System | Datei | Version | Status |
+|---|---|---:|---|
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+
+---
+
+## 29. Nächster sinnvoller Schritt aus Sicht des Logistiksystems
+
+Der nächste technische Schritt liegt nicht direkt in `src/logistics/`.
+
+Empfohlene nächste Datei:
+
+    src/ui/tc_f10_menu.lua
+
+Ziel:
+
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
 
 Warum:
 
-Logistik braucht saubere World-Daten.
+    Logistics und FOBs sind state-first stabil.
+    MissionGenerator nutzt FOB-Support bereits.
+    CaptureSystem erzeugt jetzt Pressure- und Progress-Daten.
+    Vor echter Logistik-Capture-Kopplung müssen diese Daten sichtbar werden.
 
-Erst wenn Theater Command unterscheiden kann zwischen:
+Akzeptanzkriterien:
 
-- strategischen Airfields
-- Secondary Airfields
-- Heliports
-- Helipads
-- Medical Pads
-- FARPs
-- Unknown
-
-kann Logistik sinnvoll entscheiden, welche Orte Hubs, Dropoff-Punkte oder FOB-Kandidaten sind.
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
 
 ---
 
-## Aktueller Status
+## 30. Aktueller Status
 
-Das Logistiksystem ist als Grundstruktur vorhanden und lädt erfolgreich in DCS.
+Das Logistiksystem ist für den aktuellen state-first Entwicklungsstand bestanden.
 
-Es ist noch nicht funktional mit CTLD verbunden.
+Aktuelle Fähigkeit:
 
-Der nächste übergeordnete technische Schritt bleibt die Airbase-Klassifizierung im World-System.
+- 46 Logistics Hubs werden erzeugt.
+- 6 FOB-Kandidaten werden erkannt.
+- 2 Blue-FOBs werden geplant.
+- FOBs stehen auf UNDER_CONSTRUCTION.
+- FOB-Support wird im MissionGenerator berücksichtigt.
+- F10Menu kann Logistics- und FOB-Status anzeigen.
+- CTLD ist geladen und vorbereitet.
+
+Noch nicht vorhanden:
+
+- produktive CTLD-Anbindung
+- echte CTLD-Crates
+- echte CTLD-FOBs
+- echter Cargo-Fluss
+- Logistikverbrauch
+- Logistik-Persistenz
+
+Nächster sinnvoller Schritt:
+
+    Capture-/Pressure-Sichtbarkeit im F10-Menü.
