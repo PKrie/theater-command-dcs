@@ -1,22 +1,33 @@
-# Roadmap
+# ROADMAP.md
 
-Diese Roadmap beschreibt die geplanten Entwicklungsphasen für **Theater Command DCS** und die erste Kampagne **Operation Levant Reclamation**.
+Diese Roadmap beschreibt den geplanten Entwicklungsweg von **Theater Command DCS**.
 
-Das Projekt wird schrittweise aufgebaut.  
-Jede Phase soll einzeln dokumentiert, umgesetzt und in DCS getestet werden, bevor die nächste große Phase vertieft wird.
+Das Projekt ist modular aufgebaut. Jede Stufe soll einzeln testbar sein, bevor die nächste Stufe produktiv angebunden wird.
 
 ---
 
-## 1. Projektziel
+## 1. Zielbild
 
-**Theater Command DCS** soll ein modulares, dynamisches und später persistentes DCS-World-Kampagnensystem werden.
+**Theater Command DCS** soll ein dynamisches und später persistentes Kampagnensystem für DCS World werden.
 
 Erste Kampagne:
 
 - **Operation Levant Reclamation**
 - Map: **Syria**
-- Blue Start: **Akrotiri / Zypern**
-- Red Start: **syrisches Festland vollständig rot kontrolliert**
+- Blue startet auf **Akrotiri / Zypern**
+- Das syrische Festland ist zu Beginn rot kontrolliert
+
+Langfristiges Ziel:
+
+- dynamische Blue-vs-Red-Kampagne
+- Airbases und relevante Zonen als Kampagnenobjekte
+- FOBs als operative Vorwärtsbasen
+- CTLD-Logistik als Kampagnenressource
+- MOOSE für AI-Flüge, CAP, Strike, SEAD und spätere Missionspakete
+- Skynet IADS für dynamische Luftverteidigung
+- F10-Menü als Spieler- und Debug-Interface
+- Persistenz für Kampagnenfortschritt
+- Spieler als Teilnehmer einer laufenden Kampagne
 
 Grundprinzip:
 
@@ -24,347 +35,355 @@ Grundprinzip:
 - **Lua = Kampagnensystem**
 - **GitHub = Projektgedächtnis**
 
-Der DCS Mission Editor stellt die physische Umgebung bereit.  
-Lua übernimmt die eigentliche Kampagnenlogik.  
-GitHub dokumentiert Struktur, Entscheidungen, Versionen, Teststände und Aufgabenstand.
+---
+
+## 2. Entwicklungsphasen
+
+Die Roadmap ist bewusst in technische Phasen gegliedert.
+
+Jede Phase soll einen klar testbaren Zustand liefern.
 
 ---
 
-## 2. Zielbild der Kampagne
+## Phase 0: Projektgrundlage
 
-Theater Command DCS soll langfristig keine einzelne lineare Mission sein.
+Status:
 
-Ziel ist eine laufende Kampagnenmaschine:
+- **abgeschlossen**
 
-- Blue besitzt zu Beginn Akrotiri und ggf. weitere Zypern-nahe Stützpunkte.
-- Red kontrolliert zu Beginn das syrische Festland.
-- Blue muss schrittweise Kampagnenziele auf dem Festland schwächen, isolieren und erobern.
-- Red verteidigt seine strategischen Basen, IADS-Struktur, Logistik und Lufthoheit.
-- Spieler steigen mit Client-Flugzeugen in diese laufende Lage ein.
-- Spieler sollen Missionen übernehmen können, aber nicht der einzige Auslöser der Kampagne sein.
-- Blue-KI und Red-KI sollen später unabhängig voneinander handeln können.
-- Missionen, Capture, Logistics, FOBs, IADS, AI, UI und Persistence sollen zusammenwirken.
+Ziele:
 
-Langfristiges Ziel:
+- Repository erstellen
+- Grunddokumentation anlegen
+- Projektregeln definieren
+- Vendor-Struktur definieren
+- Source-Struktur definieren
+- Mission-Editor-Arbeitsweise definieren
 
-Der Spieler ist Teilnehmer einer dynamischen Kriegsmaschinerie, nicht alleiniger Motor der Simulation.
+Erledigt:
 
----
+- `README.md`
+- `TASKS.md`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `ARCHITECTURE.md`
+- `MISSION_EDITOR_SETUP.md`
+- `NAMING_CONVENTIONS.md`
+- `LUA_STYLEGUIDE.md`
+- `docs/`
+- `mission_editor/`
+- `src/`
+- `vendor/`
 
-## 3. Aktueller Projektstand
+Ergebnis:
 
-Stand: **2026-06-16**
-
-Aktueller technischer Status:
-
-Die Theater-Command-Startkette läuft im DCS Mission Scripting Environment.
-
-Bestätigt:
-
-- Vendor-Frameworks werden geladen.
-- Eigene Source-Module werden geladen.
-- Loader erkennt Frameworks.
-- Main wird gestartet.
-- Runtime-Systeme werden initialisiert.
-- Loader beendet sauber.
-- Airbase Scanner läuft.
-- Zone Factory läuft.
-- Capture System läuft.
-- Logistics Delivery läuft.
-- FOB System läuft.
-- Mission Generator läuft.
-- AI CAP Manager läuft.
-- F10 Menu läuft.
-
-Wichtig:
-
-Das Projekt ist noch keine fertige spielbare dynamische Kampagne.  
-Die aktuell erfolgreich getesteten Systeme sind überwiegend **State-Systeme**.  
-Sie bereiten Kampagnenlogik vor, erzeugen aber noch keine echten MOOSE-, CTLD- oder Skynet-IADS-Aktionen im DCS-Raum.
+- Projekt ist strukturiert.
+- GitHub dient als Projektgedächtnis.
+- Arbeitsweise ist definiert.
+- Framework-Dateien werden als Vendor behandelt und nicht verändert.
 
 ---
 
-## 4. Aktuelle Framework-Basis
+## Phase 1: Vendor- und Runtime-Grundlage
 
-| Framework | Projektpfad | Stand |
+Status:
+
+- **weitgehend abgeschlossen**
+
+Ziele:
+
+- Vendor-Frameworks einbinden
+- sichere Ladefolge im Mission Editor definieren
+- eigene Core-Dateien anlegen
+- Logger, State, Config, Utils und Scheduler bereitstellen
+- Main und Loader bereitstellen
+- DCS-Logauswertung etablieren
+
+Aktive Vendor-Dateien:
+
+| Framework | Pfad | Stand |
 |---|---|---|
 | MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
 | MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
+| CTLD-i18n | `vendor/ctld/CTLD-i18n.lua` | geladen |
 | CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
 | Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
 
-Zusätzlich wird geladen:
+Aktive Core-Dateien:
 
-- `vendor/ctld/CTLD-i18n.lua`
+- `src/core/tc_config.lua`
+- `src/core/tc_logger.lua`
+- `src/core/tc_state.lua`
+- `src/core/tc_utils.lua`
+- `src/core/tc_scheduler.lua`
+- `src/main.lua`
+- `src/loader.lua`
 
-Wichtig:
+Erledigt:
 
-Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket, weil CTLD eine kompatible MIST-Version benötigt.
+- Frameworks laden.
+- Core-Dateien laden.
+- Main initialisiert Runtime-Systeme.
+- Loader prüft Framework-Verfügbarkeit.
+- Loader startet Main.
+- Theater Command startet ohne Lua-Abbruch.
 
-Framework-Regel:
+Offen:
 
-- Vendor-Dateien werden nicht verändert.
-- Eigene Theater-Command-Logik liegt unter `src/`.
-- Eigene Logik wird nach Aufgabenbereichen sortiert, nicht nach Frameworks.
+- Loader-only-Ladung per `dofile` praktisch testen
+- Fehlerisolierung im Loader weiter verbessern
+- optionaler Debug-Startreport
 
-Nicht erwünscht:
+Bewertung:
 
-- `tc_moose.lua`
-- `tc_mist.lua`
-- `tc_ctld.lua`
-- `tc_all_in_one.lua`
-
----
-
-## 5. Aktuelle DCS-Ladevariante
-
-Aktuell wird **Starttest-Variante A** verwendet:
-
-- sichere Einzeldatei-Ladung über `DO SCRIPT FILE`
-- alle Vendor-Dateien werden einzeln geladen
-- alle aktiven Source-Dateien werden einzeln geladen
-- `src/main.lua` wird nach den Modulen geladen
-- `src/loader.lua` wird zuletzt geladen
-
-Diese Variante ist in DCS erfolgreich getestet.
-
-Wichtig:
-
-Eine per `DO SCRIPT FILE` geladene Lua-Datei wird in die `.miz` eingebettet.  
-Nach einer GitHub-Änderung muss die geänderte Lua-Datei im Mission Editor erneut ausgewählt und die Mission gespeichert werden.
-
-Aktuelle aktive Source-Ladefolge nach den Vendor-Dateien:
-
-1. `src/core/tc_config.lua`
-2. `src/core/tc_logger.lua`
-3. `src/core/tc_state.lua`
-4. `src/core/tc_utils.lua`
-5. `src/core/tc_scheduler.lua`
-6. `src/world/tc_airbase_scanner.lua`
-7. `src/world/tc_zone_factory.lua`
-8. `src/campaign/tc_capture_system.lua`
-9. `src/campaign/tc_persistence_system.lua`
-10. `src/logistics/tc_logistics_delivery.lua`
-11. `src/logistics/tc_fob_system.lua`
-12. `src/missions/tc_mission_generator.lua`
-13. `src/ai/tc_ai_cap_manager.lua`
-14. `src/ui/tc_f10_menu.lua`
-15. `src/main.lua`
-16. `src/loader.lua`
-
-Noch offen:
-
-- Starttest-Variante B
-- Loader-only-Test mit `dofile`
-- Bewertung des DCS-Sandbox-Verhaltens
-- Entscheidung, ob spätere Entwicklung per Loader-only möglich ist
+- Phase 1 ist für die aktuelle Einzeldatei-Ladung ausreichend stabil.
+- Variante B mit Loader-only bleibt späterer Komfortschritt.
 
 ---
 
-## 6. Erfolgreiche Tests
+## Phase 2: World Layer
 
-### 6.1 Starttest Variante A
+Status:
+
+- **abgeschlossen für aktuellen State-first-Stand**
+
+Ziele:
+
+- Syria-Airbase-Objekte erfassen
+- Airbase-like Objects klassifizieren
+- relevante Kampagnenziele identifizieren
+- Airbases, Helipads, Medical Pads, Tactical Pads und unbekannte Objekte trennen
+- Kampagnenzonen aus relevanten Airbase-Objekten erzeugen
+
+Aktive Dateien:
+
+- `src/world/tc_airbase_scanner.lua`
+- `src/world/tc_zone_factory.lua`
+
+---
+
+### Phase 2.1 Airbase Scanner
 
 Status:
 
 - **bestanden**
 
-Bestätigt:
-
-- MIST geladen
-- MOOSE geladen
-- CTLD-i18n geladen
-- CTLD geladen
-- Skynet IADS geladen
-- Theater Command Loader gestartet
-- Frameworks durch Loader erkannt
-- Core geladen
-- World geladen
-- Campaign geladen
-- Logistics geladen
-- Missions geladen
-- AI geladen
-- UI geladen
-- Main gestartet
-- Runtime-Systeme initialisiert
-- Loader sauber beendet
-
----
-
-### 6.2 Airbase Scanner
-
-Datei:
-
-- `src/world/tc_airbase_scanner.lua`
-
-Aktuelle getestete Version:
+Getestete Version:
 
 - `v0.2.2`
 
+Bestätigte Werte:
+
+- total: 225
+- strategic: 19
+- secondary: 13
+- heliports: 1
+- helipads: 95
+- medical: 40
+- farps: 0
+- tactical: 13
+- unknown: 44
+- captureCandidates: 32
+- missionCandidates: 32
+- logisticsCandidates: 46
+- blueStartBases: 1
+- redStrategicCandidates: 18
+
+Ergebnis:
+
+- Syria-Airbase-Daten werden sauber klassifiziert.
+- Akrotiri wird als Blue-Startbasis erkannt.
+- strategische und sekundäre Airfields werden als Kampagnenziele vorbereitet.
+- Medical Pads und einfache Helipads werden nicht als strategische Ziele verwendet.
+
+Offen:
+
+- optionaler Airbase-Debugreport
+- spätere manuelle Feinkorrektur einzelner Syria-Objekte, falls nötig
+
+---
+
+### Phase 2.2 Zone Factory
+
 Status:
 
 - **bestanden**
 
-Bestätigte Testwerte:
-
-| Wert | Anzahl |
-|---|---:|
-| total | 225 |
-| strategic | 19 |
-| secondary | 13 |
-| heliports | 1 |
-| helipads | 95 |
-| medical | 40 |
-| farps | 0 |
-| tactical | 13 |
-| unknown | 44 |
-| captureCandidates | 32 |
-| missionCandidates | 32 |
-| logisticsCandidates | 46 |
-| blueStartBases | 1 |
-| redStrategicCandidates | 18 |
-
-Bewertung:
-
-- Airbase-Erkennung funktioniert.
-- Syria liefert 225 airbase-like objects.
-- Akrotiri wird korrekt als `STRATEGIC_AIRFIELD` erkannt.
-- Akrotiri erhält `strategicRelevance=100`.
-- strategische syrische Hauptflugplätze werden als Red Strategic Candidates vorbereitet.
-- Medical Pads und einfache Helipads werden nicht mehr als strategische Kampagnenziele behandelt.
-
----
-
-### 6.3 Zone Factory
-
-Datei:
-
-- `src/world/tc_zone_factory.lua`
-
-Aktuelle getestete Version:
+Getestete Version:
 
 - `v0.2.0`
 
-Status:
+Bestätigte Werte:
 
-- **bestanden**
+- total zones: 46
+- classified airbase zones: 46
+- Mission Editor zones: 0
+- skipped airbase-like objects: 179
+- strategic zones: 19
+- secondary zones: 13
+- heliport zones: 1
+- farp zones: 0
+- tactical zones: 13
+- captureZones: 32
+- missionZones: 32
+- logisticsZones: 46
+- startBaseZones: 1
 
-Bestätigte Testwerte:
+Ergebnis:
 
-| Wert | Anzahl |
-|---|---:|
-| total zones | 46 |
-| classified airbase zones | 46 |
-| Mission Editor zones | 0 |
-| skipped airbase-like objects | 179 |
-| strategic zones | 19 |
-| secondary zones | 13 |
-| heliport zones | 1 |
-| farp zones | 0 |
-| tactical zones | 13 |
-| captureZones | 32 |
-| missionZones | 32 |
-| logisticsZones | 46 |
-| startBaseZones | 1 |
+- ZoneFactory erzeugt nur relevante Kampagnenzonen.
+- 225 Airbase-like Objects werden nicht blind zu Kampagnenzonen.
+- 46 relevante Zonen bilden die Grundlage für Capture, Logistics, Missions, AI und spätere IADS-Anbindung.
 
-Bewertung:
+Offen:
 
-- ZoneFactory nutzt die Airbase-Klassifizierung.
-- Es werden nicht mehr 225 ungefilterte Zonen erzeugt.
-- Es entstehen 46 sinnvolle Kampagnenzonen.
+- Mission-Editor-Zonen später einbinden
+- manuelle Zonenpräfixe wie `CAPTURE_` und `TC_ZONE_` praktisch testen
+- Zone-Debugreport ergänzen
 
 ---
 
-### 6.4 Capture System
+## Phase 3: Campaign State und Capture
 
-Datei:
+Status:
+
+- **State-first-Grundlage bestanden**
+
+Aktive Datei:
 
 - `src/campaign/tc_capture_system.lua`
 
 Aktuelle getestete Version:
 
-- `v0.2.0`
+- `v0.2.1`
 
-Status:
+Ziele:
 
-- **bestanden**
+- Ownership für Basen und Zonen verwalten
+- Capture-Eligibility definieren
+- nicht geeignete Objekte ausschließen
+- verknüpfte Airbase-/Zone-Ownership synchronisieren
+- Capture-Events speichern
+- Capture-Pressure vorbereiten
+- Capture-Progress vorbereiten
+- Missionseffekte als Capture-Druck vorbereiten
 
-Bestätigte Testwerte:
+Bestätigte Werte:
 
-| Wert | Anzahl |
-|---|---:|
-| eligibleBases | 32 |
-| eligibleZones | 32 |
-| nonCaptureBases | 193 |
-| nonCaptureZones | 14 |
+- eligibleBases: 32
+- eligibleZones: 32
+- nonCaptureBases: 193
+- nonCaptureZones: 14
+- pressureRecords: 32
+- progressRecords: 32
+- appliedMissionEffects: 0
+- ready: 0
+- contested: 0
+
+Erledigt:
+
+- CaptureSystem startet sauber.
+- 32 capture-fähige Basen werden erkannt.
+- 32 capture-fähige Zonen werden erkannt.
+- 193 nicht capture-fähige Basen werden ausgeschlossen.
+- 14 nicht capture-fähige Zonen werden ausgeschlossen.
+- 32 Capture-Pressure-Records werden erzeugt.
+- 32 Capture-Progress-Records werden erzeugt.
+- Mission Effect zu Capture Pressure ist vorbereitet.
+- Capture Ready ist vorbereitet.
+- Pressure Contested ist vorbereitet.
+- Completion Hooks sind vorbereitet.
+- Automatische produktive Capture-Folgen bleiben deaktiviert.
+
+Offen:
+
+- Capture-/Pressure-Status im F10-Menü sichtbar machen
+- Missionserfolg mit Capture-Druck praktisch testen
+- `CaptureSystem.applyMissionEffect()` praktisch auslösen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
+- automatische Capture-Auswertung später entwickeln
+- Capture-Zustand persistieren
+- AI Director mit Capture-State verbinden
 
 Bewertung:
 
-- Capture wirkt nur noch auf strategische und sekundäre Kampagnenziele.
-- Helipads, Medical Pads, Tactical Pads und Unknowns werden von strategischer Capture-Logik ausgeschlossen.
+- Capture ist jetzt nicht mehr nur Ownership, sondern besitzt eine vorbereitete Druck-/Fortschrittsstruktur.
+- Das System bleibt State-only und sicher testbar.
 
 ---
 
-### 6.5 Logistics Delivery
+## Phase 4: Logistics und FOBs
 
-Datei:
+Status:
+
+- **State-first-Grundlage bestanden**
+
+Aktive Dateien:
 
 - `src/logistics/tc_logistics_delivery.lua`
-
-Aktuelle getestete Version:
-
-- `v0.2.0`
-
-Status:
-
-- **bestanden**
-
-Bestätigte Testwerte:
-
-| Wert | Anzahl |
-|---|---:|
-| logistics hubs | 46 |
-| blue hubs | 7 |
-| red hubs | 24 |
-| neutral hubs | 15 |
-| active hubs | 31 |
-| limited hubs | 15 |
-| locked hubs | 0 |
-
-Bewertung:
-
-- Logistics Delivery nutzt die klassifizierten Kampagnenzonen.
-- Akrotiri wird als Blue Main Operating Base vorbereitet.
-- Red Strategic Airbase Hubs werden vorbereitet.
-- CTLD wird noch nicht aktiv angesprochen.
+- `src/logistics/tc_fob_system.lua`
 
 ---
 
-### 6.6 FOB System
-
-Datei:
-
-- `src/logistics/tc_fob_system.lua`
-
-Aktuelle getestete Version:
-
-- `v0.2.0`
+### Phase 4.1 Logistics Delivery
 
 Status:
 
 - **bestanden**
 
-Bestätigte Testwerte:
+Getestete Version:
 
-| Wert | Anzahl |
-|---|---:|
-| FOB candidates | 6 |
-| stored candidates | 6 |
-| auto-planned FOBs | 2 |
-| skipped candidates | 4 |
-| Blue FOBs | 2 |
+- `v0.2.0`
 
-Bestätigte erzeugte FOBs:
+Bestätigte Werte:
+
+- logistics hubs: 46
+- blue hubs: 7
+- red hubs: 24
+- neutral hubs: 15
+- active hubs: 31
+- limited hubs: 15
+- locked hubs: 0
+
+Erledigt:
+
+- Logistics Hubs werden aus ZoneFactory-Daten erzeugt.
+- 46 Logistics Hubs sind im State vorhanden.
+- Hub-Zustände werden vorbereitet.
+- Delivery-Struktur ist state-only vorhanden.
+
+Noch nicht erledigt:
+
+- echte CTLD Pickup-Zonen
+- echte CTLD Dropoff-Zonen
+- echte Cargo-Flüge
+- Cargo-Verbrauch
+- Supply-Verbrauch
+- Supply-Auswirkung auf Capture und Missionen
+- Persistence für Logistics
+
+---
+
+### Phase 4.2 FOB System
+
+Status:
+
+- **bestanden**
+
+Getestete Version:
+
+- `v0.2.0`
+
+Bestätigte Werte:
+
+- FOB candidates: 6
+- stored candidates: 6
+- auto-planned FOBs: 2
+- skipped candidates: 4
+- Blue FOBs: 2
+
+Erzeugte FOBs:
 
 - `FOB Ercan`
 - `FOB Gecitkale`
@@ -373,65 +392,211 @@ Status:
 
 - `UNDER_CONSTRUCTION`
 
+Erledigt:
+
+- FOB-Kandidaten werden aus Logistics-Hubs abgeleitet.
+- Blue-FOBs werden automatisch geplant.
+- FOBs werden als State-only-Objekte erzeugt.
+- FOBs werden mit Zonen, Basen und Logistics-Hubs verknüpft.
+- Baufortschritt und Versorgung sind vorbereitet.
+- CTLD-Hooks sind vorbereitet, aber nicht aktiv.
+
+Noch nicht erledigt:
+
+- echte CTLD-FOB-Erstellung
+- echte CTLD-Crates
+- FOB-Baufortschritt durch Cargo
+- FOB-Supply-Verbrauch
+- FOB-Reparatur
+- FOB als Startpunkt für Missionen und AI
+- FOB-Persistenz
+
 Bewertung:
 
-- FOB-System nutzt die Logistics-Hub-Struktur.
-- FOBs werden als State-only-Objekte erzeugt.
-- Es werden noch keine echten CTLD-FOBs gespawnt.
+- Logistics und FOBs sind als State-Grundlage vorhanden.
+- CTLD-Produktivintegration folgt später, wenn Mission-Editor-Zonen und Cargo-Templates sauber definiert sind.
 
 ---
 
-### 6.7 Mission Generator
+## Phase 5: Mission Generator
 
-Datei:
+Status:
+
+- **State-first-Grundlage bestanden**
+
+Aktive Datei:
 
 - `src/missions/tc_mission_generator.lua`
 
 Aktuelle getestete Version:
 
-- `v0.2.1`
+- `v0.2.2`
 
-Status:
+Ziele:
 
-- **bestanden**
+- Missionen aus Kampagnenlage erzeugen
+- Missionen priorisieren
+- FOB-Support berücksichtigen
+- Missionspool stabil halten
+- Missionen über F10 auswählbar machen
+- Objectives, Briefings und Progress vorbereiten
+- Spawn-Hooks für MOOSE, CTLD und Skynet vorbereiten
 
-Bestätigte Testwerte:
+Bestätigte Werte:
 
-| Wert | Anzahl |
-|---|---:|
-| mission candidates | 69 |
-| fobSupportCandidates | 2 |
-| generated missions | 10 |
-| reservedCreated | 1 |
-| duplicatesSkipped | 1 |
-| typeLimitSkipped | 30 |
+- mission candidates: 69
+- fobSupportCandidates: 2
+- generated missions: 10
+- reservedCreated: 1
+- duplicatesSkipped: 1
+- typeLimitSkipped: 30
 
-Im Test erzeugte Missionstypen:
+Aktuelle Missionstypen:
 
+- `RECON`
+- `STRIKE`
+- `SEAD`
+- `DEAD`
+- `CAS`
+- `INTERDICTION`
+- `ESCORT`
+- `CAP`
+- `LOGISTICS`
 - `FOB_SUPPORT`
 - `AIRBASE_ATTACK`
-- `SEAD`
-- `STRIKE`
-- `CAP`
+- `IADS_SUPPRESSION`
 
-Bestätigte FOB-Support-Missionen:
+Erledigt:
 
-- `FOB_SUPPORT` für `FOB Ercan`
-- `FOB_SUPPORT` für `FOB Gecitkale`
+- Mission Generator erzeugt 10 verfügbare Missionen.
+- FOB Support wird nicht verdrängt.
+- mindestens eine FOB-Support-Mission wird reserviert.
+- Missionen enthalten Objectives.
+- Missionen enthalten Briefings.
+- Missionen enthalten Progress-Daten.
+- Missionen enthalten Activation Metadata.
+- Missionen enthalten Execution Plans.
+- MOOSE-/CTLD-/Skynet-Hooks sind reserviert.
+- Aktivierte Missionen bleiben `stateOnly=true`.
+- Spawn-Hooks bleiben `reserved`.
+
+Bestätigte F10-Interaktion:
+
+- Mission Details Slot 1 funktioniert.
+- Mission Details Slot 2 funktioniert.
+- Mission Details Slot 5 funktioniert.
+- Mission Slot 1 kann aktiviert werden.
+- Mission Slot 5 kann aktiviert werden.
+- MissionGenerator setzt aktivierte Missionen auf `ACTIVE`.
+
+Noch nicht erledigt:
+
+- Mission completed/failed über F10 oder Debug testbar machen
+- automatische Missionserfolgsauswertung
+- DCS-Event-Auswertung
+- echte MOOSE-Spawns
+- echte CTLD-Aktionen
+- echte Skynet-IADS-Wirkung
+- Missionseffekte produktiv auf Capture/Logistics/AI/IADS anwenden
 
 Bewertung:
 
-- Missionen werden aus klassifizierten Kampagnenzonen erzeugt.
-- Missionen werden priorisiert.
-- Medical Pads, einfache Helipads und Unknowns werden nicht als Strike-Ziele verwendet.
-- FOB-Support wird nicht mehr durch Airbase-Attack-, SEAD-, Strike- oder CAP-Missionen verdrängt.
-- Missionen bleiben State-only.
+- Mission Generator ist jetzt ausreichend stark für die nächste UI- und Debug-Stufe.
+- Die Missionen sind fachlich deutlich besser modelliert, bleiben aber sicher state-only.
 
 ---
 
-### 6.8 AI CAP Manager
+## Phase 6: F10 UI
 
-Datei:
+Status:
+
+- **erste Spieler-UI bestanden**
+
+Aktive Datei:
+
+- `src/ui/tc_f10_menu.lua`
+
+Aktuelle getestete Version:
+
+- `v0.2.0`
+
+Ziele:
+
+- Spielerinterface über F10 bereitstellen
+- Missionen anzeigen
+- Missionen direkt auswählen
+- Missionen direkt aktivieren
+- State-Status anzeigen
+- keine echten Spawns auslösen
+
+Bestätigt:
+
+- F10-Menü sichtbar
+- F10-Menü navigierbar
+- 26 Commands erzeugt
+- Mission Details für Slots 1 bis 10 angelegt
+- Activation Commands für Slots 1 bis 10 angelegt
+- Mission Details Slot 1 getestet
+- Mission Details Slot 2 getestet
+- Mission Details Slot 5 getestet
+- Mission 1 aktiviert
+- Mission 5 aktiviert
+- MissionGenerator setzt Missionen auf `ACTIVE`
+
+Aktuelle Menüstruktur:
+
+    F10
+    └── Theater Command
+        ├── Missions
+        │   ├── Show Available Missions
+        │   ├── Show Active Missions
+        │   ├── Mission Details
+        │   │   ├── Show Mission 1 Details
+        │   │   ├── ...
+        │   │   └── Show Mission 10 Details
+        │   └── Activate Mission
+        │       ├── Activate Mission 1
+        │       ├── ...
+        │       └── Activate Mission 10
+        ├── Status
+        │   └── Show Campaign Status
+        ├── Logistics
+        │   ├── Show Logistics Status
+        │   └── Show FOB Status
+        └── AI
+            └── Show AI CAP Status
+
+Noch nicht erledigt:
+
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
+- aktive Mission abbrechen
+- Mission completed/failed manuell auslösen
+- Debug-F10-Menü trennen
+- längere Statusanzeigen strukturieren
+- Seiten-/Pagination-Logik für große Listen
+
+Nächster empfohlener Schritt:
+
+- `src/ui/tc_f10_menu.lua` erweitern
+- Capture-/Pressure-Status sichtbar machen
+- weiterhin state-only bleiben
+
+Bewertung:
+
+- F10Menu ist die aktuelle beste Test- und Sichtbarkeitsfläche.
+- Der nächste kleine Schritt sollte wieder UI/State sein, nicht direkt MOOSE oder CTLD.
+
+---
+
+## Phase 7: AI CAP Manager
+
+Status:
+
+- **State-first-Grundlage bestanden**
+
+Aktive Datei:
 
 - `src/ai/tc_ai_cap_manager.lua`
 
@@ -439,503 +604,52 @@ Aktuelle getestete Version:
 
 - `v0.2.0`
 
-Status:
+Ziele:
 
-- **bestanden**
+- CAP-Zonen aus Kampagnenlage ableiten
+- CAP-Bedarf für Blue und Red vorbereiten
+- CAP-State erzeugen
+- spätere MOOSE-Anbindung vorbereiten
 
-Bestätigte Testwerte:
+Bestätigte Werte:
 
-| Wert | Anzahl |
-|---|---:|
-| cap zone candidates | 31 |
-| auto-registered CAP zones | 12 |
-| CAP requests | 12 |
-
-Weitere bestätigte Werte:
-
+- cap zone candidates: 31
+- auto-registered CAP zones: 12
+- CAP requests: 12
 - reactionState: `AIR_REACTION_REQUESTED`
 - threatLevel: `HIGH`
 
-Bewertung:
+Erledigt:
 
-- Blue- und Red-CAP-Bedarf wird als State vorbereitet.
-- Blue CAP für Akrotiri wird vorbereitet.
-- Red CAPs für strategische syrische Flugplätze werden vorbereitet.
-- Echter MOOSE-Spawn ist noch nicht aktiv.
-- `spawn=MOOSE_PENDING` ist aktuell erwartetes Verhalten.
+- CAP-Zonen-Kandidaten werden erkannt.
+- CAP-Requests werden erzeugt.
+- Blue-/Red-CAP-State ist vorbereitet.
+- MOOSE-Hooks sind vorbereitet.
+- `spawn=MOOSE_PENDING` ist erwartetes Verhalten.
 
----
+Noch nicht erledigt:
 
-### 6.9 F10 Menu
-
-Datei:
-
-- `src/ui/tc_f10_menu.lua`
-
-Aktuelle getestete Version:
-
-- `v0.1.0`
-
-Status:
-
-- **bestanden**
-
-Bestätigte Testwerte:
-
-| Wert | Ergebnis |
-|---|---|
-| F10 menu visible | ja |
-| F10 menu navigable | ja |
-| commands | 7 |
-
-Bestätigte Funktionen:
-
-- verfügbare Missionen anzeigen
-- aktive Missionen anzeigen
-- Top-Mission aktivieren
-- Kampagnenstatus anzeigen
-- Logistikstatus anzeigen
-- FOB-Status anzeigen
-- AI-CAP-Status anzeigen
+- MOOSE CAP Templates im Mission Editor anlegen
+- echte MOOSE SPAWN-Logik
+- AI_A2A_DISPATCHER prüfen
+- CAP-Flüge real starten
+- CAP-Erfolge und Verluste auswerten
+- CAP mit Mission Generator und AI Director verbinden
 
 Bewertung:
 
-- Erste spielerseitige Bedienoberfläche funktioniert.
-- F10 Menu ist sichtbar, navigierbar und im Log bestätigt.
-- Direkte Missionsauswahl 1 bis 10 ist noch offen.
+- AI CAP Manager ist ein Vorläufer des späteren AI Directors.
+- Noch keine echte KI-Kampagnenlogik, sondern vorbereitender CAP-State.
 
 ---
 
-## 7. Phasenübersicht
-
-### Phase 0 — Projektbasis
+## Phase 8: Persistence
 
 Status:
 
-- **abgeschlossen**
+- **Grundstruktur vorhanden, produktiver Test offen**
 
-Ziele:
-
-- Projektidee dokumentieren
-- Repository anlegen
-- zentrale Dokumentationsdateien erstellen
-- Architekturgrundsätze definieren
-- Namenskonventionen definieren
-- Lua-Stilregeln definieren
-- Mission-Editor-Grundprinzip festlegen
-- Docs-Grundblock erstellen
-- Vendor-Grundstruktur erstellen
-
-Ergebnis:
-
-Phase 0 ist abgeschlossen.
-
----
-
-### Phase 0.5 — Vendor-Basis
-
-Status:
-
-- **abgeschlossen**
-
-Ziele:
-
-- MIST unter `vendor/mist/` hinterlegen
-- MOOSE unter `vendor/moose/` hinterlegen
-- CTLD unter `vendor/ctld/` hinterlegen
-- Skynet IADS unter `vendor/skynet-iads/` hinterlegen
-- Framework-Versionen dokumentieren
-- Frameworks nicht verändern
-- Lade-Reihenfolge dokumentieren
-- Vendor-Dokumentation aktualisieren
-
-Ergebnis:
-
-Vendor-Basis ist abgeschlossen und in DCS erfolgreich geladen.
-
----
-
-### Phase 1 — Source Foundation
-
-Status:
-
-- **weitgehend abgeschlossen**
-
-Ziele:
-
-- `src/`-Grundstruktur anlegen
-- eigene Lua-Logik nach Aufgaben sortieren
-- keine frameworkorientierten Sammeldateien erstellen
-- Core-Bereich erstellen
-- Loader erstellen
-- Main-Initialisierung erstellen
-- Framework-Verfügbarkeit prüfen
-- Logging vorbereiten
-- State-Struktur vorbereiten
-- Scheduler vorbereiten
-- Startkette im DCS Mission Scripting Environment prüfen
-
-Erledigt:
-
-- `src/README.md`
-- `src/core/README.md`
-- `src/world/README.md`
-- `src/campaign/README.md`
-- `src/logistics/README.md`
-- `src/missions/README.md`
-- `src/ai/README.md`
-- `src/iads/README.md`
-- `src/ui/README.md`
-- `src/debug/README.md`
-- `src/loader.lua`
-- `src/main.lua`
-- `src/core/tc_config.lua`
-- `src/core/tc_logger.lua`
-- `src/core/tc_state.lua`
-- `src/core/tc_utils.lua`
-- `src/core/tc_scheduler.lua`
-
-Ergebnis:
-
-Source Foundation ist technisch angelegt und in DCS lauffähig.
-
-Offen:
-
-- Loader-only-Variante mit `dofile` praktisch testen
-- DCS-Sandbox-Verhalten bewerten
-- spätere Lade-Strategie festlegen
-
----
-
-### Phase 2 — Airbase- und World-System
-
-Status:
-
-- **technisch bestanden**
-
-Aktuell vorhanden:
-
-- `src/world/tc_airbase_scanner.lua`
-- `src/world/tc_zone_factory.lua`
-
-Erledigt:
-
-- 225 Syria-Airbase-Objekte erkannt
-- Airbase-Objekte klassifiziert
-- strategische Airfields erkannt
-- Secondary Airfields erkannt
-- Helipads erkannt
-- Medical Pads erkannt
-- Tactical Pads erkannt
-- Akrotiri als Blue Startbase erkannt
-- 46 relevante Kampagnenzonen erzeugt
-- 179 nicht relevante Objekte übersprungen
-
-Ergebnis:
-
-Phase 2 ist für den aktuellen Entwicklungsstand bestanden.
-
-Offen:
-
-- Debug-Report für Airbases
-- Debug-Report für Zonen
-- Mission-Editor-Zonen später praktisch testen
-- optionale Feinkorrektur einzelner Syria-Namen
-
----
-
-### Phase 3 — Campaign State und Capture-System
-
-Status:
-
-- **technisch bestanden**
-
-Aktuell vorhanden:
-
-- `src/campaign/tc_capture_system.lua`
-- `src/campaign/tc_persistence_system.lua`
-
-Erledigt:
-
-- Basisstatus vorbereitet
-- Zonenstatus vorbereitet
-- Capture-Events vorbereitet
-- In-Memory-Persistenz vorbereitet
-- State-Snapshot vorbereitet
-- State-Export vorbereitet
-- State-Import vorbereitet
-- Capture-Eligibility auf 32 relevante Ziele begrenzt
-- nicht relevante Rohobjekte von Capture ausgeschlossen
-
-Ergebnis:
-
-Capture-System arbeitet auf gefilterten Kampagnenzielen.
-
-Offen:
-
-- echte Capture-Bedingungen fachlich definieren
-- Capture-Fortschritt modellieren
-- Garnisonen berücksichtigen
-- Supply berücksichtigen
-- Missionserfolge auf Capture-Druck anwenden
-- AI-Operationen auf Capture-Druck anwenden
-- Capture-Debugreport vorbereiten
-- Capture-Zustand praktisch persistieren
-
----
-
-### Phase 4 — Logistics und FOB-System
-
-Status:
-
-- **technisch bestanden für State-Grundlogik**
-
-Aktuell vorhanden:
-
-- `src/logistics/tc_logistics_delivery.lua`
-- `src/logistics/tc_fob_system.lua`
-
-Erledigt:
-
-- Logistics Delivery nutzt klassifizierte Kampagnenzonen
-- 46 Logistics Hubs werden erzeugt
-- Blue Main Operating Base wird vorbereitet
-- Red Strategic Hubs werden vorbereitet
-- Lieferstatus vorbereitet
-- Lieferungen anlegbar
-- Lieferungen abschließbar
-- Lieferungen verlierbar
-- Lieferungen abbrechbar
-- FOB-System nutzt die Logistics-Hub-Struktur
-- 6 FOB-Kandidaten werden erzeugt
-- 2 Blue-FOBs werden automatisch geplant
-- FOBs werden mit Zonen, Basen und Logistics Hubs verbunden
-- FOB-Support-Missionen werden durch den Mission Generator berücksichtigt
-
-Ergebnis:
-
-Logistics Delivery und FOB System sind im State-first-Ansatz getestet.
-
-Offen:
-
-- CTLD-Grundkonfiguration vorbereiten
-- Akrotiri-CTLD-Pickup-Zonen anlegen
-- Dropoff-Zonen vorbereiten
-- CTLD-Ereignisse mit Theater Command verbinden
-- Supply-Verbrauch modellieren
-- Logistics-Zustand praktisch persistieren
-- echte CTLD-FOBs erst nach Mission-Editor-Zonen und CTLD-Test
-
----
-
-### Phase 5 — Missionsgenerator
-
-Status:
-
-- **technisch bestanden**
-
-Aktuell vorhanden:
-
-- `src/missions/tc_mission_generator.lua`
-
-Erledigt:
-
-- Missionsarten vorbereitet
-- Missionsstatus vorbereitet
-- Missionen anlegbar
-- Missionen aktivierbar
-- Missionen abschließbar
-- Missionen fehlgeschlagen markierbar
-- Logistikmissionen vorbereitet
-- FOB-Support-Missionen vorbereitet
-- Airbase-Ziele aus gefiltertem Kampagnenzustand abgeleitet
-- Missionen aus klassifizierten Zonen erzeugt
-- FOB-Support wird reserviert in verfügbare Missionen aufgenommen
-- 69 Kandidaten und 10 Missionen im letzten Test erzeugt
-
-Ergebnis:
-
-Mission Generator erzeugt priorisierte State-Missionen aus gefilterten Kampagnenzonen und berücksichtigt FOB-Support.
-
-Offen:
-
-- Missionen nach Flugzeugtyp filtern
-- direkte Missionsauswahl über F10
-- Missionserfolg real auswerten
-- Missionseffekte auf Capture anwenden
-- Missionseffekte auf Logistics anwenden
-- Missionseffekte auf AI und IADS anwenden
-- Briefingtexte verbessern
-
----
-
-### Phase 6 — AI Director und CAP-Manager
-
-Status:
-
-- **CAP-State technisch bestanden**
-- **AI Director noch nicht implementiert**
-
-Aktuell vorhanden:
-
-- `src/ai/tc_ai_cap_manager.lua`
-
-Erledigt:
-
-- CAP-Zonen aus klassifizierten Kampagnenzonen ableitbar
-- CAP-Anforderungen speicherbar
-- aktive CAPs verwaltbar
-- abgeschlossene CAPs verwaltbar
-- fehlgeschlagene CAPs verwaltbar
-- Prioritäten vorbereitet
-- Bedrohungsstatus vorbereitet
-- 31 CAP-Kandidaten erkannt
-- 12 CAP-Zonen auto-registriert
-- 12 CAP Requests erzeugt
-- Blue CAP für Akrotiri vorbereitet
-- Red CAPs für strategische syrische Flugplätze vorbereitet
-
-Ergebnis:
-
-CAP Manager arbeitet aktuell als State-System.  
-Echte MOOSE-Spawns sind noch offen.
-
-Offen:
-
-- MOOSE-Anbindung für reale CAP-Spawns
-- MOOSE-Templates im Mission Editor anlegen
-- AI Director erstellen
-- GCI Manager erstellen
-- Counterattack-System erstellen
-- AI-Reaktionen auf Capture vorbereiten
-- AI-Reaktionen auf IADS-Schäden vorbereiten
-- Blue- und Red-Operationen unabhängig vom Spieler planen lassen
-- AI-System funktional mit echten DCS-Gruppen testen
-
----
-
-### Phase 7 — UI und F10-Menüs
-
-Status:
-
-- **erste Version technisch bestanden**
-
-Aktuell vorhanden:
-
-- `src/ui/tc_f10_menu.lua`
-
-Erledigt:
-
-- erstes Theater-Command-F10-Menü erstellt
-- Blue-Coalition-Menü erstellt
-- verfügbare Missionen anzeigen
-- aktive Missionen anzeigen
-- Top-Mission aktivieren
-- Kampagnenstatus anzeigen
-- Logistikstatus anzeigen
-- FOB-Status anzeigen
-- AI-CAP-Status anzeigen
-- F10-Menü in DCS sichtbar
-- F10-Menü navigierbar
-- 7 Commands im Log bestätigt
-
-Ergebnis:
-
-Die erste spielerseitige UI existiert und ist getestet.
-
-Offen:
-
-- direkte Missionsauswahl 1 bis 10
-- Missionsdetails pro Mission
-- aktive Mission abbrechen
-- Mission completed/failed über F10 oder Debug
-- Debug-Menü getrennt von Spieler-Menü
-- spätere Statusseiten verbessern
-
----
-
-### Phase 8 — IADS-System
-
-Status:
-
-- **dokumentiert, noch nicht implementiert**
-
-Ziele:
-
-- rote IADS-Struktur vorbereiten
-- SAM-Sites als Kampagnenobjekte verwalten
-- Radarstellungen als Kampagnenobjekte verwalten
-- IADS-Sektoren definieren
-- Skynet IADS kapseln
-- Missionsgenerator mit IADS-Zielen verbinden
-- AI Director mit IADS-Zustand verbinden
-- zerstörte IADS-Komponenten persistieren
-
-Geplante Dateien:
-
-- `src/iads/tc_iads_network.lua`
-- `src/iads/tc_iads_sector_manager.lua`
-- `src/iads/tc_iads_site_registry.lua`
-- `src/iads/tc_iads_mission_bridge.lua`
-
-Offen:
-
-- erste IADS-Implementierung beginnen
-- Skynet-IADS-Anbindung testen
-- SEAD-/DEAD-Ziele erzeugen
-- IADS-Zustand in Campaign State abbilden
-
----
-
-### Phase 9 — Debug-System
-
-Status:
-
-- **dokumentiert, noch nicht implementiert**
-
-Ziele:
-
-- Debug-Ausgaben bündeln
-- Airbase-Reports erzeugen
-- Zonen-Reports erzeugen
-- Capture-Reports erzeugen
-- Logistik-Reports erzeugen
-- FOB-Reports erzeugen
-- Missions-Reports erzeugen
-- AI-Reports erzeugen
-- UI-Reports erzeugen
-- IADS-Reports erzeugen
-- Debug-State-Dumps vorbereiten
-- Debug-Menü später optional aktivieren
-
-Geplante Dateien:
-
-- `src/debug/tc_debug_console.lua`
-- `src/debug/tc_debug_state_dump.lua`
-- `src/debug/tc_debug_zone_overlay.lua`
-- `src/debug/tc_debug_airbase_report.lua`
-- `src/debug/tc_debug_mission_report.lua`
-- `src/debug/tc_debug_logistics_report.lua`
-- `src/debug/tc_debug_ai_report.lua`
-- `src/debug/tc_debug_iads_report.lua`
-
-Offen:
-
-- Debug-Grundmodul erstellen
-- Airbase-Debugreport vorbereiten
-- Zone-Debugreport vorbereiten
-- Missions-Debugreport vorbereiten
-
----
-
-### Phase 10 — Persistenz
-
-Status:
-
-- **In-Memory-Grundstruktur vorhanden**
-- **DCS-Dateischreibtest offen**
-
-Aktuell vorhanden:
+Aktive Datei:
 
 - `src/campaign/tc_persistence_system.lua`
 
@@ -943,306 +657,405 @@ Ziele:
 
 - Kampagnenzustand speichern
 - Kampagnenzustand laden
-- Airbase-Besitz speichern
-- Zonenstatus speichern
-- Capture-Zustand speichern
-- Logistikstatus speichern
-- FOB-Zustand speichern
-- Missionsfortschritt speichern
-- AI-Zustand speichern
-- UI-Zustand speichern
-- IADS-Zustand speichern
-- Save-Dateien kontrolliert schreiben und lesen
-
-Offen:
-
+- State nach Missionsneustart wiederherstellen
+- Save-Datei außerhalb der `.miz` nutzen
 - DCS-Sandbox-Dateizugriff prüfen
-- `save/README.md` erstellen
-- `save/example_state.lua` erstellen
-- echtes Save/Load praktisch testen
-- Dateipersistenz erst nach Sandbox-Test produktiv umsetzen
+
+Erledigt:
+
+- Datei existiert.
+- Modul lädt.
+- Modul startet.
+- State-Struktur ist inzwischen ausreichend, um ersten Save/Load-Test vorzubereiten.
+
+Noch nicht erledigt:
+
+- DCS-Dateischreibzugriff praktisch testen
+- Save-Dateipfad final definieren
+- Save-Format final definieren
+- Load-Reihenfolge definieren
+- Airbase-/Zone-/Capture-State speichern
+- Logistics-/FOB-State speichern
+- Mission-State speichern
+- AI-State speichern
+- UI-State optional speichern
+- robuste Fehlerbehandlung bei defekten Save-Dateien
+
+Geplanter Ansatz:
+
+1. State-Dump minimal testen
+2. Schreibzugriff im DCS-Sandbox-Kontext prüfen
+3. Save-Datei erzeugen
+4. Save-Datei wieder einlesen
+5. nur danach produktive Persistenz aufbauen
+
+Bewertung:
+
+- Persistence ist wichtig, aber sollte erst praktisch getestet werden, wenn der State stabil genug ist.
+- Dieser Punkt rückt nach F10-Capture-Sichtbarkeit und Mission-Completion-Test näher.
 
 ---
 
-### Phase 11 — Mission-Editor-Ausbau
+## Phase 9: IADS
 
 Status:
 
-- **DEV-Mission begonnen**
+- **Vendor geladen, eigenes Modul offen**
 
-Aktuelle DEV-Mission:
+Vendor:
 
-- `Operation_Levant_Reclamation_DEV.miz`
-
-Bisheriger Inhalt:
-
-- Map: Syria
-- Koalitionspreset: Modern
-- Blue Start: Akrotiri / Zypern
-- erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
-- Trigger: Starttest-Variante A vollständig angelegt
-- Theater-Command-F10-Menü sichtbar und navigierbar
-- keine rote Frontlinie
-- keine IADS-Stellungen
-- keine CTLD-Zonen
-- keine Template-Gruppen
+- `vendor/skynet-iads/SkynetIADS.lua`
 
 Ziele:
 
-- DEV-Mission im Repository dokumentieren
-- erste CTLD-Pickup-Zonen anlegen
-- erste Dropoff-Zonen anlegen
-- erste Template-Gruppen vorbereiten
-- erste rote IADS-Struktur anlegen
-- erste Debug-Trigger oder Debug-Menüs vorbereiten
-- Mission-Editor-Aufbau bewusst schlank halten
+- Skynet IADS als dynamisches Luftverteidigungsframework nutzen
+- IADS-Sites mit Kampagnenzonen verbinden
+- IADS-Zustand in Missionen, AI und Capture einfließen lassen
+- SEAD/DEAD/IADS_SUPPRESSION sinnvoll machen
+- IADS-Zustand persistieren
 
-Offen:
+Noch nicht erledigt:
 
-- `mission/`-Ordnerstruktur anlegen
-- `mission/dev/` dokumentieren
-- DEV-Mission sauber versionieren oder zumindest dokumentieren
-- Mission-Editor-Zonen später mit Lua-System verbinden
+- `src/iads/tc_iads_system.lua` erstellen
+- IADS-Sites erfassen
+- SAM-/EWR-/Command-Struktur definieren
+- Skynet-Instanzen initialisieren
+- IADS mit ZoneFactory/Capture verbinden
+- IADS-Missionsziele erzeugen
+- IADS-Status im F10-Menü anzeigen
+- IADS-Zustand persistieren
 
----
+Bewertung:
 
-### Phase 12 — Teststrategie
-
-Status:
-
-- **mehrere State-Systeme erfolgreich in DCS getestet**
-
-Bisher bestanden:
-
-- Starttest-Variante A
-- Airbase Scanner `v0.2.2`
-- ZoneFactory `v0.2.0`
-- CaptureSystem `v0.2.0`
-- LogisticsDelivery `v0.2.0`
-- FobSystem `v0.2.0`
-- MissionGenerator `v0.2.1`
-- AICapManager `v0.2.0`
-- F10Menu `v0.1.0`
-
-Noch offen:
-
-- Starttest-Variante B
-- Loader-only mit `dofile`
-- DCS-Sandbox-Dateizugriff
-- CTLD-Verbindung
-- MOOSE-CAP-Spawn
-- Skynet-IADS-Verbindung
-- direkte F10-Missionsauswahl
-- echte Missionserfolgsauswertung
-- echte Persistenz
-
-Ziel Variante B:
-
-- Frameworks per `DO SCRIPT FILE` laden
-- nur `src/loader.lua` per `DO SCRIPT FILE` laden
-- prüfen, ob der Loader weitere Source-Dateien per `dofile` nachladen kann
-- DCS-Sandbox-Verhalten bewerten
-- entscheiden, ob spätere Entwicklung mit Loader-only möglich ist oder Einzeldatei-Ladung nötig bleibt
+- Skynet ist geladen, aber noch nicht produktiv verbunden.
+- IADS sollte erst nach weiterem Mission-/Capture-/Debug-Fortschritt produktiv integriert werden.
 
 ---
 
-## 8. Aktuelle Prioritäten
-
-### Priorität 1 — F10-Menü ausbauen
+## Phase 10: AI Director
 
 Status:
 
-- **nächster empfohlener technischer Schritt**
+- **noch nicht implementiert**
 
-Wahrscheinliche nächste Datei:
+Ziel:
+
+Ein eigener AI Director soll später die Kampagnenlogik beider Seiten steuern.
+
+Geplante Datei:
+
+- `src/ai/tc_ai_director.lua`
+
+Zielverhalten:
+
+- Blue plant eigene Operationen.
+- Red plant eigene Operationen.
+- beide Seiten bewerten Kampagnenlage.
+- beide Seiten reagieren auf:
+  - Besitzstatus
+  - Capture-Progress
+  - Missionen
+  - Logistics
+  - FOBs
+  - CAP-Lage
+  - IADS
+  - Verluste
+  - verfügbare Ressourcen
+- Spieler kann Missionen auswählen, aber die Kampagne läuft auch ohne Spielerentscheidungen weiter.
+
+Noch nicht erledigt:
+
+- AI Director State definieren
+- Entscheidungsmodell definieren
+- Blue-Offensive planen
+- Red-Defensive planen
+- Red-Gegenangriffe planen
+- MissionGenerator mit AI Director koppeln
+- AICapManager mit AI Director koppeln
+- Logistics und FOBs einbeziehen
+- IADS einbeziehen
+- MOOSE-Spawns später einbinden
+
+Bewertung:
+
+- AI Director ist ein zentrales späteres System.
+- Er sollte erst begonnen werden, wenn Missionen, Capture, Logistics, FOB und F10-Debug ausreichend sichtbar sind.
+
+---
+
+## Phase 11: Echte Framework-Ausführung
+
+Status:
+
+- **noch nicht produktiv**
+
+Ziel:
+
+Die vorbereiteten State-Systeme sollen später echte DCS-Aktionen auslösen.
+
+Framework-Zuordnung:
+
+| Bereich | Framework |
+|---|---|
+| CAP | MOOSE |
+| Strike/SEAD/DEAD/CAS | MOOSE |
+| Cargo/Transport | CTLD |
+| FOBs | CTLD |
+| Air Defense | Skynet IADS |
+| Utility/DB/Events | MIST nach Bedarf |
+
+Noch nicht erledigt:
+
+- MOOSE Templates im Mission Editor anlegen
+- CAP Spawn-Templates definieren
+- Strike/SEAD/DEAD Templates definieren
+- Transport-/Cargo-Templates definieren
+- CTLD Pickup-Zonen definieren
+- CTLD Dropoff-/FOB-Zonen definieren
+- Skynet Sites definieren
+- Eventauswertung implementieren
+- Spawn-Limits definieren
+- Cleanup-Logik definieren
+
+Bewertung:
+
+- Framework-Ausführung kommt erst nach stabiler State- und Debug-Schicht.
+- Keine echten Spawns ohne saubere Mission-Editor-Vorbereitung.
+
+---
+
+## Phase 12: Debug und Testing
+
+Status:
+
+- **teilweise durch Logauswertung, eigenes Debug-System offen**
+
+Ziele:
+
+- Debug-Reports pro System
+- F10-Debug-Menü
+- State-Dump
+- Mission-Dump
+- Capture-Dump
+- Logistics-Dump
+- AI-Dump
+- IADS-Dump
+- Testchecklisten
+
+Noch nicht erledigt:
+
+- `src/debug/tc_debug_report.lua`
+- Debug-F10-Menü
+- State-Dump-Funktion
+- kompakte Log-Reports
+- Testmission-Checklisten
+- automatisierte Smoke-Test-Erwartungen
+
+Bewertung:
+
+- Das Projekt ist jetzt groß genug, dass Debug-Sichtbarkeit wichtig wird.
+- Der nächste kleine Schritt bleibt aber sinnvollerweise Capture-/Pressure-Anzeige im bestehenden F10-Menü.
+
+---
+
+## Phase 13: `.miz`-Generierung
+
+Status:
+
+- **nicht begonnen**
+
+Langfristiges Ziel:
+
+- automatische oder halbautomatische `.miz`-Erzeugung
+- Szenario-Generierung
+- Template-Platzierung
+- Trigger-Erzeugung
+- Campaign-State-Vorbelegung
+
+Noch nicht erledigt:
+
+- `.miz`-Struktur untersuchen
+- Zip-/Lua-Struktur automatisieren
+- Mission-Datei generieren
+- Unit-/Group-Templates schreiben
+- Trigger automatisch erzeugen
+- externe App oder Tooling prüfen
+
+Bewertung:
+
+- `.miz`-Generierung ist ein späteres Langfristziel.
+- Aktuell wird bewusst manuell im Mission Editor gearbeitet.
+
+---
+
+## 3. Aktuelle Prioritäten
+
+Stand: **2026-06-29**
+
+### Priorität 1: Capture-/Pressure-Status im F10-Menü sichtbar machen
+
+Datei:
 
 - `src/ui/tc_f10_menu.lua`
 
 Ziel:
 
-- nicht nur Top-Mission aktivieren
-- Mission 1 bis Mission 10 direkt auswählbar machen
-- Missionsdetails über F10 anzeigen
-- verfügbare Missionen stabil sortieren
-- weiter state-only bleiben
-- keine echten MOOSE-/CTLD-Spawns auslösen
+- `Show Capture Status`
+- `Show Capture Ready Zones`
+- `Show Pressure Contested Zones`
+- Capture-Pressure anzeigen
+- Capture-Progress anzeigen
+- State-only bleiben
+- keine Spawns
+- keine CTLD-Aktionen
+- keine Skynet-Aktionen
 
 Begründung:
 
-Mission Generator `v0.2.1` liefert stabile Missionsdaten inklusive FOB-Support.  
-F10Menu `v0.1.0` ist sichtbar, navigierbar und logbestätigt.  
-Der nächste sinnvolle Schritt ist direkte Missionsauswahl über F10.
+- CaptureSystem `v0.2.1` erzeugt jetzt sinnvolle Pressure- und Progress-Daten.
+- Diese Daten müssen im Spiel sichtbar werden.
+- F10Menu ist stabil und eignet sich als nächste Oberfläche.
 
 ---
 
-### Priorität 2 — Missionserfolg und Missionsstatus vorbereiten
+### Priorität 2: Mission completed/failed testbar machen
 
 Ziel:
 
-- aktive Missionen sinnvoll verwalten
-- Missionen abschließen oder fehlschlagen lassen
-- erste manuelle Debug-/F10-Funktion für Mission completed/failed vorbereiten
-- später DCS-Events und Trigger koppeln
+- aktive Mission abschließen
+- aktive Mission fehlschlagen lassen
+- Mission Completion State testen
+- Mission Effects praktisch testen
+- CaptureSystem.applyMissionEffect praktisch testen
 
-Abhängigkeit:
+Mögliche Datei:
 
-- F10-Auswahl stabil
-- Mission Generator State stabil
+- zuerst wahrscheinlich `src/ui/tc_f10_menu.lua`
+- alternativ später `src/debug/`
 
 ---
 
-### Priorität 3 — Persistence praktisch testen
+### Priorität 3: Persistence-Sandbox-Test
 
 Ziel:
 
-- Kampagnenstand speichern
-- Kampagnenstand laden
-- DCS-Sandbox real prüfen
+- prüfen, ob DCS in der aktuellen Umgebung Save-Dateien schreiben darf
+- minimalen State-Dump speichern
+- minimalen State-Dump laden
+- keine produktive Persistenz ohne erfolgreichen Sandbox-Test
 
-Abhängigkeit:
+Mögliche Datei:
 
-- ausreichend stabiler State
-- klare Save-Struktur
-- ggf. Debug-/State-Dump vorbereiten
+- `src/campaign/tc_persistence_system.lua`
 
 ---
 
-### Priorität 4 — CTLD-Integration vorbereiten
+### Priorität 4: CTLD-Vorbereitung im Mission Editor
 
 Ziel:
 
-- CTLD-Pickup-Zonen im Mission Editor anlegen
-- Dropoff-/FOB-Zonen definieren
-- CTLD-Cargo später mit Logistics Delivery und FobSystem koppeln
+- CTLD Pickup-Zonen definieren
+- CTLD Dropoff-Zonen definieren
+- FOB-Bauzonen definieren
+- Transporthelikopter vorbereiten
+- CTLD mit Logistics/FOB-State verbinden
 
-Noch nicht sofort:
+Mögliche Dateien:
 
-- echte CTLD-FOBs ohne saubere Mission-Editor-Zonen
-- komplexe Cargo-Wirtschaft
+- Mission Editor
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/logistics/tc_fob_system.lua`
 
 ---
 
-### Priorität 5 — AI Director vorbereiten
+### Priorität 5: AI Director state-only beginnen
 
 Ziel:
 
-- beidseitige Kampagnenlogik
-- Blue und Red handeln unabhängig vom Spieler
-- Spieler ist Teilnehmer, nicht alleiniger Motor
+- Blue und Red mit strategischer Entscheidungsebene ausstatten
+- keine echten Spawns im ersten Schritt
+- Operationen nur als State planen
 
-Abhängigkeit:
+Mögliche Datei:
 
-- stabile Zonen
-- stabile Missionen
-- stabile Capture-/Logistics-/FOB-Daten
-- erster CAP-State vorhanden
-- IADS noch offen
+- `src/ai/tc_ai_director.lua`
 
 ---
 
-### Priorität 6 — echte Framework-Integration
+## 4. Nächster konkreter Schritt
 
-Später:
-
-- MOOSE für CAP, Strike, SEAD und AI-Flüge
-- CTLD für Cargo, FOB und Logistik
-- Skynet IADS für Luftverteidigung
-- MIST nur dort nutzen, wo es sinnvoll ist
-
-Noch nicht sofort:
-
-- echte MOOSE-Spawns ohne Mission-Editor-Templates
-- echte CTLD-Integration ohne CTLD-Zonen
-- IADS-Kampagnenlogik ohne eigene IADS-Struktur
-
----
-
-## 9. Nächster technischer Schwerpunkt
-
-Aktueller nächster Schwerpunkt:
-
-- **F10-Menü gezielt ausbauen**
-
-Direkt empfohlene nächste Datei:
+Empfohlene nächste Datei:
 
 - `src/ui/tc_f10_menu.lua`
 
-Ziel:
+Empfohlenes Ziel:
 
-- direkte Missionsauswahl 1 bis 10
-- stabile Anzeige der Missionsliste
-- Aktivierung einzelner Missionen
-- optional Missionsdetails für ausgewählte Missionen
-- weiterhin state-only
+- Capture-/Pressure-Status in F10 anzeigen
+
+Akzeptanzkriterien:
+
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
 - keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
 
-Danach:
+Erwartete neue Testmarker nach Umsetzung:
 
-- Mission completed/failed über F10 oder Debug vorbereiten
-- Missionseffekte auf State anwenden
-- Persistence-Sandbox-Test vorbereiten
-- CTLD-Zonen im Mission Editor vorbereiten
-- AI Director state-only beginnen
-
----
-
-## 10. Langfristiges Zielbild
-
-Theater Command DCS soll langfristig folgende Systeme verbinden:
-
-- Airbase-Erkennung
-- strategische Airbase-Klassifizierung
-- virtuelle Kampagnenzonen
-- Capture-System
-- Logistiksystem
-- CTLD-Anbindung
-- FOB-Aufbau
-- dynamische Missionsgenerierung
-- F10-Spielerinteraktion
-- AI Director
-- CAP- und GCI-Management
-- Skynet-IADS-Anbindung
-- SEAD-/DEAD-Missionslogik
-- Debug-Werkzeuge
-- Persistenz
-- Kampagnenfortschritt über mehrere Sessions
+    [TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.1
+    [TC] [F10Menu] F10 menu initialized:
+    [TC] [F10Menu] Capture status shown through F10
+    [TC] [F10Menu] Capture ready zones shown through F10
+    [TC] [F10Menu] Pressure contested zones shown through F10
 
 ---
 
-## 11. Nicht-Ziele für die aktuelle Phase
+## 5. Abschlussstand dieser Session
 
-Aktuell wird bewusst nicht gemacht:
+Bestandene Systeme:
 
-- keine vollständige Frontlinie bauen
-- keine komplette Syria Map manuell mit Einheiten füllen
-- keine komplette IADS-Großstruktur bauen
-- keine komplexe KI-Kampagne mit echten Spawns bauen
-- keine automatische perfekte `.miz`-Generierung bauen
-- keine Multiplayer-Synchronisation lösen
-- keine kommerzielle Release-Struktur vorbereiten
-- keine produktive Persistenz ohne Sandbox-Test bauen
-- keine All-in-one-Datei erstellen
-- keine Framework-Dateien verändern
+| System | Version | Status |
+|---|---:|---|
+| Airbase Scanner | `v0.2.2` | bestanden |
+| ZoneFactory | `v0.2.0` | bestanden |
+| CaptureSystem | `v0.2.1` | bestanden |
+| LogisticsDelivery | `v0.2.0` | bestanden |
+| FobSystem | `v0.2.0` | bestanden |
+| MissionGenerator | `v0.2.2` | bestanden |
+| AICapManager | `v0.2.0` | bestanden |
+| F10Menu | `v0.2.0` | bestanden |
 
----
+Aktuell ist das Projekt noch keine fertige dynamische Kampagne.
 
-## 12. Arbeitsregel
+Es besitzt aber jetzt eine stabile state-first Runtime-Grundlage mit:
 
-Es wird immer nur **eine konkrete Aufgabe oder eine Datei pro Schritt** umgesetzt.
+- Airbase-Klassifizierung
+- Kampagnenzonen
+- Capture-Eligibility
+- Capture-Pressure
+- Capture-Progress
+- Logistics Hubs
+- FOB-Kandidaten
+- geplanten FOBs
+- Missionen inklusive FOB-Support
+- direkter F10-Missionsauswahl
+- direkter F10-Missionsaktivierung
+- AI-CAP-State
+- sauberem Main-/Loader-Start
 
-Neue oder ersetzte Dateien werden immer mit vollständigem Inhalt vorbereitet.
+Nächster sinnvoller Schritt bleibt:
 
-Eigene Theater-Command-Logik gehört nach:
-
-- `src/`
-
-Externe Frameworks gehören nach:
-
-- `vendor/`
-
-Frameworks werden nicht verändert.
-
-Die eigene Lua-Struktur wird nach Aufgaben sortiert, nicht nach Frameworks.
-
-Während aktiver Code-Arbeit soll nur die absolut notwendige Dokumentation aktualisiert werden.  
-Größere Dokumentationsrunden erfolgen bevorzugt am Ende einer Session.
+- Capture-/Pressure-Status im F10-Menü sichtbar machen.
