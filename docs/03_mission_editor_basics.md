@@ -2,11 +2,13 @@
 
 Diese Datei beschreibt die grundlegende Rolle des DCS Mission Editors im Projekt **Theater Command DCS**.
 
-Die erste Kampagne trägt den Arbeitstitel:
+Erste Kampagne:
 
     Operation Levant Reclamation
 
-Die Kampagne wird auf der **Syria Map** aufgebaut.
+Map:
+
+    Syria
 
 Ausgangslage:
 
@@ -15,7 +17,7 @@ Ausgangslage:
 
 ---
 
-## Grundprinzip
+## 1. Grundprinzip
 
 Das zentrale Arbeitsprinzip lautet:
 
@@ -23,7 +25,7 @@ Das zentrale Arbeitsprinzip lautet:
     Lua = Kampagnensystem
     GitHub = Projektgedächtnis
 
-Der Mission Editor stellt nur die physische Umgebung bereit.
+Der Mission Editor stellt die physische Umgebung bereit.
 
 Die eigentliche Kampagnenlogik liegt in Lua.
 
@@ -31,7 +33,7 @@ GitHub dokumentiert Struktur, Entscheidungen, Aufgabenstand, Testergebnisse und 
 
 ---
 
-## Rolle des Mission Editors
+## 2. Rolle des Mission Editors
 
 Der Mission Editor ist nicht das eigentliche Kampagnensystem.
 
@@ -57,11 +59,18 @@ Er soll nicht übernehmen:
 - strategische Besitzlogik
 - große Triggerketten
 
+Aktuelle Entscheidung:
+
+    Der Mission Editor bleibt bewusst schlank.
+    Große dynamische Logik gehört nach src/.
+
 ---
 
-## Aktueller Mission-Editor-Stand
+## 3. Aktueller Mission-Editor-Stand
 
-Stand: 2026-06-16
+Stand:
+
+    2026-06-29
 
 Aktuelle technische Entwicklungsmission:
 
@@ -74,21 +83,28 @@ Aktueller Inhalt:
     Blue Start: Akrotiri / Zypern
     erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
     Trigger: Starttest-Variante A vollständig angelegt
-    keine rote Frontlinie
-    keine IADS-Stellungen
-    keine CTLD-Zonen
-    keine Template-Gruppen
-    keine F10-Menüs
+    Vendor-Frameworks werden geladen
+    Theater-Command-Source-Dateien werden geladen
+    F10-Menü ist sichtbar und testbar
+    direkte Missionsauswahl über F10 funktioniert
+    direkte Missionsaktivierung über F10 funktioniert
+    keine produktive rote Frontlinie
+    keine produktiven IADS-Stellungen
+    keine produktiven CTLD-Zonen
+    keine produktiven Template-Gruppen
+    keine echten MOOSE-Spawns
+    keine echten CTLD-FOBs
+    keine produktive Persistenz
 
-Die Mission ist aktuell nur ein technischer Testträger.
+Die Mission ist aktuell ein technischer Testträger.
 
 Sie ist noch keine spielbare Kampagnenmission.
 
 ---
 
-## Aktueller Teststatus
+## 4. Aktueller Teststatus
 
-Der erste reale DCS-Starttest wurde durchgeführt.
+Starttest-Variante A wurde mehrfach erfolgreich durchgeführt.
 
 Test:
 
@@ -112,24 +128,41 @@ Bestätigt wurde:
 - Frameworks werden erkannt
 - Main startet
 - Runtime-Systeme werden initialisiert
-- Airbase-Scanner läuft
-- Zone-Factory läuft
+- Airbase Scanner läuft
+- ZoneFactory läuft
+- CaptureSystem läuft
+- PersistenceSystem lädt/startet als Grundstruktur
+- LogisticsDelivery läuft
+- FobSystem läuft
+- MissionGenerator läuft
+- AICapManager läuft
+- F10Menu läuft
+- F10Menu erzeugt 26 Commands
+- Missionen können über F10 direkt ausgewählt werden
+- Missionen können über F10 direkt aktiviert werden
 - Loader beendet sauber
 
-Wichtiger Befund:
+Wichtiger aktueller Befund:
 
-    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
-    Zone-Factory registrierte 225 Zonen.
+    Airbase Scanner registriert 225 Syria airbase-like objects.
+    ZoneFactory erzeugt daraus 46 relevante Kampagnenzonen.
+    CaptureSystem arbeitet auf 32 capture-fähigen Zielen.
+    CaptureSystem erzeugt 32 Pressure-Records und 32 Progress-Records.
+    LogisticsDelivery erzeugt 46 Logistics Hubs.
+    FobSystem erzeugt 6 FOB-Kandidaten und 2 Blue-FOBs.
+    MissionGenerator erzeugt 10 verfügbare Missionen aus 69 Kandidaten.
+    F10Menu erzeugt 26 Commands.
 
 Bewertung:
 
     Die Mission-Editor-Ladestruktur funktioniert.
     Die technische Startkette ist lauffähig.
-    Die Airbase-Klassifizierung ist der nächste technische Schwerpunkt.
+    Die state-first Runtime-Grundlage ist stabil.
+    Der nächste technische Schwerpunkt liegt nicht im Mission Editor, sondern in F10-/State-Sichtbarkeit.
 
 ---
 
-## Koalitionsauswahl
+## 5. Koalitionsauswahl
 
 Für die aktuelle DEV-Mission wurde das DCS-Koalitionspreset verwendet:
 
@@ -154,7 +187,7 @@ Die Koalitionsstruktur kann später angepasst werden, falls die Kampagnenlogik o
 
 ---
 
-## Spieler-Slot
+## 6. Spieler-Slot
 
 Aktueller erster Spieler-Slot:
 
@@ -170,7 +203,10 @@ Zweck:
 - Mission starten können
 - Lua-Startkette in echter DCS-Mission prüfen
 - `dcs.log` erzeugen
-- Airbase-Scanner und Zone-Factory im DCS-Kontext testen
+- Airbase Scanner und ZoneFactory im DCS-Kontext testen
+- F10-Menü testen
+- Mission Details über F10 testen
+- Mission Activation über F10 testen
 
 Dieser Slot ist noch kein finaler Kampagnen-Slot.
 
@@ -185,7 +221,7 @@ Später mögliche Client-Slots:
 
 ---
 
-## Lokale Repository-Kopie
+## 7. Lokale Repository-Kopie
 
 Für die Arbeit mit dem Mission Editor wird eine lokale Repository-Kopie auf dem DCS-PC verwendet.
 
@@ -195,9 +231,14 @@ Aktueller lokaler Pfad:
 
 Aus diesem Pfad werden die Lua-Dateien im Mission Editor per `DO SCRIPT FILE` geladen.
 
+Wichtig:
+
+    DCS bettet per DO SCRIPT FILE geladene Dateien in die .miz ein.
+    Nach jeder Lua-Änderung muss die betroffene Datei im Mission Editor erneut ausgewählt und die Mission gespeichert werden.
+
 ---
 
-## Framework-Ladung
+## 8. Framework-Ladung
 
 Externe Frameworks liegen im Repository unter:
 
@@ -227,9 +268,17 @@ Wichtig:
     CTLD-i18n.lua muss vor CTLD.lua geladen werden.
     Eigene Theater-Command-Logik startet erst nach den Frameworks.
 
+Aktueller Stand:
+
+    MIST geladen und erkannt.
+    MOOSE geladen und erkannt.
+    CTLD geladen und erkannt.
+    Skynet IADS geladen und erkannt.
+    Produktive Framework-Ausführung ist noch nicht aktiv.
+
 ---
 
-## Eigene Source-Ladung
+## 9. Eigene Source-Ladung
 
 Eigene Theater-Command-Logik liegt unter:
 
@@ -250,20 +299,23 @@ Aktuell aktive eigene Lua-Dateien:
     src/logistics/tc_fob_system.lua
     src/missions/tc_mission_generator.lua
     src/ai/tc_ai_cap_manager.lua
+    src/ui/tc_f10_menu.lua
     src/main.lua
     src/loader.lua
 
 Aktuell noch nicht aktiv implementiert:
 
     src/iads/
-    src/ui/
     src/debug/
 
-Diese Bereiche besitzen aktuell README-Dateien, aber noch keine aktiven Lua-Module.
+Wichtige Korrektur gegenüber älteren Ständen:
+
+    src/ui/ besitzt inzwischen ein aktives Lua-Modul.
+    src/ui/tc_f10_menu.lua ist geladen, sichtbar, navigierbar und getestet.
 
 ---
 
-## Starttest-Variante A
+## 10. Starttest-Variante A
 
 Status:
 
@@ -280,12 +332,16 @@ Vorteile:
 - keine harte Abhängigkeit von `dofile`
 - klare Fehlereingrenzung
 - jede Datei wird direkt im DCS-Kontext getestet
-- geeignet für erste technische Validierung
+- geeignet für technische Validierung
 - Fehler lassen sich über `dcs.log` nachvollziehen
+
+Aktuelle Entscheidung:
+
+    Starttest-Variante A bleibt Standard, bis Loader-only praktisch getestet ist.
 
 ---
 
-## Getestete Trigger-Grundstruktur
+## 11. Getestete Trigger-Grundstruktur
 
 Jeder Trigger der Starttest-Variante A verwendet:
 
@@ -300,9 +356,9 @@ Dadurch bleibt die Lade-Reihenfolge eindeutig.
 
 ---
 
-## Getestete Trigger-Reihenfolge
+## 12. Getestete Trigger-Reihenfolge
 
-Die erfolgreiche Reihenfolge war:
+Die erfolgreiche Reihenfolge ist:
 
     TIME MORE 1
     DO SCRIPT FILE: vendor/mist/mist.lua
@@ -359,6 +415,9 @@ Die erfolgreiche Reihenfolge war:
     DO SCRIPT FILE: src/ai/tc_ai_cap_manager.lua
 
     TIME MORE 20
+    DO SCRIPT FILE: src/ui/tc_f10_menu.lua
+
+    TIME MORE 21
     DO SCRIPT FILE: src/main.lua
 
     TIME MORE 22
@@ -366,19 +425,20 @@ Die erfolgreiche Reihenfolge war:
 
 Wichtig:
 
+    src/ui/tc_f10_menu.lua wird vor src/main.lua geladen.
     src/main.lua wird vor src/loader.lua geladen.
     src/loader.lua wird als letzte eigene Datei geladen.
 
 Grund:
 
-    main.lua definiert TC.Main.
-    loader.lua prüft anschließend Frameworks und startet die Main-Initialisierung.
+    main.lua definiert TC.Main und startet Runtime-Systeme.
+    loader.lua prüft anschließend Frameworks und beendet die Startkette sauber.
 
 ---
 
-## Ergebnis des ersten Mission-Editor-Tests
+## 13. Ergebnis des aktuellen Mission-Editor-Tests
 
-Der erste Test wurde erfolgreich durchgeführt.
+Die Mission-Editor-Ladekette wurde erfolgreich durchgeführt.
 
 Positive Theater-Command-Logik:
 
@@ -390,14 +450,39 @@ Positive Theater-Command-Logik:
     Logistics geladen
     Missions geladen
     AI geladen
+    UI geladen
     Main gestartet
     Runtime-Systeme initialisiert
     Loader sauber beendet
 
 World-Ergebnis:
 
-    Airbase scan completed: 225 airbases registered
-    Zone factory completed: 225 zones registered
+    Airbase scan completed: 225 airbase-like objects classified
+    Zone factory completed: 46 relevant campaign zones
+
+Campaign-Ergebnis:
+
+    Capture eligibility summary: bases=32, zones=32
+    Capture pressure summary: pressureRecords=32, progressRecords=32, appliedMissionEffects=0
+
+Logistics-Ergebnis:
+
+    Logistics hubs: 46
+    FOB candidates: 6
+    Blue FOBs: 2
+
+Mission-Ergebnis:
+
+    Mission candidates: 69
+    FOB support candidates: 2
+    Available missions: 10
+
+UI-Ergebnis:
+
+    F10Menu loaded
+    F10 menu initialized: commands=26
+    Mission Details über F10 bestätigt
+    Mission Activation über F10 bestätigt
 
 Bewertung:
 
@@ -408,7 +493,7 @@ Bewertung:
 
 ---
 
-## `dcs.log` prüfen
+## 14. `dcs.log` prüfen
 
 Nach jedem Test wird die `dcs.log` geprüft.
 
@@ -416,7 +501,7 @@ Standardpfad:
 
     C:\Users\Paul\Saved Games\DCS\Logs\dcs.log
 
-Möglicher älterer Open-Beta-/Standalone-Pfad:
+Möglicher Open-Beta-/Standalone-Pfad:
 
     C:\Users\Paul\Saved Games\DCS.openbeta\Logs\dcs.log
 
@@ -430,20 +515,32 @@ Wichtige Suchbegriffe:
     Theater Command
     ERROR
     error
+    FAILED
     stack traceback
-    attempt to index
-    nil value
+    attempt to index nil value
     cannot open
     MIST
     MOOSE
     CTLD
     Skynet
+    F10Menu
+    MissionGenerator
+    CaptureSystem
 
 Ein Test ist nur dann als bestanden zu bewerten, wenn die Theater-Command-Startkette ohne schweren Lua-Abbruch durchläuft.
 
+Besonders relevant:
+
+    [TC][ERROR]
+    FAILED in einem Theater-Command-Modul
+    stack traceback in Theater-Command-Dateien
+    fehlende Frameworks
+    fehlgeschlagener Main-Start
+    fehlgeschlagener Loader-Abschluss
+
 ---
 
-## DCS-/Syria-interne Meldungen
+## 15. DCS-/Syria-interne Meldungen
 
 Im Log können DCS- oder Syria-interne Meldungen erscheinen.
 
@@ -452,7 +549,11 @@ Beispiele:
     INVALID ATC HI08
     missing object declaration
     texture not found
-    DTC_MANAGER Window pointer is null
+    DTC_MANAGER
+    Window pointer is null
+    getObjectPosition: object is not exists
+    Destruction shape not found
+    render target not found
 
 Diese Meldungen sind aktuell kein Theater-Command-Blocker, solange:
 
@@ -461,33 +562,40 @@ Diese Meldungen sind aktuell kein Theater-Command-Blocker, solange:
 - Frameworks erkannt werden
 - Main startet
 - Runtime-Systeme initialisiert werden
+- F10Menu startet
+- Loader sauber beendet
 
 ---
 
-## Was aktuell nicht im Mission Editor gebaut wird
+## 16. Was aktuell nicht im Mission Editor gebaut wird
 
-Aktuell bewusst nicht gebaut:
+Aktuell bewusst nicht produktiv gebaut:
 
 - keine rote Frontlinie
 - keine komplette Syria-Befüllung
-- keine IADS-Großstruktur
+- keine produktive IADS-Großstruktur
 - keine CTLD-Zonen
 - keine FOB-Zonen
 - keine Template-Gruppen
-- keine F10-Menüs
-- keine Debug-Menüs
 - keine statischen Missionsziele
 - keine großen Triggerketten
+- keine MOOSE-Spawn-Templates als produktive Kampagnenlogik
+- keine CTLD-Crate-Wirtschaft
+- keine produktive Persistenz
 
-Grund:
+Wichtig:
 
-Die technische Startkette ist gerade erst bestätigt.
+    F10-Menü ist inzwischen vorhanden.
+    Dieser ältere Punkt "keine F10-Menüs" ist nicht mehr korrekt.
 
-Vor weiterem Mission-Editor-Ausbau muss der Airbase-Scanner fachlich sauber klassifizieren.
+Grund für Zurückhaltung:
+
+    Die state-first Runtime wird zuerst stabilisiert.
+    Erst danach werden echte Framework-Aktionen eingebunden.
 
 ---
 
-## Spätere Mission-Editor-Elemente
+## 17. Spätere Mission-Editor-Elemente
 
 Später werden im Mission Editor voraussichtlich benötigt:
 
@@ -496,8 +604,10 @@ Später werden im Mission Editor voraussichtlich benötigt:
 - CTLD-Dropoff-Zonen
 - FOB-Bauzonen
 - Late-Activation-Template-Gruppen
+- MOOSE-Template-Gruppen
 - rote SAM-Stellungen
 - rote Radarstellungen
+- Skynet-IADS-Sites
 - statische Missionsziele
 - Logistikobjekte
 - eventuell manuelle Sonderzonen
@@ -507,7 +617,7 @@ Diese Elemente werden erst ergänzt, wenn die jeweilige Lua-Logik bereit ist.
 
 ---
 
-## Starttest-Variante B
+## 18. Starttest-Variante B
 
 Status:
 
@@ -519,8 +629,7 @@ Ziel:
 
 Idee:
 
-Der Mission Editor lädt nur:
-
+    Der Mission Editor lädt nur:
     Frameworks
     src/loader.lua
 
@@ -537,34 +646,80 @@ Prüffragen:
 
 Diese Variante wird erst in einer späteren Session getestet.
 
+Aktuelle Entscheidung:
+
+    Starttest-Variante A bleibt bis dahin Standard.
+
 ---
 
-## Nächster sinnvoller Schritt
+## 19. Aktueller getesteter Systemstand
+
+| System | Datei | Version | Status |
+|---|---|---:|---|
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+
+---
+
+## 20. Nächster sinnvoller Schritt
 
 Der nächste sinnvolle technische Schritt liegt nicht im Mission Editor.
 
 Nächster Schritt:
 
-    Airbase-Scanner nach dem Syria-Update fachlich filtern
+    F10-Menü um Capture-/Pressure-Sichtbarkeit erweitern.
+
+Empfohlene Datei:
+
+    src/ui/tc_f10_menu.lua
 
 Ziel:
 
-- strategische Airfields erkennen
-- Heliports erkennen
-- Helipads erkennen
-- Medical Pads erkennen
-- FARPs erkennen
-- nicht-strategische Objekte aus Capture- und Missionslogik heraushalten
-- Zone-Factory später an die gefilterten Daten koppeln
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
+- Capture-Pressure und Capture-Progress lesbar machen
+- weiterhin state-only bleiben
+- keine echten Spawns auslösen
+- keine CTLD-Aktionen auslösen
+- keine Skynet-Aktionen auslösen
+
+Begründung:
+
+    CaptureSystem v0.2.1 erzeugt jetzt Pressure- und Progress-Daten.
+    Diese Daten sind im State vorhanden.
+    F10Menu ist stabil und bereits getestet.
+    Ohne UI-/Debug-Sichtbarkeit sind Missionseffekt- und Capture-Tests schwer bewertbar.
 
 ---
 
-## Aktueller Status
+## 21. Aktueller Status
 
-Die Mission-Editor-Grundlage ist für den ersten technischen Test ausreichend.
+Die Mission-Editor-Grundlage ist für die aktuelle Entwicklungsphase ausreichend.
 
 Starttest-Variante A ist bestanden.
 
 Die DEV-Mission bleibt als technischer Testträger bestehen.
 
-Der nächste Entwicklungsschritt betrifft `src/world/tc_airbase_scanner.lua`.
+Aktuelle Fähigkeit:
+
+- Frameworks laden.
+- Theater Command lädt.
+- Main und Loader starten.
+- Runtime-Systeme initialisieren.
+- F10-Menü ist sichtbar.
+- Missionen können über F10 angezeigt werden.
+- Missionen können über F10 aktiviert werden.
+- State-first-Kampagnenlogik funktioniert.
+
+Nächster Entwicklungsschritt:
+
+    src/ui/tc_f10_menu.lua
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
