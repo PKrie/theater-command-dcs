@@ -2,32 +2,34 @@
 -- File: src/missions/tc_mission_generator.lua
 --
 -- Purpose:
---   Generate and manage dynamic campaign missions from the current Theater
---   Command campaign state.
+-- Generate and manage dynamic campaign missions from the current Theater
+-- Command campaign state.
 --
 -- Current focus:
---   FOB System v0.2.0 now creates state-only FOBs from Logistics Hubs.
---   The Mission Generator must ensure that FOB construction and FOB support
---   are represented in the available mission pool instead of being pushed out
---   by high-priority airbase attack and SEAD candidates.
+-- F10 Menu v0.2.0 can now activate Mission 1 to Mission 10 directly.
+-- The Mission Generator therefore needs stronger mission records:
+-- objectives, briefings, progress data, activation metadata and reserved
+-- spawn hooks for later MOOSE, CTLD and Skynet integration.
 --
 -- Version:
---   0.2.1
+-- 0.2.2
 --
 -- Responsibilities:
---   - build mission candidates from classified campaign zones
---   - build FOB support candidates from planned and under-construction FOBs
---   - reserve mission pool space for FOB support when FOBs require support
---   - prioritize missions by owner, zone class, FOB need and strategic relevance
---   - avoid medical pads, single helipads and unknown objects as strike targets
---   - prevent duplicate missions for the same target/type combination
---   - keep mission state compatible with later persistence, AI and F10 UI systems
+-- - build mission candidates from classified campaign zones
+-- - build FOB support candidates from planned and under-construction FOBs
+-- - reserve mission pool space for FOB support when FOBs require support
+-- - prioritize missions by owner, zone class, FOB need and strategic relevance
+-- - avoid medical pads, single helipads and unknown objects as strike targets
+-- - prevent duplicate missions for the same target/type combination
+-- - enrich missions with objectives, briefing, progress and activation state
+-- - prepare future execution hooks without triggering real spawns
+-- - keep mission state compatible with later persistence, AI and F10 UI systems
 --
 -- Vendor note:
---   This file does not directly call MIST, MOOSE, CTLD or Skynet IADS.
---   It consumes Theater Command state produced by World, Campaign, Logistics,
---   FOB and AI systems. Framework-specific execution will be added later in
---   dedicated systems.
+-- This file does not directly call MIST, MOOSE, CTLD or Skynet IADS.
+-- It consumes Theater Command state produced by World, Campaign, Logistics,
+-- FOB and AI systems. Framework-specific execution will be added later in
+-- dedicated systems.
 
 TC = TC or {}
 TC.modules = TC.modules or {}
@@ -39,7 +41,7 @@ local MissionGenerator = {}
 MissionGenerator.name = "tc_mission_generator"
 MissionGenerator.displayName = "Mission Generator"
 MissionGenerator.path = "src/missions/tc_mission_generator.lua"
-MissionGenerator.version = "0.2.1"
+MissionGenerator.version = "0.2.2"
 
 MissionGenerator.loaded = true
 MissionGenerator.started = false
@@ -53,6 +55,8 @@ MissionGenerator.lastSkippedDuplicateCount = 0
 MissionGenerator.lastSkippedLimitCount = 0
 MissionGenerator.lastReservedCreatedCount = 0
 MissionGenerator.lastFobCandidateCount = 0
+MissionGenerator.lastActivationTime = 0
+MissionGenerator.lastActivatedMissionKey = nil
 
 MissionGenerator.defaultGenerationLimit = 10
 MissionGenerator.minimumFobSupportMissions = 1
@@ -79,6 +83,24 @@ MissionGenerator.status = {
     FAILED = "FAILED",
     EXPIRED = "EXPIRED",
     CANCELLED = "CANCELLED"
+}
+
+MissionGenerator.progressStage = {
+    PLANNED = "PLANNED",
+    SELECTED = "SELECTED",
+    ACTIVE = "ACTIVE",
+    IN_PROGRESS = "IN_PROGRESS",
+    EFFECT_PENDING = "EFFECT_PENDING",
+    COMPLETED = "COMPLETED",
+    FAILED = "FAILED",
+    EXPIRED = "EXPIRED",
+    CANCELLED = "CANCELLED"
+}
+
+MissionGenerator.executionMode = {
+    STATE_ONLY = "STATE_ONLY",
+    RESERVED = "RESERVED",
+    LIVE = "LIVE"
 }
 
 MissionGenerator.defaultPriorities = {
@@ -254,6 +276,7 @@ local function normalizeName(value)
     end
 
     local normalized = tostring(value)
+
     normalized = string.upper(normalized)
     normalized = string.gsub(normalized, "^%s*(.-)%s*$", "%1")
     normalized = string.gsub(normalized, "[%-/]+", "_")
@@ -308,8 +331,7 @@ local function copyValue(value, visited)
     for key, childValue in pairs(value) do
         if type(childValue) ~= "function"
             and type(childValue) ~= "userdata"
-            and type(childValue) ~= "thread"
-        then
+            and type(childValue) ~= "thread" then
             result[copyValue(key, visited)] = copyValue(childValue, visited)
         end
     end
@@ -317,6 +339,24 @@ local function copyValue(value, visited)
     visited[value] = nil
 
     return result
+end
+
+local function clamp(value, minimum, maximum)
+    local numeric = tonumber(value)
+
+    if numeric == nil then
+        numeric = minimum or 0
+    end
+
+    if type(minimum) == "number" and numeric < minimum then
+        return minimum
+    end
+
+    if type(maximum) == "number" and numeric > maximum then
+        return maximum
+    end
+
+    return numeric
 end
 
 local function getConstant(categoryName, keyName, fallback)
@@ -413,8 +453,7 @@ local function isValidStatus(status)
         or status == getStatusCompleted()
         or status == getStatusFailed()
         or status == getStatusExpired()
-        or status == getStatusCancelled()
-    then
+        or status == getStatusCancelled() then
         return true
     end
 
@@ -447,8 +486,10 @@ local function ensureMissionState()
     state.Missions.cancelled = state.Missions.cancelled or {}
     state.Missions.lastMissionId = state.Missions.lastMissionId or 0
     state.Missions.lastGenerationTime = state.Missions.lastGenerationTime or 0
+    state.Missions.lastActivationTime = state.Missions.lastActivationTime or 0
+    state.Missions.lastActivatedMissionKey = state.Missions.lastActivatedMissionKey
     state.Missions.generationHistory = state.Missions.generationHistory or {}
-
+    state.Missions.activationHistory = state.Missions.activationHistory or {}
     state.Missions.statistics = state.Missions.statistics or {
         total = 0,
         available = 0,
@@ -462,7 +503,9 @@ local function ensureMissionState()
         lastFobCandidates = 0,
         lastReservedCreated = 0,
         lastDuplicatesSkipped = 0,
-        lastLimitSkipped = 0
+        lastLimitSkipped = 0,
+        lastActivatedMissionKey = nil,
+        lastActivationTime = 0
     }
 
     return state
@@ -553,12 +596,10 @@ local function getDeliverySystem()
     return TC.Logistics.Delivery
 end
 
-local function findBaseByKeyOrName(keyOrName)
-    if keyOrName == nil then
+local function findRecordByKeyOrName(registry, keyOrName)
+    if type(registry) ~= "table" or keyOrName == nil then
         return nil
     end
-
-    local registry = getBaseRegistry()
 
     if registry[keyOrName] ~= nil then
         return registry[keyOrName]
@@ -566,51 +607,35 @@ local function findBaseByKeyOrName(keyOrName)
 
     local normalizedSearch = normalizeName(keyOrName)
 
-    for _, baseRecord in pairs(registry) do
-        if baseRecord.normalizedName == normalizedSearch then
-            return baseRecord
-        end
+    for _, record in pairs(registry) do
+        if type(record) == "table" then
+            if record.key == keyOrName then
+                return record
+            end
 
-        if normalizeName(baseRecord.name) == normalizedSearch then
-            return baseRecord
-        end
+            if record.normalizedName == normalizedSearch then
+                return record
+            end
 
-        if normalizeName(baseRecord.displayName) == normalizedSearch then
-            return baseRecord
+            if normalizeName(record.name) == normalizedSearch then
+                return record
+            end
+
+            if normalizeName(record.displayName) == normalizedSearch then
+                return record
+            end
         end
     end
 
     return nil
 end
 
+local function findBaseByKeyOrName(keyOrName)
+    return findRecordByKeyOrName(getBaseRegistry(), keyOrName)
+end
+
 local function findZoneByKeyOrName(keyOrName)
-    if keyOrName == nil then
-        return nil
-    end
-
-    local registry = getZoneRegistry()
-
-    if registry[keyOrName] ~= nil then
-        return registry[keyOrName]
-    end
-
-    local normalizedSearch = normalizeName(keyOrName)
-
-    for _, zoneRecord in pairs(registry) do
-        if zoneRecord.normalizedName == normalizedSearch then
-            return zoneRecord
-        end
-
-        if normalizeName(zoneRecord.name) == normalizedSearch then
-            return zoneRecord
-        end
-
-        if normalizeName(zoneRecord.displayName) == normalizedSearch then
-            return zoneRecord
-        end
-    end
-
-    return nil
+    return findRecordByKeyOrName(getZoneRegistry(), keyOrName)
 end
 
 local function getBlueStartBase()
@@ -718,6 +743,8 @@ local function updateStatistics()
     state.Missions.statistics.failed = countTableKeys(state.Missions.failed)
     state.Missions.statistics.expired = countTableKeys(state.Missions.expired)
     state.Missions.statistics.cancelled = countTableKeys(state.Missions.cancelled)
+    state.Missions.statistics.lastActivatedMissionKey = state.Missions.lastActivatedMissionKey
+    state.Missions.statistics.lastActivationTime = state.Missions.lastActivationTime or 0
 
     return true
 end
@@ -798,24 +825,337 @@ local function getFobDisplayName(fobRecord)
         return "UNKNOWN_FOB"
     end
 
-    return fobRecord.displayName
-        or fobRecord.name
-        or fobRecord.key
-        or "UNKNOWN_FOB"
+    return fobRecord.displayName or fobRecord.name or fobRecord.key or "UNKNOWN_FOB"
+end
+
+local function getMissionTargetName(targetZone, targetBase, targetFob)
+    if targetFob ~= nil then
+        return getFobDisplayName(targetFob)
+    end
+
+    if targetBase ~= nil and targetBase.name ~= nil then
+        return targetBase.name
+    end
+
+    if targetZone ~= nil then
+        return getZoneDisplayName(targetZone)
+    end
+
+    return "UNKNOWN_TARGET"
 end
 
 local function getMissionName(missionType, targetZone, targetBase, targetFob)
-    local targetName = "UNKNOWN_TARGET"
+    return tostring(missionType) .. " - " .. tostring(getMissionTargetName(targetZone, targetBase, targetFob))
+end
 
-    if targetFob ~= nil then
-        targetName = getFobDisplayName(targetFob)
-    elseif targetBase ~= nil and targetBase.name ~= nil then
-        targetName = targetBase.name
-    elseif targetZone ~= nil then
-        targetName = getZoneDisplayName(targetZone)
+local function getMissionSortName(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return "UNKNOWN"
     end
 
-    return tostring(missionType) .. " - " .. tostring(targetName)
+    return tostring(missionRecord.name or missionRecord.displayName or missionRecord.key or "UNKNOWN")
+end
+
+local function getMissionSortKey(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return "UNKNOWN"
+    end
+
+    return tostring(missionRecord.key or getMissionSortName(missionRecord))
+end
+
+local function getMissionTargetText(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return "UNKNOWN"
+    end
+
+    return missionRecord.targetFobName
+        or missionRecord.targetZoneName
+        or missionRecord.targetBaseName
+        or missionRecord.targetZoneKey
+        or missionRecord.targetBaseKey
+        or missionRecord.targetFobKey
+        or "UNKNOWN"
+end
+
+local function sortMissionList(missionList)
+    table.sort(missionList, function(left, right)
+        local leftPriority = tonumber(left.priority) or 0
+        local rightPriority = tonumber(right.priority) or 0
+
+        if leftPriority ~= rightPriority then
+            return leftPriority > rightPriority
+        end
+
+        local leftRelevance = tonumber(left.strategicRelevance) or 0
+        local rightRelevance = tonumber(right.strategicRelevance) or 0
+
+        if leftRelevance ~= rightRelevance then
+            return leftRelevance > rightRelevance
+        end
+
+        local leftType = tostring(left.type or "UNKNOWN")
+        local rightType = tostring(right.type or "UNKNOWN")
+
+        if leftType ~= rightType then
+            return leftType < rightType
+        end
+
+        local leftTarget = tostring(getMissionTargetText(left))
+        local rightTarget = tostring(getMissionTargetText(right))
+
+        if leftTarget ~= rightTarget then
+            return leftTarget < rightTarget
+        end
+
+        local leftName = getMissionSortName(left)
+        local rightName = getMissionSortName(right)
+
+        if leftName ~= rightName then
+            return leftName < rightName
+        end
+
+        return getMissionSortKey(left) < getMissionSortKey(right)
+    end)
+
+    return missionList
+end
+
+local function tableToSortedList(container)
+    local result = {}
+
+    if type(container) ~= "table" then
+        return result
+    end
+
+    for _, missionRecord in pairs(container) do
+        if type(missionRecord) == "table" then
+            table.insert(result, missionRecord)
+        end
+    end
+
+    return sortMissionList(result)
+end
+
+local function buildObjectiveText(missionType, targetName)
+    if missionType == MissionGenerator.types.AIRBASE_ATTACK then
+        return "Attack enemy airbase infrastructure at " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.SEAD then
+        return "Suppress air defenses around " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.DEAD then
+        return "Destroy identified air defense assets near " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.STRIKE then
+        return "Strike enemy military infrastructure at " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.RECON then
+        return "Recon enemy activity and defensive posture near " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.INTERDICTION then
+        return "Interdict enemy movement and logistics near " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.CAS then
+        return "Support friendly forces around " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.CAP then
+        return "Protect friendly airspace over " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.LOGISTICS then
+        return "Move supplies and equipment to " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.FOB_SUPPORT then
+        return "Support FOB construction or sustainment at " .. tostring(targetName) .. "."
+    end
+
+    if missionType == MissionGenerator.types.IADS_SUPPRESSION then
+        return "Suppress integrated air defense activity near " .. tostring(targetName) .. "."
+    end
+
+    return "Execute assigned mission at " .. tostring(targetName) .. "."
+end
+
+local function buildSuccessCriteria(missionType)
+    if missionType == MissionGenerator.types.FOB_SUPPORT then
+        return {
+            "FOB support package delivered or marked complete.",
+            "FOB supply, engineering or construction state can be updated.",
+            "Mission can be closed without live CTLD execution."
+        }
+    end
+
+    if missionType == MissionGenerator.types.LOGISTICS then
+        return {
+            "Logistics support reaches the intended campaign zone.",
+            "Target zone logistics state can be updated.",
+            "Mission can be closed as a state-only logistics effect."
+        }
+    end
+
+    if missionType == MissionGenerator.types.CAP then
+        return {
+            "Friendly airspace is protected for the mission window.",
+            "No real AI spawn is required in this version.",
+            "Mission can be completed through future AI or player result handling."
+        }
+    end
+
+    if missionType == MissionGenerator.types.SEAD or missionType == MissionGenerator.types.IADS_SUPPRESSION then
+        return {
+            "Air defense pressure is reduced in the target area.",
+            "Follow-on strike missions are easier to justify.",
+            "No Skynet IADS state is modified directly yet."
+        }
+    end
+
+    return {
+        "Mission objective is achieved by player or future AI result handling.",
+        "Campaign state can receive the configured mission effect.",
+        "No real MOOSE spawn is required in this version."
+    }
+end
+
+local function buildFailureCriteria(missionType)
+    if missionType == MissionGenerator.types.FOB_SUPPORT or missionType == MissionGenerator.types.LOGISTICS then
+        return {
+            "Support package does not reach the intended target.",
+            "The mission is manually failed, expired or cancelled."
+        }
+    end
+
+    return {
+        "Mission is manually failed, expired or cancelled.",
+        "Future result handling determines that the objective was not achieved."
+    }
+end
+
+local function buildInitialProgress()
+    return {
+        stage = MissionGenerator.progressStage.PLANNED,
+        current = 0,
+        target = 100,
+        percent = 0,
+        lastStep = "mission_created",
+        updatedAt = getCurrentTime()
+    }
+end
+
+local function buildExecutionPlan(missionType)
+    local plan = {
+        mode = MissionGenerator.executionMode.STATE_ONLY,
+        stateOnly = true,
+        spawnAllowed = false,
+        spawnTriggered = false,
+        spawnHookStatus = "RESERVED",
+        resultHandling = "MANUAL_OR_FUTURE_SYSTEM",
+        updatedAt = getCurrentTime(),
+        notes = "State-only mission. No MOOSE, CTLD or Skynet action is executed by MissionGenerator v0.2.2.",
+        moose = {
+            reserved = true,
+            enabled = false,
+            templateName = nil,
+            spawnName = nil
+        },
+        ctld = {
+            reserved = true,
+            enabled = false,
+            deliveryKey = nil,
+            crateType = nil
+        },
+        skynet = {
+            reserved = true,
+            enabled = false,
+            siteKey = nil,
+            networkKey = nil
+        }
+    }
+
+    if missionType == MissionGenerator.types.FOB_SUPPORT or missionType == MissionGenerator.types.LOGISTICS then
+        plan.ctld.intent = "future_logistics_execution"
+    elseif missionType == MissionGenerator.types.SEAD
+        or missionType == MissionGenerator.types.DEAD
+        or missionType == MissionGenerator.types.IADS_SUPPRESSION then
+        plan.skynet.intent = "future_iads_pressure_or_site_result"
+        plan.moose.intent = "future_strike_package_spawn"
+    elseif missionType == MissionGenerator.types.CAP then
+        plan.moose.intent = "future_cap_package_spawn"
+    else
+        plan.moose.intent = "future_mission_package_spawn"
+    end
+
+    return plan
+end
+
+local function buildObjectives(missionType, targetName, missionOptions)
+    return {
+        primary = missionOptions.objective or buildObjectiveText(missionType, targetName),
+        secondary = copyValue(missionOptions.secondaryObjectives or {}),
+        successCriteria = copyValue(missionOptions.successCriteria or buildSuccessCriteria(missionType)),
+        failureCriteria = copyValue(missionOptions.failureCriteria or buildFailureCriteria(missionType)),
+        stateOnly = true,
+        updatedAt = getCurrentTime()
+    }
+end
+
+local function buildBriefingFromRecord(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return "Mission briefing unavailable."
+    end
+
+    local lines = {
+        "Mission: " .. tostring(missionRecord.name or missionRecord.key or "UNKNOWN"),
+        "Type: " .. tostring(missionRecord.type or "UNKNOWN"),
+        "Target: " .. tostring(getMissionTargetText(missionRecord)),
+        "Priority: " .. tostring(missionRecord.priority or 0),
+        "Status: " .. tostring(missionRecord.status or "UNKNOWN"),
+        "",
+        "Objective:",
+        tostring(missionRecord.objective or "No objective defined."),
+        "",
+        "Execution:",
+        "State-only mission. No real MOOSE, CTLD or Skynet spawn is executed by this generator."
+    }
+
+    if type(missionRecord.recommendedAircraft) == "table" and #missionRecord.recommendedAircraft > 0 then
+        table.insert(lines, "")
+        table.insert(lines, "Recommended aircraft:")
+
+        for _, aircraftName in ipairs(missionRecord.recommendedAircraft) do
+            table.insert(lines, "- " .. tostring(aircraftName))
+        end
+    end
+
+    if type(missionRecord.recommendedPayload) == "table" and #missionRecord.recommendedPayload > 0 then
+        table.insert(lines, "")
+        table.insert(lines, "Recommended payload:")
+
+        for _, payloadName in ipairs(missionRecord.recommendedPayload) do
+            table.insert(lines, "- " .. tostring(payloadName))
+        end
+    end
+
+    return table.concat(lines, "\n")
+end
+
+local function refreshMissionBriefing(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return nil
+    end
+
+    missionRecord.briefing = buildBriefingFromRecord(missionRecord)
+    missionRecord.updatedAt = getCurrentTime()
+
+    return missionRecord.briefing
 end
 
 local function buildMissionRecord(missionType, options)
@@ -862,7 +1202,9 @@ local function buildMissionRecord(missionType, options)
     local targetBaseKey = targetBase and targetBase.key or missionOptions.targetBase
     local targetFobKey = targetFob and targetFob.key or missionOptions.targetFob
     local signature = buildMissionSignature(missionType, targetZoneKey, targetBaseKey, targetFobKey)
+    local targetName = getMissionTargetName(targetZone, targetBase, targetFob)
     local missionName = missionOptions.name or getMissionName(missionType, targetZone, targetBase, targetFob)
+    local objectives = buildObjectives(missionType, targetName, missionOptions)
 
     local missionRecord = {
         id = missionId,
@@ -895,18 +1237,33 @@ local function buildMissionRecord(missionType, options)
         targetIadsSiteKey = missionOptions.targetIadsSite,
 
         priority = getPriority(missionType, missionOptions.priority),
-        strategicRelevance = missionOptions.strategicRelevance or targetZone and targetZone.strategicRelevance or targetBase and targetBase.strategicRelevance or 0,
+        strategicRelevance = missionOptions.strategicRelevance
+            or targetZone and targetZone.strategicRelevance
+            or targetBase and targetBase.strategicRelevance
+            or 0,
+
         signature = signature,
 
         description = missionOptions.description,
-        objective = missionOptions.objective,
+        objective = objectives.primary,
+        objectives = objectives,
+        briefing = nil,
+
         recommendedAircraft = copyValue(missionOptions.recommendedAircraft or {}),
         recommendedPayload = copyValue(missionOptions.recommendedPayload or {}),
         packageRole = missionOptions.packageRole,
-        generationReason = missionOptions.generationReason,
 
+        generationReason = missionOptions.generationReason,
         effect = copyValue(missionOptions.effect or {}),
         effectApplied = false,
+
+        progress = copyValue(missionOptions.progress or buildInitialProgress()),
+        activation = nil,
+        execution = copyValue(missionOptions.execution or buildExecutionPlan(missionType)),
+
+        currentTask = nil,
+        selectedBy = nil,
+        activatedBy = nil,
 
         createdAt = getCurrentTime(),
         activatedAt = nil,
@@ -920,6 +1277,8 @@ local function buildMissionRecord(missionType, options)
         reservedSlot = missionOptions.reservedSlot == true,
         notes = missionOptions.notes
     }
+
+    refreshMissionBriefing(missionRecord)
 
     return missionRecord
 end
@@ -1228,11 +1587,9 @@ local function createCandidate(missionType, zoneRecord, options)
     end
 
     local targetFob = candidateOptions.targetFobRecord
-
     local targetZoneKey = zoneRecord and zoneRecord.key or candidateOptions.targetZone
     local targetBaseKey = linkedBase and linkedBase.key or candidateOptions.targetBase
     local targetFobKey = targetFob and targetFob.key or candidateOptions.targetFob
-
     local priority = getPriority(missionType, candidateOptions.priority)
     local signature = buildMissionSignature(missionType, targetZoneKey, targetBaseKey, targetFobKey)
 
@@ -1245,9 +1602,14 @@ local function createCandidate(missionType, zoneRecord, options)
         targetBase = targetBaseKey,
         targetFob = targetFobKey,
         priority = priority,
-        strategicRelevance = candidateOptions.strategicRelevance or zoneRecord and getZoneStrategicRelevance(zoneRecord) or 0,
+        strategicRelevance = candidateOptions.strategicRelevance
+            or zoneRecord and getZoneStrategicRelevance(zoneRecord)
+            or 0,
         signature = signature,
         objective = candidateOptions.objective,
+        secondaryObjectives = candidateOptions.secondaryObjectives,
+        successCriteria = candidateOptions.successCriteria,
+        failureCriteria = candidateOptions.failureCriteria,
         description = candidateOptions.description,
         recommendedAircraft = candidateOptions.recommendedAircraft or {},
         recommendedPayload = candidateOptions.recommendedPayload or {},
@@ -1256,7 +1618,10 @@ local function createCandidate(missionType, zoneRecord, options)
         effect = candidateOptions.effect or {},
         source = "MISSION_GENERATOR",
         reservedSlot = candidateOptions.reservedSlot == true,
-        sortName = candidateOptions.sortName or zoneRecord and getZoneDisplayName(zoneRecord) or targetFob and getFobDisplayName(targetFob) or signature
+        sortName = candidateOptions.sortName
+            or zoneRecord and getZoneDisplayName(zoneRecord)
+            or targetFob and getFobDisplayName(targetFob)
+            or signature
     }
 end
 
@@ -1272,11 +1637,14 @@ end
 
 local function buildAirbaseAttackCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.AIRBASE_ATTACK, zoneRecord, {
         priority = 88 + bonus,
-        objective = "Attack enemy airbase infrastructure",
-        description = "Degrade enemy air operations at " .. tostring(getZoneDisplayName(zoneRecord)) .. ". Primary effects target runway availability, parked aircraft, fuel storage and command infrastructure.",
+        objective = "Attack enemy airbase infrastructure at " .. tostring(targetName) .. ".",
+        description = "Degrade enemy air operations at "
+            .. tostring(targetName)
+            .. ". Primary effects target runway availability, parked aircraft, fuel storage and command infrastructure.",
         recommendedAircraft = { "F/A-18C", "F-15E", "F-14B" },
         recommendedPayload = { "Precision strike", "Runway attack", "Stand-off weapons" },
         packageRole = "STRIKE_PACKAGE",
@@ -1291,11 +1659,14 @@ end
 
 local function buildSeadCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.SEAD, zoneRecord, {
         priority = 76 + bonus,
-        objective = "Suppress air defenses around the target zone",
-        description = "Prepare follow-on strike operations near " .. tostring(getZoneDisplayName(zoneRecord)) .. " by suppressing radar-guided and local air defense threats.",
+        objective = "Suppress air defenses around " .. tostring(targetName) .. ".",
+        description = "Prepare follow-on strike operations near "
+            .. tostring(targetName)
+            .. " by suppressing radar-guided and local air defense threats.",
         recommendedAircraft = { "F/A-18C", "F-16C", "F-15E" },
         recommendedPayload = { "AGM-88", "Stand-off munitions", "ECM support" },
         packageRole = "SUPPRESSION_PACKAGE",
@@ -1309,11 +1680,14 @@ end
 
 local function buildStrikeCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.STRIKE, zoneRecord, {
         priority = 64 + bonus,
-        objective = "Strike enemy military infrastructure",
-        description = "Attack operational infrastructure at " .. tostring(getZoneDisplayName(zoneRecord)) .. " to reduce enemy sustainment and operational reach.",
+        objective = "Strike enemy military infrastructure at " .. tostring(targetName) .. ".",
+        description = "Attack operational infrastructure at "
+            .. tostring(targetName)
+            .. " to reduce enemy sustainment and operational reach.",
         recommendedAircraft = { "F/A-18C", "F-15E", "A-10C" },
         recommendedPayload = { "Precision bombs", "Stand-off attack", "Rocket or gun attack if permissive" },
         packageRole = "STRIKE_PACKAGE",
@@ -1327,11 +1701,14 @@ end
 
 local function buildReconCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.RECON, zoneRecord, {
         priority = 48 + bonus,
-        objective = "Recon enemy-controlled target zone",
-        description = "Collect information about enemy activity, defenses and infrastructure near " .. tostring(getZoneDisplayName(zoneRecord)) .. ".",
+        objective = "Recon enemy-controlled target zone near " .. tostring(targetName) .. ".",
+        description = "Collect information about enemy activity, defenses and infrastructure near "
+            .. tostring(targetName)
+            .. ".",
         recommendedAircraft = { "F/A-18C", "F-14B", "F-15E" },
         recommendedPayload = { "TGP", "Camera pod", "Light self-defense" },
         packageRole = "RECON_PACKAGE",
@@ -1345,11 +1722,14 @@ end
 
 local function buildInterdictionCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.INTERDICTION, zoneRecord, {
         priority = 50 + bonus,
-        objective = "Interdict enemy tactical movement and logistics",
-        description = "Disrupt enemy movement, forward staging or tactical logistics near " .. tostring(getZoneDisplayName(zoneRecord)) .. ".",
+        objective = "Interdict enemy tactical movement and logistics near " .. tostring(targetName) .. ".",
+        description = "Disrupt enemy movement, forward staging or tactical logistics near "
+            .. tostring(targetName)
+            .. ".",
         recommendedAircraft = { "F/A-18C", "F-15E", "A-10C", "AH-64D" },
         recommendedPayload = { "Rockets", "Maverick", "Precision bombs", "Gun" },
         packageRole = "INTERDICTION_PACKAGE",
@@ -1363,11 +1743,14 @@ end
 
 local function buildCapCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.CAP, zoneRecord, {
         priority = 58 + bonus,
-        objective = "Protect friendly airspace",
-        description = "Establish defensive counter-air patrol over " .. tostring(getZoneDisplayName(zoneRecord)) .. " to protect the blue starting area and outbound packages.",
+        objective = "Protect friendly airspace over " .. tostring(targetName) .. ".",
+        description = "Establish defensive counter-air patrol over "
+            .. tostring(targetName)
+            .. " to protect the blue starting area and outbound packages.",
         recommendedAircraft = { "F-14B", "F/A-18C", "F-15C" },
         recommendedPayload = { "AIM-54/AIM-120", "AIM-9", "External tanks" },
         packageRole = "AIR_SUPERIORITY_PACKAGE",
@@ -1380,11 +1763,14 @@ end
 
 local function buildLogisticsCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.LOGISTICS, zoneRecord, {
         priority = 52 + bonus,
-        objective = "Support friendly logistics buildup",
-        description = "Move supplies and equipment to support operations from " .. tostring(getZoneDisplayName(zoneRecord)) .. ".",
+        objective = "Support friendly logistics buildup at " .. tostring(targetName) .. ".",
+        description = "Move supplies and equipment to support operations from "
+            .. tostring(targetName)
+            .. ".",
         recommendedAircraft = { "UH-1H", "Mi-8", "CH-47F" },
         recommendedPayload = { "CTLD cargo", "Fuel", "Ammunition", "Engineering material" },
         packageRole = "LOGISTICS_PACKAGE",
@@ -1398,11 +1784,14 @@ end
 
 local function buildCasCandidate(zoneRecord)
     local bonus = getPriorityBonusFromZone(zoneRecord)
+    local targetName = getZoneDisplayName(zoneRecord)
 
     return createCandidate(MissionGenerator.types.CAS, zoneRecord, {
         priority = 55 + bonus,
-        objective = "Support friendly forces in contested zone",
-        description = "Provide close air support around " .. tostring(getZoneDisplayName(zoneRecord)) .. ".",
+        objective = "Support friendly forces in contested zone around " .. tostring(targetName) .. ".",
+        description = "Provide close air support around "
+            .. tostring(targetName)
+            .. ".",
         recommendedAircraft = { "A-10C", "F/A-18C", "AH-64D" },
         recommendedPayload = { "Rockets", "Maverick", "Laser-guided bombs", "Gun" },
         packageRole = "CAS_PACKAGE",
@@ -1456,8 +1845,12 @@ local function buildFobSupportCandidate(fobRecord)
     local candidate = createCandidate(MissionGenerator.types.FOB_SUPPORT, targetZone, {
         priority = getFobSupportPriority(fobRecord),
         targetFobRecord = fobRecord,
-        objective = "Support FOB construction or sustainment",
-        description = "Deliver material, supply and engineering support to " .. tostring(getFobDisplayName(fobRecord)) .. ". Current FOB status is " .. tostring(fobRecord.status or "UNKNOWN") .. ".",
+        objective = "Support FOB construction or sustainment at " .. tostring(getFobDisplayName(fobRecord)) .. ".",
+        description = "Deliver material, supply and engineering support to "
+            .. tostring(getFobDisplayName(fobRecord))
+            .. ". Current FOB status is "
+            .. tostring(fobRecord.status or "UNKNOWN")
+            .. ".",
         recommendedAircraft = { "UH-1H", "Mi-8", "CH-47F" },
         recommendedPayload = { "CTLD cargo", "Engineering material", "Fuel", "Ammunition" },
         packageRole = "FOB_SUPPORT_PACKAGE",
@@ -1527,8 +1920,7 @@ local function collectMissionCandidates()
                     addCandidate(candidates, buildReconCandidate(zoneRecord))
                 elseif isHeliportZone(zoneRecord) == true
                     or isFarpZone(zoneRecord) == true
-                    or isTacticalPadZone(zoneRecord) == true
-                then
+                    or isTacticalPadZone(zoneRecord) == true then
                     addCandidate(candidates, buildInterdictionCandidate(zoneRecord))
                     addCandidate(candidates, buildReconCandidate(zoneRecord))
                 end
@@ -1599,6 +1991,9 @@ local function candidateToMissionOptions(candidate)
         priority = candidate.priority,
         strategicRelevance = candidate.strategicRelevance,
         objective = candidate.objective,
+        secondaryObjectives = candidate.secondaryObjectives,
+        successCriteria = candidate.successCriteria,
+        failureCriteria = candidate.failureCriteria,
         description = candidate.description,
         recommendedAircraft = candidate.recommendedAircraft,
         recommendedPayload = candidate.recommendedPayload,
@@ -1663,6 +2058,7 @@ local function createReservedFobSupportMissions(candidates, limit, createdByType
 
             if success == true then
                 created = created + 1
+
                 logInfo(
                     "Reserved FOB support mission created: "
                     .. tostring(missionRecordOrReason.key)
@@ -1694,6 +2090,7 @@ local function createCandidatesWithTypeLimits(candidates, limit, alreadyCreated,
 
         if success == true then
             created = created + 1
+
             logDebug(
                 "Generated mission candidate accepted: "
                 .. tostring(missionRecordOrReason.key)
@@ -1741,6 +2138,7 @@ local function fillRemainingCandidates(candidates, limit, alreadyCreated)
                 if createdMission == true then
                     created = created + 1
                     createdByFillType[candidate.missionType] = currentTypeCount + 1
+
                     logDebug(
                         "Generated fill mission: "
                         .. tostring(missionRecordOrReason.key)
@@ -1784,6 +2182,67 @@ local function updateGenerationStatistics(candidateCount, fobCandidateCount, cre
         reservedCreated = reservedCreated,
         availableAfterGeneration = countAvailableMissions()
     })
+end
+
+local function updateMissionProgressRecord(missionRecord, percent, stage, reason)
+    if type(missionRecord) ~= "table" then
+        return false, "mission_missing"
+    end
+
+    missionRecord.progress = missionRecord.progress or buildInitialProgress()
+    missionRecord.progress.percent = clamp(percent, 0, 100)
+    missionRecord.progress.current = missionRecord.progress.percent
+    missionRecord.progress.target = 100
+    missionRecord.progress.stage = stage or missionRecord.progress.stage or MissionGenerator.progressStage.IN_PROGRESS
+    missionRecord.progress.lastStep = reason or "progress_updated"
+    missionRecord.progress.updatedAt = getCurrentTime()
+    missionRecord.updatedAt = getCurrentTime()
+
+    refreshMissionBriefing(missionRecord)
+
+    return true, missionRecord
+end
+
+local function prepareMissionActivation(missionRecord, reason)
+    if type(missionRecord) ~= "table" then
+        return false, "mission_missing"
+    end
+
+    local now = getCurrentTime()
+
+    missionRecord.activation = missionRecord.activation or {}
+    missionRecord.activation.reason = reason or "mission_activated"
+    missionRecord.activation.stateOnly = true
+    missionRecord.activation.activatedAt = now
+    missionRecord.activation.spawnTriggered = false
+    missionRecord.activation.executionMode = MissionGenerator.executionMode.STATE_ONLY
+    missionRecord.activation.message = "Mission activated in state only. No real spawn was triggered."
+
+    missionRecord.activatedAt = missionRecord.activatedAt or now
+    missionRecord.activatedBy = reason or "mission_activated"
+    missionRecord.selectedBy = reason or "mission_activated"
+
+    missionRecord.execution = missionRecord.execution or buildExecutionPlan(missionRecord.type)
+    missionRecord.execution.mode = MissionGenerator.executionMode.STATE_ONLY
+    missionRecord.execution.stateOnly = true
+    missionRecord.execution.spawnAllowed = false
+    missionRecord.execution.spawnTriggered = false
+    missionRecord.execution.spawnHookStatus = "RESERVED"
+    missionRecord.execution.updatedAt = now
+
+    missionRecord.currentTask = missionRecord.objective or buildObjectiveText(missionRecord.type, getMissionTargetText(missionRecord))
+    missionRecord.updatedAt = now
+
+    updateMissionProgressRecord(
+        missionRecord,
+        0,
+        MissionGenerator.progressStage.ACTIVE,
+        "mission_activated_state_only"
+    )
+
+    refreshMissionBriefing(missionRecord)
+
+    return true, missionRecord
 end
 
 local function applyMissionCompletionEffect(missionRecord)
@@ -1836,7 +2295,7 @@ local function applyMissionCompletionEffect(missionRecord)
             deliverySystem.createFobPackageDelivery({
                 name = "FOB support from " .. tostring(missionRecord.key),
                 owner = missionRecord.owner,
-                source = "MISSION_COMPLETION",
+                source = "MISSION_COMPLETION_STATE_ONLY",
                 targetZone = missionRecord.targetZoneKey,
                 targetBase = missionRecord.targetBaseKey,
                 targetFob = missionRecord.targetFobKey,
@@ -1845,10 +2304,17 @@ local function applyMissionCompletionEffect(missionRecord)
                     engineering = 25,
                     fobConstruction = 1
                 },
-                notes = "Generated by completed FOB support mission"
+                notes = "Generated by completed FOB support mission. State-only; no CTLD crate spawned here."
             })
         end
     end
+
+    updateMissionProgressRecord(
+        missionRecord,
+        100,
+        MissionGenerator.progressStage.COMPLETED,
+        "mission_effect_applied"
+    )
 
     markDirty("mission_effect_applied")
 
@@ -1942,26 +2408,61 @@ function MissionGenerator.setMissionStatus(missionKeyOrName, status, reason)
     missionRecord.updatedAt = getCurrentTime()
 
     if status == getStatusActive() or status == MissionGenerator.status.ACTIVE then
-        missionRecord.activatedAt = missionRecord.activatedAt or getCurrentTime()
+        prepareMissionActivation(missionRecord, reason or "mission_activated")
+        MissionGenerator.lastActivationTime = getCurrentTime()
+        MissionGenerator.lastActivatedMissionKey = missionRecord.key
+        state.Missions.lastActivationTime = MissionGenerator.lastActivationTime
+        state.Missions.lastActivatedMissionKey = missionRecord.key
+
+        table.insert(state.Missions.activationHistory, {
+            time = MissionGenerator.lastActivationTime,
+            key = missionRecord.key,
+            type = missionRecord.type,
+            target = getMissionTargetText(missionRecord),
+            reason = reason or "mission_activated",
+            stateOnly = true
+        })
     elseif status == getStatusCompleted() or status == MissionGenerator.status.COMPLETED then
         missionRecord.completedAt = missionRecord.completedAt or getCurrentTime()
+        updateMissionProgressRecord(missionRecord, 100, MissionGenerator.progressStage.EFFECT_PENDING, reason or "mission_completed")
     elseif status == getStatusFailed() or status == MissionGenerator.status.FAILED then
         missionRecord.failedAt = missionRecord.failedAt or getCurrentTime()
+        updateMissionProgressRecord(missionRecord, missionRecord.progress and missionRecord.progress.percent or 0, MissionGenerator.progressStage.FAILED, reason or "mission_failed")
     elseif status == getStatusExpired() or status == MissionGenerator.status.EXPIRED then
         missionRecord.expiredAt = missionRecord.expiredAt or getCurrentTime()
+        updateMissionProgressRecord(missionRecord, missionRecord.progress and missionRecord.progress.percent or 0, MissionGenerator.progressStage.EXPIRED, reason or "mission_expired")
     elseif status == getStatusCancelled() or status == MissionGenerator.status.CANCELLED then
         missionRecord.cancelledAt = missionRecord.cancelledAt or getCurrentTime()
+        updateMissionProgressRecord(missionRecord, missionRecord.progress and missionRecord.progress.percent or 0, MissionGenerator.progressStage.CANCELLED, reason or "mission_cancelled")
     end
 
     addMissionToContainer(missionRecord)
 
-    logInfo("Mission status changed: " .. tostring(missionRecord.key) .. " [" .. tostring(status) .. "]")
+    logInfo(
+        "Mission status changed: "
+        .. tostring(missionRecord.key)
+        .. " ["
+        .. tostring(status)
+        .. "]"
+    )
+
+    if status == getStatusActive() or status == MissionGenerator.status.ACTIVE then
+        logInfo(
+            "Mission activation prepared: "
+            .. tostring(missionRecord.key)
+            .. " stateOnly=true spawnHooks=reserved"
+        )
+    end
 
     return true, missionRecord
 end
 
 function MissionGenerator.activateMission(missionKeyOrName, reason)
-    return MissionGenerator.setMissionStatus(missionKeyOrName, getStatusActive(), reason or "mission_activated")
+    return MissionGenerator.setMissionStatus(
+        missionKeyOrName,
+        getStatusActive(),
+        reason or "mission_activated"
+    )
 end
 
 function MissionGenerator.completeMission(missionKeyOrName, reason)
@@ -1991,15 +2492,27 @@ function MissionGenerator.completeMission(missionKeyOrName, reason)
 end
 
 function MissionGenerator.failMission(missionKeyOrName, reason)
-    return MissionGenerator.setMissionStatus(missionKeyOrName, getStatusFailed(), reason or "mission_failed")
+    return MissionGenerator.setMissionStatus(
+        missionKeyOrName,
+        getStatusFailed(),
+        reason or "mission_failed"
+    )
 end
 
 function MissionGenerator.expireMission(missionKeyOrName, reason)
-    return MissionGenerator.setMissionStatus(missionKeyOrName, getStatusExpired(), reason or "mission_expired")
+    return MissionGenerator.setMissionStatus(
+        missionKeyOrName,
+        getStatusExpired(),
+        reason or "mission_expired"
+    )
 end
 
 function MissionGenerator.cancelMission(missionKeyOrName, reason)
-    return MissionGenerator.setMissionStatus(missionKeyOrName, getStatusCancelled(), reason or "mission_cancelled")
+    return MissionGenerator.setMissionStatus(
+        missionKeyOrName,
+        getStatusCancelled(),
+        reason or "mission_cancelled"
+    )
 end
 
 function MissionGenerator.deleteMission(missionKeyOrName)
@@ -2046,9 +2559,12 @@ function MissionGenerator.generateAvailableMissions(limit)
 
     if state == nil then
         MissionGenerator.failed = true
+
         setModuleStatus("FAILED")
         setFeatureStatus(false)
+
         logError("Mission generation failed because state is unavailable")
+
         return false, "state_unavailable"
     end
 
@@ -2118,7 +2634,15 @@ function MissionGenerator.generateAvailableMissions(limit)
     MissionGenerator.lastSkippedLimitCount = limitSkippedTotal
     MissionGenerator.lastReservedCreatedCount = reservedCreated
 
-    updateGenerationStatistics(candidateCount, fobCandidateCount, createdTotal, duplicateTotal, limitSkippedTotal, reservedCreated)
+    updateGenerationStatistics(
+        candidateCount,
+        fobCandidateCount,
+        createdTotal,
+        duplicateTotal,
+        limitSkippedTotal,
+        reservedCreated
+    )
+
     updateStatistics()
     markDirty("missions_generated")
 
@@ -2146,7 +2670,9 @@ function MissionGenerator.generate(limit)
 end
 
 function MissionGenerator.start()
-    if MissionGenerator.started == true and MissionGenerator.finished == true and MissionGenerator.failed ~= true then
+    if MissionGenerator.started == true
+        and MissionGenerator.finished == true
+        and MissionGenerator.failed ~= true then
         logDebug("Mission generator already started")
         return true
     end
@@ -2164,9 +2690,12 @@ function MissionGenerator.start()
 
     if success ~= true then
         MissionGenerator.failed = true
+
         setModuleStatus("FAILED")
         setFeatureStatus(false)
+
         logError("Mission generator failed: " .. tostring(result))
+
         return false
     end
 
@@ -2182,7 +2711,9 @@ end
 
 function MissionGenerator.stop()
     MissionGenerator.started = false
+
     logInfo("Mission generator stopped")
+
     return true
 end
 
@@ -2244,6 +2775,26 @@ function MissionGenerator.getCancelledMissions()
     end
 
     return state.Missions.cancelled
+end
+
+function MissionGenerator.getSortedAvailableMissions()
+    local state = ensureMissionState()
+
+    if state == nil then
+        return {}
+    end
+
+    return tableToSortedList(state.Missions.available)
+end
+
+function MissionGenerator.getSortedActiveMissions()
+    local state = ensureMissionState()
+
+    if state == nil then
+        return {}
+    end
+
+    return tableToSortedList(state.Missions.active)
 end
 
 function MissionGenerator.getMissionsByType(missionType)
@@ -2333,7 +2884,8 @@ function MissionGenerator.getMissionsForFob(fobKeyOrName)
 
     for _, container in ipairs(containers) do
         for key, missionRecord in pairs(container) do
-            if missionRecord.targetFobKey == fobKeyOrName or normalizeName(missionRecord.targetFobName) == normalizedSearch then
+            if missionRecord.targetFobKey == fobKeyOrName
+                or normalizeName(missionRecord.targetFobName) == normalizedSearch then
                 result[key] = missionRecord
             end
         end
@@ -2343,33 +2895,65 @@ function MissionGenerator.getMissionsForFob(fobKeyOrName)
 end
 
 function MissionGenerator.getTopAvailableMission()
-    local state = ensureMissionState()
+    local sorted = MissionGenerator.getSortedAvailableMissions()
 
-    if state == nil then
-        return nil
-    end
-
-    local topMission = nil
-
-    for _, missionRecord in pairs(state.Missions.available) do
-        if topMission == nil then
-            topMission = missionRecord
-        elseif (missionRecord.priority or 0) > (topMission.priority or 0) then
-            topMission = missionRecord
-        elseif (missionRecord.priority or 0) == (topMission.priority or 0)
-            and (missionRecord.strategicRelevance or 0) > (topMission.strategicRelevance or 0)
-        then
-            topMission = missionRecord
-        end
-    end
-
-    return topMission
+    return sorted[1]
 end
 
 function MissionGenerator.getGenerationCandidates()
     local candidates = collectMissionCandidates()
 
     return candidates
+end
+
+function MissionGenerator.getMissionBriefing(missionKeyOrName)
+    local missionRecord = MissionGenerator.getMission(missionKeyOrName)
+
+    if missionRecord == nil then
+        return nil, "mission_not_found"
+    end
+
+    return refreshMissionBriefing(missionRecord), missionRecord
+end
+
+function MissionGenerator.getMissionProgress(missionKeyOrName)
+    local missionRecord = MissionGenerator.getMission(missionKeyOrName)
+
+    if missionRecord == nil then
+        return nil, "mission_not_found"
+    end
+
+    missionRecord.progress = missionRecord.progress or buildInitialProgress()
+
+    return missionRecord.progress, missionRecord
+end
+
+function MissionGenerator.updateMissionProgress(missionKeyOrName, percent, stage, reason)
+    local missionRecord = MissionGenerator.getMission(missionKeyOrName)
+
+    if missionRecord == nil then
+        return false, "mission_not_found"
+    end
+
+    local success, result = updateMissionProgressRecord(missionRecord, percent, stage, reason)
+
+    if success ~= true then
+        return false, result
+    end
+
+    addMissionToContainer(missionRecord)
+    markDirty("mission_progress_updated")
+
+    logInfo(
+        "Mission progress updated: "
+        .. tostring(missionRecord.key)
+        .. " percent="
+        .. tostring(missionRecord.progress and missionRecord.progress.percent or 0)
+        .. " stage="
+        .. tostring(missionRecord.progress and missionRecord.progress.stage or "UNKNOWN")
+    )
+
+    return true, result
 end
 
 function MissionGenerator.getStatistics()
@@ -2405,6 +2989,8 @@ function MissionGenerator.summary()
         defaultGenerationLimit = MissionGenerator.defaultGenerationLimit,
         minimumFobSupportMissions = MissionGenerator.minimumFobSupportMissions,
         lastGenerationTime = MissionGenerator.lastGenerationTime,
+        lastActivationTime = MissionGenerator.lastActivationTime,
+        lastActivatedMissionKey = MissionGenerator.lastActivatedMissionKey,
         lastCandidateCount = MissionGenerator.lastCandidateCount,
         lastFobCandidateCount = MissionGenerator.lastFobCandidateCount,
         lastCreatedCount = MissionGenerator.lastCreatedCount,
