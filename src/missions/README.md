@@ -1,44 +1,111 @@
-# Missions
+# src/missions/README.md
 
-Dieser Ordner enthält die dynamische Missionsgenerierung von **Theater Command DCS**.
+Diese Datei beschreibt den Missionsbereich von **Theater Command DCS**.
 
-`src/missions/` erzeugt später spielbare Aufträge aus dem aktuellen Kampagnenzustand.
-
-Die erste Kampagne trägt den Arbeitstitel:
-
-    Operation Levant Reclamation
-
-Die Kampagne wird auf der **Syria Map** aufgebaut. Blau startet auf **Zypern / Akrotiri**. Das syrische Festland ist zu Kampagnenbeginn vollständig rot kontrolliert.
+Der Missionsbereich erzeugt dynamische Missionen aus dem aktuellen Kampagnenzustand.
 
 ---
 
-## Zweck von `src/missions/`
+## 1. Zweck des Missionsbereichs
 
-`src/missions/` ist für die Erstellung, Verwaltung und Bewertung dynamischer Missionen zuständig.
+`src/missions/` ist für die Erstellung, Verwaltung und spätere Bewertung dynamischer Missionen zuständig.
 
-Geplante Aufgaben:
+Missionen sollen nicht als feste lineare Missionsliste entstehen.
 
-- verfügbare Missionsarten verwalten
-- Missionen aus Kampagnenzustand erzeugen
-- Ziele anhand von Basen, Zonen und Frontlage auswählen
-- Missionen aktivieren
-- Missionserfolg bewerten
-- Missionsfehlschlag bewerten
-- Missionsstatus im State speichern
-- Folgeeffekte an Campaign, Logistics, AI und IADS melden
+Sie sollen aus dem aktuellen Theater-Command-State abgeleitet werden.
 
-Der Missionsbereich entscheidet nicht selbst, wem eine Basis oder Zone gehört.
+Datenquellen sind unter anderem:
 
-Diese Daten kommen aus:
+- World State
+- Airbase Scanner
+- ZoneFactory
+- CaptureSystem
+- LogisticsDelivery
+- FobSystem
+- AICapManager
+- später IADS System
+- später AI Director
+- später PersistenceSystem
 
-    src/campaign/
-    src/world/
+Aktuell ist der Missionsbereich nicht mehr nur geplant.
 
-Der Missionsbereich nutzt diese Daten, um sinnvolle Aufträge zu erzeugen.
+Der erste Mission Generator ist aktiv und getestet.
 
 ---
 
-## Architekturregel
+## 2. Aktueller technischer Stand
+
+Stand:
+
+    2026-06-29
+
+Aktive Datei:
+
+    src/missions/tc_mission_generator.lua
+
+Getestete Version:
+
+    v0.2.2
+
+Status:
+
+    bestanden
+
+Bestätigt durch DCS-Logtests:
+
+- MissionGenerator lädt.
+- MissionGenerator startet.
+- MissionGenerator erzeugt Missionskandidaten.
+- MissionGenerator erzeugt verfügbare Missionen.
+- MissionGenerator berücksichtigt FOB-Support.
+- MissionGenerator erzeugt Mission Records mit Objectives, Briefings, Progress und Activation Metadata.
+- MissionGenerator reserviert MOOSE-, CTLD- und Skynet-Hooks.
+- F10Menu kann Missionen anzeigen.
+- F10Menu kann Missionsdetails anzeigen.
+- F10Menu kann Missionen direkt aktivieren.
+- MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+- Aktivierung bleibt state-only.
+- Es werden keine echten Spawns ausgelöst.
+- Es gab keinen Theater-Command-Lua-Fehler.
+- Es gab keinen Lua-Stacktrace.
+
+---
+
+## 3. Aktuelle bestätigte Werte
+
+Aktuelle MissionGenerator-Werte:
+
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 30
+
+Aktuelle F10-Bestätigung:
+
+    F10 Commands: 26
+    Mission Details Slot 1 bestätigt
+    Mission Details Slot 2 bestätigt
+    Mission Details Slot 5 bestätigt
+    Mission Slot 1 aktiviert
+    Mission Slot 5 aktiviert
+
+Bestätigte Aktivierungsmarker:
+
+    Mission status changed: MISSION_1 [ACTIVE]
+    Mission status changed: MISSION_4 [ACTIVE]
+    Mission activation prepared: stateOnly=true spawnHooks=reserved
+
+Bewertung:
+
+    MissionGenerator v0.2.2 ist bestanden.
+    Missionen sind sichtbar, auswählbar und aktivierbar.
+    Missionen bleiben aktuell state-only.
+
+---
+
+## 4. Architekturregel
 
 Externe Frameworks liegen unter:
 
@@ -52,7 +119,7 @@ Der Missionsbereich gehört zur eigenen Theater-Command-Logik.
 
 Frameworks werden nicht verändert.
 
-Die Dateien in `src/missions/` werden nach Aufgaben benannt, nicht nach Frameworks.
+Dateien in `src/missions/` werden nach Theater-Command-Aufgaben benannt, nicht nach Frameworks.
 
 Nicht gewünscht:
 
@@ -65,135 +132,229 @@ Gewünscht:
 
     src/missions/tc_mission_generator.lua
 
-Eine Missionsdatei darf intern DCS-API, MIST, MOOSE, CTLD oder Skynet-IADS-Daten nutzen.
+Eine Missionsdatei darf intern Daten aus DCS, MIST, MOOSE, CTLD oder Skynet IADS vorbereiten oder nutzen.
 
 Der Dateiname richtet sich aber immer nach der Theater-Command-Aufgabe.
 
 ---
 
-## Geplante Dateien
+## 5. Aktive Datei
 
-Für `src/missions/` sind zunächst folgende Dateien geplant:
+Aktuell aktive Datei:
 
-    src/missions/README.md
     src/missions/tc_mission_generator.lua
 
-Später können bei Bedarf weitere Dateien ergänzt werden, zum Beispiel:
+Aktuelle Version:
+
+    v0.2.2
+
+Aufgaben:
+
+- Kampagnenzustand lesen
+- Missionskandidaten erzeugen
+- relevante Zielzonen erkennen
+- relevante Zielbasen erkennen
+- FOB-Support berücksichtigen
+- Missionstypen begrenzen
+- verfügbare Missionen erzeugen
+- Mission Records anlegen
+- Objectives erzeugen
+- Briefings erzeugen
+- Progress-Daten vorbereiten
+- Activation Metadata vorbereiten
+- Execution Plan vorbereiten
+- Effects vorbereiten
+- MOOSE-Hooks reservieren
+- CTLD-Hooks reservieren
+- Skynet-Hooks reservieren
+- Mission Activation state-only ausführen
+
+Wichtig:
+
+    MissionGenerator scannt keine Airbases selbst.
+    MissionGenerator erzeugt keine Zonen selbst.
+    MissionGenerator ändert keinen Besitzstatus direkt.
+    MissionGenerator führt aktuell keine echten Framework-Aktionen aus.
+
+---
+
+## 6. Mögliche spätere Dateien
+
+Später können bei Bedarf weitere Missionsdateien ergänzt werden.
+
+Mögliche Dateien:
 
     src/missions/tc_mission_registry.lua
     src/missions/tc_mission_types.lua
     src/missions/tc_mission_evaluator.lua
     src/missions/tc_target_selector.lua
+    src/missions/tc_mission_effects.lua
 
-Diese Zusatzdateien werden erst angelegt, wenn sie wirklich benötigt werden.
+Diese Dateien werden erst angelegt, wenn sie wirklich benötigt werden.
 
----
+Aktuell reicht:
 
-## `tc_mission_generator.lua`
-
-`tc_mission_generator.lua` wird später die zentrale Missionsgenerierung übernehmen.
-
-Geplante Aufgaben:
-
-- aktuelle Kampagnenlage lesen
-- verfügbare Zielzonen erkennen
-- mögliche Missionsarten bestimmen
-- Missionen erzeugen
-- Missionen in `TC.State.Missions` speichern
-- aktive Missionen verwalten
-- abgeschlossene Missionen archivieren
-- fehlgeschlagene Missionen speichern
-- Folgeeffekte vorbereiten
-
-Der Missionsgenerator soll keine Airbases scannen.
-
-Der Missionsgenerator soll keine Zonen erzeugen.
-
-Der Missionsgenerator soll keine Basen direkt erobern.
-
-Er erzeugt und bewertet Missionen.
-
-Strategische Besitzänderungen bleiben Aufgabe des Capture-Systems.
+    src/missions/tc_mission_generator.lua
 
 ---
 
-## Geplante Missionsarten
+## 7. Aktuelle Missionstypen
 
-Für **Operation Levant Reclamation** sind später unter anderem folgende Missionsarten denkbar:
+Aktuelle Missionstypen:
 
-    RECON
-    STRIKE
-    SEAD
-    DEAD
-    CAS
-    INTERDICTION
-    ESCORT
-    CAP
-    LOGISTICS
-    FOB_SUPPORT
-    AIRBASE_ATTACK
-    IADS_SUPPRESSION
+- `RECON`
+- `STRIKE`
+- `SEAD`
+- `DEAD`
+- `CAS`
+- `INTERDICTION`
+- `ESCORT`
+- `CAP`
+- `LOGISTICS`
+- `FOB_SUPPORT`
+- `AIRBASE_ATTACK`
+- `IADS_SUPPRESSION`
 
-Diese Liste ist noch nicht endgültig.
+Diese Liste ist noch nicht final.
 
-Die konkrete Umsetzung erfolgt schrittweise.
+Sie dient aktuell dazu, unterschiedliche Kampagnenbedarfe abzubilden.
 
 ---
 
-## Beziehung zum Core
+## 8. Mission Record
+
+MissionGenerator v0.2.2 erzeugt erweiterte Mission Records.
+
+Ein Mission Record kann aktuell enthalten:
+
+- ID
+- Key
+- Name
+- Type
+- Status
+- Owner
+- Source Base
+- Target Zone
+- Target Base
+- Target FOB
+- Priority
+- Strategic Relevance
+- Objective
+- Briefing
+- Recommended Aircraft
+- Recommended Payload
+- Progress
+- Activation Metadata
+- Execution Plan
+- Effects
+- reserved MOOSE Hook
+- reserved CTLD Hook
+- reserved Skynet Hook
+
+Bedeutung:
+
+    Missionen sind vorbereitete Kampagnenobjekte.
+    Sie können später mit Capture, Logistics, AI, IADS und Persistence verbunden werden.
+
+---
+
+## 9. Mission Status
+
+Aktuell bestätigter Statuswechsel:
+
+    AVAILABLE -> ACTIVE
+
+Mögliche oder vorbereitete Mission Status:
+
+- AVAILABLE
+- ACTIVE
+- COMPLETED
+- FAILED
+- CANCELLED
+- EXPIRED
+
+Noch offen:
+
+- Mission manuell abschließen
+- Mission manuell fehlschlagen lassen
+- Mission abbrechen
+- Mission automatisch durch DCS-Events abschließen
+- Missionserfolg auf Capture oder Logistics anwenden
+
+---
+
+## 10. Mission Activation
+
+Missionen können aktuell über F10 aktiviert werden.
+
+F10Menu v0.2.0 bietet:
+
+- Show Available Missions
+- Show Active Missions
+- Show Mission 1 Details bis Show Mission 10 Details
+- Activate Mission 1 bis Activate Mission 10
+
+Bestätigt:
+
+    MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+    Aktivierung erzeugt stateOnly=true.
+    Aktivierung erzeugt spawnHooks=reserved.
+
+Aktuelle Einschränkung:
+
+    Mission Activation bedeutet noch nicht, dass DCS-Einheiten gespawnt werden.
+    Mission Activation ist aktuell eine State-Änderung.
+
+---
+
+## 11. Verhältnis zum Core
 
 `src/missions/` nutzt den Core.
 
 Erlaubte Core-Abhängigkeiten:
 
-    TC.Config
-    TC.Logger
-    TC.State
-    TC.Utils
-    TC.Scheduler
+- `TC.Config`
+- `TC.Logger`
+- `TC.State`
+- `TC.Utils`
+- `TC.Scheduler`
 
 Der Missionsbereich darf davon ausgehen, dass der Core bereits geladen ist.
 
-Die interne Lade-Reihenfolge sieht vor:
+Aktuelle Ladeposition:
 
-    1. Core
-    2. World
-    3. Campaign
-    4. Logistics
-    5. Missions
-    6. AI
-    7. IADS
-    8. UI
-    9. Debug
-    10. Main
-
-Missionsdateien dürfen deshalb auf Core-Funktionen zugreifen.
+    nach World, Campaign und Logistics
+    vor AI, UI, Main und Loader
 
 ---
 
-## Beziehung zum World-Bereich
+## 12. Verhältnis zum World-Bereich
 
 Der Missionsbereich nutzt Daten aus:
 
     src/world/
 
-Besonders wichtig sind:
+Besonders wichtig:
 
-    TC.World.AirbaseScanner
-    TC.World.ZoneFactory
-    TC.State.Bases
-    TC.State.Zones
+- `TC.World.AirbaseScanner`
+- `TC.World.ZoneFactory`
+- `TC.State.Bases`
+- `TC.State.Zones`
 
-World liefert die räumliche Grundlage.
+Aktuelle World-Werte:
+
+    Syria airbase-like objects: 225
+    relevante Kampagnenzonen: 46
+    missionCandidates: 32
+    logisticsCandidates: 46
 
 Missions nutzt diese Daten für:
 
-    Zielauswahl
-    Missionsradius
-    Start- und Zielgebiete
-    Frontnähe
-    Airbase-Bezug
-    Zonen-Bezug
+- Zielauswahl
+- Airbase-Bezug
+- Zonen-Bezug
+- Start- und Zielräume
+- strategische Priorität
 
 Missions soll nicht selbst Airbases scannen.
 
@@ -201,294 +362,372 @@ Missions soll nicht selbst Kampagnenzonen erzeugen.
 
 ---
 
-## Beziehung zum Campaign-Bereich
+## 13. Verhältnis zum Campaign-Bereich
 
 Der Missionsbereich nutzt Daten aus:
 
     src/campaign/
 
-Besonders wichtig sind:
+Besonders wichtig:
 
-    TC.Campaign.CaptureSystem
-    TC.Campaign.PersistenceSystem
-    TC.State.Campaign
-    TC.State.Bases
-    TC.State.Zones
+- `TC.Campaign.CaptureSystem`
+- `TC.Campaign.PersistenceSystem`
+- `TC.State.Campaign`
+- `TC.State.Bases`
+- `TC.State.Zones`
 
-Campaign liefert den strategischen Zustand.
+Aktuelle Capture-Werte:
+
+    eligibleBases: 32
+    eligibleZones: 32
+    pressureRecords: 32
+    progressRecords: 32
+    appliedMissionEffects: 0
+    ready: 0
+    contested: 0
 
 Missions nutzt diesen Zustand, um passende Aufträge zu erzeugen.
 
 Beispiele:
 
-    rote Zone nahe blauer Zone wird mögliches Angriffsziel
-    blaue Zone mit schwacher Logistik wird mögliches Versorgungsziel
-    contested Zone wird mögliches CAS- oder Interdiction-Ziel
-    rote Airbase wird mögliches Strike- oder SEAD-Ziel
+- rote Zone wird mögliches Angriffsziel
+- capture-fähige Zone wird mögliches Missionsziel
+- Zone mit Pressure wird später mögliches Schwerpunktziel
+- strategische Airbase wird mögliches Strike- oder SEAD-Ziel
+- Mission Effects können später Capture-Pressure oder Capture-Progress beeinflussen
 
-Besitzwechsel bleiben Aufgabe des Capture-Systems.
+Besitzwechsel bleiben Aufgabe des CaptureSystems.
 
 ---
 
-## Beziehung zum Logistics-Bereich
+## 14. Verhältnis zum Logistics-Bereich
 
 Der Missionsbereich nutzt Daten aus:
 
     src/logistics/
 
-Besonders wichtig sind:
+Besonders wichtig:
 
-    TC.Logistics.Delivery
-    TC.Logistics.FobSystem
-    TC.State.Logistics
+- `TC.Logistics.Delivery`
+- `TC.Logistics.FobSystem`
+- `TC.State.Logistics`
 
-Logistik kann spätere Missionen beeinflussen.
+Aktuelle Logistics-Werte:
 
-Beispiele:
+    logistics hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
 
-    FOB-Aufbau erzeugt Versorgungsmission
-    Munitionsmangel erzeugt Nachschubmission
-    beschädigte Basis erzeugt Reparaturmission
-    aktive FOBs ermöglichen Missionen weiter im Landesinneren
+Aktuelle FOB-Werte:
 
-Missions erzeugt Aufträge.
+    FOB candidates: 6
+    Blue FOBs: 2
+    FOB Ercan
+    FOB Gecitkale
+    Status: UNDER_CONSTRUCTION
 
-Logistics bewertet logistische Lieferungen.
+MissionGenerator nutzt FOBs bereits:
 
----
+    fobSupportCandidates: 2
+    reservedCreated: 1
 
-## Beziehung zum AI- und IADS-Bereich
+Bedeutung:
 
-Der Missionsbereich wird später Daten liefern an:
-
-    src/ai/
-    src/iads/
-
-Beispiele:
-
-    AI Director reagiert auf aktive Missionen.
-    CAP-Manager schützt wichtige Gebiete.
-    IADS-System markiert SAM- und Radarziele.
-    SEAD- oder DEAD-Missionen nutzen IADS-Zustand.
-    feindliche Reaktion kann abhängig vom Missionstyp erfolgen.
-
-Diese Systeme werden später separat aufgebaut.
+    FOB-Support ist bereits Teil der Missionslogik.
+    CTLD-Cargo-Aktionen sind noch nicht produktiv angebunden.
 
 ---
 
-## Geplanter Namespace
+## 15. Verhältnis zum AI-Bereich
 
-Der Missionsbereich wird später unter der zentralen Projekttabelle `TC` abgelegt.
+Der Missionsbereich kann später Daten an AI liefern oder AI-Daten berücksichtigen.
 
-Geplante Struktur:
+Aktuell aktive AI-Datei:
 
-    TC.Missions
-    ├── Generator
-    ├── Registry
-    ├── Types
-    ├── Evaluator
-    └── TargetSelector
+    src/ai/tc_ai_cap_manager.lua
 
-Die globale Projekttabelle bleibt:
+Getestete Version:
 
-    TC
+    v0.2.0
 
-Nicht verwenden:
+Aktuelle AI-Werte:
 
-    TheaterCommandMissions
-    MissionsTC
-    tc_missions_global
-    _G_TC_MISSIONS
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
 
----
+Mögliche spätere Kopplungen:
 
-## Geplante State-Bereiche
+- aktive Strike-Mission erhöht feindliche CAP-Wahrscheinlichkeit
+- aktive SEAD-Mission verändert IADS-/AI-Reaktion
+- aktive Logistics-Mission erzeugt Intercept-Risiko
+- abgeschlossene Missionen beeinflussen AI Director
+- CAP-State beeinflusst Missionspriorität
 
-Der Missionsbereich arbeitet später vor allem mit:
+Aktuell:
 
-    TC.State.Missions
-    TC.State.Campaign
-    TC.State.Bases
-    TC.State.Zones
-    TC.State.Logistics
-    TC.State.IADS
-
-Geplante Daten in `TC.State.Missions`:
-
-    enabled
-    available
-    active
-    completed
-    failed
-    lastMissionId
-
-Geplante Daten für einzelne Missionen:
-
-    id
-    key
-    name
-    type
-    status
-    owner
-    targetZone
-    targetBase
-    targetIadsSite
-    sourceBase
-    priority
-    createdAt
-    activatedAt
-    completedAt
-    failedAt
-    effectApplied
-
-Der genaue Datenaufbau wird mit `tc_mission_generator.lua` festgelegt.
+    AI Director ist noch nicht implementiert.
+    MissionGenerator erzeugt Missionen state-only.
 
 ---
 
-## Anfangszustand der Kampagne
+## 16. Verhältnis zum IADS-Bereich
 
-Für **Operation Levant Reclamation** gilt als Grundannahme:
+Der Missionsbereich bereitet IADS-nahe Missionen vor.
 
-    Blau startet auf Zypern / Akrotiri.
-    Das syrische Festland ist zu Beginn rot kontrolliert.
+Aktuell:
 
-Daraus folgt für den Missionsbereich:
+    Skynet IADS wird geladen.
+    Theater-Command-IADS-Modul ist noch nicht implementiert.
+    MissionGenerator reserviert Skynet-Hooks.
 
-- erste Missionen starten aus dem blauen Ausgangsraum.
-- Akrotiri ist die wichtigste blaue Startbasis.
-- frühe Ziele liegen wahrscheinlich an der syrischen Küste oder im westlichen Festlandbereich.
-- rote Festlandbasen und rote Zonen werden potenzielle Missionsziele.
-- Logistikmissionen unterstützen später den Aufbau von FOBs.
-- SEAD-/DEAD-Missionen werden später mit dem IADS-Zustand verbunden.
+IADS-nahe Missionstypen:
 
-Die konkrete Missionslogik wird später einzeln implementiert.
+- `SEAD`
+- `DEAD`
+- `IADS_SUPPRESSION`
 
----
+Mögliche spätere Kopplung:
 
-## Missions-Grundidee
+- IADS-System liefert SAM-/EWR-Ziele.
+- MissionGenerator erzeugt SEAD-/DEAD-Missionen gegen diese Ziele.
+- Mission Effects verändern IADS-State.
+- Skynet-Hooks werden später produktiv genutzt.
 
-Der Missionsgenerator soll keine feste lineare Missionsliste sein.
+Aktuell:
 
-Er soll aus dem Kampagnenzustand dynamische Aufträge erzeugen.
-
-Beispiele:
-
-    Wenn eine rote Zone an eine blaue Zone grenzt, kann ein Angriffsziel entstehen.
-    Wenn eine Zone erobert wurde, kann eine Logistikmission entstehen.
-    Wenn ein FOB im Aufbau ist, kann eine FOB-Support-Mission entstehen.
-    Wenn ein IADS-Sektor aktiv ist, kann eine SEAD-Mission entstehen.
-    Wenn rote Luftaktivität zunimmt, kann eine CAP-Mission entstehen.
-
-Die erste Version darf einfach sein.
-
-Wichtig ist, dass die Struktur dynamisch und erweiterbar bleibt.
+    keine echte Skynet-Aktion
+    keine echte IADS-Wirkung
+    keine IADS-Persistenz
 
 ---
 
-## Abgrenzung
+## 17. Verhältnis zum UI-Bereich
+
+Der Missionsbereich ist bereits mit dem UI-Bereich verbunden.
+
+Aktive UI-Datei:
+
+    src/ui/tc_f10_menu.lua
+
+Getestete Version:
+
+    v0.2.0
+
+F10Menu kann aktuell:
+
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Mission Details Slot 1 bis 10 anzeigen
+- Mission Slot 1 bis 10 aktivieren
+
+Bestätigt:
+
+    Mission Details Slot 1
+    Mission Details Slot 2
+    Mission Details Slot 5
+    Mission Slot 1 aktiviert
+    Mission Slot 5 aktiviert
+
+Bewertung:
+
+    UI und MissionGenerator sind erfolgreich verbunden.
+    Mission Activation bleibt state-only.
+
+---
+
+## 18. Verhältnis zu Persistence
+
+PersistenceSystem ist vorbereitet, aber noch nicht produktiv.
+
+Aktuelle Datei:
+
+    src/campaign/tc_persistence_system.lua
+
+Status:
+
+    Grundstruktur lädt/startet
+    produktiver Dateischreibtest offen
+
+Missionsdaten sollen später persistiert werden:
+
+- verfügbare Missionen
+- aktive Missionen
+- abgeschlossene Missionen
+- fehlgeschlagene Missionen
+- Missionsstatus
+- Mission Progress
+- Mission Effects
+- Mission History
+
+Aktuell:
+
+    keine produktive Missionspersistenz
+    kein Save/Load von Missionen
+    keine Autosaves
+
+---
+
+## 19. State-first-Regel
+
+Der Missionsbereich folgt aktuell strikt der state-first-Architektur.
+
+Das bedeutet:
+
+- Missionen entstehen im State.
+- Missionen werden über F10 sichtbar.
+- Missionen können im State aktiviert werden.
+- Mission Effects werden vorbereitet.
+- Framework-Hooks werden reserviert.
+- echte Framework-Aktionen bleiben deaktiviert.
+
+Nicht aktiv:
+
+- echte MOOSE-Spawns
+- echte CTLD-Cargo-Aktionen
+- echte Skynet-IADS-Wirkung
+- automatische DCS-Event-Auswertung
+- automatische Mission Completion
+
+Grund:
+
+    Der Kampagnenzustand muss zuerst korrekt, sichtbar und testbar sein.
+    Danach können echte DCS-Aktionen kontrolliert angebunden werden.
+
+---
+
+## 20. Testziele
+
+Der Missionsbereich gilt aktuell für den state-first Stand als bestanden, wenn:
+
+- MissionGenerator lädt.
+- MissionGenerator startet.
+- Missionskandidaten werden erkannt.
+- 10 verfügbare Missionen werden erzeugt.
+- FOB-Support wird berücksichtigt.
+- mindestens eine FOB-Support-Mission wird reserviert.
+- Mission Records enthalten Objectives, Briefings, Progress und Activation Metadata.
+- Mission Details sind über F10 abrufbar.
+- Missionen können über F10 direkt aktiviert werden.
+- MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+- Aktivierung bleibt state-only.
+- Spawn-Hooks bleiben reserved.
+- keine Lua-Fehler auftreten.
+- keine Theater-Command-Fehler auftreten.
+
+Noch offen:
+
+- Mission completed/failed
+- Mission Effects produktiv anwenden
+- automatische DCS-Event-Auswertung
+- echte MOOSE-Spawns
+- echte CTLD-Aktionen
+- echte Skynet-IADS-Wirkung
+- Mission-State persistieren
+
+---
+
+## 21. Erwartete Logmarker
+
+Aktuelle erwartete Logmarker:
+
+    [TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.2
+    [TC] [MissionGenerator] Mission candidate summary: candidates=69, fobSupportCandidates=2, availableBefore=0, generationSlots=10
+    [TC] [MissionGenerator] Mission generation completed: 10 new missions from 69 candidates (fobSupportCandidates=2, reservedCreated=1, duplicatesSkipped=1, typeLimitSkipped=30)
+    [TC] [MissionGenerator] Mission status changed: MISSION_1 [ACTIVE]
+    [TC] [MissionGenerator] Mission activation prepared: MISSION_1 stateOnly=true spawnHooks=reserved
+    [TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_1
+    [TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_1
+
+---
+
+## 22. Abgrenzung
 
 Nicht Aufgabe von `src/missions/`:
 
-    Airbases aus DCS auslesen
-    Zonen geometrisch erzeugen
-    Basenbesitz direkt festlegen
-    Zonenbesitz direkt festlegen
-    CTLD-Lieferungen auswerten
-    FOBs direkt bauen
-    CAPs dauerhaft verwalten
-    IADS-Netzwerke aufbauen
-    F10-Menüs erzeugen
-    Debug-Zeichnungen erzeugen
-    Framework-Dateien verändern
+- Airbases aus DCS auslesen
+- Zonen geometrisch erzeugen
+- Basenbesitz direkt festlegen
+- Zonenbesitz direkt festlegen
+- CTLD-Lieferungen direkt auswerten
+- FOBs direkt bauen
+- CAPs dauerhaft verwalten
+- IADS-Netzwerke aufbauen
+- F10-Menüs erzeugen
+- Debug-Zeichnungen erzeugen
+- Framework-Dateien verändern
 
 Diese Aufgaben gehören in andere Bereiche.
 
-Missions erzeugt und bewertet Aufträge.
+Missions erzeugt und verwaltet Aufträge.
 
 ---
 
-## Verbindung zu späteren Systemen
+## 23. Nächster sinnvoller Schritt
 
-Spätere Systeme nutzen Missionsdaten.
+Der nächste sinnvolle Schritt liegt nicht direkt im Missionsbereich.
 
-Beispiele:
+Empfohlene nächste Datei:
 
-    Campaign nutzt Missionsergebnisse für strategische Folgen.
-    Logistics nutzt Versorgungsmissionen für Lieferungen.
-    AI reagiert auf aktive Missionen.
-    IADS liefert Ziele für SEAD und DEAD.
-    UI zeigt verfügbare und aktive Missionen an.
-    Debug zeigt Missionsstatus an.
-    Persistence speichert Missionslisten und Ergebnisse.
+    src/ui/tc_f10_menu.lua
 
-Der Missionsbereich ist damit die Auftragsschicht von Theater Command DCS.
+Ziel:
 
----
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
 
-## Testziele
+Geplante neue F10-Funktionen:
 
-Der Missionsbereich gilt später als funktionsfähig, wenn folgende Punkte erfüllt sind:
+    Show Capture Status
+    Show Capture Ready Zones
+    Show Pressure Contested Zones
 
-    TC.Missions ist vorhanden.
-    TC.Missions.Generator ist vorhanden.
-    TC.State.Missions wird korrekt vorbereitet.
-    verfügbare Missionen können erzeugt werden.
-    Missionen können aktiviert werden.
-    Missionen können abgeschlossen werden.
-    Missionen können fehlschlagen.
-    Missionsergebnisse werden im State gespeichert.
-    Missionsergebnisse können andere Systeme informieren.
-    keine Lua-Fehler beim Missionsstart.
-    keine Framework-Dateien werden verändert.
+Akzeptanzkriterien:
 
-Erwartete spätere Beispielausgaben in `dcs.log`:
-
-    [TC] Missions loading started
-    [TC] Mission generator loaded
-    [TC] Missions initialized
-    [TC] Mission created: STRIKE
-    [TC] Mission activated: STRIKE
-    [TC] Mission completed: STRIKE
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
 
 ---
 
-## Entwicklungsregel
+## 24. Zielbild
 
-Der Missionsbereich wird schrittweise aufgebaut.
+`src/missions/` ist die Auftragsschicht von Theater Command DCS.
 
-Empfohlene Reihenfolge:
+Der Missionsbereich verbindet:
 
-    1. src/missions/README.md
-    2. src/missions/tc_mission_generator.lua
+- World-Daten
+- Campaign-State
+- Capture-Pressure
+- Logistics
+- FOBs
+- AI-Reaktion
+- IADS-Ziele
+- Spielerinteraktion
+- Persistenz
 
-Jede Datei wird einzeln erstellt und geprüft.
+Aktueller Status:
 
-Keine parallelen Großbaustellen.
-
-Keine All-in-one-Dateien.
-
----
-
-## Zielbild
-
-`src/missions/` soll aus dem strategischen Kampagnenzustand spielbare Aufträge erzeugen.
-
-Der Missionsbereich ist die Verbindung zwischen:
-
-    World-Daten
-    Campaign-State
-    Logistics
-    AI-Reaktion
-    IADS-Zielen
-    Spielerinteraktion
-    Persistenz
-
-Damit bleibt das Projekt:
-
-    modular
-    lesbar
-    testbar
-    erweiterbar
-    wartbar
-
-`src/missions/` ist die Auftragsschicht von **Theater Command DCS**.
+    MissionGenerator v0.2.2 ist state-first bestanden.
+    Missionen sind über F10 sichtbar und aktivierbar.
+    Echte Framework-Ausführung folgt später.
