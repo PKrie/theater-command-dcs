@@ -2,11 +2,13 @@
 
 Diese Datei beschreibt das Kampagnendesign der ersten Theater-Command-DCS-Kampagne.
 
-Die erste Kampagne trägt den Arbeitstitel:
+Erste Kampagne:
 
     Operation Levant Reclamation
 
-Die Kampagne wird auf der **Syria Map** aufgebaut.
+Map:
+
+    Syria
 
 Ausgangslage:
 
@@ -15,30 +17,40 @@ Ausgangslage:
 
 ---
 
-## Grundidee der Kampagne
+## 1. Grundidee der Kampagne
 
 **Operation Levant Reclamation** soll keine lineare Einzelmission werden.
 
-Ziel ist eine dynamische Kampagne, in der der Spieler durch Missionen, Logistik, Luftüberlegenheit, SEAD/DEAD, Capture-Operationen und Unterstützungseinsätze den Kampagnenzustand verändert.
+Ziel ist eine dynamische Kampagne, in der Spieler, KI, Missionen, Logistik, Luftüberlegenheit, SEAD/DEAD, Capture-Operationen und Unterstützungseinsätze den Kampagnenzustand verändern.
 
-Die Kampagne soll später aus einem zentralen Zustand heraus arbeiten.
+Die Kampagne soll aus einem zentralen Zustand heraus arbeiten.
 
-Dieser Zustand soll unter anderem enthalten:
+Dieser Zustand enthält unter anderem:
 
 - Besitzstatus von Airbases
 - Besitzstatus von Zonen
+- Capture-Eligibility
+- Capture-Pressure
+- Capture-Progress
 - verfügbare Missionen
 - aktive Missionen
 - abgeschlossene Missionen
 - Logistikstatus
 - FOB-Status
 - AI-Reaktionen
-- IADS-Zustand
-- Persistenzdaten
+- CAP-State
+- später IADS-Zustand
+- später Persistenzdaten
+
+Die Kampagne soll langfristig nicht nur auf Spieleraktionen reagieren.
+
+Blue und Red sollen perspektivisch eigene Operationen planen und durchführen.
+
+Spieler sollen sich in eine laufende Kampagnenlage einklinken.
 
 ---
 
-## Architekturprinzip
+## 2. Architekturprinzip
 
 Das zentrale Prinzip lautet:
 
@@ -46,7 +58,16 @@ Das zentrale Prinzip lautet:
     Lua = Kampagnensystem
     GitHub = Projektgedächtnis
 
-Der DCS Mission Editor stellt die physische Umgebung bereit.
+Der DCS Mission Editor stellt die physische Umgebung bereit:
+
+- Karte
+- Koalitionen
+- Flugplätze
+- Client-Slots
+- Trigger
+- Zonen
+- Templates
+- Framework-Dateien
 
 Lua übernimmt die eigentliche Kampagnenlogik.
 
@@ -54,11 +75,17 @@ GitHub dokumentiert Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
 
 ---
 
-## Aktueller Projektstand
+## 3. Aktueller Projektstand
 
-Stand: 2026-06-16
+Stand:
 
-Aktuell vorhanden:
+    2026-06-29
+
+Aktueller Gesamtstatus:
+
+    State-first Runtime-Grundlage stabil getestet.
+
+Aktuell vorhanden und getestet:
 
 - Repository-Grundstruktur
 - zentrale Projektdokumentation
@@ -70,7 +97,6 @@ Aktuell vorhanden:
 - CTLD
 - Skynet IADS
 - `src/`-Grundstruktur
-- erste eigene Theater-Command-Lua-Module
 - Loader
 - Main-Initialisierung
 - Core-System
@@ -79,30 +105,56 @@ Aktuell vorhanden:
 - Logistics-System
 - Missions-System
 - AI-CAP-System
-- IADS-, UI- und Debug-Bereiche dokumentiert
+- UI-System mit F10-Menü
+- IADS- und Debug-Bereiche vorbereitet
 - minimale Syria-DEV-Mission
 - erster blauer F/A-18C-Client-Slot auf Akrotiri
-- vollständige Triggerkette für Starttest-Variante A
-- erster realer DCS-Starttest
-- erfolgreiche `dcs.log`-Auswertung
+- sichere Einzeldatei-Ladung im Mission Editor
+- reale DCS-Starttests
+- erfolgreiche `dcs.log`-Auswertungen
+- direkte Missionsauswahl über F10
+- direkte Missionsaktivierung über F10
 
 Aktueller Teststatus:
 
-    Starttest-Variante A ist bestanden.
-
-Wichtiges Testergebnis:
-
-    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
-    Zone-Factory registrierte 225 Zonen.
-
-Folgerung für das Kampagnendesign:
-
-    Die Kampagne darf nicht alle von DCS erkannten Airbase-Objekte gleich behandeln.
-    Strategische Airfields müssen von Helipads, Medical Pads, FARPs und taktischen Pads getrennt werden.
+    Die state-first Runtime-Grundlage ist bestanden.
+    Das Projekt ist noch keine fertige spielbare dynamische Kampagne.
 
 ---
 
-## Aktuelle DEV-Mission
+## 4. Bestätigte technische Kernwerte
+
+Aktuell bestätigte Werte aus DCS-Logs:
+
+    Syria airbase-like objects: 225
+    relevante Kampagnenzonen: 46
+    capture-fähige Basen: 32
+    capture-fähige Zonen: 32
+    Logistics Hubs: 46
+    FOB-Kandidaten: 6
+    automatisch geplante Blue-FOBs: 2
+    Missionskandidaten: 69
+    FOB-Support-Kandidaten: 2
+    verfügbare Missionen: 10
+    F10 Commands: 26
+    Capture-Pressure-Records: 32
+    Capture-Progress-Records: 32
+
+Wichtigste Designfolgerung:
+
+    Die Kampagne darf nicht alle von DCS erkannten Airbase-like Objects gleich behandeln.
+
+DCS liefert auf der Syria Map 225 airbase-like objects.
+
+Davon sind aktuell nur 46 für Theater Command als relevante Kampagnenzonen geeignet.
+
+Davon sind aktuell 32 als capture-fähige strategische oder sekundäre Kampagnenziele geeignet.
+
+Helipads, Medical Pads, Tactical Pads und unbekannte Objekte sind nicht automatisch strategische Kampagnenziele.
+
+---
+
+## 5. Aktuelle DEV-Mission
 
 Aktuelle technische Entwicklungsmission:
 
@@ -114,20 +166,25 @@ Aktueller Inhalt:
     Koalitionspreset: Modern
     Blue Start: Akrotiri / Zypern
     erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
-    Trigger: Starttest-Variante A vollständig angelegt
-    keine rote Frontlinie
-    keine IADS-Stellungen
-    keine CTLD-Zonen
-    keine Template-Gruppen
-    keine F10-Menüs
+    Trigger: sichere Einzeldatei-Ladung
+    Vendor-Frameworks werden geladen
+    Theater-Command-Source-Dateien werden geladen
+    F10-Menü ist sichtbar und testbar
+    keine produktive rote Frontlinie
+    keine produktiven IADS-Stellungen
+    keine produktiven CTLD-Zonen
+    keine produktiven Template-Gruppen
+    keine echten MOOSE-Spawns
+    keine echten CTLD-FOBs
+    keine produktive Persistenz
 
-Diese Mission ist aktuell nur ein technischer Testträger.
+Diese Mission ist aktuell ein technischer Testträger.
 
-Sie ist noch keine spielbare Kampagnenmission.
+Sie ist noch keine fertige spielbare Kampagnenmission.
 
 ---
 
-## Strategische Ausgangslage
+## 6. Strategische Ausgangslage
 
 Zu Kampagnenbeginn kontrolliert Blau nur den Startbereich auf Zypern.
 
@@ -149,13 +206,13 @@ Die Kampagne beginnt damit aus einer asymmetrischen Ausgangslage:
 
 ---
 
-## Politische und militärische Grundannahme
+## 7. Politische und militärische Grundannahme
 
 Die genaue Story wird später weiter ausgearbeitet.
 
 Aktuelle Grundannahme:
 
-Eine internationale Koalition startet von Akrotiri aus eine Operation zur Rückgewinnung und Stabilisierung des östlichen Mittelmeerraums und der syrischen Küstenregion.
+    Eine internationale Koalition startet von Akrotiri aus eine Operation zur Rückgewinnung und Stabilisierung des östlichen Mittelmeerraums und der syrischen Küstenregion.
 
 Das syrische Festland ist zu Kampagnenbeginn unter roter Kontrolle.
 
@@ -173,11 +230,11 @@ Die blaue Koalition muss schrittweise:
 
 ---
 
-## Geplanter Kampagnenverlauf
+## 8. Geplanter Kampagnenverlauf
 
 Der Kampagnenverlauf soll nicht als feste Missionskette gebaut werden.
 
-Stattdessen soll er durch den Kampagnenzustand entstehen.
+Er soll durch den Kampagnenzustand entstehen.
 
 Geplante Eskalationslogik:
 
@@ -192,18 +249,29 @@ Geplante Eskalationslogik:
 9. IADS-Neuordnung und Gegenmaßnahmen
 10. persistenter Kampagnenfortschritt
 
+Aktueller technischer Stand:
+
+    Die ersten vier Grundlagen sind state-only vorbereitet:
+    Airbase-/Zonenverständnis, Capture-Grundlage, Logistics-/FOB-Grundlage und Missionserzeugung.
+
+Noch nicht produktiv:
+
+    echte rote Gegenreaktionen
+    echte IADS-Neuordnung
+    echte persistente Kampagnenfolgen
+
 ---
 
-## Phase 1 — Initiale Lage
+## 9. Phase 1 — Initiale Lage
 
 Zu Beginn:
 
-    Blau startet auf Akrotiri.
-    Rot kontrolliert das syrische Festland.
-    Es gibt noch keine blaue Frontlinie auf dem Festland.
-    Es gibt noch keine aktiven blauen FOBs.
-    Es gibt noch keine produktive Capture-Logik.
-    Es gibt noch keine produktive Persistenz.
+- Blau startet auf Akrotiri.
+- Rot kontrolliert das syrische Festland.
+- Es gibt noch keine blaue Frontlinie auf dem Festland.
+- Es gibt noch keine produktiv gebauten CTLD-FOBs.
+- Es gibt noch keine produktive automatische Capture-Auswertung.
+- Es gibt noch keine produktive Persistenz.
 
 Ziel dieser Phase:
 
@@ -211,25 +279,30 @@ Ziel dieser Phase:
 - Airbase- und Zonenlogik sauber aufbauen
 - strategische Basen erkennen
 - Kampagnenzustand initialisieren
-- spätere Missionen aus echten Daten ableiten
+- Missionen aus echten State-Daten ableiten
+- erste Spielerinteraktion über F10 ermöglichen
 
 Aktueller Stand:
 
     Technische Startkette bestanden.
     Airbase-Erkennung funktioniert.
-    Airbase-Klassifizierung fehlt noch.
+    Airbase-Klassifizierung funktioniert.
+    ZoneFactory funktioniert.
+    CaptureSystem funktioniert state-only.
+    LogisticsDelivery funktioniert state-only.
+    FobSystem funktioniert state-only.
+    MissionGenerator funktioniert state-only.
+    F10Menu funktioniert.
 
 ---
 
-## Phase 2 — Airbase- und Zonenverständnis
+## 10. Phase 2 — Airbase- und Zonenverständnis
 
-Der erste reale DCS-Test hat gezeigt:
+Der reale DCS-Test hat gezeigt:
 
-    225 Airbase-/Helipad-Objekte werden erkannt.
+    225 Airbase-like Objects werden erkannt.
 
-Für das Kampagnendesign ist das entscheidend.
-
-Diese Objekte müssen unterschieden werden in:
+Diese Objekte werden unterschieden in:
 
 - strategische Airfields
 - Secondary Airfields
@@ -240,13 +313,24 @@ Diese Objekte müssen unterschieden werden in:
 - Tactical Pads
 - Unknown
 
-Nur strategische Airfields und ausgewählte Secondary Airfields sollen später als echte Kampagnenbasen dienen.
+Aktueller Airbase-Scanner-Stand:
 
-Helipads, Medical Pads und taktische Pads können später für Spezialrollen genutzt werden, aber nicht als vollwertige strategische Basen.
+    strategic: 19
+    secondary: 13
+    heliports: 1
+    helipads: 95
+    medical: 40
+    farps: 0
+    tactical: 13
+    unknown: 44
+
+Nur strategische Airfields und ausgewählte Secondary Airfields dienen aktuell als echte Capture- und Missionsziele.
+
+Helipads, Medical Pads und Tactical Pads können später Spezialrollen erhalten, sind aber keine vollwertigen strategischen Basen.
 
 ---
 
-## Strategische Airfields
+## 11. Strategische Airfields
 
 Strategische Airfields sind zentrale Kampagnenobjekte.
 
@@ -261,15 +345,17 @@ Sie können später:
 - AI-Reaktionen auslösen
 - IADS- und CAP-Logik beeinflussen
 
-Akrotiri ist die erste fest definierte strategische blaue Basis.
+Aktueller Stand:
 
-Syrische Hauptflugplätze sollen später als rote strategische Basen klassifiziert werden.
+    19 strategische Airfields erkannt.
+    Akrotiri ist die erste bestätigte strategische blaue Basis.
+    18 rote strategische Kandidaten sind vorbereitet.
 
 ---
 
-## Sekundäre Airfields
+## 12. Sekundäre Airfields
 
-Sekundäre Airfields können je nach Lage eine reduzierte Kampagnenrolle erhalten.
+Sekundäre Airfields erhalten eine reduzierte, aber reale Kampagnenrolle.
 
 Mögliche Rollen:
 
@@ -278,14 +364,18 @@ Mögliche Rollen:
 - logistischer Zwischenpunkt
 - Helikopterstützpunkt
 - begrenztes Missionsziel
+- Capture-Ziel
 
-Ob Secondary Airfields capturable werden, wird später entschieden.
+Aktueller Stand:
+
+    13 secondary Airfields erkannt.
+    Secondary Airfields sind aktuell Teil der 32 capture-/mission-fähigen Ziele.
 
 ---
 
-## Heliports, Helipads und Medical Pads
+## 13. Heliports, Helipads und Medical Pads
 
-Diese Objekte sollen nicht ignoriert werden.
+Diese Objekte werden nicht ignoriert.
 
 Sie sind aber keine vollwertigen strategischen Basen.
 
@@ -305,9 +395,14 @@ Nicht geeignet als Standard:
 - CAP-Zentren
 - zufällige Strike-Ziele des Missionsgenerators
 
+Aktueller Stand:
+
+    Heliports, Helipads, Medical Pads und Tactical Pads werden sauber klassifiziert.
+    Sie werden nicht blind als strategische Kampagnenziele verwendet.
+
 ---
 
-## FARPs und FOBs
+## 14. FARPs und FOBs
 
 FARPs und FOBs gehören fachlich eng zusammen.
 
@@ -320,15 +415,26 @@ FARPs können später wichtig werden für:
 - logistische Frontunterstützung
 - temporäre Kampagnenpräsenz
 
-FOBs sollen später durch Logistik aufgebaut und verbessert werden können.
+FOBs sollen durch Logistik aufgebaut und verbessert werden können.
 
-Der FOB-Aufbau wird nicht rein im Mission Editor entschieden, sondern durch Theater-Command-Logik gesteuert.
+Aktueller FOB-Stand:
+
+    FOB candidates: 6
+    auto-planned Blue FOBs: 2
+    Blue FOBs: FOB Ercan, FOB Gecitkale
+    Status: UNDER_CONSTRUCTION
+
+Wichtig:
+
+    FOBs sind aktuell State-only.
+    Es werden noch keine echten CTLD-FOBs erzeugt.
+    Der FOB-Aufbau wird später durch Theater-Command-Logik und CTLD-Cargo gesteuert.
 
 ---
 
-## Capture-Design
+## 15. Capture-Design
 
-Das Capture-System soll später den strategischen Besitz von Basen und Zonen verwalten.
+Das Capture-System verwaltet den strategischen Besitz von Basen und Zonen.
 
 Grundregel:
 
@@ -341,16 +447,25 @@ Nicht standardmäßig capturable:
 - unbekannte Objekte
 - rein taktische Pads
 
-Potentiell capturable:
+Aktuell capturable:
 
 - strategische Airfields
-- ausgewählte Secondary Airfields
-- ausgewählte militärische Heliports
-- definierte FOB-Standorte
+- sekundäre Airfields
+- strategische Airbase-Zonen
+- sekundäre Airbase-Zonen
+- definierte Mission-Editor-Capture-Zonen
+
+Aktueller bestätigter Stand:
+
+    eligibleBases: 32
+    eligibleZones: 32
+    pressureRecords: 32
+    progressRecords: 32
 
 Capture soll später abhängig sein von:
 
 - Missionsfortschritt
+- Capture-Pressure
 - Bodennähe oder Triggerlogik
 - Logistikstatus
 - FOB-Unterstützung
@@ -358,13 +473,18 @@ Capture soll später abhängig sein von:
 - IADS-Zustand
 - Kampagnenphase
 
+Aktuelle Einschränkung:
+
+    Automatische produktive Capture-Folgen sind noch deaktiviert.
+    Capture-Pressure und Capture-Progress sind vorbereitet, aber noch nicht über echte Missionserfolge produktiv wirksam.
+
 ---
 
-## Missionsdesign
+## 16. Missionsdesign
 
-Missionen sollen später dynamisch aus dem Kampagnenzustand entstehen.
+Missionen entstehen dynamisch aus dem Kampagnenzustand.
 
-Mögliche Missionstypen:
+Aktuelle Missionstypen:
 
 - Recon
 - CAP
@@ -377,28 +497,88 @@ Mögliche Missionstypen:
 - Logistics
 - FOB Support
 - Airbase Attack
-- AI Suppression
+- IADS Suppression
 
-Missionen sollen nicht zufällig aus allen DCS-Objekten erzeugt werden.
+Missionen werden nicht zufällig aus allen DCS-Objekten erzeugt.
 
-Der Missionsgenerator muss geeignete Ziele wählen.
+Der Missionsgenerator wählt geeignete Ziele aus:
 
-Beispiele:
+- strategische Airfields
+- secondary Airfields
+- relevante Capture-Zonen
+- Logistics-Zonen
+- FOBs mit Supportbedarf
+- später IADS-Ziele
 
-- SEAD/DEAD gegen IADS-Ziele
-- Strike gegen strategische Infrastruktur
-- CAP über Front- oder Bedrohungsräumen
-- Logistics zu FOBs oder Basen
-- Airbase Attack nur gegen relevante Airfields
-- FOB Support für definierte Forward Sites
+Aktueller MissionGenerator-Stand:
+
+    Version: v0.2.2
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+
+Aktuelle Mission Records enthalten:
+
+- Objective
+- Briefing
+- Progress
+- Activation Metadata
+- Execution Plan
+- Effect
+- reserved MOOSE Hook
+- reserved CTLD Hook
+- reserved Skynet Hook
+
+Aktuelle Einschränkung:
+
+    Missionen sind state-only.
+    Es werden noch keine echten DCS-Spawns ausgelöst.
 
 ---
 
-## Logistikdesign
+## 17. Spielerinteraktion
 
-Logistik soll später ein Kernbestandteil der Kampagne werden.
+Spielerinteraktion erfolgt inzwischen über ein aktives F10-Menü.
 
-Logistik beeinflusst:
+Aktuelles F10Menu:
+
+    Datei: src/ui/tc_f10_menu.lua
+    Version: v0.2.0
+    Status: bestanden
+    Commands: 26
+
+Aktuelle F10-Funktionen:
+
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Mission 1 bis Mission 10 Details anzeigen
+- Mission 1 bis Mission 10 aktivieren
+- Kampagnenstatus anzeigen
+- Logistikstatus anzeigen
+- FOB-Status anzeigen
+- AI-CAP-Status anzeigen
+
+Bestätigt:
+
+    F10-Menü ist sichtbar.
+    F10-Menü ist navigierbar.
+    Mission Details funktionieren.
+    direkte Missionsaktivierung funktioniert.
+    MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+    Aktivierung bleibt state-only.
+
+Nächster UI-Schritt:
+
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+
+---
+
+## 18. Logistikdesign
+
+Logistik soll ein Kernbestandteil der Kampagne werden.
+
+Logistik beeinflusst später:
 
 - FOB-Aufbau
 - Versorgung von Basen
@@ -413,19 +593,49 @@ Aktuelle Logistik-Module:
     src/logistics/tc_logistics_delivery.lua
     src/logistics/tc_fob_system.lua
 
-Aktuell ist nur die Grundstruktur vorhanden.
+Aktueller LogisticsDelivery-Stand:
 
-Die CTLD-Anbindung folgt später.
+    Version: v0.2.0
+    Logistics Hubs: 46
+    Blue Hubs: 7
+    Red Hubs: 24
+    Neutral Hubs: 15
+    Active Hubs: 31
+    Limited Hubs: 15
+
+Aktueller FobSystem-Stand:
+
+    Version: v0.2.0
+    FOB candidates: 6
+    Blue FOBs: 2
+    FOB Ercan
+    FOB Gecitkale
+
+Aktuelle Einschränkung:
+
+    Die CTLD-Anbindung folgt später.
+    Noch keine echten CTLD-Pickup-Zonen.
+    Noch keine echten CTLD-Dropoff-Zonen.
+    Noch keine echten CTLD-FOBs.
 
 ---
 
-## AI-Design
+## 19. AI-Design
 
 Die AI soll später auf den Kampagnenzustand reagieren.
 
 Aktuelles AI-Modul:
 
     src/ai/tc_ai_cap_manager.lua
+
+Aktueller Stand:
+
+    Version: v0.2.0
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
 
 Geplante AI-Rollen:
 
@@ -442,9 +652,15 @@ Die AI soll nicht isoliert arbeiten.
 
 Sie soll Daten aus Campaign, World, Missions, Logistics und IADS nutzen.
 
+Noch offen:
+
+    echter AI Director
+    echte MOOSE-CAP-Spawns
+    echte Blue-vs-Red-Kampagnenentscheidungen
+
 ---
 
-## IADS-Design
+## 20. IADS-Design
 
 Skynet IADS wird als externes Framework genutzt.
 
@@ -464,33 +680,12 @@ Aktueller Stand:
 
     Skynet IADS wird geladen.
     Theater-Command-IADS-Modul ist noch nicht implementiert.
+    MissionGenerator reserviert bereits Skynet-Hooks.
+    Keine echte IADS-Kampagnenlogik aktiv.
 
 ---
 
-## Spielerinteraktion
-
-Spielerinteraktion soll später über F10-Menüs erfolgen.
-
-Geplante Inhalte:
-
-- Kampagnenstatus anzeigen
-- verfügbare Missionen anzeigen
-- aktive Missionen anzeigen
-- Mission annehmen
-- Logistikstatus anzeigen
-- FOB-Status anzeigen
-- AI-/CAP-Status anzeigen
-- IADS-Status anzeigen
-- Debug-Menüs optional aktivieren
-
-Aktueller Stand:
-
-    UI-Bereich ist dokumentiert.
-    F10-Menüs sind noch nicht implementiert.
-
----
-
-## Persistenzdesign
+## 21. Persistenzdesign
 
 Die Kampagne soll später persistent werden.
 
@@ -498,6 +693,9 @@ Persistenz soll speichern:
 
 - Besitzstatus von Basen
 - Besitzstatus von Zonen
+- Capture-Pressure
+- Capture-Progress
+- Capture-Events
 - Airbase-Klassifizierung
 - aktive Missionen
 - abgeschlossene Missionen
@@ -509,8 +707,9 @@ Persistenz soll speichern:
 
 Aktueller Stand:
 
-    In-Memory-Persistenz ist vorbereitet.
-    Datei-Persistenz ist noch nicht getestet.
+    PersistenceSystem-Grundstruktur ist vorhanden.
+    Modul lädt und startet.
+    Datei-Persistenz ist noch nicht produktiv getestet.
 
 Wichtig:
 
@@ -518,7 +717,7 @@ Wichtig:
 
 ---
 
-## Kampagnenstart auf Akrotiri
+## 22. Kampagnenstart auf Akrotiri
 
 Akrotiri ist der zentrale blaue Startpunkt.
 
@@ -529,16 +728,17 @@ Fachliche Rolle:
 - erster Logistikhub
 - Ausgangspunkt für Luftoperationen
 - Ausgangspunkt für spätere See-/Luftbrücke
-- nicht initial capturable
-- nicht erstes feindliches Missionsziel
+- nicht initiales rotes Missionsziel
 
-Aktuell im Mission Editor vorhanden:
+Aktuell bestätigt:
 
-    erster F/A-18C Lot 20 Client-Slot auf Akrotiri
+    Akrotiri wird als Blue-Startbasis erkannt.
+    Akrotiri wird als STRATEGIC_AIRFIELD klassifiziert.
+    erster F/A-18C Lot 20 Client-Slot ist im Mission Editor vorhanden.
 
 ---
 
-## Roter Ausgangsraum
+## 23. Roter Ausgangsraum
 
 Der rote Ausgangsraum umfasst zu Beginn das syrische Festland.
 
@@ -552,19 +752,23 @@ Fachliche Rolle:
 - rote Missionsziele
 - spätere Capture-Ziele
 
-Aktuell noch nicht gebaut:
+Aktuell bestätigt:
 
-- keine rote Frontlinie
-- keine rote IADS-Struktur
-- keine roten Template-Gruppen
-- keine roten Logistikobjekte
-- keine roten Mission Targets
+    18 rote strategische Airbase-Kandidaten sind vorbereitet.
+    24 rote Logistics Hubs sind vorbereitet.
+    MissionGenerator erzeugt rote Zielmissionen state-only.
 
-Diese Elemente werden erst ergänzt, wenn die Airbase- und State-Grundlage stabil ist.
+Noch nicht gebaut:
+
+- produktive rote Frontlinie
+- produktive rote IADS-Struktur
+- rote Template-Gruppen
+- echte rote AI-Flüge
+- echte rote Gegenoffensive
 
 ---
 
-## Kampagnenfortschritt
+## 24. Kampagnenfortschritt
 
 Kampagnenfortschritt soll später nicht nur über zerstörte Einheiten entstehen.
 
@@ -573,6 +777,8 @@ Mögliche Fortschrittsfaktoren:
 - Airbase-Zustand
 - Zone-Zustand
 - Missionserfolg
+- Capture-Pressure
+- Capture-Progress
 - Logistiklieferungen
 - FOB-Aufbau
 - IADS-Schäden
@@ -580,18 +786,25 @@ Mögliche Fortschrittsfaktoren:
 - Capture-Ereignisse
 - persistente Zustandsänderungen
 
+Aktueller Stand:
+
+    Missionen können aktiviert werden.
+    Capture-Pressure und Capture-Progress sind vorbereitet.
+    Missionserfolge werden noch nicht automatisch ausgewertet.
+    Capture-Fortschritt wird noch nicht produktiv durch Missionserfolge verändert.
+
 ---
 
-## Nicht-Ziele im aktuellen Stand
+## 25. Nicht-Ziele im aktuellen Stand
 
 Aktuell wird bewusst nicht gebaut:
 
 - keine vollständige Kampagnenstory
 - keine komplette rote Frontlinie
 - keine komplette Syria-Befüllung
-- keine komplette IADS-Struktur
-- keine vollständige CTLD-Logistik
-- keine F10-Menüs
+- keine produktive IADS-Struktur
+- keine produktive CTLD-Logistik
+- keine echten MOOSE-Spawns
 - keine produktive Persistenz
 - keine automatische `.miz`-Generierung
 - keine Multiplayer-Synchronisation
@@ -599,43 +812,62 @@ Aktuell wird bewusst nicht gebaut:
 
 Grund:
 
-    Zuerst muss die technische Grundlage stabil bleiben.
-    Danach muss die Airbase-Klassifizierung gelöst werden.
+    Zuerst muss die state-first Runtime-Grundlage stabil bleiben.
+    Danach müssen Sichtbarkeit, Debug, Missionserfolg und Persistenz kontrolliert aufgebaut werden.
 
 ---
 
-## Nächster Kampagnendesign-Schritt
+## 26. Nächster Kampagnendesign-Schritt
 
 Der nächste fachliche und technische Schritt ist:
 
-    Airbase-Klassifizierung
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+
+Empfohlene Datei:
+
+    src/ui/tc_f10_menu.lua
 
 Warum:
 
-Der Kampagnenzustand hängt davon ab, welche DCS-Airbase-Objekte echte strategische Kampagnenbasen sind.
-
-Ohne diese Klassifizierung wären Capture, Missionen, Logistik und AI fehleranfällig.
+    CaptureSystem v0.2.1 erzeugt jetzt Pressure- und Progress-Daten.
+    Diese Daten sind im State vorhanden.
+    Ohne F10-/Debug-Sichtbarkeit sind weitere Capture- und Missionseffekt-Tests schwer bewertbar.
+    F10Menu ist stabil und bereits getestet.
 
 Ziel:
 
-- strategische Airfields identifizieren
-- Secondary Airfields erkennen
-- Heliports erkennen
-- Helipads erkennen
-- Medical Pads erkennen
-- FARPs erkennen
-- Unknown-Objekte zurückstellen
-- Akrotiri korrekt als Blue Start Base markieren
-- rote strategische Basen für spätere Kampagnenlogik vorbereiten
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
+- Capture-Pressure und Capture-Progress lesbar machen
+- weiterhin state-only bleiben
+- keine echten Spawns auslösen
+- keine CTLD-Aktionen auslösen
+- keine Skynet-Aktionen auslösen
 
 ---
 
-## Aktueller Status
+## 27. Aktueller Status
 
 Das Kampagnendesign ist als dynamisches System angelegt.
 
-Die erste technische DCS-Prüfung ist bestanden.
+Die state-first Runtime-Grundlage ist bestanden.
 
 Die Kampagne ist noch nicht spielbar.
 
-Der nächste notwendige Schritt ist die Airbase-Klassifizierung im World-System.
+Aktuelle Fähigkeit:
+
+- Airbase-Objekte werden klassifiziert.
+- relevante Kampagnenzonen werden erzeugt.
+- Capture-Ziele werden erkannt.
+- Capture-Pressure und Capture-Progress werden vorbereitet.
+- Logistics Hubs werden erzeugt.
+- FOB-Kandidaten und erste Blue-FOBs werden erzeugt.
+- Missionen inklusive FOB-Support werden erzeugt.
+- Missionen können über F10 direkt ausgewählt und aktiviert werden.
+- AI-CAP-State wird vorbereitet.
+- Main und Loader starten sauber.
+
+Nächster notwendiger Schritt:
+
+    Capture-/Pressure-Sichtbarkeit im F10-Menü.
