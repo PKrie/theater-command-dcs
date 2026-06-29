@@ -2,29 +2,34 @@
 -- File: src/campaign/tc_capture_system.lua
 --
 -- Purpose:
---   Strategic ownership and capture state management.
+-- Strategic ownership, capture pressure and capture state management.
 --
 -- Current focus:
---   Airbase Scanner and Zone Factory now distinguish strategic campaign zones
---   from helipads, medical pads, tactical pads and unknown airbase-like objects.
---   The Capture System must therefore only allow capture logic on proper
---   campaign objectives.
+-- MissionGenerator v0.2.2 can activate missions state-only and stores
+-- mission effects, progress and reserved execution hooks. The Capture System
+-- now accepts mission effects as capture pressure and tracks zone progress
+-- without triggering real MOOSE, CTLD, Skynet or persistence execution.
 --
 -- Version:
---   0.2.0
+-- 0.2.1
 --
 -- Responsibilities:
---   - manage base and zone ownership
---   - restrict capture logic to strategic and secondary campaign objectives
---   - prevent medical pads, helipads, tactical pads and unknown objects from
---     becoming strategic capture targets
---   - keep linked airbase and zone ownership synchronized
---   - store capture events for persistence, debug and later AI reactions
---   - expose filtered capture target lists for missions, AI and UI
+-- - manage base and zone ownership
+-- - restrict capture logic to strategic and secondary campaign objectives
+-- - prevent medical pads, helipads, tactical pads and unknown objects from
+--   becoming strategic capture targets
+-- - keep linked airbase and zone ownership synchronized
+-- - store capture events for persistence, debug and later AI reactions
+-- - expose filtered capture target lists for missions, AI and UI
+-- - store capture pressure per zone and owner
+-- - convert completed mission effects into state-only capture pressure
+-- - track capture progress and contested zones
+-- - prepare completion hooks without executing live spawns
 --
 -- Vendor note:
---   This file does not directly call MIST, MOOSE, CTLD or Skynet IADS.
---   It consumes Theater Command state produced by the World systems.
+-- This file does not directly call MIST, MOOSE, CTLD or Skynet IADS.
+-- It consumes Theater Command state produced by World, Mission and Logistics
+-- systems. All capture changes remain state-only.
 
 TC = TC or {}
 TC.modules = TC.modules or {}
@@ -36,7 +41,7 @@ local CaptureSystem = {}
 CaptureSystem.name = "tc_capture_system"
 CaptureSystem.displayName = "Capture System"
 CaptureSystem.path = "src/campaign/tc_capture_system.lua"
-CaptureSystem.version = "0.2.0"
+CaptureSystem.version = "0.2.1"
 
 CaptureSystem.loaded = true
 CaptureSystem.started = false
@@ -46,6 +51,12 @@ CaptureSystem.failed = false
 CaptureSystem.lastUpdateTime = 0
 CaptureSystem.captureEvents = {}
 CaptureSystem.lastEligibilitySummary = nil
+CaptureSystem.lastPressureSummary = nil
+CaptureSystem.lastMissionEffectSummary = nil
+
+CaptureSystem.defaultCaptureThreshold = 100
+CaptureSystem.defaultContestedThreshold = 25
+CaptureSystem.defaultDecayPerUpdate = 0
 
 CaptureSystem.captureClasses = {
     STRATEGIC_AIRFIELD = "STRATEGIC_AIRFIELD",
@@ -72,6 +83,15 @@ CaptureSystem.excludedZoneClasses = {
     TACTICAL_PAD_ZONE = true,
     UNKNOWN_ZONE = true,
     UNKNOWN_AIRBASE_OBJECT_ZONE = true
+}
+
+CaptureSystem.pressureSources = {
+    MANUAL = "MANUAL",
+    MISSION_EFFECT = "MISSION_EFFECT",
+    MISSION_COMPLETED = "MISSION_COMPLETED",
+    AI_DIRECTOR = "AI_DIRECTOR",
+    LOGISTICS = "LOGISTICS",
+    SYSTEM = "SYSTEM"
 }
 
 local function getConfig()
@@ -186,6 +206,7 @@ local function normalizeName(value)
     end
 
     local normalized = tostring(value)
+
     normalized = string.upper(normalized)
     normalized = string.gsub(normalized, "^%s*(.-)%s*$", "%1")
     normalized = string.gsub(normalized, "[%-/]+", "_")
@@ -240,8 +261,7 @@ local function copyValue(value, visited)
     for key, childValue in pairs(value) do
         if type(childValue) ~= "function"
             and type(childValue) ~= "userdata"
-            and type(childValue) ~= "thread"
-        then
+            and type(childValue) ~= "thread" then
             result[copyValue(key, visited)] = copyValue(childValue, visited)
         end
     end
@@ -249,6 +269,24 @@ local function copyValue(value, visited)
     visited[value] = nil
 
     return result
+end
+
+local function clamp(value, minimum, maximum)
+    local numeric = tonumber(value)
+
+    if numeric == nil then
+        numeric = minimum or 0
+    end
+
+    if type(minimum) == "number" and numeric < minimum then
+        return minimum
+    end
+
+    if type(maximum) == "number" and numeric > maximum then
+        return maximum
+    end
+
+    return numeric
 end
 
 local function getConstant(categoryName, keyName, fallback)
@@ -321,12 +359,25 @@ local function ensureCampaignTables()
     state.Campaign.capture.enabled = true
     state.Campaign.capture.initialized = state.Campaign.capture.initialized == true
     state.Campaign.capture.lastUpdateTime = state.Campaign.capture.lastUpdateTime or 0
+
     state.Campaign.capture.captureEligibleBases = state.Campaign.capture.captureEligibleBases or {}
     state.Campaign.capture.captureEligibleZones = state.Campaign.capture.captureEligibleZones or {}
     state.Campaign.capture.nonCaptureBases = state.Campaign.capture.nonCaptureBases or {}
     state.Campaign.capture.nonCaptureZones = state.Campaign.capture.nonCaptureZones or {}
+
     state.Campaign.capture.events = state.Campaign.capture.events or {}
     state.Campaign.capture.statistics = state.Campaign.capture.statistics or {}
+
+    state.Campaign.capture.pressure = state.Campaign.capture.pressure or {}
+    state.Campaign.capture.progress = state.Campaign.capture.progress or {}
+    state.Campaign.capture.missionEffects = state.Campaign.capture.missionEffects or {}
+    state.Campaign.capture.appliedMissionEffects = state.Campaign.capture.appliedMissionEffects or {}
+    state.Campaign.capture.completionHooks = state.Campaign.capture.completionHooks or {}
+
+    state.Campaign.capture.thresholds = state.Campaign.capture.thresholds or {}
+    state.Campaign.capture.thresholds.capture = state.Campaign.capture.thresholds.capture or CaptureSystem.defaultCaptureThreshold
+    state.Campaign.capture.thresholds.contested = state.Campaign.capture.thresholds.contested or CaptureSystem.defaultContestedThreshold
+    state.Campaign.capture.thresholds.decayPerUpdate = state.Campaign.capture.thresholds.decayPerUpdate or CaptureSystem.defaultDecayPerUpdate
 
     state.Bases = state.Bases or {}
     state.Zones = state.Zones or {}
@@ -364,6 +415,14 @@ local function getZoneRegistry()
     end
 
     return {}
+end
+
+local function getMissionGenerator()
+    if TC.Missions == nil then
+        return nil
+    end
+
+    return TC.Missions.Generator
 end
 
 local function markDirty(reason)
@@ -443,20 +502,22 @@ local function findRecordByKeyOrName(registry, keyOrName)
     local normalizedSearch = normalizeName(keyOrName)
 
     for key, record in pairs(registry) do
-        if record.key == keyOrName then
-            return record, key
-        end
+        if type(record) == "table" then
+            if record.key == keyOrName then
+                return record, key
+            end
 
-        if record.normalizedName == normalizedSearch then
-            return record, key
-        end
+            if record.normalizedName == normalizedSearch then
+                return record, key
+            end
 
-        if normalizeName(record.name) == normalizedSearch then
-            return record, key
-        end
+            if normalizeName(record.name) == normalizedSearch then
+                return record, key
+            end
 
-        if normalizeName(record.displayName) == normalizedSearch then
-            return record, key
+            if normalizeName(record.displayName) == normalizedSearch then
+                return record, key
+            end
         end
     end
 
@@ -560,8 +621,7 @@ local function isExcludedBaseCaptureTarget(record)
         or record.isMedicalPad == true
         or record.isFarp == true
         or record.isTacticalPad == true
-        or record.isUnknownAirbaseObject == true
-    then
+        or record.isUnknownAirbaseObject == true then
         return true
     end
 
@@ -697,6 +757,196 @@ local function updateOwnerCounters(container)
     return true
 end
 
+local function ensureZonePressureRecord(zoneKey)
+    local state = ensureCampaignTables()
+
+    if state == nil or zoneKey == nil then
+        return nil
+    end
+
+    state.Campaign.capture.pressure[zoneKey] = state.Campaign.capture.pressure[zoneKey] or {
+        zoneKey = zoneKey,
+        blue = 0,
+        red = 0,
+        neutral = 0,
+        contested = 0,
+        total = 0,
+        dominantOwner = getOwnerUnknown(),
+        lastSource = nil,
+        lastMissionKey = nil,
+        updatedAt = getCurrentTime()
+    }
+
+    return state.Campaign.capture.pressure[zoneKey]
+end
+
+local function ensureZoneProgressRecord(zoneKey)
+    local state = ensureCampaignTables()
+
+    if state == nil or zoneKey == nil then
+        return nil
+    end
+
+    state.Campaign.capture.progress[zoneKey] = state.Campaign.capture.progress[zoneKey] or {
+        zoneKey = zoneKey,
+        owner = getOwnerUnknown(),
+        previousOwner = getOwnerUnknown(),
+        dominantOwner = getOwnerUnknown(),
+        percent = 0,
+        bluePressure = 0,
+        redPressure = 0,
+        neutralPressure = 0,
+        contestedPressure = 0,
+        threshold = state.Campaign.capture.thresholds.capture or CaptureSystem.defaultCaptureThreshold,
+        contestedThreshold = state.Campaign.capture.thresholds.contested or CaptureSystem.defaultContestedThreshold,
+        status = "STABLE",
+        captureReady = false,
+        updatedAt = getCurrentTime()
+    }
+
+    return state.Campaign.capture.progress[zoneKey]
+end
+
+local function getPressureValueForOwner(pressureRecord, owner)
+    if pressureRecord == nil then
+        return 0
+    end
+
+    if owner == getOwnerBlue() then
+        return pressureRecord.blue or 0
+    end
+
+    if owner == getOwnerRed() then
+        return pressureRecord.red or 0
+    end
+
+    if owner == getOwnerNeutral() then
+        return pressureRecord.neutral or 0
+    end
+
+    if owner == getOwnerContested() then
+        return pressureRecord.contested or 0
+    end
+
+    return 0
+end
+
+local function setPressureValueForOwner(pressureRecord, owner, value)
+    if pressureRecord == nil then
+        return false
+    end
+
+    local safeValue = clamp(value, 0, nil)
+
+    if owner == getOwnerBlue() then
+        pressureRecord.blue = safeValue
+        return true
+    end
+
+    if owner == getOwnerRed() then
+        pressureRecord.red = safeValue
+        return true
+    end
+
+    if owner == getOwnerNeutral() then
+        pressureRecord.neutral = safeValue
+        return true
+    end
+
+    if owner == getOwnerContested() then
+        pressureRecord.contested = safeValue
+        return true
+    end
+
+    return false
+end
+
+local function updatePressureDerivedValues(zoneKey)
+    local state = ensureCampaignTables()
+
+    if state == nil or zoneKey == nil then
+        return nil
+    end
+
+    local zoneRecord = state.Zones.registry[zoneKey]
+    local pressureRecord = ensureZonePressureRecord(zoneKey)
+    local progressRecord = ensureZoneProgressRecord(zoneKey)
+
+    if pressureRecord == nil or progressRecord == nil then
+        return nil
+    end
+
+    local bluePressure = pressureRecord.blue or 0
+    local redPressure = pressureRecord.red or 0
+    local neutralPressure = pressureRecord.neutral or 0
+    local contestedPressure = pressureRecord.contested or 0
+    local dominantOwner = getOwnerUnknown()
+    local dominantPressure = 0
+
+    if bluePressure > dominantPressure then
+        dominantOwner = getOwnerBlue()
+        dominantPressure = bluePressure
+    end
+
+    if redPressure > dominantPressure then
+        dominantOwner = getOwnerRed()
+        dominantPressure = redPressure
+    end
+
+    if neutralPressure > dominantPressure then
+        dominantOwner = getOwnerNeutral()
+        dominantPressure = neutralPressure
+    end
+
+    if contestedPressure > dominantPressure then
+        dominantOwner = getOwnerContested()
+        dominantPressure = contestedPressure
+    end
+
+    local currentOwner = zoneRecord and getRecordOwner(zoneRecord) or getOwnerUnknown()
+    local threshold = state.Campaign.capture.thresholds.capture or CaptureSystem.defaultCaptureThreshold
+    local contestedThreshold = state.Campaign.capture.thresholds.contested or CaptureSystem.defaultContestedThreshold
+    local percent = clamp(math.floor((dominantPressure / threshold) * 100), 0, 100)
+
+    pressureRecord.total = bluePressure + redPressure + neutralPressure + contestedPressure
+    pressureRecord.dominantOwner = dominantOwner
+    pressureRecord.updatedAt = getCurrentTime()
+
+    progressRecord.owner = currentOwner
+    progressRecord.previousOwner = progressRecord.previousOwner or currentOwner
+    progressRecord.dominantOwner = dominantOwner
+    progressRecord.percent = percent
+    progressRecord.bluePressure = bluePressure
+    progressRecord.redPressure = redPressure
+    progressRecord.neutralPressure = neutralPressure
+    progressRecord.contestedPressure = contestedPressure
+    progressRecord.threshold = threshold
+    progressRecord.contestedThreshold = contestedThreshold
+    progressRecord.captureReady = dominantPressure >= threshold and dominantOwner ~= currentOwner
+    progressRecord.updatedAt = getCurrentTime()
+
+    if progressRecord.captureReady == true then
+        progressRecord.status = "CAPTURE_READY"
+    elseif dominantOwner ~= getOwnerUnknown()
+        and dominantOwner ~= currentOwner
+        and dominantPressure >= contestedThreshold then
+        progressRecord.status = "CONTESTED"
+    elseif pressureRecord.total > 0 then
+        progressRecord.status = "PRESSURED"
+    else
+        progressRecord.status = "STABLE"
+    end
+
+    if zoneRecord ~= nil then
+        zoneRecord.capturePressure = copyValue(pressureRecord)
+        zoneRecord.captureProgress = copyValue(progressRecord)
+        zoneRecord.updatedAt = getCurrentTime()
+        syncWorldZone(zoneRecord)
+    end
+
+    return progressRecord
+end
+
 local function updateCaptureEligibility()
     local state = ensureCampaignTables()
 
@@ -736,6 +986,9 @@ local function updateCaptureEligibility()
             state.Campaign.capture.captureEligibleZones[key] = zoneRecord
             zoneOwnerSummary.total = zoneOwnerSummary.total + 1
             addOwnerCount(zoneOwnerSummary, getRecordOwner(zoneRecord))
+            ensureZonePressureRecord(key)
+            ensureZoneProgressRecord(key)
+            updatePressureDerivedValues(key)
         else
             state.Campaign.capture.nonCaptureZones[key] = {
                 key = zoneRecord.key or key,
@@ -747,17 +1000,19 @@ local function updateCaptureEligibility()
         end
     end
 
-    state.Campaign.capture.statistics = {
-        bases = baseOwnerSummary,
-        zones = zoneOwnerSummary,
-        allBases = countTableKeys(getBaseRegistry()),
-        allZones = countTableKeys(getZoneRegistry()),
-        eligibleBases = baseOwnerSummary.total,
-        eligibleZones = zoneOwnerSummary.total,
-        nonCaptureBases = countTableKeys(state.Campaign.capture.nonCaptureBases),
-        nonCaptureZones = countTableKeys(state.Campaign.capture.nonCaptureZones),
-        updatedAt = getCurrentTime()
-    }
+    state.Campaign.capture.statistics = state.Campaign.capture.statistics or {}
+    state.Campaign.capture.statistics.bases = baseOwnerSummary
+    state.Campaign.capture.statistics.zones = zoneOwnerSummary
+    state.Campaign.capture.statistics.allBases = countTableKeys(getBaseRegistry())
+    state.Campaign.capture.statistics.allZones = countTableKeys(getZoneRegistry())
+    state.Campaign.capture.statistics.eligibleBases = baseOwnerSummary.total
+    state.Campaign.capture.statistics.eligibleZones = zoneOwnerSummary.total
+    state.Campaign.capture.statistics.nonCaptureBases = countTableKeys(state.Campaign.capture.nonCaptureBases)
+    state.Campaign.capture.statistics.nonCaptureZones = countTableKeys(state.Campaign.capture.nonCaptureZones)
+    state.Campaign.capture.statistics.pressureRecords = countTableKeys(state.Campaign.capture.pressure)
+    state.Campaign.capture.statistics.progressRecords = countTableKeys(state.Campaign.capture.progress)
+    state.Campaign.capture.statistics.appliedMissionEffects = countTableKeys(state.Campaign.capture.appliedMissionEffects)
+    state.Campaign.capture.statistics.updatedAt = getCurrentTime()
 
     CaptureSystem.lastEligibilitySummary = state.Campaign.capture.statistics
 
@@ -866,6 +1121,119 @@ local function getLinkedZonesFromBase(baseRecord)
     return result
 end
 
+local function getMissionTargetZoneKey(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return nil
+    end
+
+    if missionRecord.targetZoneKey ~= nil then
+        return missionRecord.targetZoneKey
+    end
+
+    if missionRecord.targetZone ~= nil then
+        return missionRecord.targetZone
+    end
+
+    if missionRecord.targetBaseKey ~= nil then
+        for key, zoneRecord in pairs(getZoneRegistry()) do
+            if zoneRecord.linkedAirbaseKey == missionRecord.targetBaseKey then
+                return key
+            end
+        end
+    end
+
+    return nil
+end
+
+local function getCapturePressureFromMission(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return 0
+    end
+
+    local effect = missionRecord.effect or {}
+    local pressure = 0
+
+    if type(effect.capturePressure) == "number" then
+        pressure = pressure + effect.capturePressure
+    end
+
+    if type(effect.airbasePressure) == "number" then
+        pressure = pressure + effect.airbasePressure
+    end
+
+    if type(effect.friendlyGroundSupport) == "number" then
+        pressure = pressure + math.floor(effect.friendlyGroundSupport / 2)
+    end
+
+    if type(effect.logisticsDisruption) == "number" then
+        pressure = pressure + math.floor(effect.logisticsDisruption / 2)
+    end
+
+    if type(effect.iadsSuppressionPressure) == "number" then
+        pressure = pressure + math.floor(effect.iadsSuppressionPressure / 2)
+    end
+
+    if pressure <= 0 then
+        if missionRecord.type == "AIRBASE_ATTACK" then
+            pressure = 20
+        elseif missionRecord.type == "STRIKE" then
+            pressure = 12
+        elseif missionRecord.type == "CAS" then
+            pressure = 15
+        elseif missionRecord.type == "SEAD" or missionRecord.type == "DEAD" or missionRecord.type == "IADS_SUPPRESSION" then
+            pressure = 10
+        elseif missionRecord.type == "INTERDICTION" then
+            pressure = 10
+        elseif missionRecord.type == "RECON" then
+            pressure = 5
+        elseif missionRecord.type == "FOB_SUPPORT" or missionRecord.type == "LOGISTICS" then
+            pressure = 5
+        end
+    end
+
+    return clamp(pressure, 0, nil)
+end
+
+local function getMissionPressureOwner(missionRecord)
+    if type(missionRecord) ~= "table" then
+        return getOwnerBlue()
+    end
+
+    if isValidOwner(missionRecord.owner) == true then
+        return missionRecord.owner
+    end
+
+    return getOwnerBlue()
+end
+
+local function registerCompletionHook(hookData)
+    local state = ensureCampaignTables()
+
+    if state == nil or type(hookData) ~= "table" then
+        return false
+    end
+
+    local hookKey = hookData.key
+        or hookData.missionKey
+        or ("HOOK_" .. tostring(countTableKeys(state.Campaign.capture.completionHooks) + 1))
+
+    state.Campaign.capture.completionHooks[hookKey] = {
+        key = hookKey,
+        missionKey = hookData.missionKey,
+        zoneKey = hookData.zoneKey,
+        owner = hookData.owner,
+        pressure = hookData.pressure or 0,
+        stateOnly = true,
+        spawnTriggered = false,
+        status = hookData.status or "RESERVED",
+        reason = hookData.reason or "capture_completion_hook_reserved",
+        createdAt = getCurrentTime(),
+        updatedAt = getCurrentTime()
+    }
+
+    return true
+end
+
 function CaptureSystem.refreshCounters()
     return refreshAllCounters()
 end
@@ -959,7 +1327,6 @@ function CaptureSystem.setBaseOwner(keyOrName, newOwner, reason, options)
 
     state.Bases.registry[registryKey] = record
     syncWorldBase(record)
-
     refreshAllCounters()
 
     if changed == true then
@@ -1014,6 +1381,16 @@ function CaptureSystem.setZoneOwner(keyOrName, newOwner, reason, options)
 
     state.Zones.registry[registryKey] = record
     syncWorldZone(record)
+
+    local progressRecord = ensureZoneProgressRecord(record.key or registryKey)
+
+    if progressRecord ~= nil then
+        progressRecord.previousOwner = previousOwner
+        progressRecord.owner = newOwner
+        progressRecord.status = "OWNER_CHANGED"
+        progressRecord.captureReady = false
+        progressRecord.updatedAt = getCurrentTime()
+    end
 
     refreshAllCounters()
 
@@ -1117,6 +1494,573 @@ function CaptureSystem.setLinkedZoneOwnerFromBase(baseKeyOrName, reason)
         changed = changed,
         skipped = skipped
     }
+end
+
+function CaptureSystem.addCapturePressure(zoneKeyOrName, owner, amount, source, options)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return false, "state_unavailable"
+    end
+
+    local zoneRecord, zoneRegistryKey = findRecordByKeyOrName(state.Zones.registry, zoneKeyOrName)
+
+    if zoneRecord == nil then
+        return false, "zone_not_found"
+    end
+
+    local eligible, eligibilityReason = canCaptureZoneRecord(zoneRecord)
+
+    if eligible ~= true then
+        return false, eligibilityReason
+    end
+
+    local pressureOwner = owner or getOwnerBlue()
+
+    if isValidOwner(pressureOwner) ~= true then
+        return false, "invalid_owner"
+    end
+
+    local pressureAmount = clamp(amount or 0, 0, nil)
+
+    if pressureAmount <= 0 then
+        return false, "invalid_pressure_amount"
+    end
+
+    local pressureRecord = ensureZonePressureRecord(zoneRecord.key or zoneRegistryKey)
+
+    if pressureRecord == nil then
+        return false, "pressure_record_unavailable"
+    end
+
+    local previousPressure = getPressureValueForOwner(pressureRecord, pressureOwner)
+    setPressureValueForOwner(pressureRecord, pressureOwner, previousPressure + pressureAmount)
+
+    pressureRecord.lastSource = source or CaptureSystem.pressureSources.MANUAL
+    pressureRecord.lastMissionKey = options and options.missionKey or nil
+    pressureRecord.lastReason = options and options.reason or "capture_pressure_added"
+    pressureRecord.updatedAt = getCurrentTime()
+
+    local progressRecord = updatePressureDerivedValues(zoneRecord.key or zoneRegistryKey)
+
+    addCaptureEvent({
+        type = "CAPTURE_PRESSURE_ADDED",
+        targetType = "ZONE",
+        key = zoneRecord.key,
+        name = zoneRecord.name,
+        owner = pressureOwner,
+        amount = pressureAmount,
+        previousPressure = previousPressure,
+        newPressure = getPressureValueForOwner(pressureRecord, pressureOwner),
+        source = source or CaptureSystem.pressureSources.MANUAL,
+        missionKey = options and options.missionKey or nil,
+        progressPercent = progressRecord and progressRecord.percent or 0,
+        progressStatus = progressRecord and progressRecord.status or "UNKNOWN",
+        stateOnly = true
+    })
+
+    markDirty("capture_pressure_added")
+
+    logInfo(
+        "Capture pressure added: zone="
+        .. tostring(zoneRecord.name or zoneRecord.key)
+        .. " owner="
+        .. tostring(pressureOwner)
+        .. " amount="
+        .. tostring(pressureAmount)
+        .. " progress="
+        .. tostring(progressRecord and progressRecord.percent or 0)
+        .. "%"
+    )
+
+    return true, {
+        zone = zoneRecord,
+        pressure = pressureRecord,
+        progress = progressRecord
+    }
+end
+
+function CaptureSystem.setCapturePressure(zoneKeyOrName, owner, amount, source, options)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return false, "state_unavailable"
+    end
+
+    local zoneRecord, zoneRegistryKey = findRecordByKeyOrName(state.Zones.registry, zoneKeyOrName)
+
+    if zoneRecord == nil then
+        return false, "zone_not_found"
+    end
+
+    local eligible, eligibilityReason = canCaptureZoneRecord(zoneRecord)
+
+    if eligible ~= true then
+        return false, eligibilityReason
+    end
+
+    local pressureOwner = owner or getOwnerBlue()
+
+    if isValidOwner(pressureOwner) ~= true then
+        return false, "invalid_owner"
+    end
+
+    local pressureRecord = ensureZonePressureRecord(zoneRecord.key or zoneRegistryKey)
+
+    if pressureRecord == nil then
+        return false, "pressure_record_unavailable"
+    end
+
+    setPressureValueForOwner(pressureRecord, pressureOwner, clamp(amount or 0, 0, nil))
+
+    pressureRecord.lastSource = source or CaptureSystem.pressureSources.MANUAL
+    pressureRecord.lastMissionKey = options and options.missionKey or nil
+    pressureRecord.lastReason = options and options.reason or "capture_pressure_set"
+    pressureRecord.updatedAt = getCurrentTime()
+
+    local progressRecord = updatePressureDerivedValues(zoneRecord.key or zoneRegistryKey)
+
+    markDirty("capture_pressure_set")
+
+    return true, {
+        zone = zoneRecord,
+        pressure = pressureRecord,
+        progress = progressRecord
+    }
+end
+
+function CaptureSystem.clearCapturePressure(zoneKeyOrName, reason)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return false, "state_unavailable"
+    end
+
+    local zoneRecord, zoneRegistryKey = findRecordByKeyOrName(state.Zones.registry, zoneKeyOrName)
+
+    if zoneRecord == nil then
+        return false, "zone_not_found"
+    end
+
+    local zoneKey = zoneRecord.key or zoneRegistryKey
+
+    state.Campaign.capture.pressure[zoneKey] = {
+        zoneKey = zoneKey,
+        blue = 0,
+        red = 0,
+        neutral = 0,
+        contested = 0,
+        total = 0,
+        dominantOwner = getOwnerUnknown(),
+        lastSource = "CLEAR",
+        lastMissionKey = nil,
+        updatedAt = getCurrentTime()
+    }
+
+    state.Campaign.capture.progress[zoneKey] = {
+        zoneKey = zoneKey,
+        owner = getRecordOwner(zoneRecord),
+        previousOwner = getRecordOwner(zoneRecord),
+        dominantOwner = getOwnerUnknown(),
+        percent = 0,
+        bluePressure = 0,
+        redPressure = 0,
+        neutralPressure = 0,
+        contestedPressure = 0,
+        threshold = state.Campaign.capture.thresholds.capture or CaptureSystem.defaultCaptureThreshold,
+        contestedThreshold = state.Campaign.capture.thresholds.contested or CaptureSystem.defaultContestedThreshold,
+        status = "STABLE",
+        captureReady = false,
+        updatedAt = getCurrentTime()
+    }
+
+    zoneRecord.capturePressure = copyValue(state.Campaign.capture.pressure[zoneKey])
+    zoneRecord.captureProgress = copyValue(state.Campaign.capture.progress[zoneKey])
+    zoneRecord.updatedAt = getCurrentTime()
+
+    syncWorldZone(zoneRecord)
+
+    addCaptureEvent({
+        type = "CAPTURE_PRESSURE_CLEARED",
+        targetType = "ZONE",
+        key = zoneRecord.key,
+        name = zoneRecord.name,
+        reason = reason or "manual_capture_pressure_clear",
+        stateOnly = true
+    })
+
+    markDirty("capture_pressure_cleared")
+
+    return true, state.Campaign.capture.progress[zoneKey]
+end
+
+function CaptureSystem.getCapturePressure(zoneKeyOrName)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return nil
+    end
+
+    local zoneRecord, zoneRegistryKey = findRecordByKeyOrName(state.Zones.registry, zoneKeyOrName)
+
+    if zoneRecord == nil then
+        return nil
+    end
+
+    return ensureZonePressureRecord(zoneRecord.key or zoneRegistryKey)
+end
+
+function CaptureSystem.getCaptureProgress(zoneKeyOrName)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return nil
+    end
+
+    local zoneRecord, zoneRegistryKey = findRecordByKeyOrName(state.Zones.registry, zoneKeyOrName)
+
+    if zoneRecord == nil then
+        return nil
+    end
+
+    return updatePressureDerivedValues(zoneRecord.key or zoneRegistryKey)
+end
+
+function CaptureSystem.evaluateZoneCapture(zoneKeyOrName, options)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return false, "state_unavailable"
+    end
+
+    local zoneRecord, zoneRegistryKey = findRecordByKeyOrName(state.Zones.registry, zoneKeyOrName)
+
+    if zoneRecord == nil then
+        return false, "zone_not_found"
+    end
+
+    local zoneKey = zoneRecord.key or zoneRegistryKey
+    local progressRecord = updatePressureDerivedValues(zoneKey)
+
+    if progressRecord == nil then
+        return false, "progress_unavailable"
+    end
+
+    local evaluationOptions = options or {}
+
+    if progressRecord.captureReady ~= true then
+        return true, {
+            captured = false,
+            contested = progressRecord.status == "CONTESTED",
+            progress = progressRecord
+        }
+    end
+
+    if evaluationOptions.autoCapture ~= true then
+        registerCompletionHook({
+            key = "CAPTURE_READY_" .. tostring(zoneKey),
+            zoneKey = zoneKey,
+            owner = progressRecord.dominantOwner,
+            pressure = progressRecord.percent,
+            status = "READY",
+            reason = "capture_ready_state_only"
+        })
+
+        addCaptureEvent({
+            type = "CAPTURE_READY",
+            targetType = "ZONE",
+            key = zoneRecord.key,
+            name = zoneRecord.name,
+            owner = progressRecord.dominantOwner,
+            progressPercent = progressRecord.percent,
+            stateOnly = true
+        })
+
+        markDirty("capture_ready")
+
+        return true, {
+            captured = false,
+            ready = true,
+            progress = progressRecord
+        }
+    end
+
+    local success, result = CaptureSystem.setZoneOwner(
+        zoneKey,
+        progressRecord.dominantOwner,
+        evaluationOptions.reason or "capture_pressure_threshold_reached",
+        {
+            force = evaluationOptions.force == true
+        }
+    )
+
+    if success == true then
+        CaptureSystem.setLinkedBaseOwnerFromZone(zoneKey, "linked_zone_capture_pressure_threshold")
+        CaptureSystem.clearCapturePressure(zoneKey, "capture_completed_pressure_reset")
+
+        addCaptureEvent({
+            type = "ZONE_CAPTURED_BY_PRESSURE",
+            targetType = "ZONE",
+            key = result.key,
+            name = result.name,
+            newOwner = progressRecord.dominantOwner,
+            progressPercent = progressRecord.percent,
+            stateOnly = true
+        })
+    end
+
+    return success, {
+        captured = success == true,
+        zone = result,
+        progress = progressRecord
+    }
+end
+
+function CaptureSystem.applyMissionEffect(missionKeyOrRecord, options)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return false, "state_unavailable"
+    end
+
+    local missionRecord = nil
+
+    if type(missionKeyOrRecord) == "table" then
+        missionRecord = missionKeyOrRecord
+    else
+        local missionGenerator = getMissionGenerator()
+
+        if missionGenerator ~= nil and missionGenerator.getMission ~= nil then
+            missionRecord = missionGenerator.getMission(missionKeyOrRecord)
+        end
+    end
+
+    if type(missionRecord) ~= "table" then
+        return false, "mission_not_found"
+    end
+
+    if missionRecord.key == nil then
+        return false, "mission_key_missing"
+    end
+
+    if state.Campaign.capture.appliedMissionEffects[missionRecord.key] == true then
+        return false, "mission_effect_already_applied"
+    end
+
+    local zoneKey = getMissionTargetZoneKey(missionRecord)
+
+    if zoneKey == nil then
+        return false, "mission_target_zone_missing"
+    end
+
+    local zoneRecord = CaptureSystem.getZone(zoneKey)
+
+    if zoneRecord == nil then
+        return false, "target_zone_not_found"
+    end
+
+    local eligible, eligibilityReason = canCaptureZoneRecord(zoneRecord)
+
+    if eligible ~= true then
+        return false, eligibilityReason
+    end
+
+    local amount = getCapturePressureFromMission(missionRecord)
+
+    if amount <= 0 then
+        return false, "mission_has_no_capture_pressure"
+    end
+
+    local owner = getMissionPressureOwner(missionRecord)
+    local applyOptions = options or {}
+
+    local success, result = CaptureSystem.addCapturePressure(
+        zoneKey,
+        owner,
+        amount,
+        CaptureSystem.pressureSources.MISSION_EFFECT,
+        {
+            missionKey = missionRecord.key,
+            reason = applyOptions.reason or "mission_effect_applied_to_capture"
+        }
+    )
+
+    if success ~= true then
+        return false, result
+    end
+
+    state.Campaign.capture.appliedMissionEffects[missionRecord.key] = true
+    state.Campaign.capture.missionEffects[missionRecord.key] = {
+        missionKey = missionRecord.key,
+        missionType = missionRecord.type,
+        zoneKey = zoneKey,
+        owner = owner,
+        amount = amount,
+        stateOnly = true,
+        appliedAt = getCurrentTime(),
+        autoCapture = applyOptions.autoCapture == true
+    }
+
+    registerCompletionHook({
+        key = "MISSION_EFFECT_" .. tostring(missionRecord.key),
+        missionKey = missionRecord.key,
+        zoneKey = zoneKey,
+        owner = owner,
+        pressure = amount,
+        status = "APPLIED_STATE_ONLY",
+        reason = "mission_effect_capture_hook"
+    })
+
+    if applyOptions.autoEvaluate ~= false then
+        CaptureSystem.evaluateZoneCapture(zoneKey, {
+            autoCapture = applyOptions.autoCapture == true,
+            reason = "mission_effect_capture_evaluation"
+        })
+    end
+
+    CaptureSystem.lastMissionEffectSummary = state.Campaign.capture.missionEffects[missionRecord.key]
+
+    addCaptureEvent({
+        type = "MISSION_EFFECT_APPLIED_TO_CAPTURE",
+        targetType = "ZONE",
+        key = zoneRecord.key,
+        name = zoneRecord.name,
+        missionKey = missionRecord.key,
+        missionType = missionRecord.type,
+        owner = owner,
+        amount = amount,
+        stateOnly = true
+    })
+
+    markDirty("mission_effect_applied_to_capture")
+
+    logInfo(
+        "Mission effect applied to capture: mission="
+        .. tostring(missionRecord.key)
+        .. " zone="
+        .. tostring(zoneRecord.name or zoneRecord.key)
+        .. " owner="
+        .. tostring(owner)
+        .. " pressure="
+        .. tostring(amount)
+    )
+
+    return true, result
+end
+
+function CaptureSystem.applyCompletedMissionEffects(options)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return false, "state_unavailable"
+    end
+
+    local missionGenerator = getMissionGenerator()
+
+    if missionGenerator == nil or missionGenerator.getCompletedMissions == nil then
+        return false, "mission_generator_unavailable"
+    end
+
+    local completedMissions = missionGenerator.getCompletedMissions()
+    local applied = 0
+    local skipped = 0
+    local failed = 0
+
+    for _, missionRecord in pairs(completedMissions) do
+        if type(missionRecord) == "table" then
+            local success, reason = CaptureSystem.applyMissionEffect(missionRecord, options)
+
+            if success == true then
+                applied = applied + 1
+            elseif reason == "mission_effect_already_applied" then
+                skipped = skipped + 1
+            else
+                failed = failed + 1
+            end
+        end
+    end
+
+    CaptureSystem.lastMissionEffectSummary = {
+        applied = applied,
+        skipped = skipped,
+        failed = failed,
+        updatedAt = getCurrentTime()
+    }
+
+    logInfo(
+        "Completed mission effects processed: applied="
+        .. tostring(applied)
+        .. ", skipped="
+        .. tostring(skipped)
+        .. ", failed="
+        .. tostring(failed)
+    )
+
+    return true, CaptureSystem.lastMissionEffectSummary
+end
+
+function CaptureSystem.updateCaptureProgress(options)
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return false, "state_unavailable"
+    end
+
+    local updateOptions = options or {}
+    local updated = 0
+    local ready = 0
+    local contested = 0
+
+    updateCaptureEligibility()
+
+    for zoneKey, _ in pairs(state.Campaign.capture.captureEligibleZones) do
+        local progressRecord = updatePressureDerivedValues(zoneKey)
+
+        if progressRecord ~= nil then
+            updated = updated + 1
+
+            if progressRecord.captureReady == true then
+                ready = ready + 1
+
+                if updateOptions.autoEvaluate == true then
+                    CaptureSystem.evaluateZoneCapture(zoneKey, {
+                        autoCapture = updateOptions.autoCapture == true,
+                        reason = "capture_progress_update"
+                    })
+                end
+            elseif progressRecord.status == "CONTESTED" then
+                contested = contested + 1
+            end
+        end
+    end
+
+    CaptureSystem.lastPressureSummary = {
+        updated = updated,
+        ready = ready,
+        contested = contested,
+        pressureRecords = countTableKeys(state.Campaign.capture.pressure),
+        progressRecords = countTableKeys(state.Campaign.capture.progress),
+        updatedAt = getCurrentTime()
+    }
+
+    state.Campaign.capture.statistics.pressureUpdated = updated
+    state.Campaign.capture.statistics.captureReady = ready
+    state.Campaign.capture.statistics.contestedByPressure = contested
+    state.Campaign.capture.statistics.pressureRecords = countTableKeys(state.Campaign.capture.pressure)
+    state.Campaign.capture.statistics.progressRecords = countTableKeys(state.Campaign.capture.progress)
+
+    markDirty("capture_progress_updated")
+
+    logInfo(
+        "Capture progress updated: zones="
+        .. tostring(updated)
+        .. ", ready="
+        .. tostring(ready)
+        .. ", contested="
+        .. tostring(contested)
+    )
+
+    return true, CaptureSystem.lastPressureSummary
 end
 
 function CaptureSystem.captureBaseForBlue(keyOrName, reason)
@@ -1319,6 +2263,48 @@ function CaptureSystem.getContestedCaptureZones()
     return CaptureSystem.getCaptureEligibleZones(getOwnerContested())
 end
 
+function CaptureSystem.getCaptureReadyZones()
+    local state = ensureCampaignTables()
+    local result = {}
+
+    if state == nil then
+        return result
+    end
+
+    CaptureSystem.updateCaptureProgress({
+        autoEvaluate = false
+    })
+
+    for key, progressRecord in pairs(state.Campaign.capture.progress) do
+        if progressRecord.captureReady == true then
+            result[key] = progressRecord
+        end
+    end
+
+    return result
+end
+
+function CaptureSystem.getPressureContestedZones()
+    local state = ensureCampaignTables()
+    local result = {}
+
+    if state == nil then
+        return result
+    end
+
+    CaptureSystem.updateCaptureProgress({
+        autoEvaluate = false
+    })
+
+    for key, progressRecord in pairs(state.Campaign.capture.progress) do
+        if progressRecord.status == "CONTESTED" then
+            result[key] = progressRecord
+        end
+    end
+
+    return result
+end
+
 function CaptureSystem.restoreInitialOwnership()
     local state = ensureCampaignTables()
 
@@ -1343,6 +2329,12 @@ function CaptureSystem.restoreInitialOwnership()
         zoneRecord.updatedAt = getCurrentTime()
         syncWorldZone(zoneRecord)
     end
+
+    state.Campaign.capture.pressure = {}
+    state.Campaign.capture.progress = {}
+    state.Campaign.capture.appliedMissionEffects = {}
+    state.Campaign.capture.missionEffects = {}
+    state.Campaign.capture.completionHooks = {}
 
     refreshAllCounters()
     markDirty("initial_ownership_restored")
@@ -1389,7 +2381,10 @@ function CaptureSystem.validateState()
         eligibleBases = summary.eligibleBases or 0,
         eligibleZones = summary.eligibleZones or 0,
         nonCaptureBases = summary.nonCaptureBases or 0,
-        nonCaptureZones = summary.nonCaptureZones or 0
+        nonCaptureZones = summary.nonCaptureZones or 0,
+        pressureRecords = summary.pressureRecords or 0,
+        progressRecords = summary.progressRecords or 0,
+        appliedMissionEffects = summary.appliedMissionEffects or 0
     }
 end
 
@@ -1421,8 +2416,27 @@ function CaptureSystem.getEligibilitySummary()
     return state.Campaign.capture.statistics or {}
 end
 
+function CaptureSystem.getPressureSummary()
+    local state = ensureCampaignTables()
+
+    if state == nil then
+        return {}
+    end
+
+    CaptureSystem.updateCaptureProgress({
+        autoEvaluate = false
+    })
+
+    return CaptureSystem.lastPressureSummary or {
+        pressureRecords = countTableKeys(state.Campaign.capture.pressure),
+        progressRecords = countTableKeys(state.Campaign.capture.progress),
+        appliedMissionEffects = countTableKeys(state.Campaign.capture.appliedMissionEffects)
+    }
+end
+
 function CaptureSystem.getCaptureSummary()
     local summary = CaptureSystem.getEligibilitySummary()
+    local pressureSummary = CaptureSystem.getPressureSummary()
 
     return {
         name = CaptureSystem.name,
@@ -1431,6 +2445,11 @@ function CaptureSystem.getCaptureSummary()
         eligibleZones = summary.eligibleZones or 0,
         nonCaptureBases = summary.nonCaptureBases or 0,
         nonCaptureZones = summary.nonCaptureZones or 0,
+        pressureRecords = pressureSummary.pressureRecords or 0,
+        progressRecords = pressureSummary.progressRecords or 0,
+        captureReady = pressureSummary.ready or 0,
+        pressureContested = pressureSummary.contested or 0,
+        appliedMissionEffects = summary.appliedMissionEffects or 0,
         baseOwners = summary.bases,
         zoneOwners = summary.zones,
         eventCount = #CaptureSystem.captureEvents
@@ -1438,7 +2457,9 @@ function CaptureSystem.getCaptureSummary()
 end
 
 function CaptureSystem.start()
-    if CaptureSystem.started == true and CaptureSystem.finished == true and CaptureSystem.failed ~= true then
+    if CaptureSystem.started == true
+        and CaptureSystem.finished == true
+        and CaptureSystem.failed ~= true then
         logDebug("Capture system already started")
         return true
     end
@@ -1457,9 +2478,12 @@ function CaptureSystem.start()
 
     if state == nil then
         CaptureSystem.failed = true
+
         setModuleStatus("FAILED")
         setFeatureStatus(false)
+
         logError("Capture system failed: state_unavailable")
+
         return false
     end
 
@@ -1467,11 +2491,18 @@ function CaptureSystem.start()
 
     if valid ~= true then
         CaptureSystem.failed = true
+
         setModuleStatus("FAILED")
         setFeatureStatus(false)
+
         logError("Capture system validation failed: " .. tostring(result))
+
         return false
     end
+
+    CaptureSystem.updateCaptureProgress({
+        autoEvaluate = false
+    })
 
     state.Campaign.capture.initialized = true
     state.Campaign.capture.lastUpdateTime = getCurrentTime()
@@ -1493,6 +2524,15 @@ function CaptureSystem.start()
         .. tostring(result.nonCaptureZones)
     )
 
+    logInfo(
+        "Capture pressure summary: pressureRecords="
+        .. tostring(result.pressureRecords)
+        .. ", progressRecords="
+        .. tostring(result.progressRecords)
+        .. ", appliedMissionEffects="
+        .. tostring(result.appliedMissionEffects)
+    )
+
     logInfo("Capture system initialized")
 
     return true
@@ -1500,8 +2540,11 @@ end
 
 function CaptureSystem.stop()
     CaptureSystem.started = false
+
     setModuleStatus("STOPPED")
+
     logInfo("Capture system stopped")
+
     return true
 end
 
@@ -1532,6 +2575,11 @@ function CaptureSystem.summary()
         zoneCount = zones and zones.total or 0,
         eligibleBases = capture and capture.statistics and capture.statistics.eligibleBases or 0,
         eligibleZones = capture and capture.statistics and capture.statistics.eligibleZones or 0,
+        pressureRecords = capture and capture.statistics and capture.statistics.pressureRecords or 0,
+        progressRecords = capture and capture.statistics and capture.statistics.progressRecords or 0,
+        appliedMissionEffects = capture and capture.statistics and capture.statistics.appliedMissionEffects or 0,
+        lastPressureSummary = CaptureSystem.lastPressureSummary,
+        lastMissionEffectSummary = CaptureSystem.lastMissionEffectSummary,
         bases = bases,
         zones = zones,
         capture = capture
