@@ -2,11 +2,13 @@
 
 Diese Datei beschreibt das geplante IADS-System von **Theater Command DCS**.
 
-Die erste Kampagne trägt den Arbeitstitel:
+Erste Kampagne:
 
     Operation Levant Reclamation
 
-Die Kampagne wird auf der **Syria Map** aufgebaut.
+Map:
+
+    Syria
 
 Ausgangslage:
 
@@ -15,607 +17,856 @@ Ausgangslage:
 
 ---
 
-## Zweck des IADS-Systems
+## 1. Zweck des IADS-Systems
 
-Das IADS-System soll später die feindliche integrierte Luftverteidigung als Teil des Kampagnenzustands abbilden.
+Das IADS-System soll langfristig die gegnerische Luftverteidigung als dynamischen Kampagnenfaktor abbilden.
 
 IADS steht für:
 
     Integrated Air Defense System
 
-Theater Command DCS nutzt dafür später **Skynet IADS** als externes Framework.
+Im Projekt soll das IADS-System nicht nur eine statische Sammlung von SAM-Stellungen sein.
 
-Theater Command selbst soll nicht Skynet IADS ersetzen.
+Es soll später Einfluss haben auf:
 
-Theater Command soll eine Kampagnenschicht über Skynet IADS legen.
+- SEAD-Missionen
+- DEAD-Missionen
+- IADS_SUPPRESSION-Missionen
+- CAP-Planung
+- AI-Director-Entscheidungen
+- Missionsrisiko
+- sichere Luftkorridore
+- Airbase-Angriffe
+- Capture-Vorbereitung
+- Persistenz
+- Red-Verteidigungsfähigkeit
 
-Ziel ist, dass Luftverteidigung nicht nur statisch vorhanden ist, sondern kampagnenlogisch relevant wird.
+Aktuell ist das IADS-System noch nicht produktiv implementiert.
 
----
-
-## Grundprinzip
-
-Das zentrale Projektprinzip lautet:
-
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis
-
-Der Mission Editor stellt die Bühne bereit.
-
-Skynet IADS stellt die technische IADS-Funktion bereit.
-
-Theater Command verwaltet den Kampagnenzustand darüber.
-
-GitHub dokumentiert Struktur, Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
+Skynet IADS ist als Vendor geladen, aber noch nicht über eine eigene Theater-Command-IADS-Schicht angebunden.
 
 ---
 
-## Aktueller technischer Stand
+## 2. Aktueller technischer Stand
 
-Stand: 2026-06-16
+Stand:
 
-Aktueller IADS-Stand:
+    2026-06-29
 
-    Skynet IADS wird als Framework geladen.
-    Theater-Command-IADS-Schicht ist noch nicht aktiv implementiert.
-
-Framework-Datei:
+Vendor-Datei:
 
     vendor/skynet-iads/SkynetIADS.lua
 
-Der erste reale DCS-Starttest wurde durchgeführt.
+Status:
 
-Test:
+    geladen und vom Loader erkannt
 
-    Starttest-Variante A — sichere Einzeldatei-Ladung
+Eigener IADS-Ordner:
 
-Ergebnis:
+    src/iads/
 
-    Bestanden
+Aktueller Stand:
 
-Bestätigt wurde:
+    Ordner vorbereitet
+    README vorhanden
+    eigenes Theater-Command-IADS-Modul noch nicht implementiert
 
-- Skynet IADS wird geladen
-- Skynet IADS wird durch Theater Command erkannt
-- keine schweren Lua-Fehler durch Skynet IADS im Starttest
-- eigene Theater-Command-Startkette läuft sauber weiter
+Geplante spätere Hauptdatei:
 
-Noch nicht vorhanden:
+    src/iads/tc_iads_system.lua
 
+Aktuell bestätigt:
+
+- Skynet IADS wird im Mission Editor geladen.
+- Loader erkennt Skynet IADS.
+- MissionGenerator reserviert Skynet-Hooks.
+- MissionGenerator erzeugt Missionstyp `IADS_SUPPRESSION`.
+- SEAD/DEAD/IADS_SUPPRESSION sind als Missionstypen vorbereitet.
+- Es gibt noch keine produktive Theater-Command-IADS-Kampagnenlogik.
+- Es werden noch keine Skynet-IADS-Sites durch Theater Command initialisiert.
+- Es gibt noch keine IADS-Persistenz.
+- Es gibt noch keine IADS-F10-Anzeige.
+
+---
+
+## 3. Aktueller getesteter Gesamtstand
+
+Der aktuelle state-first Runtime-Stand ist bestanden.
+
+Bestätigte Systeme:
+
+| System | Datei | Version | Status |
+|---|---|---:|---|
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+
+Aktuelle bestätigte Werte:
+
+    Syria airbase-like objects: 225
+    relevante Kampagnenzonen: 46
+    capture-fähige Ziele: 32
+    Capture-Pressure-Records: 32
+    Capture-Progress-Records: 32
+    Logistics Hubs: 46
+    FOB-Kandidaten: 6
+    Blue FOBs: 2
+    Mission candidates: 69
+    verfügbare Missionen: 10
+    F10 Commands: 26
+    CAP Requests: 12
+
+Bewertung:
+
+    Die Grundlage für spätere IADS-Integration ist vorhanden.
+    Das eigentliche IADS-System ist aber noch nicht implementiert.
+
+---
+
+## 4. Designprinzip
+
+Auch für IADS gilt das Theater-Command-Grundprinzip:
+
+    erst State
+    dann Sichtbarkeit
+    dann Tests
+    dann echte Framework-Aktionen
+
+Skynet IADS wird nicht direkt als Architekturordnung verwendet.
+
+Skynet IADS ist ein Framework.
+
+Theater Command soll darüber eine eigene Kampagnenschicht legen.
+
+Diese Kampagnenschicht soll entscheiden:
+
+- welche IADS-Sites existieren
+- welchem Besitzer sie gehören
+- welchen Status sie haben
+- welche Zonen sie schützen
+- wie sie Missionen beeinflussen
+- wie sie beschädigt oder unterdrückt werden
+- wie ihr Zustand persistiert wird
+- wie AI und MissionGenerator auf IADS reagieren
+
+---
+
+## 5. Rolle von Skynet IADS
+
+Skynet IADS ist das geplante Framework für echte DCS-IADS-Funktionalität.
+
+Skynet IADS kann später genutzt werden für:
+
+- SAM-Netzwerke
+- EWR-Anbindung
+- Command Center
+- IADS-Sektoren
+- SAM-Aktivierung und Deaktivierung
+- Radar-Emission-Management
+- Reaktion auf SEAD/DEAD
+- dynamische Luftverteidigung
+
+Aktueller Stand:
+
+    Skynet IADS ist geladen.
+    Theater Command initialisiert noch kein eigenes Skynet-Netzwerk.
+    Es gibt noch keine produktiven SAM-/EWR-/Command-Strukturen.
+
+---
+
+## 6. Warum IADS noch nicht produktiv ist
+
+Das IADS-System wird bewusst noch nicht produktiv aufgebaut.
+
+Gründe:
+
+- Airbase-/Zonen-State musste zuerst stabil sein.
+- Capture-Pressure und Capture-Progress mussten zuerst vorbereitet werden.
+- MissionGenerator musste zuerst Mission Records und Hooks vorbereiten.
+- F10Menu musste zuerst als Spieler-/Testoberfläche funktionieren.
+- IADS erzeugt komplexe Nebenwirkungen im DCS-Luftraum.
+- SEAD/DEAD-Wirkung muss später sauber messbar sein.
+- IADS-State muss vor echter Wirkung sichtbar und debugbar sein.
+- Missionseffekte sind noch nicht produktiv an IADS gekoppelt.
+- Persistenz ist noch nicht produktiv getestet.
+
+Aktuelle Entscheidung:
+
+    Skynet bleibt geladen und vorbereitet.
+    Theater-Command-IADS wird erst nach weiterer UI-/Debug- und MissionEffect-Grundlage produktiv begonnen.
+
+---
+
+## 7. Geplante IADS-Module
+
+Geplante eigene Module:
+
+    src/iads/tc_iads_system.lua
     src/iads/tc_iads_network.lua
     src/iads/tc_iads_sector_manager.lua
     src/iads/tc_iads_site_registry.lua
     src/iads/tc_iads_mission_bridge.lua
 
----
+Diese Namen sind noch nicht final.
 
-## Aktuelle DEV-Mission
+Wahrscheinliche erste Datei:
 
-Aktuelle technische Entwicklungsmission:
+    src/iads/tc_iads_system.lua
 
-    Operation_Levant_Reclamation_DEV.miz
+Erster sinnvoller Umfang:
 
-Aktueller Inhalt:
-
-    Map: Syria
-    Koalitionspreset: Modern
-    Blue Start: Akrotiri / Zypern
-    erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
-    Trigger: Starttest-Variante A vollständig angelegt
-    keine rote Frontlinie
-    keine IADS-Stellungen
-    keine CTLD-Zonen
-    keine Template-Gruppen
-    keine F10-Menüs
-
-Diese Mission ist aktuell nur ein technischer Testträger.
-
-Sie ist noch keine spielbare Kampagnenmission.
+- Modul lädt.
+- IADS-State wird initialisiert.
+- Skynet-Verfügbarkeit wird geprüft.
+- IADS-Systemstatus wird geloggt.
+- keine echten SAM-Sites werden initialisiert.
+- keine echten Skynet-Aktionen werden ausgelöst.
+- IADS-State bleibt state-only.
+- spätere Site-Registry wird vorbereitet.
 
 ---
 
-## Verbindung zum Airbase-System
+## 8. IADS State
 
-Der erste reale DCS-Test ergab:
+Das spätere IADS-System soll eigenen State erzeugen.
 
-    Airbase-Scanner registrierte 225 Airbase-/Helipad-Objekte.
-    Zone-Factory registrierte 225 Zonen.
+Mögliche State-Bereiche:
 
-Dieser Befund ist auch für IADS wichtig.
+    State.IADS
+    State.IADS.Sites
+    State.IADS.Networks
+    State.IADS.Sectors
+    State.IADS.Radars
+    State.IADS.SamSites
+    State.IADS.CommandCenters
+    State.IADS.Effects
+    State.IADS.Events
+    State.IADS.Persistence
 
-Problem:
+Mögliche Site-Daten:
 
-    Nicht jedes Airbase-/Helipad-Objekt darf automatisch als IADS-relevanter Standort behandelt werden.
+- siteId
+- name
+- type
+- coalition
+- owner
+- status
+- linkedZone
+- linkedBase
+- position
+- range
+- sector
+- network
+- radarState
+- ammoState
+- damageState
+- suppressionState
+- lastAttack
+- lastSeen
+- persistentState
 
-IADS-Standorte müssen später gezielt definiert werden.
+Mögliche Statuswerte:
 
-Mögliche IADS-nahe Objekte:
+- ACTIVE
+- LIMITED
+- SUPPRESSED
+- DAMAGED
+- DESTROYED
+- REPAIRING
+- OFFLINE
+- UNKNOWN
 
-- strategische Airfields
-- Radarstellungen
-- SAM-Sites
-- EWR-Standorte
-- Command Nodes
-- Air Defense Sectors
-- wichtige Logistikhubs
-- militärische Basen
+Aktuell:
 
-Nicht automatisch IADS-relevant:
-
-- Medical Pads
-- einzelne Helipads
-- unbekannte Airbase-Objekte
-- rein zivile oder taktische Pads
-
-Folgerung:
-
-    Auch IADS braucht saubere World-Daten.
-    Die Airbase-Klassifizierung ist Voraussetzung für sinnvolle IADS-Sektorlogik.
-
----
-
-## Rolle von Skynet IADS
-
-Skynet IADS ist das externe Framework für realistische Luftverteidigungslogik.
-
-Skynet IADS kann unter anderem:
-
-- SAM-Systeme vernetzen
-- Radarabhängigkeiten abbilden
-- IADS-Kommunikation simulieren
-- EWR- und SAM-Verhalten koordinieren
-- Systeme aktivieren oder deaktivieren
-- Luftverteidigung dynamischer wirken lassen
-
-Theater Command soll darüber speichern und bewerten:
-
-- welche IADS-Sektoren existieren
-- welche SAM-Sites aktiv sind
-- welche Radare zerstört sind
-- welche Sektoren geschwächt sind
-- welche Ziele für SEAD/DEAD relevant sind
-- welche IADS-Schäden persistent bleiben
-- wie AI auf IADS-Schäden reagiert
-- welche Missionen daraus entstehen
+    IADS-State ist noch nicht produktiv implementiert.
 
 ---
 
-## Architekturregel
+## 9. Verhältnis zu Airbase Scanner
 
-Skynet IADS bleibt Framework.
+Airbase Scanner liefert die strategische Raumgrundlage.
 
-Theater Command verändert keine Skynet-IADS-Dateien.
+Aktuelle Werte:
 
-Eigene IADS-Logik gehört später nach:
+    total: 225
+    strategic: 19
+    secondary: 13
+    heliports: 1
+    helipads: 95
+    medical: 40
+    farps: 0
+    tactical: 13
+    unknown: 44
+    captureCandidates: 32
+    missionCandidates: 32
+    logisticsCandidates: 46
+    blueStartBases: 1
+    redStrategicCandidates: 18
 
-    src/iads/
+IADS soll später Airbase-Daten nutzen, um:
 
-Geplante Regel:
+- rote strategische Basen zu schützen
+- IADS-Sektoren um wichtige Airfields zu legen
+- SEAD/DEAD-Ziele mit Airbase-Zielen zu verbinden
+- IADS-Verluste auf Airbase-Verteidigung wirken zu lassen
+- Capture-Operationen vom IADS-Zustand abhängig zu machen
 
-    Skynet IADS führt technische IADS-Logik aus.
-    Theater Command verwaltet Kampagnenzustand, Missionsbezug und Persistenz.
+Aktuell:
 
----
-
-## Geplante IADS-Module
-
-### `src/iads/tc_iads_network.lua`
-
-Geplante Aufgabe:
-
-- IADS-Netzwerke definieren
-- Skynet-IADS-Instanzen kapseln
-- rote IADS-Netzwerke vorbereiten
-- spätere blaue IADS-Netzwerke optional vorbereiten
-- Netzwerkstatus an Theater Command melden
-
----
-
-### `src/iads/tc_iads_sector_manager.lua`
-
-Geplante Aufgabe:
-
-- IADS-Sektoren verwalten
-- Sektorstatus speichern
-- Sektoren mit Airbases und Zonen verbinden
-- Bedrohungsräume definieren
-- SEAD-/DEAD-Relevanz vorbereiten
-
-Mögliche Sektorstatus:
-
-    ACTIVE
-    DEGRADED
-    SUPPRESSED
-    DESTROYED
-    OFFLINE
-    UNKNOWN
+    IADS nutzt Airbase-Daten noch nicht produktiv.
 
 ---
 
-### `src/iads/tc_iads_site_registry.lua`
+## 10. Verhältnis zu ZoneFactory
 
-Geplante Aufgabe:
+ZoneFactory erzeugt relevante Kampagnenzonen.
 
-- SAM-Sites registrieren
-- Radarstandorte registrieren
-- EWR-Standorte registrieren
-- Command Nodes registrieren
-- Status einzelner IADS-Elemente speichern
-- spätere Persistenz vorbereiten
+Aktuelle Werte:
 
-Mögliche Site-Typen:
+    total zones: 46
+    classified airbase zones: 46
+    Mission Editor zones: 0
+    skipped airbase-like objects: 179
+    strategic zones: 19
+    secondary zones: 13
+    captureZones: 32
+    missionZones: 32
+    logisticsZones: 46
+    startBaseZones: 1
 
-    SAM_SITE
-    SEARCH_RADAR
-    TRACK_RADAR
-    EWR
-    COMMAND_NODE
-    AAA_SITE
-    SHORAD_SITE
-    UNKNOWN
+IADS soll später an Zonen gekoppelt werden.
 
----
+Mögliche Kopplung:
 
-### `src/iads/tc_iads_mission_bridge.lua`
+- IADS-Site schützt Zone
+- IADS-Sektor deckt mehrere Zonen ab
+- Zone enthält SAM-Site
+- Zone enthält EWR
+- Zone enthält Command Center
+- MissionGenerator erzeugt IADS-Missionen aus Zone-Daten
+- CaptureSystem berücksichtigt IADS-Abdeckung
 
-Geplante Aufgabe:
+Wichtig:
 
-- IADS-Zustand an Missionsgenerator melden
-- SEAD-Ziele vorbereiten
-- DEAD-Ziele vorbereiten
-- Strike-Ziele vorbereiten
-- Missionswirkungen auf IADS-Zustand zurückmelden
-- IADS-Schäden an Campaign und Persistence weitergeben
-
----
-
-## Geplante IADS-Datenstruktur
-
-Ein späterer IADS-Sektor könnte ungefähr so aussehen:
-
-    {
-        id = "IADS_SECTOR_COAST_01",
-        name = "Syrian Coast North",
-        coalition = "red",
-        status = "ACTIVE",
-        sites = {
-            "SAM_SITE_001",
-            "EWR_001",
-            "COMMAND_NODE_001"
-        },
-        protectedBases = {
-            "Latakia",
-            "Bassel Al-Assad"
-        },
-        threatLevel = "HIGH",
-        lastUpdated = 1200
-    }
-
-Diese Struktur ist noch nicht final.
-
-Sie dient als fachliche Orientierung.
+    IADS soll nicht auf allen 225 DCS-Airbase-like Objects arbeiten.
+    IADS soll die 46 relevanten Kampagnenzonen und später manuelle IADS-Zonen nutzen.
 
 ---
 
-## Geplante SAM-Site-Datenstruktur
+## 11. Verhältnis zu CaptureSystem
 
-Eine spätere SAM-Site könnte ungefähr so aussehen:
+CaptureSystem verwaltet Capture-Eligibility, Capture-Pressure und Capture-Progress.
 
-    {
-        id = "SAM_SITE_001",
-        name = "SA-10 Coastal Battery",
-        type = "SAM_SITE",
-        coalition = "red",
-        sector = "IADS_SECTOR_COAST_01",
-        status = "ACTIVE",
-        position = {},
-        skynetName = "RED_SAM_SA10_001",
-        isMissionTarget = true,
-        isPersistent = true
-    }
+Aktuelle Werte:
 
-Diese Struktur ist noch nicht final.
+    eligibleBases: 32
+    eligibleZones: 32
+    pressureRecords: 32
+    progressRecords: 32
+    appliedMissionEffects: 0
+    ready: 0
+    contested: 0
+
+IADS soll später Capture beeinflussen.
+
+Mögliche Auswirkungen:
+
+- aktive IADS-Abdeckung erschwert Capture.
+- unterdrücktes IADS erleichtert Folgeoperationen.
+- zerstörte SAM-Sites erhöhen Capture-Pressure.
+- beschädigte IADS-Sektoren senken Red-Verteidigungsfähigkeit.
+- SEAD/DEAD-Erfolg kann Capture-Vorbereitung verbessern.
+- Red kann bei drohendem Capture IADS verstärken oder verlegen.
+
+Aktuell:
+
+    CaptureSystem erzeugt Pressure und Progress.
+    IADS ist noch nicht mit CaptureSystem gekoppelt.
+    Mission Effects auf IADS sind noch nicht produktiv.
 
 ---
 
-## IADS-Statuswerte
+## 12. Verhältnis zu MissionGenerator
 
-Geplante Statuswerte:
+MissionGenerator erzeugt Missionen aus dem Kampagnenzustand.
 
-    ACTIVE
-    DEGRADED
-    SUPPRESSED
-    DESTROYED
-    OFFLINE
-    UNKNOWN
+Aktuelle MissionGenerator-Werte:
+
+    mission candidates: 69
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 30
+
+Aktuelle relevante Missionstypen:
+
+- `SEAD`
+- `DEAD`
+- `IADS_SUPPRESSION`
+- `STRIKE`
+- `AIRBASE_ATTACK`
+- `RECON`
+
+MissionGenerator v0.2.2 erzeugt Mission Records mit:
+
+- Objective
+- Briefing
+- Progress
+- Activation Metadata
+- Execution Plan
+- Effects
+- reserved MOOSE Hook
+- reserved CTLD Hook
+- reserved Skynet Hook
 
 Bedeutung:
 
-- `ACTIVE`: System ist kampagnenlogisch aktiv
-- `DEGRADED`: System ist geschwächt, aber nicht ausgeschaltet
-- `SUPPRESSED`: System ist vorübergehend unterdrückt
-- `DESTROYED`: System ist zerstört
-- `OFFLINE`: System ist nicht aktiv oder nicht verfügbar
-- `UNKNOWN`: Status ist noch nicht bekannt
+    IADS-bezogene Missionen sind fachlich vorbereitet.
+    Skynet-Hooks sind reserviert.
+    Es wird aber noch keine echte IADS-Wirkung ausgelöst.
+
+Spätere Kopplung:
+
+- MissionGenerator wählt IADS-Sites als Ziele.
+- SEAD-Missionen setzen Site auf SUPPRESSED.
+- DEAD-Missionen setzen Site auf DAMAGED oder DESTROYED.
+- IADS_SUPPRESSION verändert Sektorstatus.
+- Mission Effects werden an IADS-System gemeldet.
+- IADS-System meldet Auswirkungen an Capture und AI.
 
 ---
 
-## Bedrohungsstufen
+## 13. Verhältnis zu AICapManager
 
-IADS-Sektoren können später Bedrohungsstufen erhalten.
+AICapManager erzeugt CAP-State.
 
-Geplante Werte:
+Aktuelle Werte:
 
-    LOW
-    MEDIUM
-    HIGH
-    CRITICAL
+    cap zone candidates: 31
+    auto-registered CAP zones: 12
+    CAP requests: 12
+    reactionState: AIR_REACTION_REQUESTED
+    threatLevel: HIGH
 
-Diese Werte können beeinflussen:
+IADS soll später CAP-Entscheidungen beeinflussen.
 
-- Missionsauswahl
-- SEAD-Priorität
-- DEAD-Priorität
-- Strike-Routen
-- Logistikrisiko
-- AI-Reaktionen
-- Spielerbriefing
-- F10-Statusanzeigen
+Mögliche Zusammenhänge:
 
----
+- aktive IADS-Sektoren reduzieren Blue-CAP-Freiheit
+- geschwächte IADS-Sektoren erhöhen Blue-Operationsmöglichkeiten
+- Red-CAP kann IADS-Lücken kompensieren
+- Blue-SEAD kann CAP-Korridore öffnen
+- CAP-Priorität hängt von IADS-Abdeckung ab
+- AI Director priorisiert CAP über gefährdeten IADS-Sektoren
 
-## Verbindung zum Missionsgenerator
+Aktuell:
 
-IADS ist besonders wichtig für folgende Missionsarten:
-
-- SEAD
-- DEAD
-- STRIKE
-- ESCORT
-- LOGISTICS
-- RECON
-- AI_SUPPRESSION
-
-Beispiele:
-
-- Aktiver IADS-Sektor erzeugt SEAD-Mission.
-- Zerstörtes Radar reduziert Bedrohung.
-- Geschwächte SAM-Site wird DEAD-Ziel.
-- Intakter IADS-Sektor erschwert Logistikmissionen.
-- Recon-Mission kann unbekannte IADS-Sites aufdecken.
-
-Aktueller Stand:
-
-    Missionsgenerator lädt.
-    IADS-Mission-Bridge ist noch nicht implementiert.
+    AICapManager ist state-only.
+    IADS beeinflusst CAP noch nicht.
 
 ---
 
-## Verbindung zum AI Director
+## 14. Verhältnis zu AI Director
 
-IADS soll später AI-Reaktionen beeinflussen.
+Der spätere AI Director soll IADS als wichtigen Faktor nutzen.
 
-Beispiele:
+AI Director soll später bewerten:
 
-- zerstörte SAM-Site löst rote CAP-Reaktion aus
-- verlorener Radarstandort verschiebt GCI-Verhalten
-- kritischer IADS-Sektor wird verstärkt
-- SEAD-Erfolg öffnet Korridor für blaue Missionen
-- IADS-Schäden erhöhen rote Eskalation
-- intakter IADS-Sektor schützt wichtige Basen
+- welche IADS-Sektoren kritisch sind
+- welche SAM-Sites verteidigt werden müssen
+- wo SEAD-/DEAD-Bedarf besteht
+- wo Blue sichere Korridore hat
+- wo Red CAP zur IADS-Unterstützung braucht
+- wo IADS-Schäden rote Verteidigung schwächen
+- wie IADS-Verluste Kampagnenphase und Prioritäten verändern
 
-Aktueller Stand:
+Aktuell:
 
-    AI-CAP-Manager lädt.
-    Vollständiger AI Director ist noch nicht implementiert.
-
----
-
-## Verbindung zum Campaign-System
-
-IADS soll Teil des Kampagnenzustands werden.
-
-Campaign kann später speichern:
-
-- welcher IADS-Sektor aktiv ist
-- welche SAM-Sites zerstört sind
-- welche Radare noch funktionieren
-- welche IADS-Zonen unterdrückt sind
-- welche Basen dadurch verwundbarer werden
-- welche Capture-Operationen dadurch möglich werden
-
-Wichtig:
-
-    IADS entscheidet nicht über Besitz.
-    Campaign entscheidet über Besitz und Capture.
-    IADS liefert Bedrohungs- und Verteidigungszustände.
+    AI Director ist noch nicht implementiert.
+    IADS-System ist noch nicht implementiert.
+    Beide Systeme werden später gekoppelt.
 
 ---
 
-## Verbindung zum Logistics-System
+## 15. Verhältnis zu Logistics und FOBs
 
-IADS beeinflusst Logistik erheblich.
+LogisticsDelivery und FobSystem liefern logistische und operative Vorwärtsstruktur.
 
-Beispiele:
+Aktuelle Werte:
 
-- aktive SAM-Sektoren blockieren Logistikrouten
-- SEAD-Erfolg ermöglicht Luftbrücken
-- zerstörte Radare erleichtern Hubschrauberlogistik
-- starke IADS-Bedrohung erzwingt Escort
-- FOB-Aufbau kann erst nach IADS-Schwächung sicher sein
+    Logistics Hubs: 46
+    Blue FOBs: 2
+    FOB Ercan
+    FOB Gecitkale
 
-Aktueller Stand:
+IADS soll später mit Logistik zusammenhängen.
 
-    Logistics-Module laden.
-    Keine produktive IADS-Logistics-Verbindung implementiert.
+Mögliche Kopplung:
 
----
+- SAM-Sites benötigen Supply oder Repair.
+- beschädigte IADS-Sites brauchen Logistik zur Wiederherstellung.
+- Red Logistics beeinflusst IADS-Reparaturfähigkeit.
+- Blue FOBs ermöglichen SEAD/DEAD-Operationen näher am Festland.
+- IADS bedroht Logistics- und FOB-Support-Missionen.
+- zerstörte IADS öffnet Logistics-Korridore.
 
-## Verbindung zum Airbase-System
+Aktuell:
 
-Strategische Airfields können später durch IADS geschützt werden.
-
-Beispiele:
-
-- rote Airbase besitzt zugehörigen IADS-Sektor
-- Airbase-Angriff benötigt vorher SEAD/DEAD
-- Capture einer Airbase wird durch aktive IADS erschwert
-- zerstörte IADS macht Airbase verwundbarer
-- AI priorisiert Schutz wichtiger Airfields
-
-Dafür muss das Airbase-System zuerst klassifizieren:
-
-- strategische Airfields
-- Secondary Airfields
-- Heliports
-- Helipads
-- Medical Pads
-- FARPs
-- Tactical Pads
-- Unknown
+    Logistik ist state-only.
+    FOBs sind state-only.
+    IADS ist noch nicht angebunden.
 
 ---
 
-## Verbindung zum UI-System
+## 16. IADS und F10
 
-Später sollen IADS-Daten im F10-Menü oder Debug-Menü sichtbar werden.
+F10Menu ist aktuell aktiv.
 
-Mögliche Anzeigen:
+F10Menu v0.2.0 kann aktuell:
 
-- bekannte IADS-Sektoren
-- Bedrohungsstufe
-- aktive SAM-Sites
-- zerstörte SAM-Sites
-- erkannte Radare
-- SEAD-Ziele
-- DEAD-Ziele
-- IADS-Status pro Region
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Mission Details anzeigen
+- Missionen aktivieren
+- Kampagnenstatus anzeigen
+- Logistics Status anzeigen
+- FOB Status anzeigen
+- AI CAP Status anzeigen
 
-Aktueller Stand:
+Aktuell noch nicht vorhanden:
 
-    UI-Bereich ist dokumentiert.
-    F10-Menüs sind noch nicht implementiert.
+- IADS Status im F10
+- IADS Site Report
+- IADS Sector Report
+- SAM Status
+- EWR Status
+- IADS Debug View
 
----
+Spätere F10-IADS-Funktionen:
 
-## Verbindung zur Persistenz
+- Show IADS Status
+- Show IADS Sectors
+- Show Active SAM Sites
+- Show Suppressed SAM Sites
+- Show Destroyed SAM Sites
+- Show IADS Threat Map
+- Show SEAD Targets
+- Debug Suppress IADS Site
+- Debug Destroy IADS Site
 
-IADS-Zustand muss später persistent gespeichert werden.
+Aktuell nächster UI-Schritt:
 
-Zu speichern sind:
-
-- aktive IADS-Sektoren
-- zerstörte SAM-Sites
-- beschädigte Radare
-- unterdrückte Systeme
-- erkannte Ziele
-- unbekannte Ziele
-- Sektorstatus
-- Bedrohungsstufen
-- Missionseffekte
-
-Aktueller Stand:
-
-    In-Memory-Persistenz ist vorbereitet.
-    Datei-Persistenz ist noch nicht getestet.
-
-Wichtig:
-
-    DCS-Dateizugriff und DCS-Sandbox-Verhalten müssen vor echter Dateipersistenz praktisch geprüft werden.
-
----
-
-## Verbindung zum Debug-System
-
-Später soll ein IADS-Debugreport möglich sein.
-
-Geplante Datei:
-
-    src/debug/tc_debug_iads_report.lua
-
-Mögliche Ausgabe:
-
-- Anzahl IADS-Sektoren
-- Status je Sektor
-- Anzahl SAM-Sites
-- Anzahl aktiver SAM-Sites
-- Anzahl zerstörter SAM-Sites
-- erkannte Radare
-- Bedrohungsstufen
-- SEAD-Ziele
-- DEAD-Ziele
-- Verknüpfung zu Airbases
-- Verknüpfung zu Missionen
-
-Aktuell wird dieser Debugreport noch nicht erstellt.
-
----
-
-## Mission-Editor-Anforderungen für IADS
-
-Später werden im Mission Editor voraussichtlich benötigt:
-
-- rote SAM-Gruppen
-- Radargruppen
-- EWR-Gruppen
-- Command Nodes
-- Strom-/Kommunikationsobjekte optional
-- IADS-Testzonen
-- Late-Activation-Gruppen
-- statische Schutzobjekte
-- Debug-Testziele
-
-Aktuell noch nicht angelegt:
-
-    keine roten IADS-Stellungen
-    keine SAM-Templates
-    keine Radar-Templates
-    keine EWR-Struktur
-    keine IADS-Sektoren
+    Capture-/Pressure-Status anzeigen.
 
 Grund:
 
-    Zuerst müssen Airbase-Klassifizierung und grundlegende World-Daten stabil sein.
+    Capture-Pressure und Capture-Progress sind bereits vorhanden.
+    Sie müssen sichtbar werden, bevor IADS sinnvoll in Mission Effects und AI eingebunden wird.
 
 ---
 
-## Nicht-Ziele im aktuellen Stand
+## 17. IADS Mission Effects
 
-Aktuell wird bewusst nicht umgesetzt:
+Mission Effects sollen später IADS-Zustände verändern.
 
-- keine vollständige IADS-Struktur
-- keine SAM-Site-Platzierung
-- keine IADS-Sektoren
-- keine SEAD-/DEAD-Missionen
-- keine Skynet-IADS-Netzwerklogik
-- keine IADS-Persistenz
-- keine IADS-F10-Menüs
-- keine IADS-Debugreports
-- keine roten Template-Gruppen
+Mögliche Effekte:
+
+- suppressSite
+- damageSite
+- destroySite
+- reduceSectorReadiness
+- disableRadar
+- degradeNetwork
+- revealSite
+- repairSite
+- restoreSector
+- increaseRedAlert
+- triggerRedCounteraction
+
+Aktuelle Vorbereitung:
+
+    MissionGenerator v0.2.2 enthält Effects und reserved Skynet Hooks.
+    Mission Effects werden noch nicht produktiv auf IADS angewendet.
+
+Späterer Ablauf:
+
+1. Mission wird aktiviert.
+2. Mission wird abgeschlossen oder schlägt fehl.
+3. MissionGenerator meldet Ergebnis.
+4. IADS-System verarbeitet IADS-relevanten Effekt.
+5. IADS-State wird aktualisiert.
+6. CaptureSystem, AI Director und MissionGenerator nutzen neuen IADS-State.
+7. Zustand wird später persistiert.
 
 ---
 
-## Nächster relevanter Schritt
+## 18. IADS und Persistenz
 
-Der nächste relevante Schritt für das IADS-System ist nicht die sofortige Platzierung roter SAM-Stellungen.
+IADS-Zustand muss später persistent werden.
 
-Zuerst erforderlich:
+Zu speichern:
 
-    Airbase-Scanner klassifizieren und filtern.
+- Site-ID
+- Site-Name
+- Site-Typ
+- Besitzer
+- Status
+- Damage State
+- Suppression State
+- Radar State
+- Ammo State
+- Network State
+- Sector State
+- Linked Zone
+- Linked Base
+- Last Mission Effect
+- Repair Progress
+- Event History
 
-Warum:
+Aktueller Stand:
 
-IADS braucht saubere World-Daten.
-
-Erst wenn Theater Command strategische Airfields, Secondary Airfields, Heliports, Helipads, Medical Pads, FARPs und Unknown-Objekte unterscheiden kann, kann entschieden werden, welche Orte durch IADS geschützt oder bedroht werden sollen.
+    PersistenceSystem-Grundstruktur existiert.
+    Produktiver DCS-Dateischreibtest ist noch offen.
+    IADS-State ist noch nicht implementiert.
 
 ---
 
-## Aktueller Status
+## 19. Mission Editor Voraussetzungen
 
-Skynet IADS ist im Projekt vorhanden und wurde im ersten DCS-Starttest erfolgreich geladen.
+Für echte IADS-Integration werden später Mission-Editor-Elemente benötigt.
 
-Die Theater-Command-IADS-Schicht ist noch nicht implementiert.
+Mögliche Elemente:
 
-Der nächste übergeordnete technische Schritt bleibt die Airbase-Klassifizierung im World-System.
+- rote SAM-Gruppen
+- rote EWR-Gruppen
+- Command Center
+- Power Nodes
+- Communications Nodes
+- Late-Activation-Templates
+- statische Objekte
+- benannte Zonen
+- Skynet-kompatible Gruppennamen
+- Testziele für SEAD/DEAD
+
+Aktuell in der DEV-Mission noch nicht produktiv vorhanden:
+
+- keine produktive IADS-Struktur
+- keine aktiven Theater-Command-IADS-Zonen
+- keine produktiven SAM-/EWR-Netzwerke
+- keine IADS-Templates
+
+Grund:
+
+    IADS-Integration wird erst aufgebaut, wenn State, Missionen, F10 und Debug ausreichend stabil sind.
+
+---
+
+## 20. Naming-Konzept
+
+Spätere IADS-Namen müssen klar und maschinenlesbar sein.
+
+Mögliche Namenskonventionen:
+
+    IADS_RED_SECTOR_COAST
+    IADS_RED_SECTOR_DAMASCUS
+    IADS_RED_SITE_SA2_001
+    IADS_RED_SITE_SA6_001
+    IADS_RED_EWR_001
+    IADS_RED_COMMAND_001
+
+Diese Namen sind noch nicht final.
+
+Sie müssen später mit `NAMING_CONVENTIONS.md` abgestimmt werden.
+
+---
+
+## 21. SEAD/DEAD Design
+
+SEAD und DEAD sind zentrale Missionstypen für IADS.
+
+SEAD:
+
+    Suppression of Enemy Air Defenses
+
+Ziel:
+
+- Luftverteidigung unterdrücken
+- Risiko für Folgeoperationen senken
+- Radar- und SAM-Aktivität reduzieren
+- temporäre Korridore öffnen
+
+DEAD:
+
+    Destruction of Enemy Air Defenses
+
+Ziel:
+
+- Luftverteidigung dauerhaft zerstören oder schwer beschädigen
+- IADS-Sektoren nachhaltig schwächen
+- Red-Verteidigungsfähigkeit reduzieren
+
+Aktueller Stand:
+
+    SEAD und DEAD sind als Missionstypen vorhanden.
+    echte Skynet-/DCS-Wirkung ist noch nicht aktiv.
+
+---
+
+## 22. IADS_SUPPRESSION Design
+
+`IADS_SUPPRESSION` ist ein übergeordneter Missionstyp.
+
+Mögliche Bedeutung:
+
+- nicht nur einzelne SAM-Site unterdrücken
+- ganzen IADS-Sektor schwächen
+- Radarverbund stören
+- Command-Knoten beeinträchtigen
+- Luftkorridor vorbereiten
+
+Aktueller Stand:
+
+    Missionstyp vorhanden.
+    MissionGenerator reserviert Skynet-Hooks.
+    keine echte IADS-Wirkung.
+
+---
+
+## 23. Risiken
+
+Risiken bei IADS-Integration:
+
+- Skynet-Konfiguration ist empfindlich gegenüber Gruppennamen.
+- SAM-/EWR-Struktur kann DCS-Startfehler erzeugen.
+- IADS-Wirkung ist schwer zu debuggen.
+- SEAD/DEAD-Erfolge müssen sauber aus DCS-Events abgeleitet werden.
+- Mission Effects können falsche Sektoren beeinflussen.
+- Persistenz kann beschädigte IADS-Zustände falsch laden.
+- AI Director kann IADS-Bedrohung falsch gewichten.
+- echte IADS-Aktivität kann Missionen zu früh zu schwer machen.
+
+Gegenmaßnahmen:
+
+- IADS zuerst state-only modellieren.
+- keine echten Skynet-Aktionen in erster Theater-Command-IADS-Version.
+- klare Logmarker.
+- F10-/Debug-Sichtbarkeit.
+- kleine Teststruktur statt komplette Syria-IADS.
+- einzelne Site testen.
+- danach erst Sektoren und Netzwerke ausbauen.
+
+---
+
+## 24. Nicht-Ziele im aktuellen Stand
+
+Aktuell nicht vorgesehen:
+
+- komplette Syria-IADS-Struktur bauen
+- echte Skynet-Netzwerke initialisieren
+- SAM-Gruppen automatisch spawnen
+- SEAD/DEAD-Erfolg automatisch auswerten
+- IADS-Zustand persistieren
+- Red-IADS-Reparatur modellieren
+- AI Director mit IADS koppeln
+- F10-IADS-Menü sofort bauen
+
+Grund:
+
+    Zuerst muss die bestehende state-first Runtime sichtbar und testbar bleiben.
+    Der nächste kleine Schritt liegt bei Capture-/Pressure-Sichtbarkeit, nicht bei IADS.
+
+---
+
+## 25. Aktuelle Akzeptanzkriterien für IADS-Basis
+
+Aktuell bestanden:
+
+- Skynet IADS wird geladen.
+- Loader erkennt Skynet IADS.
+- kein Skynet-bezogener Theater-Command-Startabbruch.
+- MissionGenerator kennt IADS-nahe Missionstypen.
+- MissionGenerator reserviert Skynet Hooks.
+- keine echten Skynet-Aktionen werden ausgelöst.
+
+Noch offen:
+
+- eigenes `tc_iads_system.lua`
+- IADS-State
+- IADS-Site-Registry
+- IADS-Sector-Registry
+- IADS-F10-Status
+- IADS-Debug-Report
+- IADS-Mission Effects
+- Skynet-Produktivanbindung
+- IADS-Persistenz
+
+---
+
+## 26. Nächster sinnvoller Schritt
+
+Der nächste sinnvolle Schritt liegt nicht direkt beim IADS-System.
+
+Empfohlene nächste Datei:
+
+    src/ui/tc_f10_menu.lua
+
+Ziel:
+
+    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+
+Geplante neue F10-Funktionen:
+
+    Show Capture Status
+    Show Capture Ready Zones
+    Show Pressure Contested Zones
+
+Akzeptanzkriterien:
+
+- F10Menu lädt als neue Version.
+- bisherige 26 Commands bleiben funktionsfähig.
+- neue Capture-Commands werden ergänzt.
+- Capture Status zeigt mindestens:
+  - eligibleBases
+  - eligibleZones
+  - pressureRecords
+  - progressRecords
+  - captureReady
+  - pressureContested
+  - appliedMissionEffects
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
+
+---
+
+## 27. Aktueller Status
+
+IADS ist aktuell vorbereitet, aber noch nicht produktiv implementiert.
+
+Aktuelle Fähigkeit:
+
+- Skynet IADS wird geladen.
+- Loader erkennt Skynet IADS.
+- MissionGenerator reserviert Skynet Hooks.
+- SEAD/DEAD/IADS_SUPPRESSION sind konzeptionell und im MissionGenerator vorbereitet.
+- Es gibt noch keine echte IADS-Kampagnenlogik.
+
+Nächster notwendiger Zwischenschritt im Gesamtprojekt:
+
+    Capture-/Pressure-Sichtbarkeit im F10-Menü.
+
+Danach sinnvoll:
+
+    Mission completed/failed testbar machen.
+    Mission Effects kontrolliert testen.
+    Erst später IADS-System state-only beginnen.
