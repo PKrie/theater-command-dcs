@@ -78,11 +78,13 @@ Nach jeder Lua-Änderung gilt:
 Für saubere Logtests:
 
 1. DCS beenden
-2. `Saved Games\DCS.openbeta\Logs\dcs.log` löschen oder umbenennen
+2. `Saved Games\DCS.openbeta\Logs\dcs.log` oder `Saved Games\DCS\Logs\dcs.log` löschen oder umbenennen
 3. DCS neu starten
 4. Mission testen
 5. DCS beenden
 6. frische `dcs.log` hochladen
+
+Ein weitergeführter Log kann nur dann für eine Regression genutzt werden, wenn der neue Abschnitt zeitlich eindeutig vom alten Abschnitt getrennt ist.
 
 ---
 
@@ -104,6 +106,8 @@ Wichtig:
 
 - Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket, weil CTLD eine kompatible MIST-Version benötigt.
 - Eigene Lua-Logik gehört nach `src/`.
+- Vendor-Dateien werden nicht verändert.
+- Eigene Integrationslogik gehört in fachliche Module unter `src/`.
 
 Nicht erwünscht:
 
@@ -192,6 +196,8 @@ Aktuell nur vorbereitet oder dokumentiert:
 ## 6. Erfolgreich getestete Systeme
 
 Stand: **2026-07-06**
+
+---
 
 ### 6.1 Starttest Variante A
 
@@ -322,6 +328,9 @@ Letzte bestätigte Startwerte:
 - nonCaptureZones: 14
 - pressureRecords: 32
 - progressRecords: 32
+- appliedMissionEffects: 0
+- ready: 0
+- contested: 0
 
 Letzte bestätigte Werte nach Mission Completion:
 
@@ -349,8 +358,9 @@ Bewertung:
 - Capture-Pressure-Records werden für 32 capture-fähige Zonen erzeugt.
 - Capture-Progress-Records werden für 32 capture-fähige Zonen erzeugt.
 - Abgeschlossene Missionen werden automatisch state-only in Capture Pressure übernommen.
-- Mission Completion kann jetzt Capture Progress erzeugen.
-- `Capture Ready` wird erstmals dynamisch sichtbar.
+- Mission Completion kann Capture Progress erzeugen.
+- `Capture Ready` wird dynamisch sichtbar.
+- Capture Ready Zones sind über F10 bestätigt.
 - Automatische produktive Ownership-Änderung bleibt deaktiviert.
 - Es gab keine Lua-Fehler.
 - Es gab keine Theater-Command-Fehler.
@@ -358,7 +368,6 @@ Bewertung:
 
 Offen:
 
-- Capture Ready Zone über F10 zusätzlich gezielt anzeigen
 - produktiven Ownership-Wechsel bewusst und kontrolliert vorbereiten
 - Failure-Effekte getrennt testen
 - Logistikzustand mit Capture-Fähigkeit koppeln
@@ -599,6 +608,7 @@ Bestätigt im Test vom **2026-07-06**:
 - `Show Active Mission Outcome Status` funktioniert.
 - `Complete Active Mission 1` funktioniert.
 - `Show Capture Status` funktioniert.
+- `Show Capture Ready Zones` funktioniert.
 - `Show Pressure Contested Zones` funktioniert.
 - Mission Outcome wird auf `COMPLETED` gesetzt.
 - Mission Effects werden state-only vorbereitet.
@@ -621,6 +631,7 @@ Bestätigte Logmarker:
 - `[TC] [F10Menu] Active mission outcome status shown through F10`
 - `[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared`
 - `[TC] [F10Menu] Capture status shown through F10`
+- `[TC] [F10Menu] Capture ready zones shown through F10`
 - `[TC] [F10Menu] Pressure contested zones shown through F10`
 - `[TC] System started: F10 Menu`
 
@@ -648,13 +659,14 @@ Bewertung:
 - Mission Outcome Controls sind praktisch nutzbar.
 - Mission Completion ist über F10 getestet.
 - Capture-Effekt nach Mission Completion ist über F10 beobachtbar.
+- Capture Ready Zones sind nach Mission Completion gezielt bestätigt.
 - Das Menü bleibt State-only.
 - Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
 
 Offen:
 
-- `Show Capture Ready Zones` nach Mission Completion gezielt testen
 - `Fail Active Mission 1` praktisch testen
+- kontrollierten Capture-Ownership-Wechsel aus Capture Ready vorbereiten
 - aktive Mission abbrechen
 - Mission expired/cancelled später über Debug oder F10 vorbereiten
 - Debug-Menü getrennt aufbauen
@@ -686,6 +698,8 @@ Offen:
 ---
 
 ## 7. Noch nicht aktive oder noch nicht produktiv integrierte Bereiche
+
+---
 
 ### 7.1 IADS
 
@@ -745,9 +759,6 @@ Ein späterer AI Director soll beide Koalitionen auf Basis der Kampagnenlage han
 Wichtig:
 
 - Das Projekt ist nicht als „Rot reagiert auf Spieler“-Mission gedacht.
-
-Zielverhalten:
-
 - Blue plant defensive und offensive Operationen.
 - Red plant defensive und offensive Operationen.
 - beide Seiten reagieren auf Zonenbesitz, Missionslage, Logistik, IADS und Verluste.
@@ -768,7 +779,7 @@ Offen:
 
 ## 8. Aktuelle Prioritäten nach dieser Session
 
-### Priorität 1: CHANGELOG.md aktualisieren
+### Priorität 1: Abschlussdokumentation fertigstellen
 
 Nächste Datei:
 
@@ -776,32 +787,52 @@ Nächste Datei:
 
 Ziel:
 
-- erfolgreichen `CaptureSystem v0.2.2`-Test dokumentieren
-- Verbindung `Mission Outcome -> Mission Effect -> Capture Pressure -> Capture Progress` dokumentieren
-- neue Logmarker eintragen
-- neue Werte eintragen:
-  - appliedMissionEffects: 1
-  - ready: 1
-  - contested: 0
-  - applied pressure: 105
-  - target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
-- klar dokumentieren, dass weiterhin keine echten Spawns, CTLD-Aktionen oder Skynet-Aktionen ausgelöst werden
+- heutigen Abschlussstand dokumentieren
+- dokumentieren, dass `Show Capture Ready Zones` nach Mission Completion bestätigt wurde
+- veraltete Known-Limitations entfernen:
+  - `gezielte Prüfung von Show Capture Ready Zones nach Mission Completion`
+- nächsten konkreten technischen Schritt auf `src/ui/tc_f10_menu.lua` setzen
+- kontrollierten Capture Ready Apply als nächsten Code-Schritt dokumentieren
 
 ---
 
-### Priorität 2: Capture Ready Zone über F10 gezielt testen
+### Priorität 2: kontrollierten Capture-Ownership-Wechsel vorbereiten
+
+Empfohlene nächste Code-Datei:
+
+- `src/ui/tc_f10_menu.lua`
 
 Ziel:
 
-- nach Mission Completion zusätzlich `Show Capture Ready Zones` auslösen
-- bestätigen, dass `ZONE_AIRBASE_ABU_AL_DUHUR` oder die entsprechende Zielzone als Capture Ready angezeigt wird
-- keine neue Code-Datei nötig, falls der bestehende F10-Pfad funktioniert
+- Capture Ready darf nicht automatisch unkontrolliert Besitz wechseln.
+- Ein Testpfad soll Ownership-Wechsel bewusst, sichtbar und state-only auslösen.
 
-Abhängigkeit:
+Mögliches Ziel:
 
-- `CaptureSystem v0.2.2` ist aktiv
-- `F10Menu v0.2.2` ist aktiv
-- Mission Completion wurde bereits bestätigt
+- `Apply Capture Ready Zone 1`
+- oder `Confirm Capture Ready Zone 1`
+
+Akzeptanzkriterien:
+
+- F10Menu lädt als neue Version.
+- bisherige 32 Commands bleiben funktionsfähig.
+- neuer Capture-Apply-Command wird ergänzt.
+- Capture Ready Zone 1 kann bewusst angewendet werden.
+- Zone Ownership wird state-only aktualisiert.
+- linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
+- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
+- Logmarker zeigen eindeutig den Ownership-Wechsel.
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
+- keine Lua-Fehler
+- keine Theater-Command-Fehler
+
+Noch nicht:
+
+- keine automatische produktive Capture-Auswertung
+- kein echter Frontlinienwechsel ohne klaren Testpfad
+- keine Persistenzverknüpfung, bevor Ownership-Wechsel stabil ist
 
 ---
 
@@ -827,26 +858,7 @@ Hinweis:
 
 ---
 
-### Priorität 4: kontrollierten Capture-Ownership-Wechsel vorbereiten
-
-Ziel:
-
-- Capture Ready darf nicht automatisch unkontrolliert Besitz wechseln.
-- Ein späterer Testpfad soll Ownership-Wechsel bewusst, sichtbar und state-only auslösen.
-- Mögliches Ziel:
-  - `Confirm Capture Ready Zone 1`
-  - `Apply Capture Ready Zone 1`
-  - oder Debug-Funktion statt Spieler-F10
-
-Noch nicht sofort:
-
-- keine automatische produktive Capture-Auswertung
-- kein echter Frontlinienwechsel ohne klaren Testpfad
-- keine Persistenzverknüpfung, bevor Ownership-Wechsel stabil ist
-
----
-
-### Priorität 5: Persistence praktisch testen
+### Priorität 4: Persistence praktisch testen
 
 Ziel:
 
@@ -857,11 +869,11 @@ Ziel:
 Abhängigkeit:
 
 - State-Struktur ist jetzt ausreichend stabil für ersten Test.
-- vorher ggf. Debug-/State-Dump vorbereiten
+- Sinnvollerweise vorher kontrollierten Ownership-Wechsel prüfen, damit ein relevanter State gespeichert werden kann.
 
 ---
 
-### Priorität 6: CTLD-Integration vorbereiten
+### Priorität 5: CTLD-Integration vorbereiten
 
 Ziel:
 
@@ -876,7 +888,7 @@ Noch nicht sofort:
 
 ---
 
-### Priorität 7: AI Director vorbereiten
+### Priorität 6: AI Director vorbereiten
 
 Ziel:
 
@@ -884,14 +896,14 @@ Ziel:
 - Blue und Red handeln unabhängig vom Spieler
 - Spieler bleibt Teilnehmer, nicht alleiniger Motor
 
-Abhängigkeit:
+Abhängung:
 
 - Missionen, Capture, Logistics, FOB und CAP-State sind jetzt als Grundlage vorhanden.
 - IADS ist noch offen.
 
 ---
 
-### Priorität 8: echte Framework-Ausführung
+### Priorität 7: echte Framework-Ausführung
 
 Später:
 
@@ -912,26 +924,42 @@ Noch nicht sofort:
 
 Während aktiver Code-Arbeit soll nur die absolut notwendige Dokumentation aktualisiert werden, damit GitHub als zuverlässige Referenzebene funktioniert.
 
-Nach dem erfolgreichen `CaptureSystem v0.2.2`-Test wird schrittweise minimal aktualisiert:
+Die Sessionabschluss-Dokumentation wurde am **2026-07-06** breit nachgezogen.
+
+Bereits in dieser Abschlussrunde aktualisiert:
+
+- `README.md`
+- `ROADMAP.md`
+- `ARCHITECTURE.md`
+- `MISSION_EDITOR_SETUP.md`
+- `LUA_STYLEGUIDE.md`
+- `NAMING_CONVENTIONS.md`
+- `docs/00_project_overview.md`
+- `docs/02_technical_architecture.md`
+- `docs/06_mission_generator.md`
+- `docs/10_testing.md`
+- `src/README.md`
+- `src/campaign/README.md`
+- `src/missions/README.md`
+- `src/ui/README.md`
+
+Noch als Abschluss nötig:
 
 - `TASKS.md`
 - `CHANGELOG.md`
+- ausführlicher Prompt für die nächste Session
 
-Optional danach, falls nötig:
+Optional später:
 
-- `README.md`
-- `docs/10_testing.md`
-
-Noch später nachzuziehen:
-
-- relevante Systemdokumente in `docs/`
-- `src/ui/README.md`
-- `src/campaign/README.md`
-- `src/missions/README.md`
+- `docs/04_airbase_system.md`
+- `docs/05_logistics_system.md`
+- `docs/07_ai_director.md`
+- `docs/08_iads_system.md`
+- `docs/09_persistence.md`
 - `src/logistics/README.md`
-- `src/README.md`
+- `src/ai/README.md`
 
-Diese vollständige Dokumentationsrunde muss nicht zwischen jedem Code-Schritt erfolgen.
+Diese optionalen Dateien sind für den heutigen Sessionabschluss nicht mehr kritisch, solange `TASKS.md`, `CHANGELOG.md` und der nächste Session-Prompt sauber sind.
 
 ---
 
@@ -970,6 +998,7 @@ Bei einem vollständigen aktuellen Testlauf sollten unter anderem diese Marker e
 - `[TC] [F10Menu] Active mission outcome status shown through F10`
 - `[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared`
 - `[TC] [F10Menu] Capture status shown through F10`
+- `[TC] [F10Menu] Capture ready zones shown through F10`
 - `[TC] [F10Menu] Pressure contested zones shown through F10`
 - `[TC] System started: F10 Menu`
 - `[TC] Runtime systems initialized`
@@ -987,35 +1016,33 @@ Bei Logauswertungen beachten:
 
 ## 11. Nächster konkreter Schritt
 
-Empfohlene nächste Datei:
+Nächste Datei in dieser Abschlussdokumentation:
 
 - `CHANGELOG.md`
 
 Ziel:
 
-- erfolgreichen `CaptureSystem v0.2.2`-Test dokumentieren
-- erfolgreiche Verbindung von Mission Completion zu Capture Pressure dokumentieren
-- neue Werte dokumentieren:
-  - appliedMissionEffects: 1
-  - ready: 1
-  - contested: 0
-  - pressure: 105
-  - target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
-- klar dokumentieren, dass weiterhin keine echten Spawns, CTLD- oder Skynet-Aktionen ausgelöst wurden
+- heutigen Abschlussstand dokumentieren
+- erfolgreiche `Show Capture Ready Zones`-Regression nach Mission Completion dokumentieren
+- bekannte Einschränkungen aktualisieren
+- nächsten Code-Schritt klar setzen
 
-Danach empfohlener nächster Test:
+Danach:
 
-- vorhandenen F10-Pfad nutzen:
-  - `Show Mission 1 Details`
-  - `Activate Mission 1`
-  - `Complete Active Mission 1`
-  - `Show Capture Status`
-  - `Show Capture Ready Zones`
+- ausführlichen Prompt für die nächste Session erstellen
 
-Danach empfohlene nächste Code-Entscheidung:
+Nächster empfohlener Code-Schritt in der nächsten Session:
 
-- entweder `Fail Active Mission 1` praktisch testen
-- oder kontrollierten Capture-Ownership-Wechsel state-only vorbereiten
+- `src/ui/tc_f10_menu.lua`
+
+Ziel:
+
+- kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+
+Möglicher neuer F10-Befehl:
+
+- `Apply Capture Ready Zone 1`
+- oder `Confirm Capture Ready Zone 1`
 
 ---
 
@@ -1062,7 +1089,7 @@ Aktuelle bestätigte Fähigkeit:
 - Capture Progress wird durch Mission Completion aktualisiert.
 - Capture Ready kann dynamisch entstehen.
 - Capture-/Pressure-Status ist über F10 sichtbar.
-- Capture Ready Zones sind über F10 sichtbar.
+- Capture Ready Zones sind über F10 sichtbar und nach Mission Completion bestätigt.
 - Pressure Contested Zones sind über F10 sichtbar.
 - AI CAP Manager erzeugt Blue-/Red-CAP-State.
 - Main und Loader beenden sauber.
