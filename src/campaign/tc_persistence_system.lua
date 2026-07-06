@@ -3,15 +3,16 @@
 --
 -- Purpose:
 -- Prepare campaign state export, import, in-memory persistence, file-system
--- sandbox validation, controlled state snapshot file saves, read-only
--- save-file validation and controlled load tests.
+-- sandbox validation, controlled state snapshot file saves, save-file validation,
+-- controlled load functions and background autosave.
 --
 -- Current focus:
--- PersistenceSystem v0.2.4 keeps the proven sandbox, file-save and file-validation
--- tests from v0.2.3 and adds a controlled delayed load test from the saved file.
+-- PersistenceSystem v0.2.5 converts persistence from startup test-timer logic
+-- toward an internal background service. File save, validation and load functions
+-- remain available internally, but player-facing F10 control is not required.
 --
 -- Version:
--- 0.2.4
+-- 0.2.5
 --
 -- Responsibilities:
 -- - keep campaign persistence state under TC.State.Persistence
@@ -21,17 +22,16 @@
 -- - test DCS mission scripting file-system availability
 -- - log os/io/lfs/load availability clearly
 -- - write/read one sandbox test file
--- - write one real campaign state snapshot file after startup
--- - read and validate the saved campaign state file after startup
--- - verify that the saved file contains a Lua return table
--- - verify that the saved file can be compiled and evaluated as a table
--- - validate the returned snapshot structure
--- - perform one controlled delayed load test into TC.State
+-- - write campaign state snapshots to disk
+-- - validate saved campaign state files
+-- - provide controlled load-from-file function
+-- - run background autosave after startup
+-- - do not expose persistence as a player F10 action
 -- - do not enable automatic productive restore yet
 --
 -- Important:
 -- This module remains state-first.
--- File save, validation and load are currently controlled tests only.
+-- Autosave is active in the background when file access is available.
 -- Automatic productive load/restore is intentionally not active yet.
 
 TC = TC or {}
@@ -44,7 +44,7 @@ local PersistenceSystem = {}
 PersistenceSystem.name = "tc_persistence_system"
 PersistenceSystem.displayName = "Persistence System"
 PersistenceSystem.path = "src/campaign/tc_persistence_system.lua"
-PersistenceSystem.version = "0.2.4"
+PersistenceSystem.version = "0.2.5"
 PersistenceSystem.loaded = true
 PersistenceSystem.started = false
 PersistenceSystem.finished = false
@@ -71,16 +71,20 @@ PersistenceSystem.sandboxMarker = "TC_PERSISTENCE_SANDBOX_TEST"
 PersistenceSystem.saveFileMarker = "TC_CAMPAIGN_STATE_SAVE"
 PersistenceSystem.defaultSaveFileName = "operation_levant_reclamation_save.lua"
 
-PersistenceSystem.fileSaveTestDelaySeconds = 8
-PersistenceSystem.fileValidationTestDelaySeconds = 12
-PersistenceSystem.fileLoadTestDelaySeconds = 16
+PersistenceSystem.autosaveEnabled = true
+PersistenceSystem.autosaveInitialDelaySeconds = 20
+PersistenceSystem.autosaveIntervalSeconds = 120
+PersistenceSystem.autosaveScheduled = false
+PersistenceSystem.autosaveRunning = false
+PersistenceSystem.autosaveCount = 0
+PersistenceSystem.lastAutosaveTime = 0
+PersistenceSystem.lastAutosavePath = nil
+PersistenceSystem.lastAutosaveStatus = nil
+PersistenceSystem.lastAutosaveReason = nil
 
-PersistenceSystem.fileSaveTestScheduled = false
-PersistenceSystem.fileSaveTestCompleted = false
-PersistenceSystem.fileValidationTestScheduled = false
-PersistenceSystem.fileValidationTestCompleted = false
-PersistenceSystem.fileLoadTestScheduled = false
-PersistenceSystem.fileLoadTestCompleted = false
+PersistenceSystem.productiveRestoreEnabled = false
+PersistenceSystem.startupRestoreAttempted = false
+PersistenceSystem.startupRestoreCompleted = false
 
 PersistenceSystem.sections = {
     "Meta",
@@ -337,6 +341,7 @@ local function ensurePersistenceState()
     state.Persistence.lastFileSaveTime = state.Persistence.lastFileSaveTime or 0
     state.Persistence.lastFileValidationTime = state.Persistence.lastFileValidationTime or 0
     state.Persistence.lastFileLoadTime = state.Persistence.lastFileLoadTime or 0
+    state.Persistence.lastAutosaveTime = state.Persistence.lastAutosaveTime or 0
     state.Persistence.saveName = state.Persistence.saveName or getDefaultSaveName()
     state.Persistence.saveFileName = state.Persistence.saveFileName or getDefaultSaveFileName(state.Persistence.saveName)
     state.Persistence.exportCount = state.Persistence.exportCount or 0
@@ -345,13 +350,20 @@ local function ensurePersistenceState()
     state.Persistence.fileSaveCount = state.Persistence.fileSaveCount or 0
     state.Persistence.fileValidationCount = state.Persistence.fileValidationCount or 0
     state.Persistence.fileLoadCount = state.Persistence.fileLoadCount or 0
+    state.Persistence.autosaveCount = state.Persistence.autosaveCount or 0
     state.Persistence.fileSystemAvailable = state.Persistence.fileSystemAvailable == true
     state.Persistence.fileWriteAllowed = state.Persistence.fileWriteAllowed == true
     state.Persistence.fileReadAllowed = state.Persistence.fileReadAllowed == true
+    state.Persistence.autosaveEnabled = PersistenceSystem.autosaveEnabled == true
+    state.Persistence.autosaveScheduled = PersistenceSystem.autosaveScheduled == true
+    state.Persistence.autosaveIntervalSeconds = PersistenceSystem.autosaveIntervalSeconds
+    state.Persistence.productiveRestoreEnabled = PersistenceSystem.productiveRestoreEnabled == true
+    state.Persistence.productiveRestore = false
     state.Persistence.sandbox = state.Persistence.sandbox or {}
     state.Persistence.fileSave = state.Persistence.fileSave or {}
     state.Persistence.fileValidation = state.Persistence.fileValidation or {}
     state.Persistence.fileLoad = state.Persistence.fileLoad or {}
+    state.Persistence.autosave = state.Persistence.autosave or {}
 
     return state
 end
@@ -447,6 +459,8 @@ local function applyImportedState(importedData)
     state.Persistence.enabled = true
     state.Persistence.lastLoadTime = getCurrentTime()
     state.Persistence.importCount = (state.Persistence.importCount or 0) + 1
+    state.Persistence.productiveRestore = false
+    state.Persistence.productiveRestoreEnabled = PersistenceSystem.productiveRestoreEnabled == true
 
     return true
 end
@@ -950,6 +964,42 @@ local function storeFileLoadResult(result)
     return true
 end
 
+local function storeAutosaveResult(success, detail)
+    local state = ensurePersistenceState()
+
+    PersistenceSystem.lastAutosaveTime = getCurrentTime()
+
+    if success == true then
+        PersistenceSystem.autosaveCount = PersistenceSystem.autosaveCount + 1
+        PersistenceSystem.lastAutosaveStatus = "PASSED"
+        PersistenceSystem.lastAutosaveReason = "autosave_completed"
+        PersistenceSystem.lastAutosavePath = detail
+    else
+        PersistenceSystem.lastAutosaveStatus = "FAILED"
+        PersistenceSystem.lastAutosaveReason = detail or "autosave_failed"
+    end
+
+    if state ~= nil then
+        state.Persistence.autosave = state.Persistence.autosave or {}
+        state.Persistence.autosave.enabled = PersistenceSystem.autosaveEnabled == true
+        state.Persistence.autosave.scheduled = PersistenceSystem.autosaveScheduled == true
+        state.Persistence.autosave.running = PersistenceSystem.autosaveRunning == true
+        state.Persistence.autosave.intervalSeconds = PersistenceSystem.autosaveIntervalSeconds
+        state.Persistence.autosave.count = PersistenceSystem.autosaveCount
+        state.Persistence.autosave.lastStatus = PersistenceSystem.lastAutosaveStatus
+        state.Persistence.autosave.lastReason = PersistenceSystem.lastAutosaveReason
+        state.Persistence.autosave.lastPath = PersistenceSystem.lastAutosavePath
+        state.Persistence.autosave.lastTime = PersistenceSystem.lastAutosaveTime
+        state.Persistence.autosaveCount = PersistenceSystem.autosaveCount
+        state.Persistence.lastAutosaveTime = PersistenceSystem.lastAutosaveTime
+        state.Persistence.lastAutosavePath = PersistenceSystem.lastAutosavePath
+        state.Persistence.lastAutosaveStatus = PersistenceSystem.lastAutosaveStatus
+        state.Persistence.lastAutosaveReason = PersistenceSystem.lastAutosaveReason
+    end
+
+    return true
+end
+
 function PersistenceSystem.validateSnapshot(snapshot)
     if type(snapshot) ~= "table" then
         return false, "snapshot_not_table"
@@ -1215,7 +1265,8 @@ function PersistenceSystem.createSnapshot()
             stateOnly = true,
             autoLoad = false,
             productiveRestore = false,
-            controlledLoadTest = true
+            productiveRestoreEnabled = PersistenceSystem.productiveRestoreEnabled == true,
+            autosave = true
         },
         data = stateData
     }
@@ -1328,13 +1379,16 @@ function PersistenceSystem.saveToFile(saveName, options)
     options = options or {}
 
     local name = saveName or getDefaultSaveName()
+    local reason = options.reason or "manual_or_internal_file_save"
+    local isAutosave = reason == "autosave" or options.autosave == true
     local startedAt = getCurrentTime()
 
     local result = {
         name = "campaign_state_file_save",
         saveName = name,
         status = "STARTED",
-        reason = options.reason or "manual_or_startup_file_save_test",
+        reason = reason,
+        autosave = isAutosave == true,
         startedAt = startedAt,
         finishedAt = 0,
         filePath = nil,
@@ -1355,7 +1409,14 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.reason = "file_system_unavailable"
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
-        logWarn("Campaign state file save blocked: file_system_unavailable")
+
+        if isAutosave == true then
+            storeAutosaveResult(false, result.reason)
+            logWarn("Campaign state autosave blocked: file_system_unavailable")
+        else
+            logWarn("Campaign state file save blocked: file_system_unavailable")
+        end
+
         return false, result.reason
     end
 
@@ -1366,7 +1427,14 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.reason = filePathReason or "save_file_path_unavailable"
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
-        logWarn("Campaign state file save failed: " .. tostring(result.reason))
+
+        if isAutosave == true then
+            storeAutosaveResult(false, result.reason)
+            logWarn("Campaign state autosave failed: " .. tostring(result.reason))
+        else
+            logWarn("Campaign state file save failed: " .. tostring(result.reason))
+        end
+
         return false, result.reason
     end
 
@@ -1379,7 +1447,14 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.reason = snapshotReason or "snapshot_failed"
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
-        logWarn("Campaign state file save failed: " .. tostring(result.reason))
+
+        if isAutosave == true then
+            storeAutosaveResult(false, result.reason)
+            logWarn("Campaign state autosave failed: " .. tostring(result.reason))
+        else
+            logWarn("Campaign state file save failed: " .. tostring(result.reason))
+        end
+
         return false, result.reason
     end
 
@@ -1393,7 +1468,14 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.reason = writeReason or "write_failed"
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
-        logWarn("Campaign state file save failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+
+        if isAutosave == true then
+            storeAutosaveResult(false, result.reason)
+            logWarn("Campaign state autosave failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        else
+            logWarn("Campaign state file save failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        end
+
         return false, result.reason
     end
 
@@ -1406,7 +1488,14 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.reason = readReason or "read_after_write_failed"
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
-        logWarn("Campaign state file save verification failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+
+        if isAutosave == true then
+            storeAutosaveResult(false, result.reason)
+            logWarn("Campaign state autosave verification failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        else
+            logWarn("Campaign state file save verification failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        end
+
         return false, result.reason
     end
 
@@ -1417,7 +1506,14 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.reason = "save_marker_or_return_missing"
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
-        logWarn("Campaign state file save verification failed: save_marker_or_return_missing path=" .. tostring(filePath))
+
+        if isAutosave == true then
+            storeAutosaveResult(false, result.reason)
+            logWarn("Campaign state autosave verification failed: save_marker_or_return_missing path=" .. tostring(filePath))
+        else
+            logWarn("Campaign state file save verification failed: save_marker_or_return_missing path=" .. tostring(filePath))
+        end
+
         return false, result.reason
     end
 
@@ -1446,9 +1542,20 @@ function PersistenceSystem.saveToFile(saveName, options)
     clearDirty()
     storeFileSaveResult(result)
 
-    PersistenceSystem.fileSaveTestCompleted = true
-
-    logInfo("Campaign state file saved: path=" .. tostring(filePath) .. " saveName=" .. tostring(name))
+    if isAutosave == true then
+        storeAutosaveResult(true, filePath)
+        logInfo(
+            "Campaign state autosaved: path="
+                .. tostring(filePath)
+                .. " saveName="
+                .. tostring(name)
+                .. " productiveRestore=false"
+                .. " autosaveCount="
+                .. tostring(PersistenceSystem.autosaveCount)
+        )
+    else
+        logInfo("Campaign state file saved: path=" .. tostring(filePath) .. " saveName=" .. tostring(name))
+    end
 
     return true, filePath
 end
@@ -1463,7 +1570,7 @@ function PersistenceSystem.validateFile(saveName, options)
         name = "campaign_state_file_validation",
         saveName = name,
         status = "STARTED",
-        reason = options.reason or "manual_or_startup_file_validation_test",
+        reason = options.reason or "manual_or_internal_file_validation",
         startedAt = startedAt,
         finishedAt = 0,
         filePath = nil,
@@ -1531,8 +1638,6 @@ function PersistenceSystem.validateFile(saveName, options)
 
     storeFileValidationResult(result)
 
-    PersistenceSystem.fileValidationTestCompleted = true
-
     logInfo(
         "Campaign state file validation passed: path="
             .. tostring(filePath)
@@ -1551,12 +1656,13 @@ function PersistenceSystem.loadFromFile(saveName, options)
 
     local name = saveName or getDefaultSaveName()
     local startedAt = getCurrentTime()
+    local allowProductiveRestore = options.productiveRestore == true and PersistenceSystem.productiveRestoreEnabled == true
 
     local result = {
         name = "campaign_state_file_load",
         saveName = name,
         status = "STARTED",
-        reason = options.reason or "manual_or_startup_file_load_test",
+        reason = options.reason or "manual_or_internal_file_load",
         startedAt = startedAt,
         finishedAt = 0,
         filePath = nil,
@@ -1564,7 +1670,7 @@ function PersistenceSystem.loadFromFile(saveName, options)
         readAllowed = false,
         snapshotValid = false,
         imported = false,
-        productiveRestore = false,
+        productiveRestore = allowProductiveRestore == true,
         snapshotMetaCampaign = nil,
         snapshotMetaVersion = nil,
         snapshotModuleVersion = nil,
@@ -1581,7 +1687,7 @@ function PersistenceSystem.loadFromFile(saveName, options)
         result.reason = readReason or "snapshot_read_failed"
         result.finishedAt = getCurrentTime()
         storeFileLoadResult(result)
-        logWarn("Campaign state file load test failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        logWarn("Campaign state file load failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
         return false, result.reason
     end
 
@@ -1606,12 +1712,11 @@ function PersistenceSystem.loadFromFile(saveName, options)
         result.reason = importReason or "import_failed"
         result.finishedAt = getCurrentTime()
         storeFileLoadResult(result)
-        logWarn("Campaign state file load test failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        logWarn("Campaign state file load failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
         return false, result.reason
     end
 
     result.imported = true
-    result.productiveRestore = false
     result.status = "PASSED"
     result.reason = "read_validate_import_verified"
     result.finishedAt = getCurrentTime()
@@ -1629,22 +1734,23 @@ function PersistenceSystem.loadFromFile(saveName, options)
         state.Persistence.lastFileLoadTime = getCurrentTime()
         state.Persistence.lastFileLoadPath = filePath
         state.Persistence.fileLoadCount = (state.Persistence.fileLoadCount or 0) + 1
+        state.Persistence.productiveRestore = allowProductiveRestore == true
+        state.Persistence.productiveRestoreEnabled = PersistenceSystem.productiveRestoreEnabled == true
         result.fileLoadCount = state.Persistence.fileLoadCount
     end
 
     clearDirty()
     storeFileLoadResult(result)
 
-    PersistenceSystem.fileLoadTestCompleted = true
-
     logInfo(
-        "Campaign state file load test passed: path="
+        "Campaign state file load completed: path="
             .. tostring(filePath)
             .. " saveName="
             .. tostring(name)
             .. " sections="
             .. tostring(result.dataSections)
-            .. " imported=true productiveRestore=false"
+            .. " imported=true productiveRestore="
+            .. boolText(allowProductiveRestore == true)
     )
 
     return true, filePath
@@ -1723,6 +1829,117 @@ function PersistenceSystem.listMemorySaves()
     return result
 end
 
+function PersistenceSystem.autosave()
+    if PersistenceSystem.autosaveEnabled ~= true then
+        storeAutosaveResult(false, "autosave_disabled")
+        logWarn("Campaign state autosave skipped: autosave_disabled")
+        return false, "autosave_disabled"
+    end
+
+    if PersistenceSystem.isFilePersistenceAvailable() ~= true then
+        local sandboxResult = PersistenceSystem.runSandboxTest()
+
+        if sandboxResult == nil or sandboxResult.fileSystemAvailable ~= true then
+            storeAutosaveResult(false, "file_system_unavailable")
+            logWarn("Campaign state autosave skipped: file_system_unavailable")
+            return false, "file_system_unavailable"
+        end
+    end
+
+    local success, result = PersistenceSystem.saveToFile(
+        getDefaultSaveName(),
+        {
+            reason = "autosave",
+            autosave = true
+        }
+    )
+
+    if success ~= true then
+        storeAutosaveResult(false, result or "autosave_failed")
+        return false, result
+    end
+
+    return true, result
+end
+
+function PersistenceSystem.scheduleAutosave()
+    if PersistenceSystem.autosaveEnabled ~= true then
+        logWarn("Persistence autosave not scheduled: autosave_disabled")
+        return false
+    end
+
+    if PersistenceSystem.autosaveScheduled == true then
+        logDebug("Persistence autosave already scheduled")
+        return true
+    end
+
+    if timer == nil or timer.scheduleFunction == nil or timer.getTime == nil then
+        logWarn("Persistence autosave not scheduled: timer_unavailable")
+        return false
+    end
+
+    PersistenceSystem.autosaveScheduled = true
+    PersistenceSystem.autosaveRunning = true
+
+    local function autosaveTick()
+        if PersistenceSystem.started ~= true or PersistenceSystem.autosaveRunning ~= true then
+            return nil
+        end
+
+        local success, result = pcall(function()
+            return PersistenceSystem.autosave()
+        end)
+
+        if success ~= true then
+            PersistenceSystem.lastError = "autosave_exception"
+            storeAutosaveResult(false, "autosave_exception:" .. tostring(result))
+            logError("Campaign state autosave exception: " .. tostring(result))
+        end
+
+        return timer.getTime() + PersistenceSystem.autosaveIntervalSeconds
+    end
+
+    timer.scheduleFunction(
+        autosaveTick,
+        nil,
+        timer.getTime() + PersistenceSystem.autosaveInitialDelaySeconds
+    )
+
+    local state = ensurePersistenceState()
+
+    if state ~= nil then
+        state.Persistence.autosaveEnabled = true
+        state.Persistence.autosaveScheduled = true
+        state.Persistence.autosaveIntervalSeconds = PersistenceSystem.autosaveIntervalSeconds
+        state.Persistence.autosaveInitialDelaySeconds = PersistenceSystem.autosaveInitialDelaySeconds
+    end
+
+    logInfo(
+        "Persistence autosave scheduled: initialDelay="
+            .. tostring(PersistenceSystem.autosaveInitialDelaySeconds)
+            .. "s interval="
+            .. tostring(PersistenceSystem.autosaveIntervalSeconds)
+            .. "s productiveRestore=false"
+    )
+
+    return true
+end
+
+function PersistenceSystem.cancelAutosave()
+    PersistenceSystem.autosaveRunning = false
+    PersistenceSystem.autosaveScheduled = false
+
+    local state = ensurePersistenceState()
+
+    if state ~= nil then
+        state.Persistence.autosaveScheduled = false
+    end
+
+    logInfo("Persistence autosave cancelled")
+
+    return true
+end
+
 function PersistenceSystem.getLastExport()
     return PersistenceSystem.lastExport
 end
@@ -1765,177 +1982,6 @@ function PersistenceSystem.isDirty()
     return state.Persistence.dirty == true
 end
 
-function PersistenceSystem.scheduleFileSaveTest()
-    if PersistenceSystem.fileSaveTestScheduled == true then
-        logDebug("Persistence file save test already scheduled")
-        return true
-    end
-
-    PersistenceSystem.fileSaveTestScheduled = true
-
-    if timer ~= nil and timer.scheduleFunction ~= nil and timer.getTime ~= nil then
-        local scheduledTime = timer.getTime() + PersistenceSystem.fileSaveTestDelaySeconds
-
-        timer.scheduleFunction(
-            function()
-                local success, result = pcall(function()
-                    return PersistenceSystem.saveToFile(
-                        getDefaultSaveName(),
-                        {
-                            reason = "startup_file_save_test"
-                        }
-                    )
-                end)
-
-                if success ~= true then
-                    PersistenceSystem.lastError = "scheduled_file_save_exception"
-                    logError("Campaign state file save test exception: " .. tostring(result))
-                end
-
-                return nil
-            end,
-            nil,
-            scheduledTime
-        )
-
-        logInfo(
-            "Persistence file save test scheduled: delay="
-                .. tostring(PersistenceSystem.fileSaveTestDelaySeconds)
-                .. "s"
-        )
-
-        return true
-    end
-
-    local success, reason = PersistenceSystem.saveToFile(
-        getDefaultSaveName(),
-        {
-            reason = "startup_file_save_test_no_scheduler"
-        }
-    )
-
-    if success ~= true then
-        logWarn("Immediate persistence file save test failed: " .. tostring(reason))
-        return false
-    end
-
-    return true
-end
-
-function PersistenceSystem.scheduleFileValidationTest()
-    if PersistenceSystem.fileValidationTestScheduled == true then
-        logDebug("Persistence file validation test already scheduled")
-        return true
-    end
-
-    PersistenceSystem.fileValidationTestScheduled = true
-
-    if timer ~= nil and timer.scheduleFunction ~= nil and timer.getTime ~= nil then
-        local scheduledTime = timer.getTime() + PersistenceSystem.fileValidationTestDelaySeconds
-
-        timer.scheduleFunction(
-            function()
-                local success, result = pcall(function()
-                    return PersistenceSystem.validateFile(
-                        getDefaultSaveName(),
-                        {
-                            reason = "startup_file_validation_test"
-                        }
-                    )
-                end)
-
-                if success ~= true then
-                    PersistenceSystem.lastError = "scheduled_file_validation_exception"
-                    logError("Campaign state file validation test exception: " .. tostring(result))
-                end
-
-                return nil
-            end,
-            nil,
-            scheduledTime
-        )
-
-        logInfo(
-            "Persistence file validation test scheduled: delay="
-                .. tostring(PersistenceSystem.fileValidationTestDelaySeconds)
-                .. "s"
-        )
-
-        return true
-    end
-
-    local success, reason = PersistenceSystem.validateFile(
-        getDefaultSaveName(),
-        {
-            reason = "startup_file_validation_test_no_scheduler"
-        }
-    )
-
-    if success ~= true then
-        logWarn("Immediate persistence file validation test failed: " .. tostring(reason))
-        return false
-    end
-
-    return true
-end
-
-function PersistenceSystem.scheduleFileLoadTest()
-    if PersistenceSystem.fileLoadTestScheduled == true then
-        logDebug("Persistence file load test already scheduled")
-        return true
-    end
-
-    PersistenceSystem.fileLoadTestScheduled = true
-
-    if timer ~= nil and timer.scheduleFunction ~= nil and timer.getTime ~= nil then
-        local scheduledTime = timer.getTime() + PersistenceSystem.fileLoadTestDelaySeconds
-
-        timer.scheduleFunction(
-            function()
-                local success, result = pcall(function()
-                    return PersistenceSystem.loadFromFile(
-                        getDefaultSaveName(),
-                        {
-                            reason = "startup_file_load_test"
-                        }
-                    )
-                end)
-
-                if success ~= true then
-                    PersistenceSystem.lastError = "scheduled_file_load_exception"
-                    logError("Campaign state file load test exception: " .. tostring(result))
-                end
-
-                return nil
-            end,
-            nil,
-            scheduledTime
-        )
-
-        logInfo(
-            "Persistence file load test scheduled: delay="
-                .. tostring(PersistenceSystem.fileLoadTestDelaySeconds)
-                .. "s"
-        )
-
-        return true
-    end
-
-    local success, reason = PersistenceSystem.loadFromFile(
-        getDefaultSaveName(),
-        {
-            reason = "startup_file_load_test_no_scheduler"
-        }
-    )
-
-    if success ~= true then
-        logWarn("Immediate persistence file load test failed: " .. tostring(reason))
-        return false
-    end
-
-    return true
-end
-
 function PersistenceSystem.start()
     if PersistenceSystem.started == true and PersistenceSystem.finished == true and PersistenceSystem.failed ~= true then
         logDebug("Persistence system already started")
@@ -1946,12 +1992,10 @@ function PersistenceSystem.start()
     PersistenceSystem.finished = false
     PersistenceSystem.failed = false
     PersistenceSystem.lastError = nil
-    PersistenceSystem.fileSaveTestScheduled = false
-    PersistenceSystem.fileSaveTestCompleted = false
-    PersistenceSystem.fileValidationTestScheduled = false
-    PersistenceSystem.fileValidationTestCompleted = false
-    PersistenceSystem.fileLoadTestScheduled = false
-    PersistenceSystem.fileLoadTestCompleted = false
+    PersistenceSystem.autosaveScheduled = false
+    PersistenceSystem.autosaveRunning = false
+    PersistenceSystem.startupRestoreAttempted = false
+    PersistenceSystem.startupRestoreCompleted = false
 
     setModuleStatus("STARTING")
     setFeatureStatus(false)
@@ -1973,9 +2017,7 @@ function PersistenceSystem.start()
 
     if sandboxResult ~= nil and sandboxResult.fileSystemAvailable == true then
         setFeatureStatus(true)
-        PersistenceSystem.scheduleFileSaveTest()
-        PersistenceSystem.scheduleFileValidationTest()
-        PersistenceSystem.scheduleFileLoadTest()
+        PersistenceSystem.scheduleAutosave()
     else
         setFeatureStatus(false)
     end
@@ -1990,18 +2032,19 @@ function PersistenceSystem.start()
             .. tostring(sandboxResult and sandboxResult.status or "UNKNOWN")
             .. ", fileSystemAvailable="
             .. boolText(sandboxResult ~= nil and sandboxResult.fileSystemAvailable == true)
-            .. ", fileSaveTestScheduled="
-            .. boolText(PersistenceSystem.fileSaveTestScheduled == true)
-            .. ", fileValidationTestScheduled="
-            .. boolText(PersistenceSystem.fileValidationTestScheduled == true)
-            .. ", fileLoadTestScheduled="
-            .. boolText(PersistenceSystem.fileLoadTestScheduled == true)
+            .. ", autosaveScheduled="
+            .. boolText(PersistenceSystem.autosaveScheduled == true)
+            .. ", autosaveInterval="
+            .. tostring(PersistenceSystem.autosaveIntervalSeconds)
+            .. "s, productiveRestore=false"
     )
 
     return true
 end
 
 function PersistenceSystem.stop()
+    PersistenceSystem.cancelAutosave()
+
     PersistenceSystem.started = false
     PersistenceSystem.finished = false
 
@@ -2035,12 +2078,18 @@ function PersistenceSystem.summary()
         dirty = PersistenceSystem.isDirty(),
         sandbox = PersistenceSystem.lastSandboxResult,
         fileSystemAvailable = PersistenceSystem.isFilePersistenceAvailable(),
-        fileSaveTestScheduled = PersistenceSystem.fileSaveTestScheduled,
-        fileSaveTestCompleted = PersistenceSystem.fileSaveTestCompleted,
-        fileValidationTestScheduled = PersistenceSystem.fileValidationTestScheduled,
-        fileValidationTestCompleted = PersistenceSystem.fileValidationTestCompleted,
-        fileLoadTestScheduled = PersistenceSystem.fileLoadTestScheduled,
-        fileLoadTestCompleted = PersistenceSystem.fileLoadTestCompleted,
+        autosaveEnabled = PersistenceSystem.autosaveEnabled,
+        autosaveScheduled = PersistenceSystem.autosaveScheduled,
+        autosaveRunning = PersistenceSystem.autosaveRunning,
+        autosaveCount = PersistenceSystem.autosaveCount,
+        autosaveIntervalSeconds = PersistenceSystem.autosaveIntervalSeconds,
+        lastAutosaveStatus = PersistenceSystem.lastAutosaveStatus,
+        lastAutosaveReason = PersistenceSystem.lastAutosaveReason,
+        lastAutosavePath = PersistenceSystem.lastAutosavePath,
+        lastAutosaveTime = PersistenceSystem.lastAutosaveTime,
+        productiveRestoreEnabled = PersistenceSystem.productiveRestoreEnabled,
+        startupRestoreAttempted = PersistenceSystem.startupRestoreAttempted,
+        startupRestoreCompleted = PersistenceSystem.startupRestoreCompleted,
         lastFileSaveName = PersistenceSystem.lastFileSaveName,
         lastFileSavePath = PersistenceSystem.lastFileSavePath,
         lastFileValidationPath = PersistenceSystem.lastFileValidationPath,
