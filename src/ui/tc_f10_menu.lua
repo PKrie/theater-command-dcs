@@ -5,11 +5,12 @@
 -- Provide the player-facing F10 menu for Theater Command DCS.
 --
 -- Current focus:
--- F10Menu v0.2.1 keeps the proven Mission/Logistics/FOB/AI
--- status functions from v0.2.0 and adds Capture/Pressure visibility.
+-- F10Menu v0.2.2 keeps the proven Mission/Logistics/FOB/AI/Capture
+-- status functions from v0.2.1 and adds state-only mission outcome
+-- test controls for the first active mission.
 --
 -- Version:
--- 0.2.1
+-- 0.2.2
 --
 -- Responsibilities:
 -- - create a Blue coalition Theater Command F10 menu
@@ -20,6 +21,9 @@
 -- - show campaign, capture, logistics, FOB and AI CAP status summaries
 -- - show Capture Ready zones
 -- - show Pressure Contested zones
+-- - show active mission outcome status
+-- - complete Active Mission 1 state-only
+-- - fail Active Mission 1 state-only
 -- - keep all UI logic state-only
 -- - do not trigger real MOOSE, CTLD or Skynet execution
 --
@@ -37,7 +41,7 @@ local F10Menu = {}
 F10Menu.name = "tc_f10_menu"
 F10Menu.displayName = "F10 Menu"
 F10Menu.path = "src/ui/tc_f10_menu.lua"
-F10Menu.version = "0.2.1"
+F10Menu.version = "0.2.2"
 F10Menu.loaded = true
 F10Menu.started = false
 F10Menu.finished = false
@@ -47,9 +51,12 @@ F10Menu.commandCount = 0
 F10Menu.lastUpdateTime = 0
 F10Menu.lastMessage = nil
 F10Menu.lastSelectedMissionKey = nil
+F10Menu.lastOutcomeMissionKey = nil
+F10Menu.lastOutcomeAction = nil
 F10Menu.outputDuration = 20
 F10Menu.maxMissionListItems = 10
 F10Menu.maxMissionSelectionItems = 10
+F10Menu.maxActiveMissionSelectionItems = 10
 F10Menu.maxCaptureListItems = 10
 
 F10Menu.menu = {
@@ -57,6 +64,7 @@ F10Menu.menu = {
   missions = nil,
   missionDetails = nil,
   missionActivation = nil,
+  missionOutcome = nil,
   status = nil,
   logistics = nil,
   ai = nil
@@ -259,12 +267,17 @@ local function ensureUiState()
   state.UI.lastUpdate = state.UI.lastUpdate or 0
   state.UI.lastMessage = state.UI.lastMessage
   state.UI.lastSelectedMissionKey = state.UI.lastSelectedMissionKey
+  state.UI.lastOutcomeMissionKey = state.UI.lastOutcomeMissionKey
+  state.UI.lastOutcomeAction = state.UI.lastOutcomeAction
   state.UI.availableMissionCount = state.UI.availableMissionCount or 0
   state.UI.availableMissionSlots = state.UI.availableMissionSlots or {}
+  state.UI.activeMissionCount = state.UI.activeMissionCount or 0
+  state.UI.activeMissionSlots = state.UI.activeMissionSlots or {}
   state.UI.menuItems = state.UI.menuItems or {}
   state.UI.captureStatus = state.UI.captureStatus or {}
   state.UI.captureReadyZones = state.UI.captureReadyZones or {}
   state.UI.pressureContestedZones = state.UI.pressureContestedZones or {}
+  state.UI.missionOutcome = state.UI.missionOutcome or {}
 
   return state
 end
@@ -505,6 +518,25 @@ local function updateAvailableMissionSlots(availableMissions)
   end
 end
 
+local function updateActiveMissionSlots(activeMissions)
+  local state = ensureUiState()
+  if state == nil then
+    return
+  end
+
+  state.UI.activeMissionSlots = {}
+  state.UI.activeMissionCount = #activeMissions
+  state.UI.lastUpdate = getCurrentTime()
+
+  local maxItems = math.min(#activeMissions, F10Menu.maxActiveMissionSelectionItems)
+  for index = 1, maxItems do
+    local missionRecord = activeMissions[index]
+    if missionRecord ~= nil then
+      state.UI.activeMissionSlots[index] = missionRecord.key
+    end
+  end
+end
+
 local function getAvailableMissionList()
   local missionGenerator = getMissionGenerator()
   if missionGenerator == nil or missionGenerator.getAvailableMissions == nil then
@@ -515,6 +547,18 @@ local function getAvailableMissionList()
   updateAvailableMissionSlots(availableMissions)
 
   return availableMissions, nil
+end
+
+local function getActiveMissionList()
+  local missionGenerator = getMissionGenerator()
+  if missionGenerator == nil or missionGenerator.getActiveMissions == nil then
+    return {}, "mission_generator_unavailable"
+  end
+
+  local activeMissions = getSortedMissionList(missionGenerator.getActiveMissions())
+  updateActiveMissionSlots(activeMissions)
+
+  return activeMissions, nil
 end
 
 local function getAvailableMissionByIndex(index)
@@ -536,6 +580,27 @@ local function getAvailableMissionByIndex(index)
   end
 
   return availableMissions[index], nil
+end
+
+local function getActiveMissionByIndex(index)
+  local activeMissions, reason = getActiveMissionList()
+  if reason ~= nil then
+    return nil, reason
+  end
+
+  if #activeMissions == 0 then
+    return nil, "no_active_missions"
+  end
+
+  if index == nil or index < 1 or index > F10Menu.maxActiveMissionSelectionItems then
+    return nil, "active_mission_index_out_of_range"
+  end
+
+  if index > #activeMissions then
+    return nil, "active_mission_slot_empty"
+  end
+
+  return activeMissions[index], nil
 end
 
 local function formatMissionLine(index, missionRecord)
@@ -583,6 +648,31 @@ local function buildMissionDetailsText(index, missionRecord, headline)
   addLineIfValue(lines, "Strategic Relevance", missionRecord.strategicRelevance or 0)
   addLineIfValue(lines, "Key", missionRecord.key)
 
+  if type(missionRecord.progress) == "table" then
+    table.insert(lines, "")
+    table.insert(lines, "Progress:")
+    addLineIfValue(lines, " Stage", missionRecord.progress.stage)
+    addLineIfValue(lines, " Percent", missionRecord.progress.percent)
+    addLineIfValue(lines, " State-only", missionRecord.progress.stateOnly)
+  end
+
+  if type(missionRecord.outcome) == "table" then
+    table.insert(lines, "")
+    table.insert(lines, "Outcome:")
+    addLineIfValue(lines, " Status", missionRecord.outcome.status)
+    addLineIfValue(lines, " Reason", missionRecord.outcome.reason)
+    addLineIfValue(lines, " State-only", missionRecord.outcome.stateOnly)
+  end
+
+  if type(missionRecord.effectState) == "table" then
+    table.insert(lines, "")
+    table.insert(lines, "Effect State:")
+    addLineIfValue(lines, " Status", missionRecord.effectState.status)
+    addLineIfValue(lines, " Prepared", missionRecord.effectState.prepared)
+    addLineIfValue(lines, " Applied", missionRecord.effectState.applied)
+    addLineIfValue(lines, " State-only", missionRecord.effectState.stateOnly)
+  end
+
   if missionRecord.objective ~= nil then
     table.insert(lines, "")
     table.insert(lines, "Objective:")
@@ -620,10 +710,16 @@ local function buildMissionSlotUnavailableText(index, reason)
     reasonText = "Mission Generator ist nicht verfügbar."
   elseif reason == "no_available_missions" then
     reasonText = "Keine verfügbaren Missionen."
+  elseif reason == "no_active_missions" then
+    reasonText = "Keine aktive Mission."
   elseif reason == "mission_slot_empty" then
     reasonText = "Mission " .. tostring(index) .. " ist aktuell nicht belegt."
+  elseif reason == "active_mission_slot_empty" then
+    reasonText = "Aktive Mission " .. tostring(index) .. " ist aktuell nicht belegt."
   elseif reason == "mission_index_out_of_range" then
     reasonText = "Mission Index außerhalb des erlaubten Bereichs."
+  elseif reason == "active_mission_index_out_of_range" then
+    reasonText = "Aktive Mission Index außerhalb des erlaubten Bereichs."
   end
 
   return "Theater Command\n\n" .. reasonText
@@ -661,12 +757,11 @@ local function buildAvailableMissionsText()
 end
 
 local function buildActiveMissionsText()
-  local missionGenerator = getMissionGenerator()
-  if missionGenerator == nil or missionGenerator.getActiveMissions == nil then
-    return "Theater Command\n\nMission Generator ist nicht verfügbar."
+  local activeMissions, reason = getActiveMissionList()
+  if reason ~= nil then
+    return buildMissionSlotUnavailableText(nil, reason)
   end
 
-  local activeMissions = getSortedMissionList(missionGenerator.getActiveMissions())
   if #activeMissions == 0 then
     return "Theater Command\n\nKeine aktive Mission."
   end
@@ -679,6 +774,75 @@ local function buildActiveMissionsText()
 
   for index, missionRecord in ipairs(activeMissions) do
     table.insert(lines, formatMissionLine(index, missionRecord))
+  end
+
+  return table.concat(lines, "\n")
+end
+
+local function buildMissionOutcomeStatusText()
+  local missionGenerator = getMissionGenerator()
+  if missionGenerator == nil then
+    return "Theater Command\n\nMission Generator ist nicht verfügbar."
+  end
+
+  local activeMissions, reason = getActiveMissionList()
+  if reason ~= nil then
+    return buildMissionSlotUnavailableText(nil, reason)
+  end
+
+  local statistics = {}
+  if missionGenerator.getStatistics ~= nil then
+    local success, result = pcall(function()
+      return missionGenerator.getStatistics()
+    end)
+    if success == true and type(result) == "table" then
+      statistics = result
+    end
+  end
+
+  local lines = {
+    "Theater Command",
+    "Mission Outcome Status:",
+    "",
+    "available: " .. tostring(statistics.available or 0),
+    "active: " .. tostring(statistics.active or #activeMissions),
+    "completed: " .. tostring(statistics.completed or 0),
+    "failed: " .. tostring(statistics.failed or 0),
+    "expired: " .. tostring(statistics.expired or 0),
+    "cancelled: " .. tostring(statistics.cancelled or 0),
+    "preparedEffects: " .. tostring(statistics.preparedEffects or 0),
+    ""
+  }
+
+  if #activeMissions == 0 then
+    table.insert(lines, "Keine aktive Mission.")
+    table.insert(lines, "")
+    table.insert(lines, "Ablauf:")
+    table.insert(lines, "1. Mission aktivieren")
+    table.insert(lines, "2. Outcome-Funktion erneut testen")
+  else
+    table.insert(lines, "Aktive Mission 1:")
+    table.insert(lines, formatMissionLine(1, activeMissions[1]))
+
+    local missionRecord = activeMissions[1]
+    if type(missionRecord.progress) == "table" then
+      table.insert(lines, "Progress: " .. tostring(missionRecord.progress.stage) .. " / " .. tostring(missionRecord.progress.percent or 0) .. "%")
+    end
+
+    if type(missionRecord.effectState) == "table" then
+      table.insert(lines, "EffectState: " .. tostring(missionRecord.effectState.status or "UNKNOWN"))
+    end
+  end
+
+  table.insert(lines, "")
+  table.insert(lines, "State-only: no MOOSE/CTLD/Skynet action executed.")
+
+  local state = ensureUiState()
+  if state ~= nil then
+    state.UI.missionOutcome.lastShownAt = getCurrentTime()
+    state.UI.missionOutcome.activeMissionCount = #activeMissions
+    state.UI.missionOutcome.statistics = shallowCopy(statistics)
+    state.UI.lastUpdate = getCurrentTime()
   end
 
   return table.concat(lines, "\n")
@@ -1173,6 +1337,12 @@ local function showMissionDetailsByIndex(index)
   return true
 end
 
+local function showActiveMissionOutcomeStatus()
+  outputToBlue(buildMissionOutcomeStatusText())
+  logInfo("Active mission outcome status shown through F10")
+  return true
+end
+
 local function showCampaignStatus()
   outputToBlue(buildCampaignStatusText())
   return true
@@ -1275,6 +1445,128 @@ local function activateMissionByIndex(index)
   return true
 end
 
+local function completeActiveMissionByIndex(index)
+  local missionGenerator = getMissionGenerator()
+  if missionGenerator == nil or missionGenerator.completeMission == nil then
+    outputToBlue("Theater Command\n\nMission Generator completeMission ist nicht verfügbar.")
+    return false
+  end
+
+  local missionRecord, reason = getActiveMissionByIndex(index)
+  if missionRecord == nil then
+    outputToBlue(buildMissionSlotUnavailableText(index, reason))
+    return false
+  end
+
+  local success, missionRecordOrReason = missionGenerator.completeMission(
+    missionRecord.key,
+    "f10_active_mission_" .. tostring(index) .. "_completed"
+  )
+
+  if success ~= true then
+    outputToBlue(
+      "Theater Command\n\nAktive Mission "
+        .. tostring(index)
+        .. " konnte nicht abgeschlossen werden: "
+        .. tostring(missionRecordOrReason)
+    )
+    return false
+  end
+
+  F10Menu.lastOutcomeMissionKey = missionRecordOrReason.key or missionRecord.key
+  F10Menu.lastOutcomeAction = "COMPLETED"
+  F10Menu.lastUpdateTime = getCurrentTime()
+
+  local state = ensureUiState()
+  if state ~= nil then
+    state.UI.lastOutcomeMissionKey = F10Menu.lastOutcomeMissionKey
+    state.UI.lastOutcomeAction = F10Menu.lastOutcomeAction
+    state.UI.lastOutcomeIndex = index
+    state.UI.lastUpdate = F10Menu.lastUpdateTime
+  end
+
+  markDirty("f10_active_mission_" .. tostring(index) .. "_completed")
+
+  outputToBlue(
+    buildMissionDetailsText(
+      index,
+      missionRecordOrReason,
+      "Aktive Mission " .. tostring(index) .. " abgeschlossen:"
+    )
+  )
+
+  logInfo(
+    "Mission completed through F10: slot="
+      .. tostring(index)
+      .. " key="
+      .. tostring(F10Menu.lastOutcomeMissionKey)
+      .. " stateOnly=true effects=prepared"
+  )
+
+  return true
+end
+
+local function failActiveMissionByIndex(index)
+  local missionGenerator = getMissionGenerator()
+  if missionGenerator == nil or missionGenerator.failMission == nil then
+    outputToBlue("Theater Command\n\nMission Generator failMission ist nicht verfügbar.")
+    return false
+  end
+
+  local missionRecord, reason = getActiveMissionByIndex(index)
+  if missionRecord == nil then
+    outputToBlue(buildMissionSlotUnavailableText(index, reason))
+    return false
+  end
+
+  local success, missionRecordOrReason = missionGenerator.failMission(
+    missionRecord.key,
+    "f10_active_mission_" .. tostring(index) .. "_failed"
+  )
+
+  if success ~= true then
+    outputToBlue(
+      "Theater Command\n\nAktive Mission "
+        .. tostring(index)
+        .. " konnte nicht als fehlgeschlagen gesetzt werden: "
+        .. tostring(missionRecordOrReason)
+    )
+    return false
+  end
+
+  F10Menu.lastOutcomeMissionKey = missionRecordOrReason.key or missionRecord.key
+  F10Menu.lastOutcomeAction = "FAILED"
+  F10Menu.lastUpdateTime = getCurrentTime()
+
+  local state = ensureUiState()
+  if state ~= nil then
+    state.UI.lastOutcomeMissionKey = F10Menu.lastOutcomeMissionKey
+    state.UI.lastOutcomeAction = F10Menu.lastOutcomeAction
+    state.UI.lastOutcomeIndex = index
+    state.UI.lastUpdate = F10Menu.lastUpdateTime
+  end
+
+  markDirty("f10_active_mission_" .. tostring(index) .. "_failed")
+
+  outputToBlue(
+    buildMissionDetailsText(
+      index,
+      missionRecordOrReason,
+      "Aktive Mission " .. tostring(index) .. " fehlgeschlagen:"
+    )
+  )
+
+  logInfo(
+    "Mission failed through F10: slot="
+      .. tostring(index)
+      .. " key="
+      .. tostring(F10Menu.lastOutcomeMissionKey)
+      .. " stateOnly=true effects=prepared"
+  )
+
+  return true
+end
+
 local function activateTopMission()
   local missionGenerator = getMissionGenerator()
   if missionGenerator == nil or missionGenerator.getTopAvailableMission == nil then
@@ -1328,6 +1620,28 @@ local function createMissionSelectionCommands()
   end
 end
 
+local function createMissionOutcomeCommands()
+  local outcomeParent = F10Menu.menu.missionOutcome or F10Menu.menu.missions
+
+  addCommand("Show Active Mission Outcome Status", outcomeParent, showActiveMissionOutcomeStatus)
+
+  addCommand(
+    "Complete Active Mission 1",
+    outcomeParent,
+    function()
+      return completeActiveMissionByIndex(1)
+    end
+  )
+
+  addCommand(
+    "Fail Active Mission 1",
+    outcomeParent,
+    function()
+      return failActiveMissionByIndex(1)
+    end
+  )
+end
+
 local function createMenuStructure()
   if missionCommandsAvailable() ~= true then
     return false, "missionCommands_unavailable"
@@ -1341,6 +1655,7 @@ local function createMenuStructure()
   F10Menu.menu.missions = addSubMenu("Missions", F10Menu.menu.root)
   F10Menu.menu.missionDetails = addSubMenu("Mission Details", F10Menu.menu.missions or F10Menu.menu.root)
   F10Menu.menu.missionActivation = addSubMenu("Activate Mission", F10Menu.menu.missions or F10Menu.menu.root)
+  F10Menu.menu.missionOutcome = addSubMenu("Mission Outcome", F10Menu.menu.missions or F10Menu.menu.root)
   F10Menu.menu.status = addSubMenu("Status", F10Menu.menu.root)
   F10Menu.menu.logistics = addSubMenu("Logistics", F10Menu.menu.root)
   F10Menu.menu.ai = addSubMenu("AI", F10Menu.menu.root)
@@ -1349,6 +1664,7 @@ local function createMenuStructure()
   addCommand("Show Active Missions", F10Menu.menu.missions, showActiveMissions)
 
   createMissionSelectionCommands()
+  createMissionOutcomeCommands()
 
   addCommand("Show Campaign Status", F10Menu.menu.status, showCampaignStatus)
   addCommand("Show Capture Status", F10Menu.menu.status, showCaptureStatus)
@@ -1366,12 +1682,14 @@ local function createMenuStructure()
     state.UI.menuRootCreated = true
     state.UI.commandCount = F10Menu.commandCount
     state.UI.directMissionSlots = F10Menu.maxMissionSelectionItems
+    state.UI.activeMissionSlotsMax = F10Menu.maxActiveMissionSelectionItems
     state.UI.captureListSlots = F10Menu.maxCaptureListItems
     state.UI.menuItems = {
       root = "Theater Command",
       missions = "Missions",
       missionDetails = "Mission Details",
       missionActivation = "Activate Mission",
+      missionOutcome = "Mission Outcome",
       status = "Status",
       logistics = "Logistics",
       ai = "AI"
@@ -1392,6 +1710,10 @@ end
 
 function F10Menu.showMissionDetails(index)
   return showMissionDetailsByIndex(index)
+end
+
+function F10Menu.showActiveMissionOutcomeStatus()
+  return showActiveMissionOutcomeStatus()
 end
 
 function F10Menu.showCampaignStatus()
@@ -1424,6 +1746,14 @@ end
 
 function F10Menu.activateMission(index)
   return activateMissionByIndex(index)
+end
+
+function F10Menu.completeActiveMission(index)
+  return completeActiveMissionByIndex(index or 1)
+end
+
+function F10Menu.failActiveMission(index)
+  return failActiveMissionByIndex(index or 1)
 end
 
 function F10Menu.activateTopMission()
@@ -1507,9 +1837,12 @@ function F10Menu.summary()
     menuRootCreated = F10Menu.menuRootCreated,
     commandCount = F10Menu.commandCount,
     maxMissionSelectionItems = F10Menu.maxMissionSelectionItems,
+    maxActiveMissionSelectionItems = F10Menu.maxActiveMissionSelectionItems,
     maxCaptureListItems = F10Menu.maxCaptureListItems,
     lastUpdateTime = F10Menu.lastUpdateTime,
     lastSelectedMissionKey = F10Menu.lastSelectedMissionKey,
+    lastOutcomeMissionKey = F10Menu.lastOutcomeMissionKey,
+    lastOutcomeAction = F10Menu.lastOutcomeAction,
     lastMessage = F10Menu.lastMessage,
     state = uiState
   }
