@@ -190,7 +190,7 @@ Aktuell nur vorbereitet oder dokumentiert:
 
 ## 6. Erfolgreich getestete Systeme
 
-Stand: **2026-06-29**
+Stand: **2026-07-06**
 
 ### 6.1 Starttest Variante A
 
@@ -333,13 +333,11 @@ Bewertung:
 - Capture-Progress-Records werden für 32 capture-fähige Zonen erzeugt.
 - Missionseffekte können state-only als Capture-Druck vorbereitet werden.
 - Automatische produktive Capture-Folgen bleiben noch deaktiviert.
+- Capture-/Pressure-Status ist seit `F10Menu v0.2.1` im F10-Menü sichtbar.
 
 Offen:
 
-- Capture-/Pressure-Status im F10-Menü sichtbar machen
 - Missionserfolg mit `CaptureSystem.applyMissionEffect()` praktisch testen
-- Capture-Ready-Zonen über UI oder Debug anzeigen
-- Pressure-Contested-Zonen über UI oder Debug anzeigen
 - echte Capture-Bedingungen final definieren
 - Logistikzustand mit Capture-Fähigkeit koppeln
 - AI-Operationen mit Capture-Fortschritt koppeln
@@ -466,7 +464,7 @@ Bestätigte Missionslogik:
 - Aktivierte Missionen bleiben `stateOnly=true`.
 - Spawn-Hooks bleiben `reserved`.
 
-Bestätigte F10-/MissionGenerator-Interaktion:
+Bestätigte F10-/MissionGenerator-Interaktion aus früherem Test:
 
 - Mission Details Slot 1 bestätigt
 - Mission Details Slot 2 bestätigt
@@ -479,7 +477,7 @@ Bestätigte F10-/MissionGenerator-Interaktion:
 Bewertung:
 
 - Mission Generator erzeugt priorisierte Missionen aus klassifizierten Kampagnenzonen und berücksichtigt FOB-Unterstützung.
-- Missionen sind jetzt fachlich besser modelliert.
+- Missionen sind fachlich modelliert.
 - Missionen bleiben weiterhin State-only und lösen keine echten DCS-Spawns aus.
 
 Offen:
@@ -539,37 +537,37 @@ Datei:
 
 Aktuelle getestete Version:
 
-- `v0.2.0`
+- `v0.2.1`
 
 Status:
 
-- **bestanden**
+- **bestanden für die Capture-/Pressure-Erweiterung**
 
-Bestätigt:
+Bestätigt im Test vom **2026-07-06**:
 
-- F10-Menü ist in der Mission sichtbar.
-- F10-Menü ist navigierbar.
-- Log bestätigt Start und Initialisierung.
-- 26 Commands wurden erzeugt.
-- Mission 1 bis Mission 10 sind direkt auswählbar.
-- Mission 1 bis Mission 10 sind direkt aktivierbar.
-- Missionsdetails sind pro Slot abrufbar.
-- Mission Details Slot 1 wurden bestätigt.
-- Mission Details Slot 2 wurden bestätigt.
-- Mission Details Slot 5 wurden bestätigt.
-- Mission Slot 1 wurde aktiviert.
-- Mission Slot 5 wurde aktiviert.
-- MissionGenerator setzt aktivierte Missionen auf `ACTIVE`.
+- F10Menu lädt als `v0.2.1`.
+- F10-Menü initialisiert sauber.
+- 29 Commands wurden erzeugt.
+- `Show Capture Status` wurde über F10 ausgelöst.
+- `Show Capture Ready Zones` wurde über F10 ausgelöst.
+- `Show Pressure Contested Zones` wurde über F10 ausgelöst.
+- CaptureSystem aktualisiert dabei weiterhin 32 Capture-Progress-Zonen.
+- `ready=0` und `contested=0` bleiben im aktuellen Startzustand erwartungsgemäß.
+- keine Lua-Scripting-Fehler.
+- keine Theater-Command-Fehler.
+- keine echten MOOSE-Spawns.
+- keine echten CTLD-Aktionen.
+- keine echten Skynet-Aktionen.
 
 Bestätigte Logmarker:
 
-- `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.0`
+- `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.1`
 - `[TC] [F10Menu] F10 menu started`
-- `[TC] [F10Menu] F10 menu initialized: commands=26`
+- `[TC] [F10Menu] F10 menu initialized: commands=29`
+- `[TC] [F10Menu] Capture status shown through F10`
+- `[TC] [F10Menu] Capture ready zones shown through F10`
+- `[TC] [F10Menu] Pressure contested zones shown through F10`
 - `[TC] System started: F10 Menu`
-- `[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_1`
-- `[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_1`
-- `[TC] [F10Menu] Mission activated through F10: slot=5 key=MISSION_4`
 
 Aktuelle F10-Funktionen:
 
@@ -578,23 +576,29 @@ Aktuelle F10-Funktionen:
 - Mission 1 bis Mission 10 Details anzeigen
 - Mission 1 bis Mission 10 aktivieren
 - Kampagnenstatus anzeigen
+- Capture-/Pressure-Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
 - Logistikstatus anzeigen
 - FOB-Status anzeigen
 - AI-CAP-Status anzeigen
 
 Bewertung:
 
-- Die erste Spieleroberfläche existiert und ist funktionsfähig.
-- Die direkte Missionsauswahl funktioniert.
-- Die direkte Missionsaktivierung funktioniert.
+- Die Spieleroberfläche ist weiter funktionsfähig.
+- Das F10-Menü wurde von 26 auf 29 Commands erweitert.
+- Die neuen Capture-/Pressure-Statusseiten sind sichtbar und logbestätigt.
 - Das Menü bleibt State-only.
 - Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
 
+Hinweis:
+
+- Im frischen `v0.2.1`-Log wurden Mission Details und Mission Activation nicht erneut angeklickt.
+- Diese Funktionen waren bereits aus dem vorherigen `v0.2.0`-Test bestätigt.
+- Beim nächsten UI-/Regressionstest sollten Mission Details und Mission Activation stichprobenartig erneut geprüft werden.
+
 Offen:
 
-- Capture-/Pressure-Status über F10 anzeigen
-- Capture Ready Zones über F10 anzeigen
-- Pressure Contested Zones über F10 anzeigen
 - aktive Mission abbrechen
 - Mission completed/failed manuell über F10 oder Debug vorbereiten
 - Debug-Menü getrennt aufbauen
@@ -708,48 +712,48 @@ Offen:
 
 ## 8. Aktuelle Prioritäten nach dieser Session
 
-### Priorität 1: Capture-/Pressure-Status im F10-Menü sichtbar machen
+### Priorität 1: Mission completed/failed state-only vorbereiten
 
 Nächste wahrscheinliche Code-Datei:
 
-- `src/ui/tc_f10_menu.lua`
+- `src/missions/tc_mission_generator.lua`
 
 Ziel:
 
-- Capture-Status anzeigen
-- Capture Ready Zones anzeigen
-- Pressure Contested Zones anzeigen
-- Capture Pressure Records anzeigen
-- Capture Progress Records anzeigen
-- weiterhin State-only bleiben
+- aktive Missionen sinnvoll abschließen können
+- Missionen manuell auf `COMPLETED` setzen können
+- Missionen manuell auf `FAILED` setzen können
+- Abschluss-Metadaten im State speichern
+- Missionseffekte zunächst nur vorbereiten oder state-only ausgeben
 - keine echten DCS-Spawns auslösen
 - keine echten CTLD-Aktionen auslösen
 - keine echten Skynet-Aktionen auslösen
 
 Begründung:
 
-- CaptureSystem `v0.2.1` erzeugt jetzt 32 Pressure-Records und 32 Progress-Records.
-- Diese Daten sind im State vorhanden, aber im Spiel noch nicht bequem sichtbar.
-- F10Menu ist bereits stabil und eignet sich für den nächsten kleinen UI-Ausbauschritt.
+- F10-Auswahl und Mission Activation sind bereits grundsätzlich vorhanden.
+- Capture-/Pressure-Status ist jetzt sichtbar.
+- Der nächste sinnvolle State-Schritt ist, Missionsergebnisse steuerbar zu machen.
+- Danach kann `CaptureSystem.applyMissionEffect()` praktisch getestet werden.
 
 ---
 
-### Priorität 2: Mission completed/failed vorbereiten
+### Priorität 2: Missionseffekte auf Capture-State anwenden
 
 Ziel:
 
-- aktive Missionen sinnvoll verwalten
-- Missionen manuell abschließen oder fehlschlagen lassen
-- erste manuelle Debug-/F10-Funktion für Mission completed/failed vorbereiten
-- `MissionGenerator.completeMission()` praktisch testen
 - `CaptureSystem.applyMissionEffect()` gezielt testen
-- später DCS-Events und Trigger koppeln
+- Missionserfolg soll Capture Pressure oder Capture Progress beeinflussen
+- Capture Ready und Pressure Contested sollen dadurch erstmals dynamisch sichtbar werden
+- weiter State-only bleiben
+- keine automatische produktive Capture-Auswertung, bevor die Daten stabil sind
 
 Abhängigkeit:
 
-- F10-Auswahl stabil
-- Mission Generator State stabil
-- Capture Pressure State stabil
+- Mission completed/failed muss vorher sauber vorbereitet sein.
+- Mission Generator State muss Abschlusszustände liefern.
+- Capture Pressure State ist vorhanden.
+- F10 Capture Status ist sichtbar.
 
 ---
 
@@ -763,7 +767,7 @@ Ziel:
 
 Abhängigkeit:
 
-- State-Struktur ist jetzt ausreichend stabil für ersten Test
+- State-Struktur ist jetzt ausreichend stabil für ersten Test.
 - vorher ggf. Debug-/State-Dump vorbereiten
 
 ---
@@ -793,8 +797,8 @@ Ziel:
 
 Abhängigkeit:
 
-- Missionen, Capture, Logistics, FOB und CAP-State sind jetzt als Grundlage vorhanden
-- IADS ist noch offen
+- Missionen, Capture, Logistics, FOB und CAP-State sind jetzt als Grundlage vorhanden.
+- IADS ist noch offen.
 
 ---
 
@@ -817,19 +821,17 @@ Noch nicht sofort:
 
 ## 9. Dokumentationsstand
 
-Am Ende dieser Session werden zentrale Dokumentationsdateien auf den aktuellen Teststand gebracht:
-
-- `CHANGELOG.md`
-- `TASKS.md`
-- `README.md`
-- `ROADMAP.md`
-- `ARCHITECTURE.md`
-
-Wichtig für zukünftige Arbeit:
-
 Während aktiver Code-Arbeit soll nur die absolut notwendige Dokumentation aktualisiert werden, damit GitHub als zuverlässige Referenzebene funktioniert.
 
-Eine größere Dokumentationsrunde soll bevorzugt am Ende einer Session erfolgen.
+Nach dem erfolgreichen `F10Menu v0.2.1`-Capture-Test wird schrittweise minimal aktualisiert:
+
+- `TASKS.md`
+- `CHANGELOG.md`
+
+Optional danach, falls nötig:
+
+- `README.md`
+- `docs/10_testing.md`
 
 Noch später nachzuziehen:
 
@@ -849,62 +851,78 @@ Diese vollständige Dokumentationsrunde muss nicht zwischen jedem Code-Schritt e
 Bei einem vollständigen aktuellen Testlauf sollten unter anderem diese Marker erscheinen:
 
 - `[TC] [AirbaseScanner] Loaded src/world/tc_airbase_scanner.lua v0.2.2`
+- `[TC] [AirbaseScanner] Airbase scan completed: 225 airbase-like objects registered`
+- `[TC] [AirbaseScanner] Airbase classification summary: total=225`
 - `[TC] [ZoneFactory] Loaded src/world/tc_zone_factory.lua v0.2.0`
+- `[TC] [ZoneFactory] Zone factory completed: 46 zones registered`
 - `[TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.1`
 - `[TC] [CaptureSystem] Capture progress updated: zones=32, ready=0, contested=0`
 - `[TC] [CaptureSystem] Capture pressure summary: pressureRecords=32, progressRecords=32, appliedMissionEffects=0`
 - `[TC] [LogisticsDelivery] Loaded src/logistics/tc_logistics_delivery.lua v0.2.0`
+- `[TC] [LogisticsDelivery] Logistics hub summary: total=46, blue=7, red=24, neutral=15`
 - `[TC] [FobSystem] Loaded src/logistics/tc_fob_system.lua v0.2.0`
+- `[TC] [FobSystem] FOB system initialized: fobs=2, candidates=6`
 - `[TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.2`
 - `[TC] [MissionGenerator] Mission candidate summary: candidates=69, fobSupportCandidates=2, availableBefore=0, generationSlots=10`
-- `[TC] [MissionGenerator] Mission generation completed: 10 new missions from 69 candidates (fobSupportCandidates=2, reservedCreated=1, duplicatesSkipped=1, typeLimitSkipped=30)`
-- `[TC] [MissionGenerator] Mission activation prepared: MISSION_4 stateOnly=true spawnHooks=reserved`
+- `[TC] [MissionGenerator] Mission generation completed: 10 new missions from 69 candidates`
 - `[TC] [AICapManager] Loaded src/ai/tc_ai_cap_manager.lua v0.2.0`
-- `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.0`
-- `[TC] [F10Menu] F10 menu initialized: commands=26`
-- `[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_1`
-- `[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_1`
+- `[TC] [AICapManager] AI CAP manager ready: zones=12, requested=12, reactionState=AIR_REACTION_REQUESTED, threatLevel=HIGH`
+- `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.1`
+- `[TC] [F10Menu] F10 menu initialized: commands=29`
+- `[TC] [F10Menu] Capture status shown through F10`
+- `[TC] [F10Menu] Capture ready zones shown through F10`
+- `[TC] [F10Menu] Pressure contested zones shown through F10`
 - `[TC] System started: F10 Menu`
 - `[TC] Runtime systems initialized`
 - `[TC] Main initialized`
 - `[TC] Main started`
 - `[TC] Theater Command loader finished`
 
+Bei UI-Regressionstests zusätzlich sinnvoll:
+
+- `[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_1`
+- `[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_1`
+- `[TC] [MissionGenerator] Mission activation prepared: MISSION_1 stateOnly=true spawnHooks=reserved`
+
 Bei Logauswertungen beachten:
 
 - DCS-/Rendering-/Terrain-Fehler sind nicht automatisch Theater-Command-Fehler.
-- Entscheidend sind `[TC]` und `[TC][ERROR]`.
+- Entscheidend sind `[TC]`, `[TC][ERROR]`, `SCRIPTING ERROR`, `Mission script error`, `stack traceback` und `attempt to`.
 - Alte Logs vorher löschen oder umbenennen, damit keine veralteten Testläufe bewertet werden.
 
 ---
 
-## 11. Nächster konkreter Schritt für die nächste Session
+## 11. Nächster konkreter Schritt
 
 Empfohlene nächste Datei:
 
-- `src/ui/tc_f10_menu.lua`
+- `CHANGELOG.md`
 
-Empfohlenes Ziel:
+Ziel:
 
-- Capture-/Pressure-Status im F10-Menü sichtbar machen
-- `Show Capture Status`
-- `Show Capture Ready Zones`
-- `Show Pressure Contested Zones`
-- Capture-Pressure und Capture-Progress lesbar anzeigen
-- weiter State-only bleiben
-- keine echten DCS-Spawns auslösen
+- erfolgreichen `F10Menu v0.2.1`-Test dokumentieren
+- neue F10-Capture-/Pressure-Funktionen eintragen
+- Logmarker eintragen
+- Hinweis aufnehmen, dass Mission Details und Mission Activation im `v0.2.1`-Capture-Test nicht erneut ausgelöst wurden
 
-Danach mögliche Folgeschritte:
+Danach empfohlene nächste Code-Datei:
 
-1. Mission completed/failed über F10 oder Debug vorbereiten
-2. Missionseffekte auf Capture-State anwenden
-3. Persistence-Sandbox-Test vorbereiten
-4. CTLD-Zonen im Mission Editor vorbereiten
-5. AI Director state-only beginnen
+- `src/missions/tc_mission_generator.lua`
+
+Empfohlenes Code-Ziel:
+
+- Mission completed/failed state-only vorbereiten
+- aktive Missionen abschließen können
+- aktive Missionen fehlschlagen lassen können
+- Mission Outcome im State speichern
+- Missionseffekte für Capture/Logistics/AI/IADS vorbereiten
+- keine echten Spawns
+- keine CTLD-Aktion
+- keine Skynet-Aktion
 
 ---
 
-## 12. Aktueller Abschlussstand dieser Session
+## 12. Aktueller Abschlussstand
 
 Bestandene Systeme:
 
@@ -917,7 +935,7 @@ Bestandene Systeme:
 | FobSystem | `v0.2.0` | bestanden |
 | MissionGenerator | `v0.2.2` | bestanden |
 | AICapManager | `v0.2.0` | bestanden |
-| F10Menu | `v0.2.0` | bestanden |
+| F10Menu | `v0.2.1` | bestanden für Capture-/Pressure-Erweiterung |
 
 Aktuelle bestätigte Fähigkeit:
 
@@ -927,6 +945,8 @@ Aktuelle bestätigte Fähigkeit:
 - 225 Syria airbase-like objects werden verarbeitet.
 - 46 relevante Kampagnenzonen werden erzeugt.
 - 32 Capture-Ziele werden erkannt.
+- 32 Capture-Pressure-Records werden erzeugt.
+- 32 Capture-Progress-Records werden erzeugt.
 - 46 Logistics Hubs werden erzeugt.
 - 6 FOB-Kandidaten werden erzeugt.
 - 2 Blue-FOBs werden geplant:
@@ -935,11 +955,12 @@ Aktuelle bestätigte Fähigkeit:
 - Mission Generator erzeugt 10 Missionen inklusive FOB-Support.
 - Missionen enthalten Objectives, Briefings, Progress und Activation Metadata.
 - F10-Menü ist sichtbar, navigierbar und logbestätigt.
-- F10-Menü erzeugt 26 Commands.
-- Mission 1 bis Mission 10 sind direkt über F10 auswählbar.
-- Missionen können über F10 aktiviert werden.
-- CaptureSystem erzeugt 32 Pressure-Records.
-- CaptureSystem erzeugt 32 Progress-Records.
+- F10-Menü erzeugt 29 Commands.
+- Mission 1 bis Mission 10 sind grundsätzlich direkt über F10 auswählbar.
+- Missionen können grundsätzlich über F10 aktiviert werden.
+- Capture-/Pressure-Status ist über F10 sichtbar.
+- Capture Ready Zones sind über F10 sichtbar.
+- Pressure Contested Zones sind über F10 sichtbar.
 - AI CAP Manager erzeugt Blue-/Red-CAP-State.
 - Main und Loader beenden sauber.
 
@@ -953,4 +974,3 @@ Noch nicht implementiert:
 - AI Director
 - echte Missionserfolgsauswertung
 - automatische Capture-Auswertung aus Missionsergebnissen
-- Capture-/Pressure-Status im F10-Menü
