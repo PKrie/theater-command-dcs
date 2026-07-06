@@ -4,6 +4,23 @@ Diese Datei beschreibt den Campaign-Bereich von **Theater Command DCS**.
 
 Der Campaign-Bereich enthält eigene Lua-Logik für strategischen Kampagnenzustand, Capture-System und Persistenzvorbereitung.
 
+Erste Kampagne:
+
+- **Operation Levant Reclamation**
+
+Map:
+
+- **Syria**
+
+Ausgangslage:
+
+- Blue startet auf **Akrotiri / Zypern**
+- das syrische Festland ist zu Beginn rot kontrolliert
+- Red hält zu Beginn den Großteil der strategischen Flugplätze
+- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
+- Spieler sollen sich in eine laufende Kampagnenlage einklinken, nicht jede Aktion allein auslösen
+- Blue und Red sollen später eigene Operationen durchführen
+
 ---
 
 ## 1. Zweck des Campaign-Bereichs
@@ -14,7 +31,9 @@ Dieser Bereich entscheidet nicht, welche Airbases in DCS existieren.
 
 Diese Daten kommen aus:
 
-    src/world/
+```text
+src/world/
+```
 
 Der Campaign-Bereich entscheidet, was diese Daten strategisch bedeuten.
 
@@ -25,7 +44,10 @@ Langfristig verwaltet `src/campaign/`:
 - Capture-Eligibility
 - Capture-Pressure
 - Capture-Progress
+- Capture Ready
+- Pressure Contested
 - Mission Effects
+- angewendete Mission Effects
 - Kampagnenfortschritt
 - Kampagnenzustand
 - Persistenzvorbereitung
@@ -43,42 +65,50 @@ Das PersistenceSystem ist als Grundstruktur aktiv und lädt/startet.
 
 Erste Kampagne:
 
-    Operation Levant Reclamation
+```text
+Operation Levant Reclamation
+```
 
 Map:
 
-    Syria
+```text
+Syria
+```
 
 Ausgangslage:
 
-    Blue Start: Akrotiri / Zypern
-    Red Start: syrisches Festland vollständig rot kontrolliert
+```text
+Blue Start: Akrotiri / Zypern
+Red Start: syrisches Festland initial rot kontrolliert
+```
 
 Grundannahme:
 
-    Akrotiri ist initial blau.
-    Zypern ist initial blauer Ausgangsraum.
-    Syrische Festlandbasen sind initial rot.
-    Syrische Festlandzonen sind initial rot.
-    Neutrale Sonderfälle werden später ausdrücklich definiert.
+- Akrotiri ist initial blau.
+- Zypern ist initial blauer Ausgangsraum.
+- syrische Festlandbasen sind initial rot.
+- syrische Festlandzonen sind initial rot.
+- neutrale Sonderfälle werden später ausdrücklich definiert.
 
 ---
 
 ## 3. Aktueller technischer Stand
 
-Stand:
-
-    2026-06-29
+Stand: **2026-07-06**
 
 Aktive Dateien:
 
-    src/campaign/tc_capture_system.lua
-    src/campaign/tc_persistence_system.lua
+```text
+src/campaign/tc_capture_system.lua
+src/campaign/tc_persistence_system.lua
+```
 
 Getesteter Stand:
 
-    CaptureSystem: v0.2.1 bestanden
-    PersistenceSystem: Grundstruktur lädt/startet
+```text
+CaptureSystem: v0.2.2 bestanden
+PersistenceSystem: Grundstruktur lädt/startet
+```
 
 Bestätigt durch DCS-Logtests:
 
@@ -87,7 +117,11 @@ Bestätigt durch DCS-Logtests:
 - CaptureSystem erkennt capture-fähige Basen und Zonen.
 - CaptureSystem erzeugt Pressure-Records.
 - CaptureSystem erzeugt Progress-Records.
-- CaptureSystem bereitet Mission Effects vor.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects.
+- CaptureSystem erzeugt Capture Pressure aus Mission Completion.
+- CaptureSystem aktualisiert Capture Progress aus Mission Completion.
+- CaptureSystem erzeugt Capture Ready.
+- Capture Ready Zones sind über F10 sichtbar.
 - PersistenceSystem lädt.
 - PersistenceSystem startet als Grundstruktur.
 - Es gab keinen Theater-Command-Lua-Fehler.
@@ -97,25 +131,43 @@ Bestätigt durch DCS-Logtests:
 
 ## 4. Aktuelle bestätigte Capture-Werte
 
-CaptureSystem v0.2.1:
+CaptureSystem `v0.2.2` im Startzustand:
 
-    eligibleBases: 32
-    eligibleZones: 32
-    nonCaptureBases: 193
-    nonCaptureZones: 14
-    pressureRecords: 32
-    progressRecords: 32
-    appliedMissionEffects: 0
-    ready: 0
-    contested: 0
+```text
+eligibleBases: 32
+eligibleZones: 32
+nonCaptureBases: 193
+nonCaptureZones: 14
+pressureRecords: 32
+progressRecords: 32
+appliedMissionEffects: 0
+ready: 0
+contested: 0
+```
+
+CaptureSystem `v0.2.2` nach Mission Completion:
+
+```text
+completed mission: MISSION_2
+target zone: ZONE_AIRBASE_ABU_AL_DUHUR
+capture pressure owner: BLUE
+applied pressure: 105
+progress: 100 %
+appliedMissionEffects: 1
+ready: 1
+contested: 0
+```
 
 Bewertung:
 
-    CaptureSystem arbeitet nicht auf allen 225 DCS-Airbase-like Objects.
-    CaptureSystem arbeitet auf 32 fachlich geeigneten Capture-Zielen.
-    32 Pressure-Records und 32 Progress-Records werden erzeugt.
-    appliedMissionEffects=0 ist aktuell korrekt, weil Mission Effects noch nicht produktiv angewendet werden.
-    ready=0 und contested=0 sind im aktuellen Teststand korrekt.
+- CaptureSystem arbeitet nicht auf allen 225 DCS-Airbase-like Objects.
+- CaptureSystem arbeitet auf 32 fachlich geeigneten Capture-Zielen.
+- 32 Pressure-Records und 32 Progress-Records werden erzeugt.
+- Mission Completion kann Capture Pressure erzeugen.
+- Capture Progress kann durch Mission Completion auf 100 % steigen.
+- Capture Ready kann dynamisch entstehen.
+- Capture Ready ist über F10 sichtbar.
+- automatische produktive Besitzwechsel sind weiterhin deaktiviert.
 
 ---
 
@@ -123,11 +175,15 @@ Bewertung:
 
 Externe Frameworks liegen unter:
 
-    vendor/
+```text
+vendor/
+```
 
 Eigene Theater-Command-Logik liegt unter:
 
-    src/
+```text
+src/
+```
 
 Der Campaign-Bereich gehört zur eigenen Theater-Command-Logik.
 
@@ -137,15 +193,19 @@ Dateien in `src/campaign/` werden nach Theater-Command-Aufgaben benannt, nicht n
 
 Nicht gewünscht:
 
-    src/campaign/tc_moose_campaign.lua
-    src/campaign/tc_mist_campaign.lua
-    src/campaign/tc_campaign_all_in_one.lua
-    src/campaign/tc_capture_and_persistence_all_in_one.lua
+```text
+src/campaign/tc_moose_campaign.lua
+src/campaign/tc_mist_campaign.lua
+src/campaign/tc_campaign_all_in_one.lua
+src/campaign/tc_capture_and_persistence_all_in_one.lua
+```
 
 Gewünscht:
 
-    src/campaign/tc_capture_system.lua
-    src/campaign/tc_persistence_system.lua
+```text
+src/campaign/tc_capture_system.lua
+src/campaign/tc_persistence_system.lua
+```
 
 Eine Campaign-Datei darf intern DCS-API, MIST, MOOSE, CTLD oder Skynet-IADS-Daten nutzen.
 
@@ -157,27 +217,38 @@ Der Dateiname richtet sich aber immer nach der Theater-Command-Aufgabe.
 
 Aktuell aktive Dateien:
 
-    src/campaign/tc_capture_system.lua
-    src/campaign/tc_persistence_system.lua
+```text
+src/campaign/tc_capture_system.lua
+src/campaign/tc_persistence_system.lua
+```
 
 `tc_capture_system.lua`:
 
-    aktives strategisches Capture-Modul
-    Version v0.2.1
-    bestanden
+- aktives strategisches Capture-Modul
+- Version `v0.2.2`
+- bestanden
+- verarbeitet Capture-Eligibility
+- verarbeitet Capture-Pressure
+- verarbeitet Capture-Progress
+- verarbeitet abgeschlossene Mission Effects
+- erzeugt Capture Ready
+- stellt Capture-Daten für F10 bereit
 
 `tc_persistence_system.lua`:
 
-    vorbereitete Persistenz-Grundstruktur
-    lädt/startet
-    produktiver Dateischreibtest offen
+- vorbereitete Persistenz-Grundstruktur
+- lädt/startet
+- produktiver Dateischreibtest offen
+- Save-/Load-Konzept noch nicht produktiv
 
 Mögliche spätere Dateien:
 
-    src/campaign/tc_campaign_events.lua
-    src/campaign/tc_campaign_progress.lua
-    src/campaign/tc_ownership_rules.lua
-    src/campaign/tc_mission_effects.lua
+```text
+src/campaign/tc_campaign_events.lua
+src/campaign/tc_campaign_progress.lua
+src/campaign/tc_ownership_rules.lua
+src/campaign/tc_mission_effects.lua
+```
 
 Diese Zusatzdateien werden erst angelegt, wenn sie wirklich benötigt werden.
 
@@ -187,15 +258,19 @@ Diese Zusatzdateien werden erst angelegt, wenn sie wirklich benötigt werden.
 
 Datei:
 
-    src/campaign/tc_capture_system.lua
+```text
+src/campaign/tc_capture_system.lua
+```
 
 Getestete Version:
 
-    v0.2.1
+```text
+v0.2.2
+```
 
 Status:
 
-    bestanden
+- bestanden
 
 Aktuelle Aufgaben:
 
@@ -205,17 +280,20 @@ Aktuelle Aufgaben:
 - nicht capture-fähige Objekte ausschließen
 - Capture-Pressure vorbereiten
 - Capture-Progress vorbereiten
-- Mission Effects vorbereiten
+- abgeschlossene Mission Effects verarbeiten
+- Mission Effects state-only auf Capture Pressure anwenden
+- Capture Ready erkennen
+- Pressure Contested erkennen
 - Capture-State aktualisieren
 - Capture-Summary loggen
-- State für spätere F10-/Debug-Anzeige bereitstellen
+- State für F10-/Debug-Anzeige bereitstellen
 
 Wichtig:
 
-    CaptureSystem scannt keine Airbases selbst.
-    CaptureSystem erzeugt keine Zonen selbst.
-    CaptureSystem arbeitet mit Daten aus World und ZoneFactory.
-    CaptureSystem führt aktuell noch keine echten Besitzwechsel durch.
+- CaptureSystem scannt keine Airbases selbst.
+- CaptureSystem erzeugt keine Zonen selbst.
+- CaptureSystem arbeitet mit Daten aus World und ZoneFactory.
+- CaptureSystem führt aktuell noch keinen automatischen produktiven Besitzwechsel durch.
 
 ---
 
@@ -225,17 +303,22 @@ Capture-Eligibility entscheidet, welche Objekte strategisch eroberbar sind.
 
 Aktuell capture-fähig:
 
-    32 Basen/Zonen
+```text
+32 Basen/Zonen
+```
 
 Aktuell nicht capture-fähig:
 
-    193 Airbase-like Objects
-    14 relevante, aber nicht capture-fähige Zonen
+```text
+193 Airbase-like Objects
+14 relevante, aber nicht capture-fähige Zonen
+```
 
 Grund:
 
-    DCS Syria liefert 225 airbase-like objects.
-    Nicht jedes dieser Objekte ist ein strategisches Kampagnenziel.
+DCS Syria liefert 225 airbase-like objects.
+
+Nicht jedes dieser Objekte ist ein strategisches Kampagnenziel.
 
 Nicht automatisch capture-fähig:
 
@@ -251,15 +334,39 @@ Diese Filterung ist wichtig, damit die Kampagne keine unsinnigen Capture-Ziele e
 
 ## 9. Capture-Pressure
 
-Capture-Pressure beschreibt später den militärischen Druck auf eine Zone.
+Capture-Pressure beschreibt den militärischen Druck auf eine Zone.
 
-Aktueller Stand:
+Aktueller Startstand:
 
-    pressureRecords: 32
+```text
+pressureRecords: 32
+```
+
+Bestätigter Pressure-Test nach Mission Completion:
+
+```text
+zone: ZONE_AIRBASE_ABU_AL_DUHUR
+owner: BLUE
+amount: 105
+progress: 100 %
+```
+
+Bestätigter Logmarker:
+
+```text
+[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
+```
+
+Aktuelle Einflussfaktoren:
+
+- abgeschlossene Mission Effects
+- Mission Completion
+- Zielzone
+- Besitzerseite
+- vorbereitete Mission Effect-Daten
 
 Mögliche spätere Einflussfaktoren:
 
-- erfolgreiche Missionen
 - CAS
 - Strike
 - SEAD/DEAD
@@ -271,60 +378,104 @@ Mögliche spätere Einflussfaktoren:
 - Ressourcenlage
 - Bodentruppenpräsenz
 
-Aktuell:
+Aktueller Stand:
 
-    Capture-Pressure wird vorbereitet.
-    Mission Effects werden noch nicht produktiv angewendet.
-    Capture-Pressure ist noch nicht über F10 sichtbar.
-
-Nächster Schritt:
-
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+- Capture-Pressure wird erzeugt.
+- Capture-Pressure kann durch Mission Completion steigen.
+- Capture-Pressure ist über Capture Status indirekt sichtbar.
+- Capture Ready Zones sind über F10 sichtbar.
+- produktive Besitzwechsel folgen erst nach kontrolliertem Testpfad.
 
 ---
 
 ## 10. Capture-Progress
 
-Capture-Progress beschreibt später den tatsächlichen Fortschritt Richtung Besitzwechsel.
+Capture-Progress beschreibt den Fortschritt Richtung Besitzwechsel.
 
-Aktueller Stand:
+Aktueller Startstand:
 
-    progressRecords: 32
-    ready: 0
-    contested: 0
+```text
+progressRecords: 32
+ready: 0
+contested: 0
+```
+
+Bestätigter Progress-Test nach Mission Completion:
+
+```text
+progress: 100 %
+ready: 1
+contested: 0
+```
+
+Bestätigter Logmarker:
+
+```text
+[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
+```
 
 Mögliche spätere Zustände:
 
-- STABLE
-- PRESSURED
-- CONTESTED
-- READY_FOR_CAPTURE
-- CAPTURED
-- LOCKED
-- BLOCKED
+- `STABLE`
+- `PRESSURED`
+- `CONTESTED`
+- `READY_FOR_CAPTURE`
+- `CAPTURED`
+- `LOCKED`
+- `BLOCKED`
 
-Aktuell:
+Aktueller Stand:
 
-    Capture-Progress wird vorbereitet.
-    Es gibt noch keine Zone mit ready=1.
-    Es gibt noch keine contested Zone.
-    Besitzwechsel sind noch nicht produktiv aktiv.
+- Capture-Progress wird vorbereitet und aktualisiert.
+- Capture Ready kann durch Mission Completion entstehen.
+- Pressure Contested ist vorbereitet.
+- Besitzwechsel sind noch nicht produktiv aktiv.
 
 ---
 
 ## 11. Mission Effects
 
-Mission Effects sollen später CaptureSystem beeinflussen.
+Mission Effects beeinflussen den Campaign State.
 
-Aktueller Stand:
+Aktueller bestätigter Stand:
 
-    appliedMissionEffects: 0
+```text
+appliedMissionEffects: 1
+```
 
-Das ist erwartbar.
+Bestätigte Pipeline:
 
-MissionGenerator v0.2.2 erzeugt Mission Records mit Effects.
+```text
+Mission Completion
+-> Mission Effects prepared
+-> CaptureSystem processes completed mission effects
+-> Capture Pressure added
+-> Capture Progress updated
+-> Capture Ready detected
+-> Capture Ready shown through F10
+```
 
-Diese Effects werden aber noch nicht produktiv auf CaptureSystem angewendet.
+Bestätigter Testfall:
+
+```text
+MISSION_2 -> ZONE_AIRBASE_ABU_AL_DUHUR -> BLUE pressure 105 -> progress 100% -> ready=1
+```
+
+Bestätigte Logmarker:
+
+```text
+[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared
+[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105
+[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1
+```
+
+Wichtig:
+
+- Mission Effects werden nicht mehrfach angewendet.
+- Bei erneutem Statusaufruf ist `skipped=1` für bereits angewendete Effects korrekt.
+- Mission Effects bleiben state-only.
+- Der erste bestätigte Empfänger ist CaptureSystem.
+- Logistics, AI und IADS verarbeiten Mission Effects noch nicht produktiv.
 
 Spätere mögliche Mission Effects:
 
@@ -336,10 +487,7 @@ Spätere mögliche Mission Effects:
 - Besitzwechsel vorbereiten
 - Logistikstatus beeinflussen
 - AI-Reaktion auslösen
-
-Nächste Voraussetzung:
-
-    Capture-/Pressure-Daten müssen im F10-Menü sichtbar sein.
+- IADS-Zustand beeinflussen
 
 ---
 
@@ -347,13 +495,15 @@ Nächste Voraussetzung:
 
 Datei:
 
-    src/campaign/tc_persistence_system.lua
+```text
+src/campaign/tc_persistence_system.lua
+```
 
 Status:
 
-    Grundstruktur vorhanden
-    lädt/startet
-    produktiver Dateischreibtest offen
+- Grundstruktur vorhanden
+- lädt/startet
+- produktiver Dateischreibtest offen
 
 Aufgaben aktuell:
 
@@ -380,7 +530,9 @@ Noch nicht aktiv:
 
 Wichtig:
 
-    PersistenceSystem darf erst produktiv werden, wenn DCS-Dateizugriff sauber getestet wurde.
+PersistenceSystem darf erst produktiv werden, wenn DCS-Dateizugriff sauber getestet wurde.
+
+Der Persistence-Sandbox-Test wird sinnvoller, sobald ein kontrollierter state-only Ownership-Wechsel bestätigt ist.
 
 ---
 
@@ -400,8 +552,10 @@ Der Campaign-Bereich darf davon ausgehen, dass der Core bereits geladen ist.
 
 Aktuelle Ladeposition:
 
-    nach Core und World
-    vor Logistics, Missions, AI, UI, Main und Loader
+```text
+nach Core und World
+vor Logistics, Missions, AI, UI, Main und Loader
+```
 
 ---
 
@@ -409,7 +563,9 @@ Aktuelle Ladeposition:
 
 Der Campaign-Bereich nutzt Daten aus:
 
-    src/world/
+```text
+src/world/
+```
 
 Besonders wichtig:
 
@@ -420,11 +576,13 @@ Besonders wichtig:
 
 Aktuelle World-Werte:
 
-    Syria airbase-like objects: 225
-    relevante Kampagnenzonen: 46
-    captureCandidates: 32
-    missionCandidates: 32
-    logisticsCandidates: 46
+```text
+Syria airbase-like objects: 225
+relevante Kampagnenzonen: 46
+captureCandidates: 32
+missionCandidates: 32
+logisticsCandidates: 46
+```
 
 Campaign nutzt diese Daten für:
 
@@ -446,21 +604,25 @@ Der Logistics-Bereich nutzt Campaign-Daten und liefert später selbst Einflussfa
 
 Aktuelle Logistics-Werte:
 
-    logistics hubs: 46
-    blue hubs: 7
-    red hubs: 24
-    neutral hubs: 15
-    active hubs: 31
-    limited hubs: 15
-    locked hubs: 0
+```text
+logistics hubs: 46
+blue hubs: 7
+red hubs: 24
+neutral hubs: 15
+active hubs: 31
+limited hubs: 15
+locked hubs: 0
+```
 
 Aktuelle FOB-Werte:
 
-    FOB candidates: 6
-    Blue FOBs: 2
-    FOB Ercan
-    FOB Gecitkale
-    Status: UNDER_CONSTRUCTION
+```text
+FOB candidates: 6
+Blue FOBs: 2
+FOB Ercan
+FOB Gecitkale
+Status: UNDER_CONSTRUCTION
+```
 
 Spätere Kopplung:
 
@@ -472,8 +634,9 @@ Spätere Kopplung:
 
 Aktuell:
 
-    Logistics und FOBs sind state-only.
-    CaptureSystem ist noch nicht produktiv mit Logistik gekoppelt.
+- Logistics und FOBs sind state-only.
+- CaptureSystem ist noch nicht produktiv mit Logistik gekoppelt.
+- Mission Effects auf Logistics sind noch nicht aktiv.
 
 ---
 
@@ -483,20 +646,26 @@ Der Missionsbereich nutzt Campaign-Daten.
 
 Aktuelle MissionGenerator-Datei:
 
-    src/missions/tc_mission_generator.lua
+```text
+src/missions/tc_mission_generator.lua
+```
 
 Getestete Version:
 
-    v0.2.2
+```text
+v0.2.3
+```
 
 Aktuelle MissionGenerator-Werte:
 
-    mission candidates: 69
-    fobSupportCandidates: 2
-    generated missions: 10
-    reservedCreated: 1
-    duplicatesSkipped: 1
-    typeLimitSkipped: 30
+```text
+mission candidates: 78
+fobSupportCandidates: 2
+generated missions: 10
+reservedCreated: 1
+duplicatesSkipped: 1
+typeLimitSkipped: 68
+```
 
 MissionGenerator nutzt Campaign-Daten für:
 
@@ -507,18 +676,27 @@ MissionGenerator nutzt Campaign-Daten für:
 - Capture-relevante Missionen
 - Mission Effects
 
-Spätere Rückwirkung:
+Bestätigte Rückwirkung:
 
-- Mission completed erhöht Capture-Pressure.
-- Mission failed erzeugt keine oder negative Wirkung.
-- Mission Effects verändern CaptureSystem.
-- Missionen können Besitzwechsel vorbereiten.
+- Mission Completion erzeugt Mission Effects.
+- Mission Effects erhöhen Capture-Pressure.
+- Mission Effects erhöhen Capture-Progress.
+- Mission Effects können Capture Ready erzeugen.
 
-Aktuell:
+Aktuell bestätigt:
 
-    Missionen können über F10 aktiviert werden.
-    Mission Activation bleibt state-only.
-    Mission Effects werden noch nicht produktiv angewendet.
+- Missionen können über F10 angezeigt werden.
+- Missionen können über F10 aktiviert werden.
+- Mission Activation bleibt state-only.
+- Missionen können über F10 auf `COMPLETED` gesetzt werden.
+- Mission Completion bleibt state-only.
+- Mission Effects werden durch CaptureSystem verarbeitet.
+
+Noch offen:
+
+- `Fail Active Mission 1` praktisch testen
+- Failure Effects definieren
+- Mission Effects auf Logistics, AI und IADS anwenden
 
 ---
 
@@ -528,23 +706,30 @@ AI soll später Campaign-Daten nutzen.
 
 Aktuelle AI-Datei:
 
-    src/ai/tc_ai_cap_manager.lua
+```text
+src/ai/tc_ai_cap_manager.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.0
+```
 
 Aktuelle AI-Werte:
 
-    cap zone candidates: 31
-    auto-registered CAP zones: 12
-    CAP requests: 12
-    reactionState: AIR_REACTION_REQUESTED
-    threatLevel: HIGH
+```text
+cap zone candidates: 31
+auto-registered CAP zones: 12
+CAP requests: 12
+reactionState: AIR_REACTION_REQUESTED
+threatLevel: HIGH
+```
 
 Spätere AI-Nutzung:
 
 - Zonen unter Druck bewerten
+- Capture Ready bewerten
 - Gegenangriffe planen
 - CAP über kritischen Zonen priorisieren
 - Blue-/Red-Operationen planen
@@ -553,9 +738,9 @@ Spätere AI-Nutzung:
 
 Aktuell:
 
-    AICapManager ist state-only.
-    AI Director ist noch nicht implementiert.
-    AI nutzt Capture-Pressure noch nicht produktiv.
+- AICapManager ist state-only.
+- AI Director ist noch nicht implementiert.
+- AI nutzt Capture-Pressure noch nicht produktiv.
 
 ---
 
@@ -565,9 +750,9 @@ IADS soll später Campaign-Daten beeinflussen und selbst von Campaign-Daten abh�
 
 Aktueller IADS-Stand:
 
-    Skynet IADS wird geladen.
-    eigenes Theater-Command-IADS-Modul ist noch nicht implementiert.
-    MissionGenerator reserviert Skynet-Hooks.
+- Skynet IADS wird geladen.
+- eigenes Theater-Command-IADS-Modul ist noch nicht implementiert.
+- MissionGenerator reserviert Skynet-Hooks.
 
 Spätere Kopplung:
 
@@ -579,21 +764,26 @@ Spätere Kopplung:
 
 Aktuell:
 
-    IADS ist noch nicht mit CaptureSystem gekoppelt.
+- IADS ist noch nicht mit CaptureSystem gekoppelt.
+- Mission Effects auf IADS sind noch nicht aktiv.
 
 ---
 
 ## 19. Verhältnis zum UI-Bereich
 
-F10Menu ist aktiv und zeigt bereits mehrere Statusbereiche.
+F10Menu ist aktiv und zeigt mehrere Campaign- und Capture-Bereiche.
 
 Aktive UI-Datei:
 
-    src/ui/tc_f10_menu.lua
+```text
+src/ui/tc_f10_menu.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.2
+```
 
 Aktuelle F10-Funktionen:
 
@@ -601,20 +791,40 @@ Aktuelle F10-Funktionen:
 - aktive Missionen anzeigen
 - Missionsdetails anzeigen
 - Missionen aktivieren
+- Active Mission Outcome Status anzeigen
+- aktive Mission 1 auf `COMPLETED` setzen
 - Kampagnenstatus anzeigen
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
 - Logistikstatus anzeigen
 - FOB-Status anzeigen
 - AI-CAP-Status anzeigen
 
-Aktuell noch nicht sichtbar:
+Aktueller bestätigter F10-Wert:
 
-- Capture Status
-- Capture Ready Zones
-- Pressure Contested Zones
+```text
+commands: 32
+```
+
+Aktueller Stand:
+
+- Capture Status ist sichtbar.
+- Capture Ready Zones sind sichtbar.
+- Pressure Contested Zones sind sichtbar.
+- Mission Completion ist über F10 möglich.
+- Capture Ready kann nach Mission Completion über F10 geprüft werden.
 
 Nächster UI-Schritt:
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+```text
+Apply Capture Ready Zone 1
+```
+
+Ziel:
+
+- kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+- kein automatischer Besitzwechsel ohne Spieler-/Debug-Bestätigung
 
 ---
 
@@ -624,11 +834,13 @@ Der Campaign-Bereich arbeitet mit State-Daten.
 
 Wichtige State-Bereiche:
 
-    TC.State.Campaign
-    TC.State.Bases
-    TC.State.Zones
-    TC.State.Capture
-    TC.State.Persistence
+```text
+TC.State.Campaign
+TC.State.Bases
+TC.State.Zones
+TC.State.Capture
+TC.State.Persistence
+```
 
 Mögliche Campaign-Daten:
 
@@ -645,7 +857,7 @@ Mögliche Campaign-Daten:
 - tick
 - lastUpdate
 
-Mögliche Capture-Daten:
+Aktuelle Capture-Daten:
 
 - eligibleBases
 - eligibleZones
@@ -659,8 +871,10 @@ Mögliche Capture-Daten:
 
 Aktuell:
 
-    CaptureSystem erzeugt bereits Pressure- und Progress-Records.
-    produktive Besitzwechsel sind noch nicht aktiv.
+- CaptureSystem erzeugt Pressure- und Progress-Records.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects.
+- Capture Ready kann entstehen.
+- produktive Besitzwechsel sind noch nicht aktiv.
 
 ---
 
@@ -672,24 +886,27 @@ Das bedeutet:
 
 - Campaign erzeugt State.
 - CaptureSystem aktualisiert State.
+- CaptureSystem verarbeitet Mission Effects state-only.
+- CaptureSystem erzeugt Capture Pressure.
+- CaptureSystem erzeugt Capture Progress.
+- CaptureSystem erzeugt Capture Ready.
 - PersistenceSystem bereitet State-Speicherung vor.
-- Mission Effects werden vorbereitet.
-- UI soll State sichtbar machen.
-- echte Besitzwechsel folgen später.
+- UI macht State sichtbar.
+- echte Besitzwechsel folgen kontrolliert.
 - produktive Persistenz folgt später.
 
-Nicht aktiv:
+Aktuell nicht aktiv:
 
 - automatische Zone-Capture
 - automatische Base-Capture
 - produktive Save-/Load-Logik
 - Autosave
-- MissionEffect-Anwendung
 - DCS-Event-basierter Besitzwechsel
+- echte Framework-Aktionen
 
 Grund:
 
-    Strategischer Kampagnenzustand muss zuerst sichtbar, reproduzierbar und testbar sein.
+Strategischer Kampagnenzustand muss zuerst sichtbar, reproduzierbar und testbar sein.
 
 ---
 
@@ -699,11 +916,10 @@ Theater Command unterscheidet zwischen DCS-Koalition und strategischem Besitzsta
 
 Beispiel:
 
-    DCS-Airbase-Koalition:
-    technischer Zustand im Mission Editor
-
-    Theater-Command-Besitzstatus:
-    strategischer Kampagnenzustand
+```text
+DCS-Airbase-Koalition: technischer Zustand im Mission Editor
+Theater-Command-Besitzstatus: strategischer Kampagnenzustand
+```
 
 Diese Trennung ist notwendig, weil die Kampagne später persistent und dynamisch werden soll.
 
@@ -720,8 +936,10 @@ Ein Besitzwechsel kann später ausgelöst werden durch:
 
 Aktuell:
 
-    CaptureSystem bereitet diese Logik vor.
-    Es gibt noch keinen produktiven Besitzwechsel.
+- CaptureSystem bereitet diese Logik vor.
+- Capture Ready kann entstehen.
+- Capture Ready kann über F10 angezeigt werden.
+- Es gibt noch keinen produktiven automatischen Besitzwechsel.
 
 ---
 
@@ -736,6 +954,7 @@ Beispiele:
 - welche Zonen kontrolliert werden
 - welcher Capture-Pressure existiert
 - welcher Capture-Progress existiert
+- welche Mission Effects bereits angewendet wurden
 - welche Missionen verfügbar sind
 - welche Missionen aktiv sind
 - welche Missionen abgeschlossen sind
@@ -752,7 +971,7 @@ Persistenz speichert den Kampagnenzustand, nicht jeden kurzlebigen Simulationszu
 
 ## 24. Testziele
 
-CaptureSystem v0.2.1 gilt aktuell als bestanden, wenn:
+CaptureSystem `v0.2.2` gilt aktuell als bestanden, wenn:
 
 - Datei lädt.
 - Version wird im Log angezeigt.
@@ -761,9 +980,14 @@ CaptureSystem v0.2.1 gilt aktuell als bestanden, wenn:
 - 32 eligibleZones erkannt werden.
 - 32 pressureRecords erzeugt werden.
 - 32 progressRecords erzeugt werden.
-- appliedMissionEffects=0 ist.
-- ready=0 ist.
-- contested=0 ist.
+- Mission Completion kann Capture Pressure erzeugen.
+- Mission Completion kann Capture Progress aktualisieren.
+- Mission Completion kann Capture Ready erzeugen.
+- `appliedMissionEffects=1` nach Completion-Test ist.
+- `ready=1` nach Completion-Test ist.
+- `contested=0` nach Completion-Test ist.
+- Capture Ready Zones über F10 sichtbar sind.
+- Mission Effects nicht doppelt angewendet werden.
 - keine Theater-Command-Lua-Fehler auftreten.
 - keine Lua-Stacktraces auftreten.
 
@@ -776,9 +1000,11 @@ PersistenceSystem gilt aktuell als Grundstruktur bestanden, wenn:
 
 Noch offen:
 
-- Capture-/Pressure-Anzeige im F10
-- Mission Effects praktisch anwenden
-- Mission completed/failed
+- kontrollierter state-only Ownership-Wechsel aus Capture Ready
+- `Fail Active Mission 1` praktisch testen
+- Mission Effects auf Logistics anwenden
+- Mission Effects auf AI anwenden
+- Mission Effects auf IADS anwenden
 - produktive Besitzwechsel
 - Persistence-Sandbox-Dateischreibtest
 - Save/Load
@@ -790,24 +1016,37 @@ Noch offen:
 
 Aktuelle erwartete Capture-Logmarker:
 
-    [TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.1
-    [TC] [CaptureSystem] Capture progress updated: zones=32, ready=0, contested=0
-    [TC] [CaptureSystem] Capture eligibility summary: bases=32, zones=32, nonCaptureBases=193, nonCaptureZones=14
-    [TC] [CaptureSystem] Capture pressure summary: pressureRecords=32, progressRecords=32, appliedMissionEffects=0
+```text
+[TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.2
+[TC] [CaptureSystem] Capture progress updated: zones=32, ready=0, contested=0, appliedMissionEffects=0
+[TC] [CaptureSystem] Capture eligibility summary: bases=32, zones=32, nonCaptureBases=193, nonCaptureZones=14
+[TC] [CaptureSystem] Capture pressure summary: pressureRecords=32, progressRecords=32, appliedMissionEffects=0
+```
+
+Erwartete Logmarker nach Mission Completion:
+
+```text
+[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared
+[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
+[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105
+[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1
+[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
+[TC] [F10Menu] Capture ready zones shown through F10
+```
 
 Aktuelle Persistence-Erwartung:
 
-    PersistenceSystem lädt.
-    PersistenceSystem startet.
-    kein produktiver Save/Load.
+- PersistenceSystem lädt.
+- PersistenceSystem startet.
+- kein produktiver Save/Load.
 
 Der genaue Wortlaut einzelner Persistence-Logs kann je nach Implementierung variieren.
 
 Wichtig ist:
 
-    keine Fehler
-    kein Stacktrace
-    Main und Loader bleiben sauber
+- keine Fehler
+- kein Stacktrace
+- Main und Loader bleiben sauber
 
 ---
 
@@ -834,37 +1073,36 @@ Campaign entscheidet über strategischen Besitz, Fortschritt und Speicherzustand
 
 ## 27. Nächster sinnvoller Schritt
 
-Der nächste sinnvolle Schritt liegt nicht direkt im Campaign-Bereich.
+Der nächste sinnvolle Schritt liegt technisch im UI-Bereich, betrifft aber direkt Campaign/Capture.
 
 Empfohlene nächste Datei:
 
-    src/ui/tc_f10_menu.lua
+```text
+src/ui/tc_f10_menu.lua
+```
 
 Ziel:
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+```text
+kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+```
 
-Geplante neue F10-Funktionen:
+Geplanter neuer F10-Befehl:
 
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
+```text
+Apply Capture Ready Zone 1
+```
 
 Akzeptanzkriterien:
 
 - F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
+- bisherige 32 Commands bleiben funktionsfähig.
+- neuer Capture-Apply-Command wird ergänzt.
+- Capture Ready Zone 1 kann bewusst angewendet werden.
+- Zone Ownership wird state-only aktualisiert.
+- linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
+- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
+- Logmarker zeigen eindeutig den Ownership-Wechsel.
 - keine echten Spawns
 - keine CTLD-Aktion
 - keine Skynet-Aktion
@@ -890,10 +1128,16 @@ Der Campaign-Bereich verbindet:
 
 Aktueller Status:
 
-    CaptureSystem v0.2.1 ist state-first bestanden.
-    PersistenceSystem lädt/startet als Grundstruktur.
-    produktive Besitzwechsel und Save/Load folgen später.
+- CaptureSystem `v0.2.2` ist state-first bestanden.
+- Mission Completion zu Capture Pressure ist bestätigt.
+- Mission Completion zu Capture Progress ist bestätigt.
+- Capture Ready ist bestätigt.
+- Capture Ready ist über F10 sichtbar.
+- PersistenceSystem lädt/startet als Grundstruktur.
+- produktive Besitzwechsel und Save/Load folgen später.
 
 Nächster notwendiger Zwischenschritt im Gesamtprojekt:
 
-    F10Menu v0.2.1 mit Capture-/Pressure-Sichtbarkeit.
+```text
+F10Menu v0.2.3 mit kontrolliertem state-only Capture Ready Apply
+```
