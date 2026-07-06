@@ -7,9 +7,19 @@ Das Projekt ist ein modulares, dynamisches und später persistentes Kampagnensys
 Erste Kampagne:
 
 - **Operation Levant Reclamation**
-- Map: **Syria**
+
+Map:
+
+- **Syria**
+
+Ausgangslage:
+
 - Blue startet auf **Akrotiri / Zypern**
 - Das syrische Festland ist zu Beginn rot kontrolliert
+- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
+- Red hält zu Beginn den Großteil der strategischen Flugplätze
+- Spieler sollen sich in eine laufende Kampagne einklinken, nicht jede Aktion allein auslösen
+- Blue und Red sollen später eigene Operationen durchführen
 
 ---
 
@@ -43,6 +53,8 @@ GitHub dokumentiert:
 - Changelog
 - Missionsdesign
 - aktuelle Teststände
+- bekannte Einschränkungen
+- nächste Entwicklungsschritte
 
 ---
 
@@ -61,11 +73,13 @@ Das System ist nicht als lineare Einzelmission gedacht.
 
 Ziel ist eine modulare Kampagnenruntime.
 
+Der Spieler soll Teilnehmer einer laufenden Kampagne sein, nicht alleiniger Auslöser aller Kampagnenaktionen.
+
 ---
 
 ## 3. Architekturstatus
 
-Stand: **2026-06-29**
+Stand: **2026-07-06**
 
 Aktueller Stand:
 
@@ -74,22 +88,33 @@ Aktueller Stand:
 - World-Systeme klassifizieren Syria-Airbase-Daten.
 - ZoneFactory erzeugt relevante Kampagnenzonen.
 - CaptureSystem verwaltet Capture-Eligibility, Capture-Pressure und Capture-Progress.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects state-only in Capture Pressure.
+- CaptureSystem erzeugt dynamisch Capture Ready.
 - LogisticsDelivery erzeugt Logistics Hubs.
 - FobSystem erzeugt FOB-Kandidaten und Blue-FOBs.
 - MissionGenerator erzeugt Missionen inklusive FOB-Support.
-- MissionGenerator erzeugt Objectives, Briefings, Progress-Daten und Activation Metadata.
+- MissionGenerator erzeugt Objectives, Briefings, Progress-Daten, Activation Metadata, Outcome State und Effect State.
+- MissionGenerator kann Missionen state-only aktivieren und abschließen.
 - AICapManager erzeugt Blue-/Red-CAP-State.
 - F10Menu ist sichtbar, navigierbar und unterstützt direkte Missionsauswahl.
+- F10Menu unterstützt Mission Outcome Controls.
+- F10Menu zeigt Capture-/Pressure-Status.
+- F10Menu zeigt Capture Ready Zones.
 - Main und Loader starten sauber durch.
 
 Aktuelle Architekturklasse:
 
 - **State-first Runtime**
+
+Aktuelle bewusste Einschränkungen:
+
 - keine echten Spawns
 - keine produktive Persistenz
 - keine echte CTLD-FOB-Erstellung
 - keine produktive Skynet-IADS-Kampagnenlogik
-- keine automatische Missionserfolgsauswertung
+- keine automatische Missionserfolgsauswertung aus DCS-Events
+- kein automatischer produktiver Ownership-Wechsel aus Capture Ready
+- keine automatische `.miz`-Generierung
 
 ---
 
@@ -111,6 +136,12 @@ Reihenfolge von unten nach oben:
 10. Main / Loader Layer
 11. Debug / Testing Layer
 
+Grundregel:
+
+- Untere Schichten stellen Zustand und Basisdaten bereit.
+- Obere Schichten lesen diesen Zustand und leiten daraus Aufgaben, UI oder spätere Framework-Aktionen ab.
+- Echte Framework-Ausführung wird erst aktiviert, wenn der State stabil, sichtbar und testbar ist.
+
 ---
 
 ## 5. Vendor Layer
@@ -122,8 +153,9 @@ Pfad:
 Aufgabe:
 
 - externe Frameworks bereitstellen
-- nicht verändern
-- nur laden und später über eigene Module nutzen
+- Framework-Dateien unverändert halten
+- Frameworks laden
+- Framework-Funktionen später über eigene Theater-Command-Module nutzen
 
 Aktive Vendor-Dateien:
 
@@ -176,9 +208,11 @@ Aufgabe:
 - Modulstatus
 - Featurestatus
 
-Der Core Layer darf keine fachliche Kampagnenentscheidung treffen.
+Architekturregel:
 
-Er stellt nur gemeinsame Infrastruktur bereit.
+- Der Core Layer trifft keine fachlichen Kampagnenentscheidungen.
+- Der Core Layer stellt gemeinsame Infrastruktur bereit.
+- Fachlogik gehört in World, Campaign, Logistics, Missions, AI, IADS oder UI.
 
 ---
 
@@ -211,15 +245,12 @@ Grundregel:
 - Andere Module lesen diesen Zustand über definierte Tabellen oder Funktionen.
 - Framework-Ausführung wird später aus dem State abgeleitet.
 - Der State bleibt persistierbar.
-
-Aktuelle Eigenschaft:
-
-- Die Runtime ist state-first.
 - F10-Aktionen ändern aktuell nur State.
 - Missionen ändern aktuell nur State.
 - Capture Pressure und Capture Progress sind State-Daten.
 - Logistics und FOBs sind State-Daten.
 - AI CAP ist State-Daten.
+- Mission Effects werden aktuell state-only vorbereitet und zuerst durch CaptureSystem verarbeitet.
 
 ---
 
@@ -367,7 +398,7 @@ Datei:
 
 Getestete Version:
 
-- `v0.2.1`
+- `v0.2.2`
 
 Aufgabe:
 
@@ -378,10 +409,12 @@ Aufgabe:
 - Capture Events speichern
 - Capture Pressure erzeugen
 - Capture Progress erzeugen
-- Missionseffekte state-only als Capture-Druck vorbereiten
-- Capture Ready und Pressure Contested vorbereiten
+- abgeschlossene Mission Effects state-only in Capture Pressure übernehmen
+- Capture Ready und Pressure Contested erkennen
+- Capture Ready Zones für F10 bereitstellen
+- produktiven Ownership-Wechsel bewusst getrennt halten
 
-Bestätigte Werte:
+Bestätigte Startwerte:
 
 - eligibleBases: 32
 - eligibleZones: 32
@@ -389,8 +422,16 @@ Bestätigte Werte:
 - nonCaptureZones: 14
 - pressureRecords: 32
 - progressRecords: 32
-- appliedMissionEffects: 0
-- ready: 0
+
+Bestätigte Werte nach Mission Completion:
+
+- completed mission: `MISSION_2`
+- target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- capture pressure owner: `BLUE`
+- applied pressure: 105
+- progress: 100 %
+- appliedMissionEffects: 1
+- ready: 1
 - contested: 0
 
 Capture-fähig:
@@ -413,10 +454,13 @@ Ausgeschlossen:
 Aktuelle Capture-Architektur:
 
 - Capture ist noch nicht automatisch produktiv.
-- Capture Pressure wird vorbereitet.
-- Capture Progress wird vorbereitet.
-- Missionseffekte können vorbereitet angewendet werden.
+- Capture Pressure wird state-only verarbeitet.
+- Capture Progress wird state-only verarbeitet.
+- Mission Completion kann Capture Pressure erzeugen.
+- Capture Ready kann dynamisch entstehen.
+- Capture Ready Zones sind über F10 sichtbar.
 - Ownership-Wechsel bleiben kontrolliert.
+- Automatische produktive Ownership-Wechsel sind deaktiviert.
 
 ---
 
@@ -459,6 +503,7 @@ Zukünftig zu speichern:
 Aktuelle Architekturentscheidung:
 
 - keine produktive Persistenz ohne vorherigen DCS-Sandbox-Test
+- Persistence wird erst produktiv ausgebaut, wenn State-Änderungen und kontrollierter Ownership-Wechsel stabil getestet sind
 
 ---
 
@@ -518,6 +563,7 @@ Aktuelle Architektur:
 - Keine echten Cargo-Flüge.
 - Keine echten Dropoffs.
 - Keine echten Supply-Verbräuche.
+- Logistics Effects aus Missionen sind noch nicht produktiv angewendet.
 
 ---
 
@@ -578,7 +624,7 @@ Aktive Datei:
 
 Getestete Version:
 
-- `v0.2.2`
+- `v0.2.3`
 
 Aufgabe:
 
@@ -588,17 +634,18 @@ Aufgabe:
 - FOB-Support berücksichtigen
 - Missionen über F10 aktivierbar machen
 - Mission Records fachlich anreichern
-- Missionseffekte vorbereiten
+- Mission Outcomes vorbereiten
+- Mission Effects vorbereiten
 - spätere Spawn-Hooks reservieren
 
 Bestätigte Werte:
 
-- mission candidates: 69
+- mission candidates: 78
 - fobSupportCandidates: 2
 - generated missions: 10
 - reservedCreated: 1
 - duplicatesSkipped: 1
-- typeLimitSkipped: 30
+- typeLimitSkipped: 68
 
 Aktuelle Missionstypen:
 
@@ -635,6 +682,8 @@ Aktuelle Mission Records enthalten:
 - Recommended Payload
 - Progress
 - Activation Metadata
+- Outcome State
+- Effect State
 - Execution Plan
 - Effects
 - reserved MOOSE hook
@@ -647,7 +696,10 @@ Aktuelle Architektur:
 - Aktivierung setzt Missionen auf `ACTIVE`.
 - Aktivierung triggert keine echten Spawns.
 - Spawn-Hooks bleiben reserviert.
-- Missionserfolg und Fehlschlag sind vorbereitet, aber noch nicht automatisch angebunden.
+- Completion setzt Missionen auf `COMPLETED`.
+- Mission Completion bereitet Effects vor.
+- CaptureSystem kann abgeschlossene Mission Effects verarbeiten.
+- Failure, Cancelled und Expired sind vorbereitet, aber noch nicht praktisch getestet.
 
 ---
 
@@ -718,6 +770,7 @@ Der AI Director soll später bewerten:
 
 - Besitzstatus
 - Capture Progress
+- Capture Ready
 - aktive Missionen
 - verfügbare Missionen
 - Logistics
@@ -739,6 +792,7 @@ Zielverhalten:
 Aktuelle Architekturentscheidung:
 
 - AI Director kommt erst nach besserer F10-/Debug-Sichtbarkeit.
+- AI Director startet später state-only und ohne echte Spawns.
 
 ---
 
@@ -790,7 +844,7 @@ Aktive Datei:
 
 Getestete Version:
 
-- `v0.2.0`
+- `v0.2.2`
 
 Aufgabe:
 
@@ -799,7 +853,11 @@ Aufgabe:
 - aktive Missionen anzeigen
 - Missionen direkt auswählen
 - Missionen direkt aktivieren
+- Mission Outcome Controls bereitstellen
 - Kampagnenstatus anzeigen
+- Capture-/Pressure-Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
 - Logistikstatus anzeigen
 - FOB-Status anzeigen
 - AI-CAP-Status anzeigen
@@ -808,36 +866,42 @@ Bestätigt:
 
 - F10-Menü sichtbar
 - F10-Menü navigierbar
-- 26 Commands erzeugt
+- 32 Commands erzeugt
 - Mission Details Slot 1 bestätigt
-- Mission Details Slot 2 bestätigt
-- Mission Details Slot 5 bestätigt
 - Mission Slot 1 aktiviert
-- Mission Slot 5 aktiviert
+- Active Mission Outcome Status bestätigt
+- Complete Active Mission 1 bestätigt
+- Capture Status bestätigt
+- Capture Ready Zones nach Mission Completion bestätigt
+- Pressure Contested Zones bestätigt
 - MissionGenerator setzt aktivierte Missionen auf `ACTIVE`
+- MissionGenerator setzt abgeschlossene Missionen auf `COMPLETED`
+- CaptureSystem verarbeitet abgeschlossene Mission Effects
 
 Aktuelle Menüstruktur:
 
-    F10
-    └── Theater Command
-        ├── Missions
-        │   ├── Show Available Missions
-        │   ├── Show Active Missions
-        │   ├── Mission Details
-        │   │   ├── Show Mission 1 Details
-        │   │   ├── ...
-        │   │   └── Show Mission 10 Details
-        │   └── Activate Mission
-        │       ├── Activate Mission 1
-        │       ├── ...
-        │       └── Activate Mission 10
-        ├── Status
-        │   └── Show Campaign Status
-        ├── Logistics
-        │   ├── Show Logistics Status
-        │   └── Show FOB Status
-        └── AI
-            └── Show AI CAP Status
+- `Theater Command`
+  - `Missions`
+    - `Show Available Missions`
+    - `Show Active Missions`
+    - `Mission Details`
+      - `Show Mission 1 Details` bis `Show Mission 10 Details`
+    - `Activate Mission`
+      - `Activate Mission 1` bis `Activate Mission 10`
+    - `Mission Outcome`
+      - `Show Active Mission Outcome Status`
+      - `Complete Active Mission 1`
+      - `Fail Active Mission 1`
+  - `Status`
+    - `Show Campaign Status`
+    - `Show Capture Status`
+    - `Show Capture Ready Zones`
+    - `Show Pressure Contested Zones`
+  - `Logistics`
+    - `Show Logistics Status`
+    - `Show FOB Status`
+  - `AI`
+    - `Show AI CAP Status`
 
 Aktuelle Architektur:
 
@@ -846,12 +910,12 @@ Aktuelle Architektur:
 - UI triggert keine echten Spawns.
 - UI triggert keine CTLD-Aktionen.
 - UI triggert keine Skynet-Aktionen.
+- UI ist aktuell das wichtigste Test- und Sichtbarkeitsinstrument.
 
 Nächster UI-Schritt:
 
-- Capture-/Pressure-Status anzeigen
-- Capture Ready Zones anzeigen
-- Pressure Contested Zones anzeigen
+- kontrollierten state-only Ownership-Wechsel aus Capture Ready Zone 1 vorbereiten
+- kein automatischer Besitzwechsel ohne F10-/Debug-Bestätigung
 
 ---
 
@@ -916,6 +980,7 @@ Aktuelle Testmethode:
 - manuelle F10-Tests
 - Modulversionen im Log
 - Testwerte aus Runtime-Zusammenfassungen
+- weitergeführte Logs mit sauberer zeitlicher Trennung, falls DCS nicht neu gestartet wurde
 
 Geplante Debug-Funktionen:
 
@@ -934,7 +999,7 @@ Geplante Debug-Funktionen:
 Aktuelle Architekturentscheidung:
 
 - Debug-Funktionen kommen später.
-- Kurzfristig wird das bestehende F10-Menü um notwendige Statussichtbarkeit erweitert.
+- Kurzfristig wird das bestehende F10-Menü um notwendige Status- und Kontrollfunktionen erweitert.
 
 ---
 
@@ -948,14 +1013,26 @@ Aktueller Datenfluss:
 4. LogisticsDelivery nutzt Logistics-Zonen für Logistics Hubs.
 5. FobSystem nutzt Logistics Hubs für FOB-Kandidaten und Blue-FOBs.
 6. MissionGenerator nutzt Zonen, Capture, Logistics und FOBs für Missionen.
-7. AICapManager nutzt Zonen und Ownership für CAP-State.
-8. F10Menu zeigt Missionen, Campaign, Logistics, FOB und AI State an.
-9. Main startet die Runtime.
-10. Loader prüft die Umgebung.
+7. MissionGenerator erzeugt Mission Effects nach Mission Completion.
+8. CaptureSystem verarbeitet abgeschlossene Mission Effects.
+9. CaptureSystem erzeugt Capture Pressure, Capture Progress und Capture Ready.
+10. AICapManager nutzt Zonen und Ownership für CAP-State.
+11. F10Menu zeigt Missionen, Campaign, Capture, Logistics, FOB und AI State an.
+12. F10Menu erlaubt state-only Mission Activation und Mission Completion.
+13. Main startet die Runtime.
+14. Loader prüft die Umgebung.
+
+Aktuell vollständig bestätigt:
+
+- Mission Completion zu Capture Effect
+- Mission Effect zu Capture Pressure
+- Capture Pressure zu Capture Progress
+- Capture Progress zu Capture Ready
+- Capture Ready zu F10-Anzeige
 
 Aktuell noch nicht vollständig verbunden:
 
-- Mission Completion zu Capture Effect
+- Mission Failure zu Capture/Logistics/AI/IADS Effect
 - Mission Completion zu Logistics Effect
 - Mission Completion zu AI Effect
 - Mission Completion zu IADS Effect
@@ -964,6 +1041,7 @@ Aktuell noch nicht vollständig verbunden:
 - Skynet zu IADS-State
 - Persistence zu vollständigem State
 - AI Director zu Gesamtstrategie
+- Capture Ready zu kontrolliertem Ownership-Wechsel
 
 ---
 
@@ -992,6 +1070,7 @@ Aktueller Stand:
 - Frameworks sind geladen.
 - Produktive Ausführung folgt später.
 - State-Systeme werden zuerst stabilisiert.
+- Keine echten Framework-Aktionen ohne vorherige Templates, Zonen und Testpfade.
 
 ---
 
@@ -1005,6 +1084,7 @@ Aktuell gilt:
 - keine produktive Persistenz
 - keine automatischen Kampagnenfolgen ohne Test
 - keine Änderung an Vendor-Dateien
+- kein automatischer Ownership-Wechsel ohne bewussten F10-/Debug-Pfad
 
 Grund:
 
@@ -1012,6 +1092,7 @@ Grund:
 - Jede Schicht muss einzeln stabil sein.
 - State muss sichtbar und testbar sein.
 - Framework-Ausführung wird erst später aktiviert.
+- Ownership-Wechsel müssen vor Persistenz und AI Director sauber kontrolliert sein.
 
 ---
 
@@ -1051,6 +1132,7 @@ Aktuell akzeptiert:
 - keine echte Skynet-Verbindung
 - keine automatische Missionserfolgsauswertung
 - keine automatische `.miz`-Generierung
+- keine automatische produktive Capture-Auswertung
 
 Nicht akzeptiert:
 
@@ -1059,10 +1141,46 @@ Nicht akzeptiert:
 - Frameworklogik mit Kampagnenlogik vermischen
 - neue große Systeme ohne vorherige Sichtbarkeit im State
 - mehrere große Aufgaben parallel bearbeiten
+- automatischer Ownership-Wechsel ohne kontrollierten Testpfad
 
 ---
 
-## 30. Nächster architektonischer Schritt
+## 30. Aktuelle modulübergreifende Pipeline
+
+Aktuell bestätigte Pipeline:
+
+1. F10Menu zeigt Missionen an.
+2. F10Menu aktiviert Mission 1.
+3. MissionGenerator setzt `MISSION_2` auf `ACTIVE`.
+4. F10Menu setzt aktive Mission 1 auf `COMPLETED`.
+5. MissionGenerator bereitet Mission Effects vor.
+6. CaptureSystem verarbeitet den abgeschlossenen Mission Effect.
+7. CaptureSystem erhöht Capture Pressure auf `ZONE_AIRBASE_ABU_AL_DUHUR`.
+8. CaptureSystem aktualisiert Capture Progress auf 100 %.
+9. CaptureSystem setzt `ready=1`.
+10. F10Menu zeigt Capture Status.
+11. F10Menu zeigt Capture Ready Zones.
+
+Bestätigte Werte:
+
+- mission: `MISSION_2`
+- zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- owner: `BLUE`
+- pressure: 105
+- progress: 100 %
+- appliedMissionEffects: 1
+- ready: 1
+- contested: 0
+
+Architekturbedeutung:
+
+- Das ist der erste vollständig bestätigte Kampagnenzusammenhang über mehrere Module hinweg.
+- Die Pipeline bleibt state-only.
+- Sie löst keine echten Framework-Aktionen aus.
+
+---
+
+## 31. Nächster architektonischer Schritt
 
 Empfohlene nächste Datei:
 
@@ -1070,35 +1188,33 @@ Empfohlene nächste Datei:
 
 Ziel:
 
-- Capture-/Pressure-Daten sichtbar machen
+- kontrollierten state-only Ownership-Wechsel aus Capture Ready Zone 1 vorbereiten
 
-Neue UI-Funktionen:
+Neue mögliche UI-Funktion:
 
-- `Show Capture Status`
-- `Show Capture Ready Zones`
-- `Show Pressure Contested Zones`
+- `Apply Capture Ready Zone 1`
+- oder `Confirm Capture Ready Zone 1`
 
 Warum UI zuerst:
 
-- CaptureSystem erzeugt jetzt Pressure und Progress.
-- Diese Daten sind im State vorhanden.
-- Ohne Sichtbarkeit ist der nächste Capture-/Mission-Test schwer zu bewerten.
-- F10Menu ist bereits stabil.
-- UI-Ausbau ist risikoarm und state-only.
+- CaptureSystem erzeugt Capture Ready.
+- F10Menu kann Capture Ready Zones anzeigen.
+- Ein Ownership-Wechsel darf nicht automatisch und unsichtbar passieren.
+- Ein bewusster F10-/Debug-Pfad ist sicherer.
+- Der Schritt bleibt state-only.
+- Die bestehende UI ist bereits stabil.
+- Danach kann Persistence sinnvoller getestet werden.
 
 Akzeptanzkriterien:
 
 - F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben erhalten.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
+- bisherige 32 Commands bleiben erhalten.
+- neuer Capture-Apply-Command wird ergänzt.
+- Capture Ready Zone 1 kann bewusst angewendet werden.
+- Zone Ownership wird state-only aktualisiert.
+- Linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
+- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
+- Logmarker zeigen eindeutig den Ownership-Wechsel.
 - keine echten Spawns
 - keine CTLD-Aktion
 - keine Skynet-Aktion
@@ -1107,7 +1223,7 @@ Akzeptanzkriterien:
 
 ---
 
-## 31. Architekturabschlussstand
+## 32. Architekturabschlussstand
 
 Bestandene Systeme:
 
@@ -1115,33 +1231,25 @@ Bestandene Systeme:
 |---|---:|---|
 | Airbase Scanner | `v0.2.2` | bestanden |
 | ZoneFactory | `v0.2.0` | bestanden |
-| CaptureSystem | `v0.2.1` | bestanden |
+| CaptureSystem | `v0.2.2` | bestanden |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
-| MissionGenerator | `v0.2.2` | bestanden |
+| MissionGenerator | `v0.2.3` | bestanden |
 | AICapManager | `v0.2.0` | bestanden |
-| F10Menu | `v0.2.0` | bestanden |
+| F10Menu | `v0.2.2` | bestanden |
 
-Aktuelle Architektur ist stabil genug für den nächsten UI-/Debug-Schritt.
+Aktuelle Architektur ist stabil genug für den nächsten kontrollierten Capture-Ownership-Test.
 
-Das Projekt ist noch keine fertige dynamische Kampagne.
+Der empfohlene nächste Schritt bleibt bewusst klein:
 
-Es besitzt aber jetzt eine tragfähige state-first Runtime-Basis mit:
+- nicht MOOSE
+- nicht CTLD
+- nicht Skynet
+- nicht AI Director
+- nicht Persistenz als Erstes
 
-- klassifizierter Syria-Welt
-- relevanten Kampagnenzonen
-- Capture-Eligibility
-- Capture-Pressure
-- Capture-Progress
-- Logistics Hubs
-- FOB-Kandidaten
-- geplanten FOBs
-- Missionen inklusive FOB-Support
-- direkter F10-Missionsauswahl
-- direkter F10-Missionsaktivierung
-- AI-CAP-State
-- sauberem Runtime-Start
+Sondern:
 
-Nächster sinnvoller architektonischer Schritt:
-
-- Capture-/Pressure-Sichtbarkeit im F10-Menü.
+- Capture Ready bewusst anwenden
+- state-only Ownership-Wechsel prüfen
+- danach Persistenz- und Failure-Pfade vorbereiten
