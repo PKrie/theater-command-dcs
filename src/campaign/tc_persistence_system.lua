@@ -2,16 +2,15 @@
 -- File: src/campaign/tc_persistence_system.lua
 --
 -- Purpose:
--- Prepare campaign state export, import, in-memory persistence and a controlled
--- DCS file-system sandbox test.
+-- Prepare campaign state export, import, in-memory persistence, file-system
+-- sandbox validation and controlled state snapshot file save tests.
 --
 -- Current focus:
--- PersistenceSystem v0.2.1 keeps the existing state-first memory persistence
--- foundation and fixes the sandbox write verification for DCS/Lua environments
--- where file:write() may return nil despite a successful protected write call.
+-- PersistenceSystem v0.2.2 keeps the proven sandbox test from v0.2.1 and adds
+-- a controlled one-shot campaign state file save test.
 --
 -- Version:
--- 0.2.1
+-- 0.2.2
 --
 -- Responsibilities:
 -- - keep campaign persistence state under TC.State.Persistence
@@ -20,12 +19,15 @@
 -- - support in-memory save/load for early tests
 -- - test DCS mission scripting file-system availability
 -- - log os/io/lfs availability clearly
--- - attempt one minimal file write/read test only when safe path access exists
--- - do not require productive persistence to pass for the module to start
+-- - write/read one sandbox test file
+-- - write one real campaign state snapshot file after startup
+-- - do not automatically load campaign state yet
+-- - do not perform productive campaign restore yet
 --
 -- Important:
 -- This module remains state-first.
--- It does not yet perform productive campaign save/load automatically.
+-- File save is currently a controlled test only.
+-- Automatic load/restore is intentionally not active yet.
 
 TC = TC or {}
 TC.modules = TC.modules or {}
@@ -37,7 +39,7 @@ local PersistenceSystem = {}
 PersistenceSystem.name = "tc_persistence_system"
 PersistenceSystem.displayName = "Persistence System"
 PersistenceSystem.path = "src/campaign/tc_persistence_system.lua"
-PersistenceSystem.version = "0.2.1"
+PersistenceSystem.version = "0.2.2"
 PersistenceSystem.loaded = true
 PersistenceSystem.started = false
 PersistenceSystem.finished = false
@@ -49,10 +51,19 @@ PersistenceSystem.lastImport = nil
 PersistenceSystem.lastSaveName = nil
 PersistenceSystem.lastError = nil
 PersistenceSystem.lastSandboxResult = nil
+PersistenceSystem.lastFileSaveResult = nil
+PersistenceSystem.lastFileSaveName = nil
+PersistenceSystem.lastFileSavePath = nil
 
 PersistenceSystem.sandboxDirectoryName = "TheaterCommandDCS"
 PersistenceSystem.sandboxFileName = "tc_persistence_sandbox_test.lua"
 PersistenceSystem.sandboxMarker = "TC_PERSISTENCE_SANDBOX_TEST"
+
+PersistenceSystem.saveFileMarker = "TC_CAMPAIGN_STATE_SAVE"
+PersistenceSystem.defaultSaveFileName = "operation_levant_reclamation_save.lua"
+PersistenceSystem.fileSaveTestDelaySeconds = 8
+PersistenceSystem.fileSaveTestScheduled = false
+PersistenceSystem.fileSaveTestCompleted = false
 
 PersistenceSystem.sections = {
     "Meta",
@@ -282,6 +293,16 @@ local function getDefaultSaveName()
     return "operation_levant_reclamation"
 end
 
+local function getDefaultSaveFileName(saveName)
+    local normalizedSaveName = normalizeName(saveName or getDefaultSaveName())
+
+    if normalizedSaveName == nil then
+        return PersistenceSystem.defaultSaveFileName
+    end
+
+    return string.lower(normalizedSaveName) .. "_save.lua"
+end
+
 local function ensurePersistenceState()
     local state = getState()
 
@@ -296,12 +317,18 @@ local function ensurePersistenceState()
     state.Persistence.lastLoadTime = state.Persistence.lastLoadTime or 0
     state.Persistence.lastExportTime = state.Persistence.lastExportTime or 0
     state.Persistence.lastImportTime = state.Persistence.lastImportTime or 0
+    state.Persistence.lastFileSaveTime = state.Persistence.lastFileSaveTime or 0
     state.Persistence.saveName = state.Persistence.saveName or getDefaultSaveName()
+    state.Persistence.saveFileName = state.Persistence.saveFileName or getDefaultSaveFileName(state.Persistence.saveName)
     state.Persistence.exportCount = state.Persistence.exportCount or 0
     state.Persistence.importCount = state.Persistence.importCount or 0
     state.Persistence.memorySaveCount = state.Persistence.memorySaveCount or 0
+    state.Persistence.fileSaveCount = state.Persistence.fileSaveCount or 0
     state.Persistence.fileSystemAvailable = state.Persistence.fileSystemAvailable == true
+    state.Persistence.fileWriteAllowed = state.Persistence.fileWriteAllowed == true
+    state.Persistence.fileReadAllowed = state.Persistence.fileReadAllowed == true
     state.Persistence.sandbox = state.Persistence.sandbox or {}
+    state.Persistence.fileSave = state.Persistence.fileSave or {}
 
     return state
 end
@@ -755,6 +782,68 @@ local function storeSandboxResult(result)
     return true
 end
 
+local function getLastWritableRoot()
+    if type(PersistenceSystem.lastSandboxResult) == "table"
+        and type(PersistenceSystem.lastSandboxResult.writableRoot) == "string"
+        and PersistenceSystem.lastSandboxResult.writableRoot ~= "" then
+
+        return PersistenceSystem.lastSandboxResult.writableRoot
+    end
+
+    local state = getState()
+
+    if state ~= nil
+        and state.Persistence ~= nil
+        and type(state.Persistence.sandbox) == "table"
+        and type(state.Persistence.sandbox.writableRoot) == "string"
+        and state.Persistence.sandbox.writableRoot ~= "" then
+
+        return state.Persistence.sandbox.writableRoot
+    end
+
+    return nil
+end
+
+local function getSaveDirectoryPath()
+    local writableRoot = getLastWritableRoot()
+
+    if writableRoot == nil then
+        return nil, "writable_root_missing"
+    end
+
+    return writableRoot .. PersistenceSystem.sandboxDirectoryName, nil
+end
+
+local function getSaveFilePath(saveName)
+    local directoryPath, directoryReason = getSaveDirectoryPath()
+
+    if directoryPath == nil then
+        return nil, directoryReason
+    end
+
+    return directoryPath .. "/" .. getDefaultSaveFileName(saveName), nil
+end
+
+local function storeFileSaveResult(result)
+    PersistenceSystem.lastFileSaveResult = copyValue(result)
+
+    local state = ensurePersistenceState()
+
+    if state == nil then
+        return false
+    end
+
+    state.Persistence.fileSave = copyValue(result)
+    state.Persistence.lastFileSaveStatus = result.status
+    state.Persistence.lastFileSaveReason = result.reason
+    state.Persistence.lastFileSaveTime = result.finishedAt or result.startedAt or getCurrentTime()
+    state.Persistence.lastFileSavePath = result.filePath
+    state.Persistence.lastFileSaveName = result.saveName
+    state.Persistence.fileSaveCount = result.fileSaveCount or state.Persistence.fileSaveCount or 0
+
+    return true
+end
+
 function PersistenceSystem.runSandboxTest()
     local startedAt = getCurrentTime()
     local availability = detectFileSystemAvailability()
@@ -909,6 +998,7 @@ function PersistenceSystem.createSnapshot()
 
     local snapshot = {
         meta = {
+            marker = PersistenceSystem.saveFileMarker,
             project = "Theater Command DCS",
             module = PersistenceSystem.name,
             moduleVersion = PersistenceSystem.version,
@@ -917,7 +1007,9 @@ function PersistenceSystem.createSnapshot()
             map = campaignConfig.map or "Syria",
             createdAt = getCurrentTime(),
             format = "TC_LUA_TABLE_V1",
-            stateOnly = true
+            stateOnly = true,
+            autoLoad = false,
+            productiveRestore = false
         },
         data = stateData
     }
@@ -1018,6 +1110,135 @@ function PersistenceSystem.saveToMemory(saveName)
     return true, name
 end
 
+function PersistenceSystem.saveToFile(saveName, options)
+    options = options or {}
+
+    local name = saveName or getDefaultSaveName()
+    local startedAt = getCurrentTime()
+
+    local result = {
+        name = "campaign_state_file_save",
+        saveName = name,
+        status = "STARTED",
+        reason = options.reason or "manual_or_startup_file_save_test",
+        startedAt = startedAt,
+        finishedAt = 0,
+        filePath = nil,
+        fileSystemAvailable = PersistenceSystem.isFilePersistenceAvailable(),
+        writeAllowed = false,
+        readVerified = false,
+        snapshotCreated = false,
+        fileSaveCount = 0
+    }
+
+    if result.fileSystemAvailable ~= true then
+        local sandboxResult = PersistenceSystem.runSandboxTest()
+        result.fileSystemAvailable = sandboxResult ~= nil and sandboxResult.fileSystemAvailable == true
+    end
+
+    if result.fileSystemAvailable ~= true then
+        result.status = "BLOCKED"
+        result.reason = "file_system_unavailable"
+        result.finishedAt = getCurrentTime()
+        storeFileSaveResult(result)
+        logWarn("Campaign state file save blocked: file_system_unavailable")
+        return false, result.reason
+    end
+
+    local filePath, filePathReason = getSaveFilePath(name)
+
+    if filePath == nil then
+        result.status = "FAILED"
+        result.reason = filePathReason or "save_file_path_unavailable"
+        result.finishedAt = getCurrentTime()
+        storeFileSaveResult(result)
+        logWarn("Campaign state file save failed: " .. tostring(result.reason))
+        return false, result.reason
+    end
+
+    result.filePath = filePath
+
+    local snapshot, snapshotReason = PersistenceSystem.createSnapshot()
+
+    if snapshot == nil then
+        result.status = "FAILED"
+        result.reason = snapshotReason or "snapshot_failed"
+        result.finishedAt = getCurrentTime()
+        storeFileSaveResult(result)
+        logWarn("Campaign state file save failed: " .. tostring(result.reason))
+        return false, result.reason
+    end
+
+    result.snapshotCreated = true
+
+    local serialized = "return " .. serializeValue(snapshot, 0, {})
+    local writeOk, writeReason = writeTextFile(filePath, serialized)
+
+    if writeOk ~= true then
+        result.status = "FAILED"
+        result.reason = writeReason or "write_failed"
+        result.finishedAt = getCurrentTime()
+        storeFileSaveResult(result)
+        logWarn("Campaign state file save failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        return false, result.reason
+    end
+
+    result.writeAllowed = true
+
+    local readContent, readReason = readTextFile(filePath)
+
+    if readContent == nil then
+        result.status = "FAILED"
+        result.reason = readReason or "read_after_write_failed"
+        result.finishedAt = getCurrentTime()
+        storeFileSaveResult(result)
+        logWarn("Campaign state file save verification failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        return false, result.reason
+    end
+
+    if string.find(readContent, "return", 1, true) == nil
+        or string.find(readContent, PersistenceSystem.saveFileMarker, 1, true) == nil then
+
+        result.status = "FAILED"
+        result.reason = "save_marker_or_return_missing"
+        result.finishedAt = getCurrentTime()
+        storeFileSaveResult(result)
+        logWarn("Campaign state file save verification failed: save_marker_or_return_missing path=" .. tostring(filePath))
+        return false, result.reason
+    end
+
+    result.readVerified = true
+    result.status = "PASSED"
+    result.reason = "snapshot_write_read_verified"
+    result.finishedAt = getCurrentTime()
+
+    PersistenceSystem.lastSaveName = name
+    PersistenceSystem.lastFileSaveName = name
+    PersistenceSystem.lastFileSavePath = filePath
+    PersistenceSystem.lastExport = copyValue(snapshot)
+
+    local state = ensurePersistenceState()
+
+    if state ~= nil then
+        state.Persistence.saveName = name
+        state.Persistence.saveFileName = getDefaultSaveFileName(name)
+        state.Persistence.lastSaveTime = getCurrentTime()
+        state.Persistence.lastFileSaveTime = getCurrentTime()
+        state.Persistence.lastFileSavePath = filePath
+        state.Persistence.fileSaveCount = (state.Persistence.fileSaveCount or 0) + 1
+        result.fileSaveCount = state.Persistence.fileSaveCount
+    end
+
+    clearDirty()
+    storeFileSaveResult(result)
+
+    PersistenceSystem.fileSaveTestCompleted = true
+
+    logInfo("Campaign state file saved: path=" .. tostring(filePath) .. " saveName=" .. tostring(name))
+
+    return true, filePath
+end
+
 function PersistenceSystem.loadFromMemory(saveName)
     local name = saveName or PersistenceSystem.lastSaveName or getDefaultSaveName()
     local snapshot = PersistenceSystem.memorySaves[name]
@@ -1103,6 +1324,10 @@ function PersistenceSystem.getLastError()
     return PersistenceSystem.lastError
 end
 
+function PersistenceSystem.getLastFileSaveResult()
+    return PersistenceSystem.lastFileSaveResult
+end
+
 function PersistenceSystem.markDirty(reason)
     return markDirty(reason or "manual_dirty_mark")
 end
@@ -1145,6 +1370,63 @@ function PersistenceSystem.validateSnapshot(snapshot)
     return true
 end
 
+function PersistenceSystem.scheduleFileSaveTest()
+    if PersistenceSystem.fileSaveTestScheduled == true then
+        logDebug("Persistence file save test already scheduled")
+        return true
+    end
+
+    PersistenceSystem.fileSaveTestScheduled = true
+
+    if timer ~= nil and timer.scheduleFunction ~= nil and timer.getTime ~= nil then
+        local scheduledTime = timer.getTime() + PersistenceSystem.fileSaveTestDelaySeconds
+
+        timer.scheduleFunction(
+            function()
+                local success, result = pcall(function()
+                    return PersistenceSystem.saveToFile(
+                        getDefaultSaveName(),
+                        {
+                            reason = "startup_file_save_test"
+                        }
+                    )
+                end)
+
+                if success ~= true then
+                    PersistenceSystem.lastError = "scheduled_file_save_exception"
+                    logError("Campaign state file save test exception: " .. tostring(result))
+                end
+
+                return nil
+            end,
+            nil,
+            scheduledTime
+        )
+
+        logInfo(
+            "Persistence file save test scheduled: delay="
+                .. tostring(PersistenceSystem.fileSaveTestDelaySeconds)
+                .. "s"
+        )
+
+        return true
+    end
+
+    local success, reason = PersistenceSystem.saveToFile(
+        getDefaultSaveName(),
+        {
+            reason = "startup_file_save_test_no_scheduler"
+        }
+    )
+
+    if success ~= true then
+        logWarn("Immediate persistence file save test failed: " .. tostring(reason))
+        return false
+    end
+
+    return true
+end
+
 function PersistenceSystem.start()
     if PersistenceSystem.started == true and PersistenceSystem.finished == true and PersistenceSystem.failed ~= true then
         logDebug("Persistence system already started")
@@ -1155,6 +1437,8 @@ function PersistenceSystem.start()
     PersistenceSystem.finished = false
     PersistenceSystem.failed = false
     PersistenceSystem.lastError = nil
+    PersistenceSystem.fileSaveTestScheduled = false
+    PersistenceSystem.fileSaveTestCompleted = false
 
     setModuleStatus("STARTING")
     setFeatureStatus(false)
@@ -1176,6 +1460,7 @@ function PersistenceSystem.start()
 
     if sandboxResult ~= nil and sandboxResult.fileSystemAvailable == true then
         setFeatureStatus(true)
+        PersistenceSystem.scheduleFileSaveTest()
     else
         setFeatureStatus(false)
     end
@@ -1190,6 +1475,8 @@ function PersistenceSystem.start()
             .. tostring(sandboxResult and sandboxResult.status or "UNKNOWN")
             .. ", fileSystemAvailable="
             .. boolText(sandboxResult ~= nil and sandboxResult.fileSystemAvailable == true)
+            .. ", fileSaveTestScheduled="
+            .. boolText(PersistenceSystem.fileSaveTestScheduled == true)
     )
 
     return true
@@ -1229,6 +1516,11 @@ function PersistenceSystem.summary()
         dirty = PersistenceSystem.isDirty(),
         sandbox = PersistenceSystem.lastSandboxResult,
         fileSystemAvailable = PersistenceSystem.isFilePersistenceAvailable(),
+        fileSaveTestScheduled = PersistenceSystem.fileSaveTestScheduled,
+        fileSaveTestCompleted = PersistenceSystem.fileSaveTestCompleted,
+        lastFileSaveName = PersistenceSystem.lastFileSaveName,
+        lastFileSavePath = PersistenceSystem.lastFileSavePath,
+        lastFileSaveResult = PersistenceSystem.lastFileSaveResult,
         state = persistenceState
     }
 end
