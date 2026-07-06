@@ -2,9 +2,7 @@
 
 Alle relevanten Änderungen am Projekt **Theater Command DCS** werden in dieser Datei dokumentiert.
 
-Das Projekt befindet sich weiterhin in der frühen Aufbauphase.
-
-Die erste vollständig spielbare dynamische Kampagne ist noch nicht fertig, aber die technische Runtime-Grundlage läuft inzwischen stabil im DCS Mission Scripting Environment.
+Das Projekt befindet sich weiterhin in der frühen Aufbauphase. Die erste vollständig spielbare dynamische Kampagne ist noch nicht fertig, aber die technische Runtime-Grundlage läuft inzwischen stabil im DCS Mission Scripting Environment.
 
 ---
 
@@ -24,12 +22,18 @@ Map:
 
 Ausgangslage:
 
-- Blue startet auf **Akrotiri / Zypern**
-- Das syrische Festland ist zu Beginn rot kontrolliert
-- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
-- Red hält zu Beginn den Großteil der strategischen Flugplätze
-- Spieler sollen sich in eine laufende Kampagne einklinken, nicht jede Aktion allein auslösen
-- Perspektivisch sollen Blue und Red eigene Operationen durchführen
+- Blue startet auf **Akrotiri / Zypern**.
+- Das syrische Festland ist zu Beginn rot kontrolliert.
+- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten.
+- Red hält zu Beginn den Großteil der strategischen Flugplätze.
+- Spieler sollen sich in eine laufende Kampagne einklinken, nicht jede Aktion allein auslösen.
+- Perspektivisch sollen Blue und Red eigene Operationen durchführen.
+
+Grundprinzip:
+
+- **Mission Editor = Bühne**
+- **Lua = Kampagnensystem**
+- **GitHub = Projektgedächtnis**
 
 Aktueller technischer Stand:
 
@@ -45,6 +49,7 @@ Aktueller technischer Stand:
 - Das F10-Menü unterstützt Mission Outcome Controls für die erste aktive Mission.
 - Das F10-Menü zeigt Campaign-, Capture-, Pressure-, Logistics-, FOB- und AI-CAP-Statusinformationen an.
 - Das F10-Menü zeigt Capture Ready Zones nach Mission Completion an.
+- Das F10-Menü kann Capture Ready Zone 1 bewusst state-only anwenden.
 - Der MissionGenerator erzeugt erweiterte Mission Records mit Objectives, Briefing, Progress, Activation Metadata, Outcome State, Effect State und reservierten Spawn-Hooks.
 - Missionen können state-only aktiviert werden.
 - Missionen können state-only auf `COMPLETED` gesetzt werden.
@@ -54,9 +59,13 @@ Aktueller technischer Stand:
 - Mission Completion kann Capture Progress erzeugen.
 - Capture Ready kann dynamisch entstehen.
 - Capture Ready ist über F10 sichtbar und nach Mission Completion bestätigt.
+- Capture Ready kann bewusst über F10 angewendet werden.
+- Beim bestätigten Capture-Apply wurde Zone Ownership state-only aktualisiert.
+- Beim bestätigten Capture-Apply wurde die linked Airbase Ownership state-only synchronisiert.
+- Capture Pressure wurde nach erfolgreichem Ownership-Wechsel durch das CaptureSystem zurückgesetzt.
 - Main und Loader starten sauber durch.
 
-Aktuelle Einschränkung:
+Aktuelle Einschränkungen:
 
 - Das Projekt ist noch keine fertige spielbare dynamische Kampagne.
 - Echte MOOSE-Spawns sind noch nicht aktiv.
@@ -65,10 +74,11 @@ Aktuelle Einschränkung:
 - Persistenz ist vorbereitet, aber noch nicht praktisch im DCS-Dateisystem getestet.
 - AI Director für beidseitige Blue-vs-Red-Kampagnenlogik ist noch nicht implementiert.
 - Missionserfolg und Missionsfehlschlag werden noch nicht automatisch aus DCS-Events ausgewertet.
-- Mission Effects werden bisher nur auf Capture Pressure angewendet.
+- Mission Effects werden bisher produktiv nur auf Capture Pressure angewendet.
 - Mission Effects werden noch nicht produktiv auf Logistics, AI oder IADS angewendet.
-- Capture Ready führt noch nicht automatisch produktiv zu Ownership-Wechseln.
-- Capture-Druck führt noch nicht automatisch produktiv zu realen Kampagnenfolgen.
+- Ownership-Wechsel erfolgen aktuell nur kontrolliert state-only über F10 oder vorbereitete Debug-/Systemfunktionen.
+- Es gibt noch keinen automatischen produktiven Ownership-Wechsel ohne bewusste Bestätigung.
+- Capture-Druck führt noch nicht automatisch produktiv zu realen DCS-Weltfolgen.
 
 ---
 
@@ -84,11 +94,119 @@ Aktuelle Einschränkung:
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
 | MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
 
 ---
 
 ## Added
+
+### F10 Capture Ready Apply bestätigt
+
+Dateien:
+
+- `src/ui/tc_f10_menu.lua`
+- `src/campaign/tc_capture_system.lua`
+- `src/missions/tc_mission_generator.lua`
+
+Bestätigter Status:
+
+- `F10Menu v0.2.3`
+- `CaptureSystem v0.2.2`
+- `MissionGenerator v0.2.3`
+
+Neu bestätigt:
+
+- Der neue F10-Befehl `Apply Capture Ready Zone 1` ist verfügbar.
+- Capture Ready Zone 1 kann bewusst über F10 angewendet werden.
+- Der Ownership-Wechsel bleibt state-only.
+- Es wird kein automatischer Ownership-Wechsel ohne F10-Bestätigung ausgelöst.
+- Die Zone Ownership wird über das bestehende CaptureSystem aktualisiert.
+- Die linked Airbase Ownership wird über das bestehende CaptureSystem synchronisiert.
+- Capture Pressure wird nach erfolgreichem Ownership-Wechsel durch das CaptureSystem zurückgesetzt.
+- Capture Ready wird nach Anwendung sauber entfernt.
+- Die bisherige Mission Completion Pipeline bleibt funktionsfähig.
+- Es werden keine echten MOOSE-Spawns ausgelöst.
+- Es werden keine echten CTLD-Aktionen ausgelöst.
+- Es werden keine echten Skynet-Aktionen ausgelöst.
+
+Bestätigter Testpfad:
+
+1. Mission 1 Details über F10 angezeigt.
+2. Mission 1 über F10 aktiviert.
+3. Active Mission Outcome Status über F10 angezeigt.
+4. Active Mission 1 über F10 auf `COMPLETED` gesetzt.
+5. CaptureSystem verarbeitet abgeschlossene Mission Effects.
+6. Capture Pressure wird erzeugt.
+7. Capture Progress wird auf 100 % aktualisiert.
+8. Capture Ready entsteht.
+9. Capture Status über F10 angezeigt.
+10. Capture Ready Zones über F10 angezeigt.
+11. `Apply Capture Ready Zone 1` über F10 ausgelöst.
+12. Zone Ownership state-only auf `BLUE` gesetzt.
+13. Linked Airbase Ownership state-only auf `BLUE` gesetzt.
+14. Capture Pressure wird zurückgesetzt.
+15. Capture Status erneut über F10 angezeigt.
+
+Bestätigte Testwerte:
+
+- completed mission: `MISSION_2`
+- target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- capture pressure owner: `BLUE`
+- applied pressure: 105
+- progress vor Apply: 100 %
+- appliedMissionEffects: 1
+- ready vor Apply: 1
+- contested: 0
+- applied zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- applied owner: `BLUE`
+- linked airbase: `Abu al-Duhur`
+- ready nach Apply: 0
+
+Bestätigte F10-Command-Zahl:
+
+- vorher: 32 Commands
+- jetzt: 33 Commands
+
+Bestätigte Logmarker:
+
+- `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.3`
+- `[TC] [F10Menu] F10 menu initialized: commands=33`
+- `[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_2`
+- `[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2`
+- `[TC] [F10Menu] Active mission outcome status shown through F10`
+- `[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared`
+- `[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%`
+- `[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1`
+- `[TC] [F10Menu] Capture ready zones shown through F10`
+- `[TC] [CaptureSystem] Zone captured: ZONE_AIRBASE_ABU_AL_DUHUR [BLUE]`
+- `[TC] [CaptureSystem] Base captured: Abu al-Duhur [BLUE]`
+- `[TC] [F10Menu] Capture ready zone applied through F10: slot=1 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE stateOnly=true`
+- `[TC] [CaptureSystem] Capture progress updated: zones=32, ready=0, contested=0, appliedMissionEffects=1`
+- `[TC] [F10Menu] Capture status shown through F10`
+
+Bewertung:
+
+- F10Menu `v0.2.3` ist bestanden.
+- Der kontrollierte state-only Ownership-Wechsel aus Capture Ready ist bestätigt.
+- Die erste vollständige State-Kette ist technisch bestätigt:
+  - Mission anzeigen
+  - Mission aktivieren
+  - Mission abschließen
+  - Mission Effect vorbereiten
+  - Capture Pressure erzeugen
+  - Capture Progress erzeugen
+  - Capture Ready erzeugen
+  - Capture Ready über F10 anzeigen
+  - Capture Ready über F10 anwenden
+  - Zone Ownership aktualisieren
+  - linked Airbase Ownership synchronisieren
+  - Capture Pressure zurücksetzen
+- Es gab keine Lua-Scripting-Fehler.
+- Es gab keine Theater-Command-Fehler.
+- Es gab keinen Lua-Stacktrace.
+- Es wurden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
+
+---
 
 ### Capture Ready Zones nach Mission Completion bestätigt
 
@@ -113,17 +231,17 @@ Neu bestätigt:
 
 Bestätigter Testpfad:
 
-1. Mission 1 Details über F10 angezeigt
-2. Mission 1 über F10 aktiviert
-3. Active Mission Outcome Status über F10 angezeigt
-4. Active Mission 1 über F10 auf `COMPLETED` gesetzt
-5. CaptureSystem verarbeitet abgeschlossene Mission Effects
-6. Capture Pressure wird erzeugt
-7. Capture Progress wird auf 100 % aktualisiert
-8. Capture Ready entsteht
-9. Capture Status über F10 angezeigt
-10. Capture Ready Zones über F10 angezeigt
-11. Pressure Contested Zones über F10 angezeigt
+1. Mission 1 Details über F10 angezeigt.
+2. Mission 1 über F10 aktiviert.
+3. Active Mission Outcome Status über F10 angezeigt.
+4. Active Mission 1 über F10 auf `COMPLETED` gesetzt.
+5. CaptureSystem verarbeitet abgeschlossene Mission Effects.
+6. Capture Pressure wird erzeugt.
+7. Capture Progress wird auf 100 % aktualisiert.
+8. Capture Ready entsteht.
+9. Capture Status über F10 angezeigt.
+10. Capture Ready Zones über F10 angezeigt.
+11. Pressure Contested Zones über F10 angezeigt.
 
 Bestätigte Testwerte:
 
@@ -155,7 +273,7 @@ Bewertung:
 
 - Der bisher offene Regressionstest `Show Capture Ready Zones nach Mission Completion` ist bestanden.
 - Capture Ready ist nicht nur im State vorhanden, sondern über F10 sichtbar.
-- Der nächste technische Schritt ist nicht mehr reine Anzeige, sondern kontrollierter state-only Ownership-Wechsel aus Capture Ready.
+- Der nachfolgende kontrollierte state-only Ownership-Wechsel wurde inzwischen mit `F10Menu v0.2.3` bestätigt.
 
 ---
 
@@ -576,11 +694,18 @@ Bestätigte Testwerte:
 - stored candidates: 6
 - auto-planned FOBs: 2
 - skipped candidates: 4
-- erzeugte FOBs:
-  - `FOB Ercan`
-  - `FOB Gecitkale`
-- Status:
-  - `UNDER_CONSTRUCTION`
+
+Erzeugte FOBs:
+
+- `FOB Ercan`
+- `FOB Gecitkale`
+
+Status:
+
+- `UNDER_CONSTRUCTION`
+
+Weitere Werte:
+
 - Blue FOBs: 2
 
 Bewertung:
@@ -727,6 +852,68 @@ Dokumentiert wurde:
 
 ## Changed
 
+### F10-Menü von 32 auf 33 Commands erweitert
+
+Vorher:
+
+- F10Menu `v0.2.2`
+- 32 Commands
+- Missionsanzeige
+- Missionsdetails
+- Missionsaktivierung
+- Mission Outcome Controls
+- Kampagnenstatus
+- Capture-/Pressure-Status
+- Logistikstatus
+- FOB-Status
+- AI-CAP-Status
+- Capture Ready Anzeige
+
+Jetzt:
+
+- F10Menu `v0.2.3`
+- 33 Commands
+- zusätzlicher Befehl `Apply Capture Ready Zone 1`
+- kontrollierter state-only Ownership-Wechsel aus Capture Ready
+- Zone Ownership wird über CaptureSystem aktualisiert
+- linked Airbase Ownership wird über CaptureSystem synchronisiert
+- Capture Pressure wird nach erfolgreichem Capture Apply zurückgesetzt
+- Capture Ready wird nach erfolgreicher Anwendung entfernt
+
+Bewertung:
+
+- Das F10-Menü kann jetzt nicht nur Capture Ready anzeigen, sondern Capture Ready Zone 1 bewusst anwenden.
+- Der Schritt bleibt kontrolliert, manuell und state-only.
+- Es gibt weiterhin keinen automatischen produktiven Ownership-Wechsel ohne F10-/Debug-Bestätigung.
+
+---
+
+### Capture Ready Apply ist nicht mehr offen
+
+Vorher:
+
+- Capture Ready konnte nach Mission Completion entstehen.
+- Capture Ready konnte über F10 angezeigt werden.
+- Der kontrollierte Ownership-Wechsel aus Capture Ready war noch der nächste offene Code-Schritt.
+- Zone Ownership und linked Airbase Ownership wurden noch nicht praktisch über diesen F10-Pfad geändert.
+
+Jetzt:
+
+- `Apply Capture Ready Zone 1` wurde über F10 ausgelöst.
+- `ZONE_AIRBASE_ABU_AL_DUHUR` wurde state-only auf `BLUE` gesetzt.
+- Die linked Airbase `Abu al-Duhur` wurde state-only auf `BLUE` gesetzt.
+- Capture Pressure wurde durch das CaptureSystem zurückgesetzt.
+- Capture Ready fiel nach Apply von `ready=1` auf `ready=0`.
+
+Bewertung:
+
+- Der erste kontrollierte State-Ownership-Wechsel der Kampagne ist bestätigt.
+- Die bestehende CaptureSystem-Funktionalität reicht für den Apply-Schritt aus.
+- Es war keine Änderung an `src/campaign/tc_capture_system.lua` notwendig.
+- Die Änderung blieb auf `src/ui/tc_f10_menu.lua` beschränkt.
+
+---
+
 ### CaptureSystem von v0.2.1 auf v0.2.2 erweitert
 
 Vorher:
@@ -745,7 +932,7 @@ Jetzt:
 - `ready` steigt nach dem getesteten Abschluss auf 1.
 - Capture Ready ist dynamisch sichtbar.
 - Capture Ready Zones sind über F10 nach Mission Completion sichtbar.
-- Ownership-Wechsel bleibt weiterhin deaktiviert.
+- Ownership-Wechsel bleibt standardmäßig deaktiviert und wird nur bei ausdrücklichem `autoCapture=true` ausgeführt.
 
 Bewertung:
 
@@ -758,6 +945,7 @@ Bewertung:
   - Capture Progress aktualisieren
   - Capture Ready erzeugen
   - Capture Ready über F10 anzeigen
+  - Capture Ready über F10 anwenden
 
 ---
 
@@ -873,13 +1061,44 @@ Bestätigt wurde erneut:
 - Missionen, Capture, Logistics, FOBs, AI und UI sind als State-Systeme miteinander verbunden.
 - Capture-/Pressure-Daten sind über F10 beobachtbar.
 - Capture Ready Zones sind über F10 nach Mission Completion sichtbar.
+- Capture Ready Zone 1 kann state-only über F10 angewendet werden.
 - Mission Outcomes sind über F10 testbar.
 - Mission Effects werden vorbereitet.
 - Abgeschlossene Mission Effects werden inzwischen state-only auf Capture Pressure angewendet.
+- Ein bestätigter Capture Ready Apply kann Ownership state-only ändern.
+- Der Ownership-Wechsel wird nicht automatisch produktiv ausgelöst.
 
 ---
 
 ## Fixed
+
+### Kontrollierter Capture Ready Apply war noch offen
+
+Vorher:
+
+- Capture Ready konnte entstehen.
+- Capture Ready konnte über F10 angezeigt werden.
+- Der konkrete Apply-Schritt war noch nicht praktisch getestet.
+- Der bisherige nächste Code-Schritt war `Apply Capture Ready Zone 1` oder `Confirm Capture Ready Zone 1`.
+- Es war noch nicht bestätigt, ob der F10-Pfad die bestehende CaptureSystem-Funktion sauber nutzen kann.
+
+Jetzt:
+
+- `Apply Capture Ready Zone 1` wurde in `F10Menu v0.2.3` ergänzt.
+- Der Befehl wurde im DCS-Test ausgelöst.
+- Die bestehende CaptureSystem-Funktion `evaluateZoneCapture()` wurde genutzt.
+- Es war keine Änderung an `tc_capture_system.lua` notwendig.
+- Zone Ownership wurde state-only geändert.
+- Linked Airbase Ownership wurde state-only synchronisiert.
+- Capture Pressure wurde zurückgesetzt.
+- Die neue F10-Command-Zahl `commands=33` ist bestätigt.
+
+Bewertung:
+
+- Der kontrollierte Capture Ready Apply ist bestanden.
+- Die Capture-Kette ist nun nicht nur sichtbar, sondern state-only anwendbar.
+
+---
 
 ### Capture Ready Zones nach Mission Completion waren noch nicht bestätigt
 
@@ -1053,7 +1272,7 @@ Noch offen:
 - automatische Missionserfolge und Fehlschläge
 - praktische Prüfung von `Fail Active Mission 1`
 - produktive automatische Capture-Auswertung aus Missionsresultaten
-- kontrollierter Ownership-Wechsel aus Capture Ready
+- automatischer produktiver Ownership-Wechsel ohne manuelle F10-/Debug-Bestätigung
 - Anwendung vorbereiteter Mission Effects auf Logistics, AI und IADS
 - echte Logistik-Auswirkungen auf Capture und Missionen
 - eigene Debug-Reports
@@ -1064,51 +1283,36 @@ Noch offen:
 Nicht mehr offen:
 
 - gezielte Prüfung von `Show Capture Ready Zones` nach Mission Completion
+- kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+- `Apply Capture Ready Zone 1` als F10-Befehl
+- F10Menu `v0.2.3` Regressionstest
+- Capture Ready Apply ohne Änderung an `tc_capture_system.lua`
 
 ---
 
 ## Nächster sinnvoller technischer Schritt
 
-Empfohlene nächste Code-Datei:
+Vor dem nächsten Code-Schritt sollte zuerst die notwendige Projektdokumentation minimal synchronisiert werden.
 
-- `src/ui/tc_f10_menu.lua`
+Nächste Dokumentationsdatei:
 
-Mögliches Ziel:
+- `TASKS.md`
 
-- `Apply Capture Ready Zone 1`
-- oder `Confirm Capture Ready Zone 1`
+Ziel:
 
-Zweck:
-
-- Capture Ready bewusst anwenden
-- Zone Ownership state-only ändern
-- linked Airbase Ownership kontrolliert synchronisieren
-- Capture Pressure nach erfolgreichem Ownership-Wechsel zurücksetzen oder sauber markieren
-- Ownership-Wechsel sichtbar und nachvollziehbar loggen
-- keinen automatischen Ownership-Wechsel ohne F10-/Debug-Bestätigung auslösen
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 32 Commands bleiben funktionsfähig.
-- neuer Capture-Apply-Command wird ergänzt.
-- Capture Ready Zone 1 kann bewusst angewendet werden.
-- Zone Ownership wird state-only aktualisiert.
-- linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
-- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
-- Logmarker zeigen eindeutig den Ownership-Wechsel.
-- keine echten MOOSE-Spawns
-- keine echten CTLD-Aktionen
-- keine echten Skynet-Aktionen
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
+- `Apply Capture Ready Zone 1` als erledigt markieren
+- F10Menu `v0.2.3` als bestanden dokumentieren
+- den nächsten offenen praktischen Test auf `Fail Active Mission 1` setzen
+- Persistence-Sandbox-Test weiterhin als nächstes größeres Thema vorbereiten
+- keine vollständige Dokumentationsrunde während aktiver Arbeit auslösen
 
 Danach sinnvoll:
 
-- `Fail Active Mission 1` praktisch testen
-- Persistence-Sandbox-Test vorbereiten
-- Debug-F10-Menü getrennt entwickeln
-- CTLD-Integration vorbereiten
+1. `Fail Active Mission 1` praktisch testen.
+2. Persistence-Sandbox-Test vorbereiten.
+3. kontrollierte Save-/Load-Grundlage testen.
+4. Debug-F10-Menü getrennt entwickeln.
+5. CTLD-Integration vorbereiten.
+6. MOOSE-CAP-Templates vorbereiten.
+7. AI Director state-only entwerfen.
+8. IADS-System mit Skynet vorbereiten.
