@@ -3,16 +3,15 @@
 --
 -- Purpose:
 -- Prepare campaign state export, import, in-memory persistence, file-system
--- sandbox validation, controlled state snapshot file saves and read-only
--- save-file validation.
+-- sandbox validation, controlled state snapshot file saves, read-only
+-- save-file validation and controlled load tests.
 --
 -- Current focus:
--- PersistenceSystem v0.2.3 keeps the proven sandbox and file-save test from
--- v0.2.2 and adds a controlled read-only validation test for the saved
--- campaign state file.
+-- PersistenceSystem v0.2.4 keeps the proven sandbox, file-save and file-validation
+-- tests from v0.2.3 and adds a controlled delayed load test from the saved file.
 --
 -- Version:
--- 0.2.3
+-- 0.2.4
 --
 -- Responsibilities:
 -- - keep campaign persistence state under TC.State.Persistence
@@ -20,20 +19,20 @@
 -- - import a campaign snapshot back into TC.State
 -- - support in-memory save/load for early tests
 -- - test DCS mission scripting file-system availability
--- - log os/io/lfs availability clearly
+-- - log os/io/lfs/load availability clearly
 -- - write/read one sandbox test file
 -- - write one real campaign state snapshot file after startup
 -- - read and validate the saved campaign state file after startup
 -- - verify that the saved file contains a Lua return table
 -- - verify that the saved file can be compiled and evaluated as a table
 -- - validate the returned snapshot structure
--- - do not automatically import the saved file into TC.State yet
--- - do not perform productive campaign restore yet
+-- - perform one controlled delayed load test into TC.State
+-- - do not enable automatic productive restore yet
 --
 -- Important:
 -- This module remains state-first.
--- File save and file validation are currently controlled tests only.
--- Automatic load/restore is intentionally not active yet.
+-- File save, validation and load are currently controlled tests only.
+-- Automatic productive load/restore is intentionally not active yet.
 
 TC = TC or {}
 TC.modules = TC.modules or {}
@@ -45,7 +44,7 @@ local PersistenceSystem = {}
 PersistenceSystem.name = "tc_persistence_system"
 PersistenceSystem.displayName = "Persistence System"
 PersistenceSystem.path = "src/campaign/tc_persistence_system.lua"
-PersistenceSystem.version = "0.2.3"
+PersistenceSystem.version = "0.2.4"
 PersistenceSystem.loaded = true
 PersistenceSystem.started = false
 PersistenceSystem.finished = false
@@ -59,9 +58,11 @@ PersistenceSystem.lastError = nil
 PersistenceSystem.lastSandboxResult = nil
 PersistenceSystem.lastFileSaveResult = nil
 PersistenceSystem.lastFileValidationResult = nil
+PersistenceSystem.lastFileLoadResult = nil
 PersistenceSystem.lastFileSaveName = nil
 PersistenceSystem.lastFileSavePath = nil
 PersistenceSystem.lastFileValidationPath = nil
+PersistenceSystem.lastFileLoadPath = nil
 
 PersistenceSystem.sandboxDirectoryName = "TheaterCommandDCS"
 PersistenceSystem.sandboxFileName = "tc_persistence_sandbox_test.lua"
@@ -69,12 +70,17 @@ PersistenceSystem.sandboxMarker = "TC_PERSISTENCE_SANDBOX_TEST"
 
 PersistenceSystem.saveFileMarker = "TC_CAMPAIGN_STATE_SAVE"
 PersistenceSystem.defaultSaveFileName = "operation_levant_reclamation_save.lua"
+
 PersistenceSystem.fileSaveTestDelaySeconds = 8
 PersistenceSystem.fileValidationTestDelaySeconds = 12
+PersistenceSystem.fileLoadTestDelaySeconds = 16
+
 PersistenceSystem.fileSaveTestScheduled = false
 PersistenceSystem.fileSaveTestCompleted = false
 PersistenceSystem.fileValidationTestScheduled = false
 PersistenceSystem.fileValidationTestCompleted = false
+PersistenceSystem.fileLoadTestScheduled = false
+PersistenceSystem.fileLoadTestCompleted = false
 
 PersistenceSystem.sections = {
     "Meta",
@@ -330,6 +336,7 @@ local function ensurePersistenceState()
     state.Persistence.lastImportTime = state.Persistence.lastImportTime or 0
     state.Persistence.lastFileSaveTime = state.Persistence.lastFileSaveTime or 0
     state.Persistence.lastFileValidationTime = state.Persistence.lastFileValidationTime or 0
+    state.Persistence.lastFileLoadTime = state.Persistence.lastFileLoadTime or 0
     state.Persistence.saveName = state.Persistence.saveName or getDefaultSaveName()
     state.Persistence.saveFileName = state.Persistence.saveFileName or getDefaultSaveFileName(state.Persistence.saveName)
     state.Persistence.exportCount = state.Persistence.exportCount or 0
@@ -337,12 +344,14 @@ local function ensurePersistenceState()
     state.Persistence.memorySaveCount = state.Persistence.memorySaveCount or 0
     state.Persistence.fileSaveCount = state.Persistence.fileSaveCount or 0
     state.Persistence.fileValidationCount = state.Persistence.fileValidationCount or 0
+    state.Persistence.fileLoadCount = state.Persistence.fileLoadCount or 0
     state.Persistence.fileSystemAvailable = state.Persistence.fileSystemAvailable == true
     state.Persistence.fileWriteAllowed = state.Persistence.fileWriteAllowed == true
     state.Persistence.fileReadAllowed = state.Persistence.fileReadAllowed == true
     state.Persistence.sandbox = state.Persistence.sandbox or {}
     state.Persistence.fileSave = state.Persistence.fileSave or {}
     state.Persistence.fileValidation = state.Persistence.fileValidation or {}
+    state.Persistence.fileLoad = state.Persistence.fileLoad or {}
 
     return state
 end
@@ -921,6 +930,116 @@ local function storeFileValidationResult(result)
     return true
 end
 
+local function storeFileLoadResult(result)
+    PersistenceSystem.lastFileLoadResult = copyValue(result)
+
+    local state = ensurePersistenceState()
+
+    if state == nil then
+        return false
+    end
+
+    state.Persistence.fileLoad = copyValue(result)
+    state.Persistence.lastFileLoadStatus = result.status
+    state.Persistence.lastFileLoadReason = result.reason
+    state.Persistence.lastFileLoadTime = result.finishedAt or result.startedAt or getCurrentTime()
+    state.Persistence.lastFileLoadPath = result.filePath
+    state.Persistence.lastFileLoadSaveName = result.saveName
+    state.Persistence.fileLoadCount = result.fileLoadCount or state.Persistence.fileLoadCount or 0
+
+    return true
+end
+
+function PersistenceSystem.validateSnapshot(snapshot)
+    if type(snapshot) ~= "table" then
+        return false, "snapshot_not_table"
+    end
+
+    if type(snapshot.meta) ~= "table" then
+        return false, "snapshot_meta_missing"
+    end
+
+    if snapshot.meta.marker ~= PersistenceSystem.saveFileMarker then
+        return false, "snapshot_marker_invalid"
+    end
+
+    if snapshot.meta.format ~= "TC_LUA_TABLE_V1" then
+        return false, "snapshot_format_invalid"
+    end
+
+    if type(snapshot.data) ~= "table" then
+        return false, "snapshot_data_missing"
+    end
+
+    if type(snapshot.data.Campaign) ~= "table" then
+        return false, "campaign_section_missing"
+    end
+
+    if type(snapshot.data.Bases) ~= "table" then
+        return false, "bases_section_missing"
+    end
+
+    if type(snapshot.data.Zones) ~= "table" then
+        return false, "zones_section_missing"
+    end
+
+    return true
+end
+
+local function readSnapshotFromFile(saveName)
+    local name = saveName or getDefaultSaveName()
+
+    if PersistenceSystem.isFilePersistenceAvailable() ~= true then
+        local sandboxResult = PersistenceSystem.runSandboxTest()
+
+        if sandboxResult == nil or sandboxResult.fileSystemAvailable ~= true then
+            return nil, nil, "file_system_unavailable"
+        end
+    end
+
+    local filePath, filePathReason = getSaveFilePath(name)
+
+    if filePath == nil then
+        return nil, nil, filePathReason or "save_file_path_unavailable"
+    end
+
+    local readContent, readReason = readTextFile(filePath)
+
+    if readContent == nil then
+        return nil, filePath, readReason or "file_read_failed"
+    end
+
+    if string.find(readContent, "return", 1, true) == nil then
+        return nil, filePath, "return_missing"
+    end
+
+    if string.find(readContent, PersistenceSystem.saveFileMarker, 1, true) == nil then
+        return nil, filePath, "save_marker_missing"
+    end
+
+    local chunk, compileReason = compileLuaChunkFromText(readContent, "tc_campaign_state_save")
+
+    if chunk == nil then
+        return nil, filePath, compileReason or "chunk_compile_failed"
+    end
+
+    local evalSuccess, snapshotOrError = pcall(function()
+        return chunk()
+    end)
+
+    if evalSuccess ~= true then
+        return nil, filePath, "chunk_eval_failed:" .. tostring(snapshotOrError)
+    end
+
+    local valid, validationReason = PersistenceSystem.validateSnapshot(snapshotOrError)
+
+    if valid ~= true then
+        return nil, filePath, validationReason or "snapshot_invalid"
+    end
+
+    return snapshotOrError, filePath, nil
+end
+
 function PersistenceSystem.runSandboxTest()
     local startedAt = getCurrentTime()
     local availability = detectFileSystemAvailability()
@@ -1095,7 +1214,8 @@ function PersistenceSystem.createSnapshot()
             format = "TC_LUA_TABLE_V1",
             stateOnly = true,
             autoLoad = false,
-            productiveRestore = false
+            productiveRestore = false,
+            controlledLoadTest = true
         },
         data = stateData
     }
@@ -1133,7 +1253,15 @@ function PersistenceSystem.importState(snapshot)
         return false, "snapshot_not_table"
     end
 
-    local importedData = snapshot.data or snapshot
+    local valid, validationReason = PersistenceSystem.validateSnapshot(snapshot)
+
+    if valid ~= true then
+        PersistenceSystem.lastError = validationReason
+        logError("Persistence import failed: " .. tostring(validationReason))
+        return false, validationReason
+    end
+
+    local importedData = snapshot.data
 
     if type(importedData) ~= "table" then
         PersistenceSystem.lastError = "snapshot_data_missing"
@@ -1354,118 +1482,36 @@ function PersistenceSystem.validateFile(saveName, options)
         fileValidationCount = 0
     }
 
-    if result.fileSystemAvailable ~= true then
-        local sandboxResult = PersistenceSystem.runSandboxTest()
-        result.fileSystemAvailable = sandboxResult ~= nil and sandboxResult.fileSystemAvailable == true
-    end
-
-    if result.fileSystemAvailable ~= true then
-        result.status = "BLOCKED"
-        result.reason = "file_system_unavailable"
-        result.finishedAt = getCurrentTime()
-        storeFileValidationResult(result)
-        logWarn("Campaign state file validation blocked: file_system_unavailable")
-        return false, result.reason
-    end
-
-    local filePath, filePathReason = getSaveFilePath(name)
-
-    if filePath == nil then
-        result.status = "FAILED"
-        result.reason = filePathReason or "save_file_path_unavailable"
-        result.finishedAt = getCurrentTime()
-        storeFileValidationResult(result)
-        logWarn("Campaign state file validation failed: " .. tostring(result.reason))
-        return false, result.reason
-    end
+    local snapshot, filePath, readReason = readSnapshotFromFile(name)
 
     result.filePath = filePath
 
-    local readContent, readReason = readTextFile(filePath)
-
-    if readContent == nil then
+    if snapshot == nil then
         result.status = "FAILED"
-        result.reason = readReason or "file_read_failed"
+        result.reason = readReason or "snapshot_read_failed"
         result.finishedAt = getCurrentTime()
         storeFileValidationResult(result)
         logWarn("Campaign state file validation failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
         return false, result.reason
     end
 
+    result.fileSystemAvailable = true
     result.readAllowed = true
-    result.returnFound = string.find(readContent, "return", 1, true) ~= nil
-    result.markerFound = string.find(readContent, PersistenceSystem.saveFileMarker, 1, true) ~= nil
-
-    if result.returnFound ~= true then
-        result.status = "FAILED"
-        result.reason = "return_missing"
-        result.finishedAt = getCurrentTime()
-        storeFileValidationResult(result)
-        logWarn("Campaign state file validation failed: return_missing path=" .. tostring(filePath))
-        return false, result.reason
-    end
-
-    if result.markerFound ~= true then
-        result.status = "FAILED"
-        result.reason = "save_marker_missing"
-        result.finishedAt = getCurrentTime()
-        storeFileValidationResult(result)
-        logWarn("Campaign state file validation failed: save_marker_missing path=" .. tostring(filePath))
-        return false, result.reason
-    end
-
-    local chunk, compileReason = compileLuaChunkFromText(readContent, "tc_campaign_state_save")
-
-    if chunk == nil then
-        result.status = "FAILED"
-        result.reason = compileReason or "chunk_compile_failed"
-        result.finishedAt = getCurrentTime()
-        storeFileValidationResult(result)
-        logWarn("Campaign state file validation failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
-        return false, result.reason
-    end
-
+    result.markerFound = true
+    result.returnFound = true
     result.chunkCompiled = true
-
-    local evalSuccess, snapshotOrError = pcall(function()
-        return chunk()
-    end)
-
-    if evalSuccess ~= true then
-        result.status = "FAILED"
-        result.reason = "chunk_eval_failed:" .. tostring(snapshotOrError)
-        result.finishedAt = getCurrentTime()
-        storeFileValidationResult(result)
-        logWarn("Campaign state file validation failed: chunk_eval_failed path=" .. tostring(filePath))
-        return false, result.reason
-    end
-
     result.chunkEvaluated = true
-
-    local valid, validationReason = PersistenceSystem.validateSnapshot(snapshotOrError)
-
-    if valid ~= true then
-        result.status = "FAILED"
-        result.reason = validationReason or "snapshot_invalid"
-        result.finishedAt = getCurrentTime()
-        storeFileValidationResult(result)
-        logWarn("Campaign state file validation failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
-        return false, result.reason
-    end
-
     result.snapshotValid = true
     result.imported = false
 
-    if type(snapshotOrError) == "table" then
-        if type(snapshotOrError.meta) == "table" then
-            result.snapshotMetaCampaign = snapshotOrError.meta.campaign
-            result.snapshotMetaVersion = snapshotOrError.meta.version
-            result.snapshotModuleVersion = snapshotOrError.meta.moduleVersion
-        end
+    if type(snapshot.meta) == "table" then
+        result.snapshotMetaCampaign = snapshot.meta.campaign
+        result.snapshotMetaVersion = snapshot.meta.version
+        result.snapshotModuleVersion = snapshot.meta.moduleVersion
+    end
 
-        if type(snapshotOrError.data) == "table" then
-            result.dataSections = countTableKeys(snapshotOrError.data)
-        end
+    if type(snapshot.data) == "table" then
+        result.dataSections = countTableKeys(snapshot.data)
     end
 
     result.status = "PASSED"
@@ -1495,6 +1541,110 @@ function PersistenceSystem.validateFile(saveName, options)
             .. " sections="
             .. tostring(result.dataSections)
             .. " imported=false"
+    )
+
+    return true, filePath
+end
+
+function PersistenceSystem.loadFromFile(saveName, options)
+    options = options or {}
+
+    local name = saveName or getDefaultSaveName()
+    local startedAt = getCurrentTime()
+
+    local result = {
+        name = "campaign_state_file_load",
+        saveName = name,
+        status = "STARTED",
+        reason = options.reason or "manual_or_startup_file_load_test",
+        startedAt = startedAt,
+        finishedAt = 0,
+        filePath = nil,
+        fileSystemAvailable = PersistenceSystem.isFilePersistenceAvailable(),
+        readAllowed = false,
+        snapshotValid = false,
+        imported = false,
+        productiveRestore = false,
+        snapshotMetaCampaign = nil,
+        snapshotMetaVersion = nil,
+        snapshotModuleVersion = nil,
+        dataSections = 0,
+        fileLoadCount = 0
+    }
+
+    local snapshot, filePath, readReason = readSnapshotFromFile(name)
+
+    result.filePath = filePath
+
+    if snapshot == nil then
+        result.status = "FAILED"
+        result.reason = readReason or "snapshot_read_failed"
+        result.finishedAt = getCurrentTime()
+        storeFileLoadResult(result)
+        logWarn("Campaign state file load test failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        return false, result.reason
+    end
+
+    result.fileSystemAvailable = true
+    result.readAllowed = true
+    result.snapshotValid = true
+
+    if type(snapshot.meta) == "table" then
+        result.snapshotMetaCampaign = snapshot.meta.campaign
+        result.snapshotMetaVersion = snapshot.meta.version
+        result.snapshotModuleVersion = snapshot.meta.moduleVersion
+    end
+
+    if type(snapshot.data) == "table" then
+        result.dataSections = countTableKeys(snapshot.data)
+    end
+
+    local imported, importReason = PersistenceSystem.importState(snapshot)
+
+    if imported ~= true then
+        result.status = "FAILED"
+        result.reason = importReason or "import_failed"
+        result.finishedAt = getCurrentTime()
+        storeFileLoadResult(result)
+        logWarn("Campaign state file load test failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
+        return false, result.reason
+    end
+
+    result.imported = true
+    result.productiveRestore = false
+    result.status = "PASSED"
+    result.reason = "read_validate_import_verified"
+    result.finishedAt = getCurrentTime()
+
+    PersistenceSystem.lastFileLoadPath = filePath
+    PersistenceSystem.lastImport = copyValue(snapshot)
+    PersistenceSystem.lastSaveName = name
+
+    local state = ensurePersistenceState()
+
+    if state ~= nil then
+        state.Persistence.saveName = name
+        state.Persistence.saveFileName = getDefaultSaveFileName(name)
+        state.Persistence.lastLoadTime = getCurrentTime()
+        state.Persistence.lastFileLoadTime = getCurrentTime()
+        state.Persistence.lastFileLoadPath = filePath
+        state.Persistence.fileLoadCount = (state.Persistence.fileLoadCount or 0) + 1
+        result.fileLoadCount = state.Persistence.fileLoadCount
+    end
+
+    clearDirty()
+    storeFileLoadResult(result)
+
+    PersistenceSystem.fileLoadTestCompleted = true
+
+    logInfo(
+        "Campaign state file load test passed: path="
+            .. tostring(filePath)
+            .. " saveName="
+            .. tostring(name)
+            .. " sections="
+            .. tostring(result.dataSections)
+            .. " imported=true productiveRestore=false"
     )
 
     return true, filePath
@@ -1593,6 +1743,10 @@ function PersistenceSystem.getLastFileValidationResult()
     return PersistenceSystem.lastFileValidationResult
 end
 
+function PersistenceSystem.getLastFileLoadResult()
+    return PersistenceSystem.lastFileLoadResult
+end
+
 function PersistenceSystem.markDirty(reason)
     return markDirty(reason or "manual_dirty_mark")
 end
@@ -1609,42 +1763,6 @@ function PersistenceSystem.isDirty()
     end
 
     return state.Persistence.dirty == true
-end
-
-function PersistenceSystem.validateSnapshot(snapshot)
-    if type(snapshot) ~= "table" then
-        return false, "snapshot_not_table"
-    end
-
-    if type(snapshot.meta) ~= "table" then
-        return false, "snapshot_meta_missing"
-    end
-
-    if snapshot.meta.marker ~= PersistenceSystem.saveFileMarker then
-        return false, "snapshot_marker_invalid"
-    end
-
-    if snapshot.meta.format ~= "TC_LUA_TABLE_V1" then
-        return false, "snapshot_format_invalid"
-    end
-
-    if type(snapshot.data) ~= "table" then
-        return false, "snapshot_data_missing"
-    end
-
-    if type(snapshot.data.Campaign) ~= "table" then
-        return false, "campaign_section_missing"
-    end
-
-    if type(snapshot.data.Bases) ~= "table" then
-        return false, "bases_section_missing"
-    end
-
-    if type(snapshot.data.Zones) ~= "table" then
-        return false, "zones_section_missing"
-    end
-
-    return true
 end
 
 function PersistenceSystem.scheduleFileSaveTest()
@@ -1761,6 +1879,63 @@ function PersistenceSystem.scheduleFileValidationTest()
     return true
 end
 
+function PersistenceSystem.scheduleFileLoadTest()
+    if PersistenceSystem.fileLoadTestScheduled == true then
+        logDebug("Persistence file load test already scheduled")
+        return true
+    end
+
+    PersistenceSystem.fileLoadTestScheduled = true
+
+    if timer ~= nil and timer.scheduleFunction ~= nil and timer.getTime ~= nil then
+        local scheduledTime = timer.getTime() + PersistenceSystem.fileLoadTestDelaySeconds
+
+        timer.scheduleFunction(
+            function()
+                local success, result = pcall(function()
+                    return PersistenceSystem.loadFromFile(
+                        getDefaultSaveName(),
+                        {
+                            reason = "startup_file_load_test"
+                        }
+                    )
+                end)
+
+                if success ~= true then
+                    PersistenceSystem.lastError = "scheduled_file_load_exception"
+                    logError("Campaign state file load test exception: " .. tostring(result))
+                end
+
+                return nil
+            end,
+            nil,
+            scheduledTime
+        )
+
+        logInfo(
+            "Persistence file load test scheduled: delay="
+                .. tostring(PersistenceSystem.fileLoadTestDelaySeconds)
+                .. "s"
+        )
+
+        return true
+    end
+
+    local success, reason = PersistenceSystem.loadFromFile(
+        getDefaultSaveName(),
+        {
+            reason = "startup_file_load_test_no_scheduler"
+        }
+    )
+
+    if success ~= true then
+        logWarn("Immediate persistence file load test failed: " .. tostring(reason))
+        return false
+    end
+
+    return true
+end
+
 function PersistenceSystem.start()
     if PersistenceSystem.started == true and PersistenceSystem.finished == true and PersistenceSystem.failed ~= true then
         logDebug("Persistence system already started")
@@ -1775,6 +1950,8 @@ function PersistenceSystem.start()
     PersistenceSystem.fileSaveTestCompleted = false
     PersistenceSystem.fileValidationTestScheduled = false
     PersistenceSystem.fileValidationTestCompleted = false
+    PersistenceSystem.fileLoadTestScheduled = false
+    PersistenceSystem.fileLoadTestCompleted = false
 
     setModuleStatus("STARTING")
     setFeatureStatus(false)
@@ -1798,6 +1975,7 @@ function PersistenceSystem.start()
         setFeatureStatus(true)
         PersistenceSystem.scheduleFileSaveTest()
         PersistenceSystem.scheduleFileValidationTest()
+        PersistenceSystem.scheduleFileLoadTest()
     else
         setFeatureStatus(false)
     end
@@ -1816,6 +1994,8 @@ function PersistenceSystem.start()
             .. boolText(PersistenceSystem.fileSaveTestScheduled == true)
             .. ", fileValidationTestScheduled="
             .. boolText(PersistenceSystem.fileValidationTestScheduled == true)
+            .. ", fileLoadTestScheduled="
+            .. boolText(PersistenceSystem.fileLoadTestScheduled == true)
     )
 
     return true
@@ -1859,11 +2039,15 @@ function PersistenceSystem.summary()
         fileSaveTestCompleted = PersistenceSystem.fileSaveTestCompleted,
         fileValidationTestScheduled = PersistenceSystem.fileValidationTestScheduled,
         fileValidationTestCompleted = PersistenceSystem.fileValidationTestCompleted,
+        fileLoadTestScheduled = PersistenceSystem.fileLoadTestScheduled,
+        fileLoadTestCompleted = PersistenceSystem.fileLoadTestCompleted,
         lastFileSaveName = PersistenceSystem.lastFileSaveName,
         lastFileSavePath = PersistenceSystem.lastFileSavePath,
         lastFileValidationPath = PersistenceSystem.lastFileValidationPath,
+        lastFileLoadPath = PersistenceSystem.lastFileLoadPath,
         lastFileSaveResult = PersistenceSystem.lastFileSaveResult,
         lastFileValidationResult = PersistenceSystem.lastFileValidationResult,
+        lastFileLoadResult = PersistenceSystem.lastFileLoadResult,
         state = persistenceState
     }
 end
