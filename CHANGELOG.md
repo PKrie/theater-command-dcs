@@ -40,8 +40,12 @@ Aktueller technischer Stand:
 - ZoneFactory, CaptureSystem, LogisticsDelivery, FobSystem, MissionGenerator, AICapManager und F10Menu nutzen inzwischen den klassifizierten Kampagnenzustand.
 - Das F10-Menü unterstützt direkte Missionsauswahl für Mission 1 bis Mission 10.
 - Das F10-Menü unterstützt direkte Missionsaktivierung für Mission 1 bis Mission 10.
-- Das F10-Menü zeigt jetzt Capture-/Pressure-Statusinformationen an.
-- Der MissionGenerator erzeugt erweiterte Mission Records mit Objectives, Briefing, Progress, Activation Metadata und reservierten Spawn-Hooks.
+- Das F10-Menü zeigt Capture-/Pressure-Statusinformationen an.
+- Das F10-Menü unterstützt Mission Outcome Controls für die erste aktive Mission.
+- Der MissionGenerator erzeugt erweiterte Mission Records mit Objectives, Briefing, Progress, Activation Metadata, Outcome State, Effect State und reservierten Spawn-Hooks.
+- Missionen können state-only aktiviert werden.
+- Missionen können state-only auf `COMPLETED` gesetzt werden.
+- Mission Effects werden state-only vorbereitet.
 - Das CaptureSystem erzeugt Capture-Pressure- und Progress-Records für capture-fähige Zonen.
 - Missionseffekte können vorbereitet state-only auf Capture-Druck abgebildet werden.
 - Main und Loader starten sauber durch.
@@ -55,6 +59,7 @@ Aktuelle Einschränkung:
 - Persistenz ist vorbereitet, aber noch nicht praktisch im DCS-Dateisystem getestet.
 - AI Director für beidseitige Blue-vs-Red-Kampagnenlogik ist noch nicht implementiert.
 - Missionserfolg und Missionsfehlschlag werden noch nicht automatisch aus DCS-Events ausgewertet.
+- Mission Effects werden vorbereitet, aber noch nicht produktiv auf Capture, Logistics, AI oder IADS angewendet.
 - Capture-Druck führt noch nicht automatisch produktiv zu realen Kampagnenfolgen.
 
 ---
@@ -69,13 +74,162 @@ Aktuelle Einschränkung:
 | PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.1` | bestanden für Capture-/Pressure-Erweiterung |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
 
 ---
 
 ## Added
+
+### F10 Mission Outcome Controls
+
+Datei:
+
+- `src/ui/tc_f10_menu.lua`
+
+Version:
+
+- `v0.2.2`
+
+Neu:
+
+- neues F10-Untermenü `Mission Outcome`
+- `Show Active Mission Outcome Status`
+- `Complete Active Mission 1`
+- `Fail Active Mission 1`
+- Anzeige aktiver Missionen bleibt erhalten.
+- Missionsdetails zeigen jetzt zusätzlich Progress-, Outcome- und Effect-State-Daten.
+- Mission Completion kann über F10 praktisch getestet werden.
+- Mission Effects werden nach Completion state-only vorbereitet.
+- F10Menu schreibt Outcome-relevante UI-Daten in `TC.State.UI`.
+- F10Menu bleibt weiterhin state-first.
+- F10Menu löst keine echten MOOSE-Spawns aus.
+- F10Menu löst keine echten CTLD-Aktionen aus.
+- F10Menu löst keine echten Skynet-Aktionen aus.
+
+Bestätigte neue F10-Funktionen:
+
+- `Theater Command > Missions > Mission Outcome > Show Active Mission Outcome Status`
+- `Theater Command > Missions > Mission Outcome > Complete Active Mission 1`
+- `Theater Command > Missions > Mission Outcome > Fail Active Mission 1`
+
+Bestätigte F10-Command-Zahl:
+
+- vorher: 29 Commands
+- jetzt: 32 Commands
+
+Bestätigte Logmarker:
+
+- `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.2`
+- `[TC] [F10Menu] F10 menu started`
+- `[TC] [F10Menu] F10 menu initialized: commands=32`
+- `[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_2`
+- `[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2`
+- `[TC] [F10Menu] Active mission outcome status shown through F10`
+- `[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared`
+- `[TC] System started: F10 Menu`
+
+Bewertung:
+
+- F10Menu `v0.2.2` ist bestanden.
+- Das F10-Menü ist sichtbar und initialisiert sauber.
+- Die direkte Missionsauswahl funktioniert weiterhin.
+- Die direkte Missionsaktivierung funktioniert weiterhin.
+- Mission Completion ist über F10 praktisch getestet.
+- Mission Effects werden state-only vorbereitet.
+- Es gab keine Lua-Scripting-Fehler.
+- Es gab keine Theater-Command-Fehler.
+- Es gab keinen Lua-Stacktrace.
+- Es wurden keine echten Spawns oder externen Framework-Aktionen ausgelöst.
+
+Hinweis:
+
+- `Fail Active Mission 1` ist im Code vorbereitet, aber noch nicht praktisch logbestätigt.
+- Der Completion-Pfad ist praktisch bestanden.
+- Der Failure-Pfad sollte in einem späteren Regressionstest gezielt geprüft werden.
+
+---
+
+### Mission Generator State-only Outcomes
+
+Datei:
+
+- `src/missions/tc_mission_generator.lua`
+
+Version:
+
+- `v0.2.3`
+
+Neu:
+
+- Mission Records enthalten Outcome-Daten.
+- Mission Records enthalten Effect-State-Daten.
+- Missionen können state-only auf `COMPLETED` gesetzt werden.
+- Missionen können state-only auf `FAILED` gesetzt werden.
+- Missionen können state-only auf `CANCELLED` gesetzt werden.
+- Missionen können state-only auf `EXPIRED` gesetzt werden.
+- `completeMission()` ist praktisch über F10 getestet.
+- `failMission()` ist vorbereitet.
+- `cancelMission()` ist vorbereitet.
+- `expireMission()` ist vorbereitet.
+- `prepareMissionEffects()` ist vorbereitet.
+- `applyMissionCompletionEffect()` bleibt state-only vorbereitet.
+- Mission Outcome History wird im State vorbereitet.
+- Effect History wird im State vorbereitet.
+- vorbereitete Effekte enthalten Zielbezüge für Capture, Logistics, AI und IADS.
+- echte Framework-Ausführung bleibt deaktiviert.
+
+Bestätigte Testwerte:
+
+- mission candidates: 78
+- fobSupportCandidates: 2
+- generated missions: 10
+- reservedCreated: 1
+- duplicatesSkipped: 1
+- typeLimitSkipped: 68
+
+Bestätigte MissionGenerator-/F10-Interaktion:
+
+- Mission Details Slot 1 bestätigt.
+- Mission Slot 1 aktiviert.
+- MissionGenerator setzt Mission Slot 1 auf `ACTIVE`.
+- Aktivierung erzeugt `stateOnly=true`.
+- Aktivierung erzeugt `spawnHooks=reserved`.
+- aktive Mission 1 wurde über F10 auf `COMPLETED` gesetzt.
+- MissionGenerator erzeugt `Mission effects prepared state-only`.
+- MissionGenerator erzeugt `Mission outcome prepared`.
+- Outcome bleibt `stateOnly=true`.
+- Effects bleiben `prepared`.
+
+Bestätigte Logmarker:
+
+- `[TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.3`
+- `[TC] [MissionGenerator] Mission generator started`
+- `[TC] [MissionGenerator] Mission candidate summary: candidates=78, fobSupportCandidates=2, availableBefore=0, generationSlots=10`
+- `[TC] [MissionGenerator] Mission generation completed: 10 new missions from 78 candidates (fobSupportCandidates=2, reservedCreated=1, duplicatesSkipped=1, typeLimitSkipped=68)`
+- `[TC] [MissionGenerator] Mission generator ready`
+- `[TC] [MissionGenerator] Mission status changed: MISSION_2 [ACTIVE]`
+- `[TC] [MissionGenerator] Mission activation prepared: MISSION_2 stateOnly=true spawnHooks=reserved`
+- `[TC] [MissionGenerator] Mission effects prepared state-only: MISSION_2 status=COMPLETED`
+- `[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared`
+
+Bewertung:
+
+- MissionGenerator `v0.2.3` ist bestanden.
+- Mission Activation ist weiterhin stabil.
+- Mission Completion ist state-only praktisch getestet.
+- Mission Effects werden vorbereitet, aber noch nicht produktiv auf Capture, Logistics, AI oder IADS angewendet.
+- Es werden weiterhin keine echten DCS-Spawns ausgelöst.
+- Es gab keinen Theater-Command-Lua-Fehler und keinen Lua-Stacktrace.
+
+Hinweis:
+
+- Die Kandidatenzahl ist von 69 auf 78 gestiegen.
+- Das ist aktuell kein Fehler, weil weiter nur 10 Missionen erzeugt werden.
+- Die höhere Kandidatenzahl entsteht durch die erweiterte Missions- und Outcome-Struktur und muss weiter beobachtet werden.
+
+---
 
 ### F10 Menu Capture-/Pressure-Status
 
@@ -146,17 +300,11 @@ Bewertung:
 
 - F10Menu `v0.2.1` ist für die Capture-/Pressure-Erweiterung bestanden.
 - Das F10-Menü ist sichtbar und initialisiert sauber.
-- Die drei neuen Capture-/Pressure-Funktionen wurden im frischen DCS-Test ausgelöst.
+- Die drei neuen Capture-/Pressure-Funktionen wurden im DCS-Test ausgelöst.
 - Es gab keine Lua-Scripting-Fehler.
 - Es gab keine Theater-Command-Fehler.
 - Es gab keinen Lua-Stacktrace.
 - Es wurden keine echten Spawns oder externen Framework-Aktionen ausgelöst.
-
-Hinweis:
-
-- Im frischen `v0.2.1`-Capture-Test wurden Mission Details und Mission Activation nicht erneut angeklickt.
-- Diese Funktionen waren aus dem vorherigen `v0.2.0`-Test bereits bestätigt.
-- Beim nächsten UI-/Regressionstest sollten Mission Details und Mission Activation stichprobenartig erneut geprüft werden.
 
 ---
 
@@ -495,33 +643,59 @@ Dokumentiert wurde:
 
 ## Changed
 
-### F10-Menü von 26 auf 29 Commands erweitert
+### F10-Menü von 29 auf 32 Commands erweitert
 
 Vorher:
 
-- F10Menu `v0.2.0`
-- 26 Commands
+- F10Menu `v0.2.1`
+- 29 Commands
 - Missionsanzeige
 - Missionsdetails
 - Missionsaktivierung
 - Kampagnenstatus
+- Capture-/Pressure-Status
 - Logistikstatus
 - FOB-Status
 - AI-CAP-Status
 
 Jetzt:
 
-- F10Menu `v0.2.1`
-- 29 Commands
-- zusätzliche Capture-/Pressure-Anzeigen
-- `Show Capture Status`
-- `Show Capture Ready Zones`
-- `Show Pressure Contested Zones`
+- F10Menu `v0.2.2`
+- 32 Commands
+- zusätzliches Untermenü `Mission Outcome`
+- `Show Active Mission Outcome Status`
+- `Complete Active Mission 1`
+- `Fail Active Mission 1`
 
 Bewertung:
 
-- Die UI ist jetzt besser geeignet, um spätere Missionseffekte auf Capture-/Pressure-State direkt im Spiel zu beobachten.
-- Das ist die Grundlage für den nächsten Schritt: Mission completed/failed state-only testen und danach `CaptureSystem.applyMissionEffect()` praktisch prüfen.
+- Die UI kann jetzt Mission Outcomes praktisch auslösen.
+- Das ist die Grundlage für den nächsten Schritt: vorbereitete Mission Effects in Capture Pressure überführen.
+
+---
+
+### MissionGenerator von v0.2.2 auf v0.2.3 erweitert
+
+Vorher:
+
+- Missionen konnten aktiviert werden.
+- Mission Records enthielten Objectives, Briefing, Progress und Activation Metadata.
+- Completion-/Failure-Funktionen waren vorbereitet, aber nicht praktisch über F10 getestet.
+
+Jetzt:
+
+- Missionen enthalten Outcome State.
+- Missionen enthalten Effect State.
+- Mission Completion ist praktisch über F10 getestet.
+- Mission Effects werden state-only vorbereitet.
+- Outcome History und Effect History werden vorbereitet.
+- Kandidatenzahl steigt auf 78.
+- Missionspool bleibt auf 10 erzeugte Missionen begrenzt.
+
+Bewertung:
+
+- Der MissionGenerator ist jetzt ausreichend vorbereitet, um Missionsergebnisse an Kampagnensysteme weiterzugeben.
+- Der nächste fachlich sinnvolle Schritt liegt im CaptureSystem.
 
 ---
 
@@ -574,11 +748,36 @@ Bestätigt wurde erneut:
 - MOOSE, CTLD und Skynet IADS sind geladen, aber noch nicht produktiv über eigene Theater-Command-Brücken angebunden.
 - F10-Aktionen beeinflussen aktuell nur den Theater-Command-State.
 - Missionen, Capture, Logistics, FOBs, AI und UI sind als State-Systeme miteinander vorbereitend verbunden.
-- Capture-/Pressure-Daten sind jetzt über F10 beobachtbar.
+- Capture-/Pressure-Daten sind über F10 beobachtbar.
+- Mission Outcomes sind über F10 testbar.
+- Mission Effects werden vorbereitet, aber noch nicht produktiv angewendet.
 
 ---
 
 ## Fixed
+
+### Mission Outcomes waren nicht praktisch über F10 testbar
+
+Vorher:
+
+- MissionGenerator konnte Mission Outcome-Funktionen vorbereiten.
+- Es gab aber keinen praktischen F10-Testpfad für Completion.
+- Mission Effects konnten noch nicht im laufenden DCS-Test sichtbar vorbereitet werden.
+
+Jetzt:
+
+- `Complete Active Mission 1` ist über F10 verfügbar.
+- `Show Active Mission Outcome Status` ist über F10 verfügbar.
+- aktive Mission 1 wurde praktisch auf `COMPLETED` gesetzt.
+- Mission Effects wurden state-only vorbereitet.
+- Completion-Logmarker sind bestätigt.
+
+Bewertung:
+
+- Mission Outcome ist jetzt praktisch testbar.
+- Der Completion-Pfad ist als Grundlage für Capture-Effekt-Tests geeignet.
+
+---
 
 ### Capture-/Pressure-State war über F10 noch nicht sichtbar
 
@@ -593,8 +792,8 @@ Jetzt:
 - Capture-/Pressure-Status ist über F10 sichtbar.
 - Capture Ready Zones sind über F10 sichtbar.
 - Pressure Contested Zones sind über F10 sichtbar.
-- F10Menu erzeugt 29 Commands.
-- Die drei neuen Statusfunktionen sind logbestätigt.
+- F10Menu erzeugt seit v0.2.1 mindestens 29 Commands.
+- Die drei Capture-/Pressure-Statusfunktionen sind logbestätigt.
 
 Bewertung:
 
@@ -615,7 +814,7 @@ Jetzt:
 - Mission 1 bis Mission 10 können direkt ausgewählt werden.
 - Mission 1 bis Mission 10 können direkt aktiviert werden.
 - Missionsdetails sind pro Slot abrufbar.
-- F10Menu erzeugt mindestens 26 Commands.
+- F10Menu erzeugt seit v0.2.0 mindestens 26 Commands.
 - Aktivierung schreibt sauber in den MissionGenerator-State.
 
 ---
@@ -634,6 +833,8 @@ Jetzt:
 - Aktivierte Missionen enthalten Execution Plans.
 - MOOSE-/CTLD-/Skynet-Hooks sind reserviert.
 - Missionen bleiben state-only.
+- Missionen enthalten Outcome State.
+- Missionen enthalten Effect State.
 
 ---
 
@@ -666,7 +867,9 @@ Noch offen:
 - AI Director für Blue-vs-Red-Kampagnenentscheidungen
 - automatische Missionsauswertung über DCS-Events
 - automatische Missionserfolge und Fehlschläge
+- praktische Prüfung von `Fail Active Mission 1`
 - echte Capture-Auswertung aus Missionsresultaten
+- Anwendung vorbereiteter Mission Effects auf CaptureSystem
 - echte Logistik-Auswirkungen auf Capture und Missionen
 - eigene Debug-Reports
 - eigenes Debug-F10-Menü
@@ -679,23 +882,26 @@ Noch offen:
 
 Empfohlene nächste Code-Datei:
 
-- `src/missions/tc_mission_generator.lua`
+- `src/campaign/tc_capture_system.lua`
 
 Empfohlenes Ziel:
 
-- Mission completed/failed state-only vorbereiten
-- aktive Missionen abschließen können
-- aktive Missionen fehlschlagen lassen können
-- Mission Outcome im State speichern
-- Missionseffekte für Capture/Logistics/AI/IADS vorbereiten
-- anschließend `CaptureSystem.applyMissionEffect()` praktisch testen
-- weiterhin state-only bleiben
+- vorbereitete Missionseffekte aus dem MissionGenerator aufnehmen
+- `CaptureSystem.applyMissionEffect()` praktisch nutzbar machen
+- Capture Pressure durch abgeschlossene Missionen state-only verändern
+- Capture Progress daraus aktualisieren
+- F10 Capture Status zur direkten Kontrolle nutzen
+- `appliedMissionEffects` erhöhen
+- `captureReady` und `pressureContested` dynamisch beobachtbar machen
+- weiter state-only bleiben
+- keine echte Ownership-Änderung erzwingen
 - keine echten MOOSE-Spawns auslösen
 - keine echten CTLD-Aktionen auslösen
 - keine echten Skynet-Aktionen auslösen
 
 Danach sinnvoll:
 
-- F10- oder Debug-Funktion zum Testen von Mission completed/failed ergänzen
-- Capture Ready und Pressure Contested dynamisch sichtbar machen
+- `Fail Active Mission 1` praktisch testen
+- Failure-Effekte prüfen
 - Persistence-Sandbox-Test vorbereiten
+- Debug-F10-Menü später getrennt entwickeln
