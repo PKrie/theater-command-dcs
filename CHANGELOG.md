@@ -10,14 +10,24 @@ Das Projekt befindet sich weiterhin in der frühen Aufbauphase. Die erste vollst
 
 ### Projektstand
 
-Stand: **2026-06-29**
+Stand: **2026-07-06**
 
 Erste Kampagne:
 
 - **Operation Levant Reclamation**
-- Map: **Syria**
+
+Map:
+
+- **Syria**
+
+Ausgangslage:
+
 - Blue startet auf **Akrotiri / Zypern**
 - Das syrische Festland ist zu Beginn rot kontrolliert
+- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
+- Red hält zu Beginn den Großteil der strategischen Flugplätze
+- Spieler sollen sich in eine laufende Kampagne einklinken, nicht jede Aktion allein auslösen
+- Perspektivisch sollen Blue und Red eigene Operationen durchführen
 
 Aktueller technischer Stand:
 
@@ -28,7 +38,9 @@ Aktueller technischer Stand:
 - Die Kernsysteme laufen in DCS ohne Theater-Command-Lua-Abbruch.
 - Die Syria-Airbase-Daten werden fachlich klassifiziert.
 - ZoneFactory, CaptureSystem, LogisticsDelivery, FobSystem, MissionGenerator, AICapManager und F10Menu nutzen inzwischen den klassifizierten Kampagnenzustand.
-- Das F10-Menü unterstützt jetzt direkte Missionsauswahl für Mission 1 bis Mission 10.
+- Das F10-Menü unterstützt direkte Missionsauswahl für Mission 1 bis Mission 10.
+- Das F10-Menü unterstützt direkte Missionsaktivierung für Mission 1 bis Mission 10.
+- Das F10-Menü zeigt jetzt Capture-/Pressure-Statusinformationen an.
 - Der MissionGenerator erzeugt erweiterte Mission Records mit Objectives, Briefing, Progress, Activation Metadata und reservierten Spawn-Hooks.
 - Das CaptureSystem erzeugt Capture-Pressure- und Progress-Records für capture-fähige Zonen.
 - Missionseffekte können vorbereitet state-only auf Capture-Druck abgebildet werden.
@@ -59,11 +71,94 @@ Aktuelle Einschränkung:
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
 | MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.1` | bestanden für Capture-/Pressure-Erweiterung |
 
 ---
 
 ## Added
+
+### F10 Menu Capture-/Pressure-Status
+
+Datei:
+
+- `src/ui/tc_f10_menu.lua`
+
+Version:
+
+- `v0.2.1`
+
+Neu:
+
+- `Show Capture Status` wurde im F10-Menü ergänzt.
+- `Show Capture Ready Zones` wurde im F10-Menü ergänzt.
+- `Show Pressure Contested Zones` wurde im F10-Menü ergänzt.
+- Capture-/Pressure-Status wird aus dem vorhandenen CaptureSystem-State gelesen.
+- Capture Ready Zones können über F10 angezeigt werden.
+- Pressure Contested Zones können über F10 angezeigt werden.
+- F10Menu schreibt UI-relevante Capture-Informationen weiterhin in `TC.State.UI`.
+- F10Menu bleibt weiterhin state-first.
+- F10Menu löst keine echten MOOSE-Spawns aus.
+- F10Menu löst keine echten CTLD-Aktionen aus.
+- F10Menu löst keine echten Skynet-Aktionen aus.
+
+Bestätigte neue F10-Funktionen:
+
+- `Theater Command > Status > Show Capture Status`
+- `Theater Command > Status > Show Capture Ready Zones`
+- `Theater Command > Status > Show Pressure Contested Zones`
+
+Bestätigte Capture-Statusfelder:
+
+- `eligibleBases`
+- `eligibleZones`
+- `pressureRecords`
+- `progressRecords`
+- `captureReady`
+- `pressureContested`
+- `appliedMissionEffects`
+
+Bestätigte Testwerte im aktuellen Startzustand:
+
+- eligibleBases: 32
+- eligibleZones: 32
+- pressureRecords: 32
+- progressRecords: 32
+- captureReady: 0
+- pressureContested: 0
+- appliedMissionEffects: 0
+
+Bestätigte F10-Command-Zahl:
+
+- vorher: 26 Commands
+- jetzt: 29 Commands
+
+Bestätigte Logmarker:
+
+- `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.1`
+- `[TC] [F10Menu] F10 menu started`
+- `[TC] [F10Menu] F10 menu initialized: commands=29`
+- `[TC] [F10Menu] Capture status shown through F10`
+- `[TC] [F10Menu] Capture ready zones shown through F10`
+- `[TC] [F10Menu] Pressure contested zones shown through F10`
+- `[TC] System started: F10 Menu`
+
+Bewertung:
+
+- F10Menu `v0.2.1` ist für die Capture-/Pressure-Erweiterung bestanden.
+- Das F10-Menü ist sichtbar und initialisiert sauber.
+- Die drei neuen Capture-/Pressure-Funktionen wurden im frischen DCS-Test ausgelöst.
+- Es gab keine Lua-Scripting-Fehler.
+- Es gab keine Theater-Command-Fehler.
+- Es gab keinen Lua-Stacktrace.
+- Es wurden keine echten Spawns oder externen Framework-Aktionen ausgelöst.
+
+Hinweis:
+
+- Im frischen `v0.2.1`-Capture-Test wurden Mission Details und Mission Activation nicht erneut angeklickt.
+- Diese Funktionen waren aus dem vorherigen `v0.2.0`-Test bereits bestätigt.
+- Beim nächsten UI-/Regressionstest sollten Mission Details und Mission Activation stichprobenartig erneut geprüft werden.
+
+---
 
 ### F10 Menu direkte Missionsauswahl
 
@@ -400,6 +495,36 @@ Dokumentiert wurde:
 
 ## Changed
 
+### F10-Menü von 26 auf 29 Commands erweitert
+
+Vorher:
+
+- F10Menu `v0.2.0`
+- 26 Commands
+- Missionsanzeige
+- Missionsdetails
+- Missionsaktivierung
+- Kampagnenstatus
+- Logistikstatus
+- FOB-Status
+- AI-CAP-Status
+
+Jetzt:
+
+- F10Menu `v0.2.1`
+- 29 Commands
+- zusätzliche Capture-/Pressure-Anzeigen
+- `Show Capture Status`
+- `Show Capture Ready Zones`
+- `Show Pressure Contested Zones`
+
+Bewertung:
+
+- Die UI ist jetzt besser geeignet, um spätere Missionseffekte auf Capture-/Pressure-State direkt im Spiel zu beobachten.
+- Das ist die Grundlage für den nächsten Schritt: Mission completed/failed state-only testen und danach `CaptureSystem.applyMissionEffect()` praktisch prüfen.
+
+---
+
 ### Aktive Mission-Editor-Ladefolge
 
 Die aktive Ladefolge bleibt die sichere Einzeldatei-Ladung über `DO SCRIPT FILE`.
@@ -449,10 +574,33 @@ Bestätigt wurde erneut:
 - MOOSE, CTLD und Skynet IADS sind geladen, aber noch nicht produktiv über eigene Theater-Command-Brücken angebunden.
 - F10-Aktionen beeinflussen aktuell nur den Theater-Command-State.
 - Missionen, Capture, Logistics, FOBs, AI und UI sind als State-Systeme miteinander vorbereitend verbunden.
+- Capture-/Pressure-Daten sind jetzt über F10 beobachtbar.
 
 ---
 
 ## Fixed
+
+### Capture-/Pressure-State war über F10 noch nicht sichtbar
+
+Vorher:
+
+- CaptureSystem erzeugte bereits Pressure- und Progress-Records.
+- Capture Ready und Pressure Contested waren im State vorbereitet.
+- Der Spieler konnte diese Daten aber noch nicht über F10 anzeigen.
+
+Jetzt:
+
+- Capture-/Pressure-Status ist über F10 sichtbar.
+- Capture Ready Zones sind über F10 sichtbar.
+- Pressure Contested Zones sind über F10 sichtbar.
+- F10Menu erzeugt 29 Commands.
+- Die drei neuen Statusfunktionen sind logbestätigt.
+
+Bewertung:
+
+- Die UI ist jetzt ausreichend vorbereitet, um spätere Missionsergebnisse und Capture-Effekte direkt im laufenden Test sichtbar zu machen.
+
+---
 
 ### F10-Menü war nur Top-Mission-fähig
 
@@ -467,7 +615,7 @@ Jetzt:
 - Mission 1 bis Mission 10 können direkt ausgewählt werden.
 - Mission 1 bis Mission 10 können direkt aktiviert werden.
 - Missionsdetails sind pro Slot abrufbar.
-- F10Menu erzeugt 26 Commands.
+- F10Menu erzeugt mindestens 26 Commands.
 - Aktivierung schreibt sauber in den MissionGenerator-State.
 
 ---
@@ -529,22 +677,25 @@ Noch offen:
 
 ## Nächster sinnvoller technischer Schritt
 
-Empfohlene nächste Datei:
+Empfohlene nächste Code-Datei:
 
-- `src/ui/tc_f10_menu.lua`
+- `src/missions/tc_mission_generator.lua`
 
 Empfohlenes Ziel:
 
-- Capture-/Pressure-Status im F10-Menü sichtbar machen
-- `Show Capture Status`
-- `Show Capture Ready Zones`
-- `Show Pressure Contested Zones`
+- Mission completed/failed state-only vorbereiten
+- aktive Missionen abschließen können
+- aktive Missionen fehlschlagen lassen können
+- Mission Outcome im State speichern
+- Missionseffekte für Capture/Logistics/AI/IADS vorbereiten
+- anschließend `CaptureSystem.applyMissionEffect()` praktisch testen
 - weiterhin state-only bleiben
-- keine echten MOOSE-/CTLD-/Skynet-Aktionen auslösen
+- keine echten MOOSE-Spawns auslösen
+- keine echten CTLD-Aktionen auslösen
+- keine echten Skynet-Aktionen auslösen
 
-Alternativ danach:
+Danach sinnvoll:
 
-- Mission completed/failed über F10 oder Debug vorbereiten
-- `MissionGenerator.completeMission()` testbar machen
-- `CaptureSystem.applyMissionEffect()` gezielt über F10/Debug auslösen
+- F10- oder Debug-Funktion zum Testen von Mission completed/failed ergänzen
+- Capture Ready und Pressure Contested dynamisch sichtbar machen
 - Persistence-Sandbox-Test vorbereiten
