@@ -149,6 +149,7 @@ Aktive Theater-Command-Ladefolge:
 
 Wichtig:
 
+- `src/campaign/tc_capture_system.lua` ist aktiv.
 - `src/ui/tc_f10_menu.lua` ist aktiv.
 - F10Menu muss nach AI CAP Manager und vor Main geladen werden.
 - `src/loader.lua` bleibt die letzte eigene Datei.
@@ -307,13 +308,13 @@ Datei:
 
 Aktuelle getestete Version:
 
-- `v0.2.1`
+- `v0.2.2`
 
 Status:
 
 - **bestanden**
 
-Letzte bestätigte Werte:
+Letzte bestätigte Startwerte:
 
 - eligibleBases: 32
 - eligibleZones: 32
@@ -321,24 +322,45 @@ Letzte bestätigte Werte:
 - nonCaptureZones: 14
 - pressureRecords: 32
 - progressRecords: 32
-- appliedMissionEffects: 0
-- ready: 0
+
+Letzte bestätigte Werte nach Mission Completion:
+
+- completed mission: `MISSION_2`
+- target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- capture pressure owner: `BLUE`
+- applied pressure: 105
+- progress: 100 %
+- appliedMissionEffects: 1
+- ready: 1
 - contested: 0
+
+Bestätigte Logmarker:
+
+- `[TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.2`
+- `[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%`
+- `[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105`
+- `[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1`
+- `[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1`
 
 Bewertung:
 
-- Capture wirkt nur auf strategische und sekundäre Kampagnenziele.
+- Capture wirkt weiterhin nur auf strategische und sekundäre Kampagnenziele.
 - Nicht geeignete Airbase-like Objects bleiben ausgeschlossen.
 - Capture-Pressure-Records werden für 32 capture-fähige Zonen erzeugt.
 - Capture-Progress-Records werden für 32 capture-fähige Zonen erzeugt.
-- Missionseffekte können state-only als Capture-Druck vorbereitet werden.
-- Automatische produktive Capture-Folgen bleiben noch deaktiviert.
-- Capture-/Pressure-Status ist seit `F10Menu v0.2.1` im F10-Menü sichtbar.
+- Abgeschlossene Missionen werden automatisch state-only in Capture Pressure übernommen.
+- Mission Completion kann jetzt Capture Progress erzeugen.
+- `Capture Ready` wird erstmals dynamisch sichtbar.
+- Automatische produktive Ownership-Änderung bleibt deaktiviert.
+- Es gab keine Lua-Fehler.
+- Es gab keine Theater-Command-Fehler.
+- Es wurden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
 
 Offen:
 
-- vorbereitete Missionseffekte praktisch in `CaptureSystem.applyMissionEffect()` einspeisen
-- echte Capture-Bedingungen final definieren
+- Capture Ready Zone über F10 zusätzlich gezielt anzeigen
+- produktiven Ownership-Wechsel bewusst und kontrolliert vorbereiten
+- Failure-Effekte getrennt testen
 - Logistikzustand mit Capture-Fähigkeit koppeln
 - AI-Operationen mit Capture-Fortschritt koppeln
 - Capture-Zustand persistieren
@@ -467,7 +489,7 @@ Bestätigte Missionslogik:
 - Spawn-Hooks bleiben `reserved`.
 - Missionen können state-only auf `COMPLETED` gesetzt werden.
 - Missionseffekte werden state-only vorbereitet.
-- Mission Effects bleiben zunächst vorbereitet und werden noch nicht produktiv in Capture, Logistics, AI oder IADS angewendet.
+- vorbereitete Mission Effects können von `CaptureSystem v0.2.2` verarbeitet werden.
 
 Bestätigte F10-/MissionGenerator-Interaktion:
 
@@ -480,7 +502,7 @@ Bestätigte F10-/MissionGenerator-Interaktion:
 - MissionGenerator erzeugt `Mission effects prepared state-only`
 - MissionGenerator erzeugt `Mission outcome prepared`
 - Outcome bleibt `stateOnly=true`
-- Effects bleiben `prepared`
+- Effects bleiben zunächst `prepared`, werden danach vom CaptureSystem state-only übernommen
 
 Bestätigte Logmarker:
 
@@ -497,7 +519,7 @@ Bewertung:
 - MissionGenerator `v0.2.3` ist bestanden.
 - Missionsaktivierung ist weiterhin stabil.
 - Mission Completion ist state-only praktisch getestet.
-- Mission Effects werden vorbereitet, aber noch nicht auf produktive Kampagnensysteme angewendet.
+- Mission Effects werden vorbereitet und können jetzt vom CaptureSystem verarbeitet werden.
 - Es werden weiterhin keine echten DCS-Spawns ausgelöst.
 - Es gab keinen Theater-Command-Lua-Fehler und keinen Lua-Stacktrace.
 
@@ -505,8 +527,7 @@ Offen:
 
 - Mission `FAILED` praktisch über F10 testen
 - Mission `CANCELLED` und `EXPIRED` später testbar machen
-- vorbereitete Missionseffekte an `CaptureSystem.applyMissionEffect()` übergeben
-- Missionseffekte praktisch auf Capture, Logistics, AI und IADS anwenden
+- Missionseffekte praktisch auf Logistics, AI und IADS anwenden
 - automatische Missionserfolgsauswertung aus DCS-Events/Triggern entwickeln
 - Briefingtexte später weiter verfeinern
 - weitere Missionstypen ausbauen
@@ -577,8 +598,11 @@ Bestätigt im Test vom **2026-07-06**:
 - `Show Active Missions` funktioniert.
 - `Show Active Mission Outcome Status` funktioniert.
 - `Complete Active Mission 1` funktioniert.
+- `Show Capture Status` funktioniert.
+- `Show Pressure Contested Zones` funktioniert.
 - Mission Outcome wird auf `COMPLETED` gesetzt.
 - Mission Effects werden state-only vorbereitet.
+- Mission Effects werden durch CaptureSystem v0.2.2 state-only in Capture Pressure übernommen.
 - Mission Activation bleibt `stateOnly=true`.
 - Spawn-Hooks bleiben `reserved`.
 - keine Lua-Scripting-Fehler.
@@ -596,6 +620,8 @@ Bestätigte Logmarker:
 - `[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2`
 - `[TC] [F10Menu] Active mission outcome status shown through F10`
 - `[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared`
+- `[TC] [F10Menu] Capture status shown through F10`
+- `[TC] [F10Menu] Pressure contested zones shown through F10`
 - `[TC] System started: F10 Menu`
 
 Aktuelle F10-Funktionen:
@@ -618,14 +644,16 @@ Aktuelle F10-Funktionen:
 Bewertung:
 
 - Die Spieleroberfläche ist weiter funktionsfähig.
-- Das F10-Menü wurde von 29 auf 32 Commands erweitert.
+- Das F10-Menü erzeugt 32 Commands.
 - Mission Outcome Controls sind praktisch nutzbar.
 - Mission Completion ist über F10 getestet.
+- Capture-Effekt nach Mission Completion ist über F10 beobachtbar.
 - Das Menü bleibt State-only.
 - Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
 
 Offen:
 
+- `Show Capture Ready Zones` nach Mission Completion gezielt testen
 - `Fail Active Mission 1` praktisch testen
 - aktive Mission abbrechen
 - Mission expired/cancelled später über Debug oder F10 vorbereiten
@@ -740,57 +768,85 @@ Offen:
 
 ## 8. Aktuelle Prioritäten nach dieser Session
 
-### Priorität 1: Missionseffekte auf Capture-State anwenden
+### Priorität 1: CHANGELOG.md aktualisieren
 
-Nächste wahrscheinliche Code-Datei:
+Nächste Datei:
 
-- `src/campaign/tc_capture_system.lua`
+- `CHANGELOG.md`
 
 Ziel:
 
-- vorbereitete Missionseffekte aus abgeschlossenen Missionen verarbeiten
-- `CaptureSystem.applyMissionEffect()` praktisch testen
-- Mission Outcome soll Capture Pressure oder Capture Progress beeinflussen
-- Capture Ready und Pressure Contested sollen dadurch erstmals dynamisch sichtbar werden
-- F10 Capture Status soll den Effekt direkt anzeigen
-- weiter State-only bleiben
-- keine automatische produktive Ownership-Änderung, bevor die Daten stabil sind
-- keine echten DCS-Spawns auslösen
-- keine echten CTLD-Aktionen auslösen
-- keine echten Skynet-Aktionen auslösen
-
-Begründung:
-
-- Mission Activation funktioniert.
-- Mission Completion funktioniert.
-- Mission Effects werden state-only vorbereitet.
-- Capture-/Pressure-Status ist über F10 sichtbar.
-- Der nächste logische Schritt ist die Verbindung zwischen Mission Outcome und Capture Pressure.
+- erfolgreichen `CaptureSystem v0.2.2`-Test dokumentieren
+- Verbindung `Mission Outcome -> Mission Effect -> Capture Pressure -> Capture Progress` dokumentieren
+- neue Logmarker eintragen
+- neue Werte eintragen:
+  - appliedMissionEffects: 1
+  - ready: 1
+  - contested: 0
+  - applied pressure: 105
+  - target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- klar dokumentieren, dass weiterhin keine echten Spawns, CTLD-Aktionen oder Skynet-Aktionen ausgelöst werden
 
 ---
 
-### Priorität 2: Mission Failed praktisch testen
+### Priorität 2: Capture Ready Zone über F10 gezielt testen
+
+Ziel:
+
+- nach Mission Completion zusätzlich `Show Capture Ready Zones` auslösen
+- bestätigen, dass `ZONE_AIRBASE_ABU_AL_DUHUR` oder die entsprechende Zielzone als Capture Ready angezeigt wird
+- keine neue Code-Datei nötig, falls der bestehende F10-Pfad funktioniert
+
+Abhängigkeit:
+
+- `CaptureSystem v0.2.2` ist aktiv
+- `F10Menu v0.2.2` ist aktiv
+- Mission Completion wurde bereits bestätigt
+
+---
+
+### Priorität 3: Mission Failed praktisch testen
 
 Ziel:
 
 - `Fail Active Mission 1` über F10 praktisch testen
 - `MissionGenerator.failMission()` bestätigen
 - Failure-Outcome und vorbereitete Failure-Effects prüfen
+- prüfen, ob Failure-Effekte später neutral, negativ oder gegnerisch wirken sollen
 - keine echten Framework-Aktionen auslösen
 
 Abhängigkeit:
 
-- `F10Menu v0.2.2` ist aktiv.
-- `MissionGenerator v0.2.3` ist aktiv.
+- `F10Menu v0.2.2` ist aktiv
+- `MissionGenerator v0.2.3` ist aktiv
 
 Hinweis:
 
-- Der Completion-Pfad ist bereits bestanden.
+- Der Completion-Pfad ist bestanden.
 - Der Failure-Pfad ist im Code vorbereitet, aber noch nicht logbestätigt.
 
 ---
 
-### Priorität 3: Persistence praktisch testen
+### Priorität 4: kontrollierten Capture-Ownership-Wechsel vorbereiten
+
+Ziel:
+
+- Capture Ready darf nicht automatisch unkontrolliert Besitz wechseln.
+- Ein späterer Testpfad soll Ownership-Wechsel bewusst, sichtbar und state-only auslösen.
+- Mögliches Ziel:
+  - `Confirm Capture Ready Zone 1`
+  - `Apply Capture Ready Zone 1`
+  - oder Debug-Funktion statt Spieler-F10
+
+Noch nicht sofort:
+
+- keine automatische produktive Capture-Auswertung
+- kein echter Frontlinienwechsel ohne klaren Testpfad
+- keine Persistenzverknüpfung, bevor Ownership-Wechsel stabil ist
+
+---
+
+### Priorität 5: Persistence praktisch testen
 
 Ziel:
 
@@ -805,7 +861,7 @@ Abhängigkeit:
 
 ---
 
-### Priorität 4: CTLD-Integration vorbereiten
+### Priorität 6: CTLD-Integration vorbereiten
 
 Ziel:
 
@@ -820,7 +876,7 @@ Noch nicht sofort:
 
 ---
 
-### Priorität 5: AI Director vorbereiten
+### Priorität 7: AI Director vorbereiten
 
 Ziel:
 
@@ -835,7 +891,7 @@ Abhängigkeit:
 
 ---
 
-### Priorität 6: echte Framework-Ausführung
+### Priorität 8: echte Framework-Ausführung
 
 Später:
 
@@ -856,7 +912,7 @@ Noch nicht sofort:
 
 Während aktiver Code-Arbeit soll nur die absolut notwendige Dokumentation aktualisiert werden, damit GitHub als zuverlässige Referenzebene funktioniert.
 
-Nach dem erfolgreichen `F10Menu v0.2.2`-Mission-Outcome-Test wird schrittweise minimal aktualisiert:
+Nach dem erfolgreichen `CaptureSystem v0.2.2`-Test wird schrittweise minimal aktualisiert:
 
 - `TASKS.md`
 - `CHANGELOG.md`
@@ -888,8 +944,8 @@ Bei einem vollständigen aktuellen Testlauf sollten unter anderem diese Marker e
 - `[TC] [AirbaseScanner] Airbase classification summary: total=225`
 - `[TC] [ZoneFactory] Loaded src/world/tc_zone_factory.lua v0.2.0`
 - `[TC] [ZoneFactory] Zone factory completed: 46 zones registered`
-- `[TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.1`
-- `[TC] [CaptureSystem] Capture progress updated: zones=32, ready=0, contested=0`
+- `[TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.2`
+- `[TC] [CaptureSystem] Capture progress updated: zones=32, ready=0, contested=0, appliedMissionEffects=0`
 - `[TC] [CaptureSystem] Capture pressure summary: pressureRecords=32, progressRecords=32, appliedMissionEffects=0`
 - `[TC] [LogisticsDelivery] Loaded src/logistics/tc_logistics_delivery.lua v0.2.0`
 - `[TC] [LogisticsDelivery] Logistics hub summary: total=46, blue=7, red=24, neutral=15`
@@ -901,6 +957,10 @@ Bei einem vollständigen aktuellen Testlauf sollten unter anderem diese Marker e
 - `[TC] [MissionGenerator] Mission activation prepared: MISSION_2 stateOnly=true spawnHooks=reserved`
 - `[TC] [MissionGenerator] Mission effects prepared state-only: MISSION_2 status=COMPLETED`
 - `[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared`
+- `[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%`
+- `[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105`
+- `[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1`
+- `[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1`
 - `[TC] [AICapManager] Loaded src/ai/tc_ai_cap_manager.lua v0.2.0`
 - `[TC] [AICapManager] AI CAP manager ready: zones=12, requested=12, reactionState=AIR_REACTION_REQUESTED, threatLevel=HIGH`
 - `[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.2`
@@ -910,7 +970,6 @@ Bei einem vollständigen aktuellen Testlauf sollten unter anderem diese Marker e
 - `[TC] [F10Menu] Active mission outcome status shown through F10`
 - `[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared`
 - `[TC] [F10Menu] Capture status shown through F10`
-- `[TC] [F10Menu] Capture ready zones shown through F10`
 - `[TC] [F10Menu] Pressure contested zones shown through F10`
 - `[TC] System started: F10 Menu`
 - `[TC] Runtime systems initialized`
@@ -934,29 +993,29 @@ Empfohlene nächste Datei:
 
 Ziel:
 
-- erfolgreichen `MissionGenerator v0.2.3`-Test dokumentieren
-- erfolgreichen `F10Menu v0.2.2`-Test dokumentieren
-- Mission Outcome Controls dokumentieren
-- Completion-Logmarker dokumentieren
-- neue Kandidatenwerte dokumentieren:
-  - `mission candidates: 78`
-  - `typeLimitSkipped: 68`
+- erfolgreichen `CaptureSystem v0.2.2`-Test dokumentieren
+- erfolgreiche Verbindung von Mission Completion zu Capture Pressure dokumentieren
+- neue Werte dokumentieren:
+  - appliedMissionEffects: 1
+  - ready: 1
+  - contested: 0
+  - pressure: 105
+  - target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- klar dokumentieren, dass weiterhin keine echten Spawns, CTLD- oder Skynet-Aktionen ausgelöst wurden
 
-Danach empfohlene nächste Code-Datei:
+Danach empfohlener nächster Test:
 
-- `src/campaign/tc_capture_system.lua`
+- vorhandenen F10-Pfad nutzen:
+  - `Show Mission 1 Details`
+  - `Activate Mission 1`
+  - `Complete Active Mission 1`
+  - `Show Capture Status`
+  - `Show Capture Ready Zones`
 
-Empfohlenes Code-Ziel:
+Danach empfohlene nächste Code-Entscheidung:
 
-- vorbereitete Missionseffekte aus `MissionGenerator` aufnehmen
-- `CaptureSystem.applyMissionEffect()` praktisch nutzbar machen
-- Capture Pressure durch abgeschlossene Missionen state-only verändern
-- Capture Progress daraus aktualisieren
-- F10 Capture Status zur direkten Kontrolle nutzen
-- keine echte Ownership-Änderung erzwingen
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
+- entweder `Fail Active Mission 1` praktisch testen
+- oder kontrollierten Capture-Ownership-Wechsel state-only vorbereiten
 
 ---
 
@@ -968,7 +1027,7 @@ Bestandene Systeme:
 |---|---:|---|
 | Airbase Scanner | `v0.2.2` | bestanden |
 | ZoneFactory | `v0.2.0` | bestanden |
-| CaptureSystem | `v0.2.1` | bestanden |
+| CaptureSystem | `v0.2.2` | bestanden |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
 | MissionGenerator | `v0.2.3` | bestanden |
@@ -999,6 +1058,9 @@ Aktuelle bestätigte Fähigkeit:
 - Missionen können über F10 aktiviert werden.
 - aktive Mission 1 kann über F10 auf `COMPLETED` gesetzt werden.
 - Mission Effects werden state-only vorbereitet.
+- abgeschlossene Mission Effects werden state-only in Capture Pressure übernommen.
+- Capture Progress wird durch Mission Completion aktualisiert.
+- Capture Ready kann dynamisch entstehen.
 - Capture-/Pressure-Status ist über F10 sichtbar.
 - Capture Ready Zones sind über F10 sichtbar.
 - Pressure Contested Zones sind über F10 sichtbar.
@@ -1014,6 +1076,7 @@ Noch nicht implementiert oder noch nicht praktisch bestätigt:
 - echte Persistenz
 - AI Director
 - echte Missionserfolgsauswertung aus DCS-Events
-- automatische Capture-Auswertung aus Missionsergebnissen
-- Anwendung vorbereiteter Mission Effects auf CaptureSystem
+- produktive automatische Capture-Auswertung aus Missionsergebnissen
+- kontrollierter Capture-Ownership-Wechsel aus Capture Ready
+- Anwendung vorbereiteter Mission Effects auf Logistics, AI und IADS
 - `Fail Active Mission 1` praktisch getestet
