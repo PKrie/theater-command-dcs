@@ -4,11 +4,28 @@ Diese Datei beschreibt den UI-Bereich von **Theater Command DCS**.
 
 Der UI-Bereich enthält eigene Lua-Logik für Spielerinteraktion, F10-Menüs, Statusanzeigen und spätere Debug-/Kampagnensteuerung.
 
+Erste Kampagne:
+
+- **Operation Levant Reclamation**
+
+Map:
+
+- **Syria**
+
+Ausgangslage:
+
+- Blue startet auf **Akrotiri / Zypern**
+- das syrische Festland ist zu Beginn rot kontrolliert
+- Red hält zu Beginn den Großteil der strategischen Flugplätze
+- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
+- Spieler sollen sich in eine laufende Kampagnenlage einklinken, nicht jede Aktion allein auslösen
+- Blue und Red sollen später eigene Operationen durchführen
+
 ---
 
 ## 1. Zweck des UI-Bereichs
 
-Der UI-Bereich stellt die Schnittstelle zwischen Spieler und Theater-Command-Kampagnenzustand bereit.
+`src/ui/` ist die Schnittstelle zwischen Spieler und Theater-Command-Kampagnenzustand.
 
 Langfristig soll UI ermöglichen:
 
@@ -17,50 +34,69 @@ Langfristig soll UI ermöglichen:
 - aktive Missionen anzeigen
 - Missionen auswählen
 - Missionen aktivieren
+- Mission Outcome Controls nutzen
 - Missionsdetails anzeigen
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
 - Logistikstatus anzeigen
 - FOB-Status anzeigen
 - AI-Status anzeigen
-- Capture-Status anzeigen
-- Debug-Informationen anzeigen
-- später Save/Load- oder Admin-Funktionen anbieten
+- spätere IADS-Informationen anzeigen
+- spätere Debug-Informationen anzeigen
+- spätere Save/Load- oder Admin-Funktionen anbieten
 
-Aktuell ist der UI-Bereich nicht mehr nur geplant.
+Aktuell ist der UI-Bereich aktiv und getestet.
 
-Das erste F10-Menü ist aktiv und getestet.
+Das F10-Menü ist sichtbar, navigierbar und bereits mit MissionGenerator und CaptureSystem verbunden.
 
 ---
 
 ## 2. Aktueller technischer Stand
 
-Stand:
-
-    2026-06-29
+Stand: **2026-07-06**
 
 Aktive Datei:
 
-    src/ui/tc_f10_menu.lua
+```text
+src/ui/tc_f10_menu.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.2
+```
 
 Status:
 
-    bestanden
+- **bestanden**
 
 Bestätigt durch DCS-Logtests:
 
 - F10Menu lädt.
 - F10Menu startet.
-- F10Menu erzeugt 26 Commands.
+- F10Menu erzeugt 32 Commands.
 - F10-Menü ist in DCS sichtbar.
 - F10-Menü ist navigierbar.
 - Missionen können angezeigt werden.
+- aktive Missionen können angezeigt werden.
 - Missionsdetails können pro Slot angezeigt werden.
 - Missionen können direkt aktiviert werden.
-- MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+- Mission Outcome Controls sind vorhanden.
+- Active Mission Outcome Status kann angezeigt werden.
+- Active Mission 1 kann auf `COMPLETED` gesetzt werden.
+- MissionGenerator setzt aktivierte Missionen auf `ACTIVE`.
+- MissionGenerator setzt abgeschlossene Missionen auf `COMPLETED`.
+- MissionGenerator bereitet Mission Effects state-only vor.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects.
+- CaptureSystem erzeugt Capture Pressure.
+- CaptureSystem aktualisiert Capture Progress.
+- Capture Ready entsteht dynamisch.
+- Capture Ready Zones sind über F10 sichtbar.
+- Pressure Contested Zones sind über F10 sichtbar.
 - Aktivierung bleibt state-only.
+- Completion bleibt state-only.
 - Es werden keine echten Spawns ausgelöst.
 - Es gab keinen Theater-Command-Lua-Fehler.
 - Es gab keinen Lua-Stacktrace.
@@ -71,50 +107,61 @@ Bestätigt durch DCS-Logtests:
 
 Aktuelle F10-Struktur:
 
-    F10
-    └── Theater Command
-        ├── Missions
-        │   ├── Show Available Missions
-        │   ├── Show Active Missions
-        │   ├── Mission Details
-        │   │   ├── Show Mission 1 Details
-        │   │   ├── Show Mission 2 Details
-        │   │   ├── Show Mission 3 Details
-        │   │   ├── Show Mission 4 Details
-        │   │   ├── Show Mission 5 Details
-        │   │   ├── Show Mission 6 Details
-        │   │   ├── Show Mission 7 Details
-        │   │   ├── Show Mission 8 Details
-        │   │   ├── Show Mission 9 Details
-        │   │   └── Show Mission 10 Details
-        │   └── Activate Mission
-        │       ├── Activate Mission 1
-        │       ├── Activate Mission 2
-        │       ├── Activate Mission 3
-        │       ├── Activate Mission 4
-        │       ├── Activate Mission 5
-        │       ├── Activate Mission 6
-        │       ├── Activate Mission 7
-        │       ├── Activate Mission 8
-        │       ├── Activate Mission 9
-        │       └── Activate Mission 10
-        ├── Status
-        │   └── Show Campaign Status
-        ├── Logistics
-        │   ├── Show Logistics Status
-        │   └── Show FOB Status
-        └── AI
-            └── Show AI CAP Status
+```text
+F10
+└── Theater Command
+    ├── Missions
+    │   ├── Show Available Missions
+    │   ├── Show Active Missions
+    │   ├── Mission Details
+    │   │   ├── Show Mission 1 Details
+    │   │   ├── Show Mission 2 Details
+    │   │   ├── Show Mission 3 Details
+    │   │   ├── Show Mission 4 Details
+    │   │   ├── Show Mission 5 Details
+    │   │   ├── Show Mission 6 Details
+    │   │   ├── Show Mission 7 Details
+    │   │   ├── Show Mission 8 Details
+    │   │   ├── Show Mission 9 Details
+    │   │   └── Show Mission 10 Details
+    │   ├── Activate Mission
+    │   │   ├── Activate Mission 1
+    │   │   ├── Activate Mission 2
+    │   │   ├── Activate Mission 3
+    │   │   ├── Activate Mission 4
+    │   │   ├── Activate Mission 5
+    │   │   ├── Activate Mission 6
+    │   │   ├── Activate Mission 7
+    │   │   ├── Activate Mission 8
+    │   │   ├── Activate Mission 9
+    │   │   └── Activate Mission 10
+    │   └── Mission Outcome
+    │       ├── Show Active Mission Outcome Status
+    │       ├── Complete Active Mission 1
+    │       └── Fail Active Mission 1
+    ├── Status
+    │   ├── Show Campaign Status
+    │   ├── Show Capture Status
+    │   ├── Show Capture Ready Zones
+    │   └── Show Pressure Contested Zones
+    ├── Logistics
+    │   ├── Show Logistics Status
+    │   └── Show FOB Status
+    └── AI
+        └── Show AI CAP Status
+```
 
 Bestätigte Commands:
 
-    commands: 26
+```text
+commands: 32
+```
 
 ---
 
 ## 4. Aktuelle F10-Funktionen
 
-Aktuell unterstützt F10Menu v0.2.0:
+Aktuell unterstützt F10Menu `v0.2.2`:
 
 - verfügbare Missionen anzeigen
 - aktive Missionen anzeigen
@@ -138,7 +185,13 @@ Aktuell unterstützt F10Menu v0.2.0:
 - Mission 8 aktivieren
 - Mission 9 aktivieren
 - Mission 10 aktivieren
+- Active Mission Outcome Status anzeigen
+- Active Mission 1 auf `COMPLETED` setzen
+- Active Mission 1 auf `FAILED` setzen
 - Kampagnenstatus anzeigen
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
 - Logistikstatus anzeigen
 - FOB-Status anzeigen
 - AI-CAP-Status anzeigen
@@ -146,10 +199,19 @@ Aktuell unterstützt F10Menu v0.2.0:
 Bestätigt getestet:
 
 - Mission Details Slot 1
-- Mission Details Slot 2
-- Mission Details Slot 5
-- Mission 1 aktivieren
-- Mission 5 aktivieren
+- Mission Slot 1 aktivieren
+- Active Mission Outcome Status anzeigen
+- Active Mission 1 auf `COMPLETED` setzen
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
+- Logistics Status anzeigen
+- FOB Status anzeigen
+- AI CAP Status anzeigen
+
+Noch nicht praktisch bestätigt:
+
+- `Fail Active Mission 1`
 
 ---
 
@@ -159,11 +221,15 @@ F10Menu ist aktuell eng mit MissionGenerator verbunden.
 
 Aktive MissionGenerator-Datei:
 
-    src/missions/tc_mission_generator.lua
+```text
+src/missions/tc_mission_generator.lua
+```
 
 Getestete Version:
 
-    v0.2.2
+```text
+v0.2.3
+```
 
 MissionGenerator liefert:
 
@@ -175,6 +241,8 @@ MissionGenerator liefert:
 - Mission Briefings
 - Mission Progress
 - Activation Metadata
+- Outcome State
+- Effect State
 - reserved Spawn Hooks
 
 F10Menu nutzt diese Daten, um:
@@ -183,186 +251,274 @@ F10Menu nutzt diese Daten, um:
 - Mission Slots 1 bis 10 darzustellen
 - Missionsdetails pro Slot anzuzeigen
 - Missionen über F10 zu aktivieren
+- Active Mission Outcome Status anzuzeigen
+- aktive Mission 1 state-only abzuschließen
 - Aktivierung an MissionGenerator weiterzugeben
+- Completion an MissionGenerator weiterzugeben
 
 Bestätigte MissionGenerator-Werte:
 
-    mission candidates: 69
-    fobSupportCandidates: 2
-    generated missions: 10
-    reservedCreated: 1
-    duplicatesSkipped: 1
-    typeLimitSkipped: 30
+```text
+mission candidates: 78
+fobSupportCandidates: 2
+generated missions: 10
+reservedCreated: 1
+duplicatesSkipped: 1
+typeLimitSkipped: 68
+```
 
 Bestätigte Aktivierung:
 
-    Mission status changed: MISSION_1 [ACTIVE]
-    Mission status changed: MISSION_4 [ACTIVE]
-    Mission activation prepared: stateOnly=true spawnHooks=reserved
+```text
+[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2
+[TC] [MissionGenerator] Mission status changed: MISSION_2 [ACTIVE]
+[TC] [MissionGenerator] Mission activation prepared: MISSION_2 stateOnly=true spawnHooks=reserved
+```
+
+Bestätigte Completion:
+
+```text
+[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared
+[TC] [MissionGenerator] Mission effects prepared state-only: MISSION_2 status=COMPLETED
+[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared
+```
 
 Wichtig:
 
-    F10Menu aktiviert Missionen aktuell nur state-only.
-    Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
+- F10Menu aktiviert Missionen aktuell nur state-only.
+- F10Menu schließt Missionen aktuell nur state-only ab.
+- Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
 
 ---
 
 ## 6. Verhältnis zu CaptureSystem
 
-CaptureSystem ist aktuell vorbereitet, aber noch nicht im F10-Menü sichtbar.
+CaptureSystem ist inzwischen im F10-Menü sichtbar und praktisch mit Mission Outcome verbunden.
 
 Aktive Capture-Datei:
 
-    src/campaign/tc_capture_system.lua
+```text
+src/campaign/tc_capture_system.lua
+```
 
 Getestete Version:
 
-    v0.2.1
+```text
+v0.2.2
+```
 
-Bestätigte Werte:
+Bestätigte Startwerte:
 
-    eligibleBases: 32
-    eligibleZones: 32
-    nonCaptureBases: 193
-    nonCaptureZones: 14
-    pressureRecords: 32
-    progressRecords: 32
-    appliedMissionEffects: 0
-    ready: 0
-    contested: 0
+```text
+eligibleBases: 32
+eligibleZones: 32
+nonCaptureBases: 193
+nonCaptureZones: 14
+pressureRecords: 32
+progressRecords: 32
+appliedMissionEffects: 0
+ready: 0
+contested: 0
+```
+
+Bestätigte Werte nach Mission Completion:
+
+```text
+completed mission: MISSION_2
+target zone: ZONE_AIRBASE_ABU_AL_DUHUR
+capture pressure owner: BLUE
+applied pressure: 105
+progress: 100 %
+appliedMissionEffects: 1
+ready: 1
+contested: 0
+```
+
+Aktive F10-Funktionen:
+
+```text
+Show Capture Status
+Show Capture Ready Zones
+Show Pressure Contested Zones
+```
+
+Bestätigte Capture-Folge:
+
+```text
+[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
+[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105
+[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1
+[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
+[TC] [F10Menu] Capture ready zones shown through F10
+```
+
+Bewertung:
+
+- Capture-/Pressure-Sichtbarkeit ist bestanden.
+- Capture Ready Zones sind über F10 sichtbar.
+- Pressure Contested Zones sind über F10 sichtbar.
+- Der frühere nächste UI-Schritt „Capture-/Pressure-Status sichtbar machen“ ist erledigt.
 
 Nächster UI-Schritt:
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+```text
+Apply Capture Ready Zone 1
+```
 
-Geplante neue F10-Funktionen:
+Ziel:
 
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
-
-Warum:
-
-    CaptureSystem erzeugt inzwischen Pressure- und Progress-Daten.
-    Diese Daten sind im State vorhanden.
-    Ohne F10-/Debug-Sichtbarkeit sind spätere MissionEffect- und Capture-Tests schwer bewertbar.
+- kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+- kein automatischer Besitzwechsel ohne Spieler-/Debug-Bestätigung
 
 ---
 
 ## 7. Verhältnis zu LogisticsDelivery
 
-F10Menu zeigt bereits Logistikstatus an.
+F10Menu zeigt Logistikstatus an.
 
 Aktive Logistics-Datei:
 
-    src/logistics/tc_logistics_delivery.lua
+```text
+src/logistics/tc_logistics_delivery.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.0
+```
 
 Bestätigte Werte:
 
-    logistics hubs: 46
-    blue hubs: 7
-    red hubs: 24
-    neutral hubs: 15
-    active hubs: 31
-    limited hubs: 15
-    locked hubs: 0
+```text
+logistics hubs: 46
+blue hubs: 7
+red hubs: 24
+neutral hubs: 15
+active hubs: 31
+limited hubs: 15
+locked hubs: 0
+```
 
 Aktuelle F10-Funktion:
 
-    Show Logistics Status
+```text
+Show Logistics Status
+```
 
 Bewertung:
 
-    Logistics-Status ist über F10 erreichbar.
-    Die Darstellung kann später erweitert werden.
-    CTLD-Aktionen sind noch nicht produktiv angebunden.
+- Logistics-Status ist über F10 erreichbar.
+- Die Darstellung kann später erweitert werden.
+- CTLD-Aktionen sind noch nicht produktiv angebunden.
 
 ---
 
 ## 8. Verhältnis zu FobSystem
 
-F10Menu zeigt bereits FOB-Status an.
+F10Menu zeigt FOB-Status an.
 
 Aktive FOB-Datei:
 
-    src/logistics/tc_fob_system.lua
+```text
+src/logistics/tc_fob_system.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.0
+```
 
 Bestätigte Werte:
 
-    FOB candidates: 6
-    stored candidates: 6
-    auto-planned FOBs: 2
-    skipped candidates: 4
-    Blue FOBs: 2
+```text
+FOB candidates: 6
+stored candidates: 6
+auto-planned FOBs: 2
+skipped candidates: 4
+Blue FOBs: 2
+```
 
 Erzeugte FOBs:
 
-    FOB Ercan
-    FOB Gecitkale
+```text
+FOB Ercan
+FOB Gecitkale
+```
 
 Status:
 
-    UNDER_CONSTRUCTION
+```text
+UNDER_CONSTRUCTION
+```
 
 Aktuelle F10-Funktion:
 
-    Show FOB Status
+```text
+Show FOB Status
+```
 
 Bewertung:
 
-    FOB-Status ist über F10 erreichbar.
-    FOBs sind aktuell state-only.
-    Es werden noch keine echten CTLD-FOBs erzeugt.
+- FOB-Status ist über F10 erreichbar.
+- FOBs sind aktuell state-only.
+- Es werden noch keine echten CTLD-FOBs erzeugt.
 
 ---
 
 ## 9. Verhältnis zu AICapManager
 
-F10Menu zeigt bereits AI-CAP-Status an.
+F10Menu zeigt AI-CAP-Status an.
 
 Aktive AI-Datei:
 
-    src/ai/tc_ai_cap_manager.lua
+```text
+src/ai/tc_ai_cap_manager.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.0
+```
 
 Bestätigte Werte:
 
-    cap zone candidates: 31
-    auto-registered CAP zones: 12
-    CAP requests: 12
-    reactionState: AIR_REACTION_REQUESTED
-    threatLevel: HIGH
+```text
+cap zone candidates: 31
+auto-registered CAP zones: 12
+CAP requests: 12
+reactionState: AIR_REACTION_REQUESTED
+threatLevel: HIGH
+```
 
 Aktuelle F10-Funktion:
 
-    Show AI CAP Status
+```text
+Show AI CAP Status
+```
 
 Bewertung:
 
-    AI-CAP-State ist über F10 erreichbar.
-    Echte MOOSE-CAP-Spawns sind noch nicht aktiv.
-    spawn=MOOSE_PENDING ist erwartetes Verhalten.
+- AI-CAP-State ist über F10 erreichbar.
+- Echte MOOSE-CAP-Spawns sind noch nicht aktiv.
+- `spawn=MOOSE_PENDING` ist erwartetes Verhalten.
 
 ---
 
 ## 10. Verhältnis zu Campaign State
 
-F10Menu zeigt aktuell einen einfachen Kampagnenstatus.
+F10Menu zeigt inzwischen mehrere Campaign- und Capture-Bereiche.
 
-Aktuelle F10-Funktion:
+Aktuelle F10-Funktionen:
 
-    Show Campaign Status
+```text
+Show Campaign Status
+Show Capture Status
+Show Capture Ready Zones
+Show Pressure Contested Zones
+```
 
 Campaign State enthält oder soll enthalten:
 
@@ -370,7 +526,10 @@ Campaign State enthält oder soll enthalten:
 - Capture-Eligibility
 - Capture-Pressure
 - Capture-Progress
+- Capture Ready
+- Pressure Contested
 - Mission State
+- Mission Effects
 - Logistics State
 - FOB State
 - AI State
@@ -379,8 +538,11 @@ Campaign State enthält oder soll enthalten:
 
 Aktueller Stand:
 
-    F10Menu zeigt grundlegende Campaign-Informationen.
-    Capture-/Pressure-Details fehlen noch und sind der nächste geplante UI-Ausbauschritt.
+- F10Menu zeigt grundlegende Campaign-Informationen.
+- F10Menu zeigt Capture-/Pressure-Informationen.
+- Capture Ready Zones sind sichtbar.
+- Pressure Contested Zones sind sichtbar.
+- nächster sinnvoller UI-Schritt ist kontrollierter Capture Ready Apply.
 
 ---
 
@@ -390,13 +552,17 @@ F10Menu enthält aktuell keine Save-/Load-Funktionen.
 
 PersistenceSystem:
 
-    src/campaign/tc_persistence_system.lua
+```text
+src/campaign/tc_persistence_system.lua
+```
 
 Status:
 
-    Grundstruktur vorhanden
-    lädt/startet
-    produktiver Dateischreibtest offen
+```text
+Grundstruktur vorhanden
+lädt/startet
+produktiver Dateischreibtest offen
+```
 
 Spätere mögliche F10-Funktionen:
 
@@ -408,14 +574,12 @@ Spätere mögliche F10-Funktionen:
 
 Aktuell nicht vorgesehen:
 
-    Persistence-F10-Funktionen sind noch nicht der nächste Schritt.
+- Persistence-F10-Funktionen als nächster Schritt
 
 Grund:
 
-    Zuerst müssen Capture-/Pressure-Daten sichtbar werden.
-    Danach Mission completed/failed.
-    Danach Mission Effects.
-    Danach Persistence-Sandbox-Test.
+- Zuerst muss kontrollierter Ownership-Wechsel aus Capture Ready getestet werden.
+- Danach ist Persistence deutlich sinnvoller, weil dann echte State-Änderungen gespeichert werden können.
 
 ---
 
@@ -425,9 +589,9 @@ F10Menu enthält aktuell keine IADS-Anzeige.
 
 IADS-Stand:
 
-    Skynet IADS wird geladen.
-    Theater-Command-IADS-Modul ist noch nicht implementiert.
-    MissionGenerator reserviert Skynet-Hooks.
+- Skynet IADS wird geladen.
+- Theater-Command-IADS-Modul ist noch nicht implementiert.
+- MissionGenerator reserviert Skynet-Hooks.
 
 Spätere mögliche F10-Funktionen:
 
@@ -440,7 +604,11 @@ Spätere mögliche F10-Funktionen:
 
 Aktuell nicht vorgesehen:
 
-    IADS-F10-Funktionen werden erst nach eigenem IADS-State sinnvoll.
+- IADS-F10-Funktionen als nächster Schritt
+
+Grund:
+
+- IADS-F10-Funktionen werden erst nach eigenem IADS-State sinnvoll.
 
 ---
 
@@ -456,15 +624,27 @@ Mögliche UI-State-Daten:
 - Anzahl verfügbarer Missionen
 - Anzahl aktiver Missionen
 - letzte Aktivierung
+- letzter Mission Outcome
 - letzte Statusabfrage
+- letzte Capture-Anzeige
 - UI-Version
 
 Aktuell bestätigt:
 
-    F10Menu initialisiert 26 Commands.
-    F10Menu kann Mission Details anzeigen.
-    F10Menu kann Mission Activation auslösen.
-    UI bleibt state-only.
+```text
+F10Menu initialized: commands=32
+```
+
+F10Menu kann:
+
+- Mission Details anzeigen
+- Mission Activation auslösen
+- Mission Completion auslösen
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
+
+UI bleibt state-only.
 
 ---
 
@@ -478,10 +658,13 @@ Das bedeutet:
 - F10 zeigt State an.
 - F10 ruft sichere Theater-Command-Funktionen auf.
 - F10 aktiviert Missionen state-only.
+- F10 schließt Missionen state-only ab.
+- F10 zeigt Capture State.
 - F10 löst keine echten DCS-Spawns aus.
 - F10 ruft CTLD nicht produktiv auf.
 - F10 ruft Skynet nicht produktiv auf.
 - F10 verändert keine Vendor-Dateien.
+- F10 löst keinen automatischen produktiven Ownership-Wechsel aus.
 
 Diese Regel bleibt auch für die nächste Version wichtig.
 
@@ -489,16 +672,19 @@ Diese Regel bleibt auch für die nächste Version wichtig.
 
 ## 15. Warum F10Menu aktuell wichtig ist
 
-F10Menu ist aktuell die wichtigste Sichtbarkeitsfläche.
+F10Menu ist aktuell die wichtigste Sichtbarkeits- und Kontrollfläche.
 
 Grund:
 
 - DCS-Logauswertung allein reicht nicht für spätere Kampagnensteuerung.
 - Spieler brauchen Zugriff auf Missionen.
 - Entwickler brauchen Zugriff auf State-Zusammenfassungen.
-- Mission Activation ist über F10 bereits bestätigt.
-- Capture-Pressure und Capture-Progress müssen sichtbar werden.
-- Spätere MissionEffects brauchen UI-/Debug-Kontrolle.
+- Mission Activation ist über F10 bestätigt.
+- Mission Completion ist über F10 bestätigt.
+- Capture-Pressure und Capture-Progress sind über F10 sichtbar.
+- Capture Ready ist über F10 sichtbar.
+- spätere Mission Effects brauchen UI-/Debug-Kontrolle.
+- Ownership-Wechsel müssen bewusst und sichtbar getestet werden.
 
 F10Menu ist damit aktuell die Brücke zwischen State-Systemen und praktischer DCS-Bewertung.
 
@@ -508,51 +694,76 @@ F10Menu ist damit aktuell die Brücke zwischen State-Systemen und praktischer DC
 
 Aktuelle Version:
 
-    F10Menu v0.2.0
+```text
+F10Menu v0.2.2
+```
 
 Erwartete aktuelle Logmarker:
 
-    [TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.0
-    [TC] [F10Menu] F10 menu started
-    [TC] [F10Menu] F10 menu initialized: commands=26
-    [TC] System started: F10 Menu
-    [TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_1
-    [TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_1
-    [TC] [F10Menu] Mission activated through F10: slot=5 key=MISSION_4
+```text
+[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.2
+[TC] [F10Menu] F10 menu started
+[TC] [F10Menu] F10 menu initialized: commands=32
+[TC] System started: F10 Menu
+[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_2
+[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2
+[TC] [F10Menu] Active mission outcome status shown through F10
+[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared
+[TC] [F10Menu] Capture status shown through F10
+[TC] [F10Menu] Capture ready zones shown through F10
+[TC] [F10Menu] Pressure contested zones shown through F10
+```
 
 Erwartete nächste Version:
 
-    F10Menu v0.2.1
+```text
+F10Menu v0.2.3
+```
 
 Erwartete neue Logmarker nach nächstem Schritt:
 
-    [TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.1
-    [TC] [F10Menu] F10 menu initialized:
-    [TC] [F10Menu] Capture status shown through F10
-    [TC] [F10Menu] Capture ready zones shown through F10
-    [TC] [F10Menu] Pressure contested zones shown through F10
+```text
+[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.3
+[TC] [F10Menu] F10 menu initialized:
+[TC] [F10Menu] Capture ready zones shown through F10
+[TC] [F10Menu] Capture ready zone applied through F10:
+[TC] [CaptureSystem] Zone captured:
+```
 
 ---
 
 ## 17. Aktuelle Akzeptanzkriterien
 
-F10Menu v0.2.0 gilt als bestanden, weil:
+F10Menu `v0.2.2` gilt als bestanden, weil:
 
 - Datei lädt.
 - Version wird im Log angezeigt.
 - Menü startet.
-- 26 Commands werden erzeugt.
+- 32 Commands werden erzeugt.
 - F10-Menü ist sichtbar.
 - F10-Menü ist navigierbar.
 - Mission Details sind abrufbar.
 - Mission Activation funktioniert.
-- MissionGenerator setzt Missionen auf ACTIVE.
+- MissionGenerator setzt Missionen auf `ACTIVE`.
+- Mission Completion funktioniert.
+- MissionGenerator setzt Missionen auf `COMPLETED`.
+- Mission Effects werden vorbereitet.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects.
+- Capture Status ist sichtbar.
+- Capture Ready Zones sind sichtbar.
+- Pressure Contested Zones sind sichtbar.
 - Aktivierung bleibt state-only.
+- Completion bleibt state-only.
 - keine echten Spawns.
 - keine CTLD-Aktionen.
 - keine Skynet-Aktionen.
 - keine Theater-Command-Lua-Fehler.
 - keine Lua-Stacktraces.
+
+Noch offen:
+
+- `Fail Active Mission 1` praktisch testen
+- kontrollierten Capture Ready Apply implementieren und testen
 
 ---
 
@@ -560,33 +771,32 @@ F10Menu v0.2.0 gilt als bestanden, weil:
 
 Empfohlene nächste Datei:
 
-    src/ui/tc_f10_menu.lua
+```text
+src/ui/tc_f10_menu.lua
+```
 
 Ziel:
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+```text
+kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+```
 
-Geplante neue F10-Funktionen:
+Geplante neue F10-Funktion:
 
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
+```text
+Apply Capture Ready Zone 1
+```
 
 Akzeptanzkriterien:
 
 - F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
+- bisherige 32 Commands bleiben funktionsfähig.
+- neuer Capture-Apply-Command wird ergänzt.
+- Capture Ready Zone 1 kann bewusst angewendet werden.
+- Zone Ownership wird state-only aktualisiert.
+- linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
+- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
+- Logmarker zeigen eindeutig den Ownership-Wechsel.
 - keine echten Spawns
 - keine CTLD-Aktion
 - keine Skynet-Aktion
@@ -597,22 +807,26 @@ Akzeptanzkriterien:
 
 ## 19. Spätere UI-Schritte
 
-Nach Capture-/Pressure-Sichtbarkeit:
+Nach kontrolliertem Capture Ready Apply:
 
-1. Mission completed/failed manuell über F10 oder Debug testbar machen
-2. Mission Effects kontrolliert testen
-3. CaptureSystem.applyMissionEffect praktisch testen
-4. Persistence-Sandbox-Test optional über Debug-F10 vorbereiten
-5. AI Director Status später anzeigen
-6. IADS Status später anzeigen
-7. Debug-Menü getrennt aufbauen
+1. `Fail Active Mission 1` praktisch testen
+2. Persistence-Sandbox-Test optional über Debug-F10 vorbereiten
+3. Mission Effects auf Logistics später sichtbar machen
+4. Mission Effects auf AI später sichtbar machen
+5. Mission Effects auf IADS später sichtbar machen
+6. AI Director Status später anzeigen
+7. IADS Status später anzeigen
+8. Debug-Menü getrennt aufbauen
+9. Persistence-Menü später getrennt aufbauen
 
 Mögliche spätere Menüs:
 
-    Theater Command
-    Theater Command Debug
-    Theater Command Admin
-    Theater Command Persistence
+```text
+Theater Command
+Theater Command Debug
+Theater Command Admin
+Theater Command Persistence
+```
 
 Diese Struktur ist noch nicht final.
 
@@ -629,16 +843,20 @@ Risiken im UI-Bereich:
 - F10-Funktionen können zu früh echte Framework-Aktionen auslösen
 - UI kann Kampagnenlogik versehentlich selbst übernehmen
 - Debug- und Spielerfunktionen können vermischt werden
+- Capture Ready Apply kann Ownership unkontrolliert ändern
+- Capture Pressure kann nach Ownership-Wechsel inkonsistent bleiben
 
 Aktuelle Gegenmaßnahmen:
 
 - stabile Missionssortierung
 - feste Slots 1 bis 10
 - state-only Aktivierung
+- state-only Completion
 - keine echten Framework-Aktionen
 - klare Logmarker
 - kleine UI-Schritte
 - Debug später getrennt behandeln
+- Ownership-Wechsel nur bewusst über F10-/Debug-Pfad
 
 ---
 
@@ -655,11 +873,13 @@ Aktuell nicht vorgesehen:
 - CTLD-Cargo-Menü
 - echte Spawn-Auslösung über F10
 - Admin-Kommandos für produktive Kampagnenänderungen
+- automatischer Ownership-Wechsel ohne Bestätigung
+- echte CTLD-Aktion über F10
+- echte Skynet-Aktion über F10
 
 Grund:
 
-    Zuerst muss die State-Sichtbarkeit stabil wachsen.
-    Der nächste kleine Schritt ist Capture-/Pressure-Status.
+Zuerst muss die State-Sichtbarkeit stabil bleiben und der nächste Ownership-Schritt kontrolliert getestet werden.
 
 ---
 
@@ -669,20 +889,19 @@ Grund:
 |---|---|---:|---|
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
 
 ---
 
 ## 23. Aktueller Status
 
-Der UI-Bereich ist aktiv.
-
-F10Menu v0.2.0 ist bestanden.
+Der UI-Bereich ist aktiv und bestanden.
 
 Aktuelle Fähigkeit:
 
@@ -692,13 +911,22 @@ Aktuelle Fähigkeit:
 - aktive Missionen können angezeigt werden.
 - Missionsdetails können angezeigt werden.
 - Missionen können direkt aktiviert werden.
+- Mission Completion kann direkt über F10 getestet werden.
 - Kampagnenstatus kann angezeigt werden.
+- Capture Status kann angezeigt werden.
+- Capture Ready Zones können angezeigt werden.
+- Pressure Contested Zones können angezeigt werden.
 - Logistikstatus kann angezeigt werden.
 - FOB-Status kann angezeigt werden.
 - AI-CAP-Status kann angezeigt werden.
 - Mission Activation bleibt state-only.
+- Mission Completion bleibt state-only.
+- Capture Ready bleibt state-only sichtbar.
+- keine echten Framework-Aktionen werden ausgelöst.
 
 Nächster notwendiger Schritt:
 
-    F10Menu v0.2.1
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+```text
+F10Menu v0.2.3
+kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+```
