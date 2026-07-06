@@ -6,12 +6,12 @@
 -- DCS file-system sandbox test.
 --
 -- Current focus:
--- PersistenceSystem v0.2.0 keeps the existing state-first memory persistence
--- foundation and adds a safe startup sandbox test for os/io/lfs availability
--- and minimal write/read verification.
+-- PersistenceSystem v0.2.1 keeps the existing state-first memory persistence
+-- foundation and fixes the sandbox write verification for DCS/Lua environments
+-- where file:write() may return nil despite a successful protected write call.
 --
 -- Version:
--- 0.2.0
+-- 0.2.1
 --
 -- Responsibilities:
 -- - keep campaign persistence state under TC.State.Persistence
@@ -37,7 +37,7 @@ local PersistenceSystem = {}
 PersistenceSystem.name = "tc_persistence_system"
 PersistenceSystem.displayName = "Persistence System"
 PersistenceSystem.path = "src/campaign/tc_persistence_system.lua"
-PersistenceSystem.version = "0.2.0"
+PersistenceSystem.version = "0.2.1"
 PersistenceSystem.loaded = true
 PersistenceSystem.started = false
 PersistenceSystem.finished = false
@@ -651,8 +651,14 @@ local function writeTextFile(pathValue, content)
         return false, "file_open_write_failed"
     end
 
-    local writeSuccess, writeResult = pcall(function()
-        return fileHandle:write(content)
+    local writeSuccess, writeError = pcall(function()
+        fileHandle:write(content)
+    end)
+
+    local flushSuccess = pcall(function()
+        if fileHandle.flush ~= nil then
+            fileHandle:flush()
+        end
     end)
 
     local closeSuccess = pcall(function()
@@ -660,15 +666,15 @@ local function writeTextFile(pathValue, content)
     end)
 
     if writeSuccess ~= true then
-        return false, "file_write_failed"
+        return false, "file_write_failed:" .. tostring(writeError)
+    end
+
+    if flushSuccess ~= true then
+        return false, "file_flush_after_write_failed"
     end
 
     if closeSuccess ~= true then
         return false, "file_close_after_write_failed"
-    end
-
-    if writeResult == nil then
-        return false, "file_write_returned_nil"
     end
 
     return true
