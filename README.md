@@ -1,12 +1,12 @@
 # Theater Command DCS
 
-**Theater Command DCS** ist ein modulares, dynamisches und später persistentes Kampagnensystem für **DCS World**.
+Theater Command DCS ist ein modulares, dynamisches und später persistentes Kampagnensystem für DCS World.
 
-Das Projekt entsteht zunächst für die **Syria Map**.
+Das Projekt entsteht zunächst für die Syria Map.
 
 Erste Kampagne:
 
-- **Operation Levant Reclamation**
+- Operation Levant Reclamation
 
 ---
 
@@ -14,7 +14,7 @@ Erste Kampagne:
 
 Blue startet auf:
 
-- **Akrotiri / Zypern**
+- Akrotiri / Zypern
 
 Die Ausgangslage:
 
@@ -31,9 +31,9 @@ Die Ausgangslage:
 
 Theater Command DCS folgt drei Grundsätzen:
 
-- **Mission Editor = Bühne**
-- **Lua = Kampagnensystem**
-- **GitHub = Projektgedächtnis**
+- Mission Editor = Bühne
+- Lua = Kampagnensystem
+- GitHub = Projektgedächtnis
 
 Der DCS Mission Editor stellt bereit:
 
@@ -85,9 +85,9 @@ Die KI soll perspektivisch auf beiden Seiten handeln:
 
 ## Aktueller Projektstand
 
-Stand: **2026-07-06**
+Stand: 2026-07-06
 
-Das Projekt befindet sich weiterhin in einer frühen Aufbauphase, besitzt aber inzwischen eine stabil getestete **State-first Runtime** im DCS Mission Scripting Environment.
+Das Projekt befindet sich weiterhin in einer frühen Aufbauphase, besitzt aber inzwischen eine stabil getestete State-first Runtime im DCS Mission Scripting Environment.
 
 Aktuell erreicht:
 
@@ -106,7 +106,9 @@ Aktuell erreicht:
 - FobSystem erzeugt FOB-Kandidaten und erste Blue-FOBs.
 - MissionGenerator erzeugt verfügbare Missionen inklusive FOB-Support.
 - MissionGenerator erzeugt Objectives, Briefings, Progress-Daten, Activation Metadata, Outcome State und Effect State.
-- MissionGenerator kann Missionen state-only aktivieren und abschließen.
+- MissionGenerator kann Missionen state-only aktivieren.
+- MissionGenerator kann Missionen state-only auf `COMPLETED` setzen.
+- MissionGenerator kann Missionen state-only auf `FAILED` setzen.
 - AICapManager erzeugt Blue-/Red-CAP-State.
 - F10Menu ist sichtbar, navigierbar und logbestätigt.
 - F10Menu erlaubt direkte Missionsauswahl Mission 1 bis Mission 10.
@@ -115,6 +117,11 @@ Aktuell erreicht:
 - F10Menu zeigt Capture-/Pressure-Status an.
 - F10Menu zeigt Capture Ready Zones und Pressure Contested Zones an.
 - F10Menu kann Capture Ready Zone 1 bewusst state-only anwenden.
+- PersistenceSystem kann DCS-Dateisystemzugriff prüfen.
+- PersistenceSystem kann Campaign-State als Lua-Return-Datei speichern.
+- PersistenceSystem kann Save-Dateien lesen, kompilieren, evaluieren und validieren.
+- PersistenceSystem kann Save-Dateien kontrolliert importieren.
+- PersistenceSystem läuft inzwischen als unsichtbarer Background-Autosave-Service.
 - Main und Loader starten sauber durch.
 
 Noch nicht erreicht:
@@ -124,12 +131,13 @@ Noch nicht erreicht:
 - echte CTLD-FOBs
 - echte CTLD-Cargo-Flüge
 - echte Skynet-IADS-Kampagnenlogik
-- produktive Persistenz
-- AI Director
+- produktiver automatischer Restore beim Missionsstart
+- AI Director mit echten Entscheidungen
 - automatische Missionserfolgsauswertung
 - automatische Mission-Outcome-Auswertung aus DCS-Events
-- produktive automatische Capture-Auswertung aus Missionsresultaten
-- automatische produktive Ownership-Wechsel ohne bewusste Bestätigung
+- automatische Capture-Auswertung aus realen DCS-Einheiten/Zonen
+- produktive automatische Ownership-Wechsel ohne bewusste Bestätigung
+- Persistenz-Hooks nach allen relevanten State-Änderungen
 - automatische `.miz`-Generierung
 
 ---
@@ -141,7 +149,7 @@ Noch nicht erreicht:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.5` | bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
 | MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
@@ -154,63 +162,89 @@ Noch nicht erreicht:
 
 Aktuell bestätigte Testwerte aus DCS-Logs:
 
-Airbase Scanner:
+### Airbase Scanner
 
-- Syria airbase-like objects: **225**
-- strategic: **19**
-- secondary: **13**
-- heliports: **1**
-- helipads: **95**
-- medical: **40**
-- farps: **0**
-- tactical: **13**
-- unknown: **44**
-- captureCandidates: **32**
-- missionCandidates: **32**
-- logisticsCandidates: **46**
-- blueStartBases: **1**
-- redStrategicCandidates: **18**
+- Syria airbase-like objects: `225`
+- strategic: `19`
+- secondary: `13`
+- heliports: `1`
+- helipads: `95`
+- medical: `40`
+- farps: `0`
+- tactical: `13`
+- unknown: `44`
+- captureCandidates: `32`
+- missionCandidates: `32`
+- logisticsCandidates: `46`
+- blueStartBases: `1`
+- redStrategicCandidates: `18`
 
-ZoneFactory:
+### ZoneFactory
 
-- relevante Kampagnenzonen: **46**
-- skipped airbase-like objects: **179**
-- captureZones: **32**
-- missionZones: **32**
-- logisticsZones: **46**
-- startBaseZones: **1**
+- relevante Kampagnenzonen: `46`
+- skipped airbase-like objects: `179`
+- captureZones: `32`
+- missionZones: `32`
+- logisticsZones: `46`
+- startBaseZones: `1`
 
-CaptureSystem Startzustand:
+### CaptureSystem Startzustand
 
-- eligibleBases: **32**
-- eligibleZones: **32**
-- nonCaptureBases: **193**
-- nonCaptureZones: **14**
-- pressureRecords: **32**
-- progressRecords: **32**
-- appliedMissionEffects: **0**
-- ready: **0**
-- contested: **0**
+- eligibleBases: `32`
+- eligibleZones: `32`
+- nonCaptureBases: `193`
+- nonCaptureZones: `14`
+- pressureRecords: `32`
+- progressRecords: `32`
+- appliedMissionEffects: `0`
+- ready: `0`
+- contested: `0`
 
-MissionGenerator:
+### MissionGenerator
 
-- mission candidates: **78**
-- fobSupportCandidates: **2**
-- generated missions: **10**
-- reservedCreated: **1**
-- duplicatesSkipped: **1**
-- typeLimitSkipped: **68**
+- mission candidates: `78`
+- fobSupportCandidates: `2`
+- generated missions: `10`
+- reservedCreated: `1`
+- duplicatesSkipped: `1`
+- typeLimitSkipped: `68`
 
-F10Menu:
+### F10Menu
 
-- Version: **v0.2.3**
-- Commands: **33**
+- Version: `v0.2.3`
+- Commands: `33`
 - F10Menu ist sichtbar und navigierbar.
 - Mission 1 bis Mission 10 sind direkt auswählbar.
 - Missionen können über F10 aktiviert werden.
 - aktive Mission 1 kann über F10 auf `COMPLETED` gesetzt werden.
+- aktive Mission 1 kann über F10 auf `FAILED` gesetzt werden.
 - Capture Ready Zones sind über F10 anzeigbar.
 - Capture Ready Zone 1 kann über F10 bewusst angewendet werden.
+
+### PersistenceSystem
+
+- Version: `v0.2.5`
+- `fileSystemAvailable=true`
+- `io=true`
+- `lfs=true`
+- `os=false`
+- `require=false`
+- `load=true`
+- `loadstring=true`
+- `loadfile=true`
+- `autosaveScheduled=true`
+- Autosave initial nach `20s`
+- Autosave-Intervall: `120s`
+- letzter bestätigter Autosave Count: `1`
+- `productiveRestore=false`
+
+Bestätigter Speicherordner:
+
+- `C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS`
+
+Bestätigte Save-Datei:
+
+- `C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua`
 
 ---
 
@@ -236,23 +270,24 @@ Bestätigt ist eine modulübergreifende State-Kette:
 16. CaptureSystem synchronisiert die linked Airbase Ownership.
 17. CaptureSystem setzt Capture Pressure nach erfolgreichem Apply zurück.
 18. F10Menu zeigt den aktualisierten Capture Status an.
+19. PersistenceSystem speichert den Campaign-State im Hintergrund automatisch.
 
 Bestätigter Testfall:
 
 - completed mission: `MISSION_2`
 - target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
 - capture pressure owner: `BLUE`
-- applied pressure: **105**
-- progress vor Apply: **100 %**
-- appliedMissionEffects: **1**
-- ready vor Apply: **1**
-- contested: **0**
+- applied pressure: `105`
+- progress vor Apply: `100 %`
+- appliedMissionEffects: `1`
+- ready vor Apply: `1`
+- contested: `0`
 - applied zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
 - applied owner: `BLUE`
 - linked airbase: `Abu al-Duhur`
-- ready nach Apply: **0**
+- ready nach Apply: `0`
 
-Diese Kette bleibt vollständig **state-only**.
+Diese Kette bleibt vollständig state-only.
 
 Sie löst aktuell nicht aus:
 
@@ -260,7 +295,80 @@ Sie löst aktuell nicht aus:
 - echte CTLD-Aktionen
 - echte Skynet-IADS-Aktionen
 - produktive automatische Ownership-Wechsel
-- automatische Persistenz
+- produktiven automatischen Restore
+
+---
+
+## Mission Failure Pipeline
+
+Bestätigt ist außerdem der Failure-Pfad:
+
+1. F10Menu zeigt Mission Details.
+2. F10Menu aktiviert Mission 1.
+3. MissionGenerator setzt Mission 1 auf `ACTIVE`.
+4. F10Menu zeigt Active Mission Outcome Status.
+5. F10Menu setzt aktive Mission 1 state-only auf `FAILED`.
+6. MissionGenerator setzt Mission Outcome auf `FAILED`.
+7. MissionGenerator bereitet Failure Effects state-only vor.
+8. CaptureSystem verarbeitet abgeschlossene Mission Effects.
+9. CaptureSystem wendet bei `FAILED` aktuell keinen Capture Pressure an.
+
+Bestätigt:
+
+- Failed Missions erzeugen aktuell bewusst keinen Capture Pressure.
+- `appliedMissionEffects=0`
+- `ready=0`
+- `contested=0`
+
+Bewertung:
+
+- Failure-Pfad ist bestanden.
+- Das Verhalten ist für den aktuellen State-first-Teststand korrekt.
+
+---
+
+## Persistence-Status
+
+Persistence ist aktuell ein internes Hintergrundsystem.
+
+Spieler müssen und sollen Persistenz nicht über F10 auslösen.
+
+Technischer Verlauf:
+
+- `v0.2.0`: DCS-Sandbox-Verfügbarkeit geprüft.
+- `v0.2.1`: Schreib-/Lesetest korrigiert und bestanden.
+- `v0.2.2`: Campaign-State-Snapshot als Datei geschrieben.
+- `v0.2.3`: Save-Datei gelesen, kompiliert, evaluiert und validiert.
+- `v0.2.4`: Save-Datei kontrolliert in `TC.State` importiert.
+- `v0.2.5`: Test-Timer-Kaskade entfernt und Background-Autosave aktiviert.
+
+Aktueller Status:
+
+- Autosave läuft automatisch im Hintergrund.
+- Erster Autosave nach 20 Sekunden.
+- Danach Autosave alle 120 Sekunden.
+- Save/Validate/Load-Funktionen bleiben intern vorhanden.
+- Produktiver Restore beim Missionsstart ist bewusst deaktiviert.
+- `productiveRestore=false`
+
+Wichtige lokale Voraussetzung:
+
+In der lokalen DCS-Datei:
+
+- `...\DCS World\Scripts\MissionScripting.lua`
+
+müssen für dieses Projekt `io` und `lfs` entsperrt sein.
+
+Bewusster Zustand:
+
+- `io` entsperrt
+- `lfs` entsperrt
+- `os` gesperrt
+- `require` gesperrt
+
+Hinweis:
+
+Nach DCS-Updates kann `MissionScripting.lua` überschrieben werden. Dann muss die lokale Sandbox-Freigabe erneut geprüft werden.
 
 ---
 
@@ -268,37 +376,35 @@ Sie löst aktuell nicht aus:
 
 Aktuelle Grundstruktur:
 
-```text
-theater-command-dcs/
-├── README.md
-├── ROADMAP.md
-├── TASKS.md
-├── CHANGELOG.md
-├── ARCHITECTURE.md
-├── MISSION_EDITOR_SETUP.md
-├── NAMING_CONVENTIONS.md
-├── LUA_STYLEGUIDE.md
-├── docs/
-├── mission_editor/
-├── src/
-│   ├── README.md
-│   ├── loader.lua
-│   ├── main.lua
-│   ├── core/
-│   ├── world/
-│   ├── campaign/
-│   ├── logistics/
-│   ├── missions/
-│   ├── ai/
-│   ├── iads/
-│   ├── ui/
-│   └── debug/
-└── vendor/
-    ├── mist/
-    ├── moose/
-    ├── ctld/
-    └── skynet-iads/
-```
+    theater-command-dcs/
+    ├── README.md
+    ├── ROADMAP.md
+    ├── TASKS.md
+    ├── CHANGELOG.md
+    ├── ARCHITECTURE.md
+    ├── MISSION_EDITOR_SETUP.md
+    ├── NAMING_CONVENTIONS.md
+    ├── LUA_STYLEGUIDE.md
+    ├── docs/
+    ├── mission_editor/
+    ├── src/
+    │   ├── README.md
+    │   ├── loader.lua
+    │   ├── main.lua
+    │   ├── core/
+    │   ├── world/
+    │   ├── campaign/
+    │   ├── logistics/
+    │   ├── missions/
+    │   ├── ai/
+    │   ├── iads/
+    │   ├── ui/
+    │   └── debug/
+    └── vendor/
+        ├── mist/
+        ├── moose/
+        ├── ctld/
+        └── skynet-iads/
 
 ---
 
@@ -308,83 +414,33 @@ Eigene Lua-Logik liegt unter `src/`.
 
 Aktive Source-Dateien:
 
-```text
-src/loader.lua
-src/main.lua
-src/core/tc_config.lua
-src/core/tc_logger.lua
-src/core/tc_state.lua
-src/core/tc_utils.lua
-src/core/tc_scheduler.lua
-src/world/tc_airbase_scanner.lua
-src/world/tc_zone_factory.lua
-src/campaign/tc_capture_system.lua
-src/campaign/tc_persistence_system.lua
-src/logistics/tc_logistics_delivery.lua
-src/logistics/tc_fob_system.lua
-src/missions/tc_mission_generator.lua
-src/ai/tc_ai_cap_manager.lua
-src/ui/tc_f10_menu.lua
-```
+- `src/loader.lua`
+- `src/main.lua`
+- `src/core/tc_config.lua`
+- `src/core/tc_logger.lua`
+- `src/core/tc_state.lua`
+- `src/core/tc_utils.lua`
+- `src/core/tc_scheduler.lua`
+- `src/world/tc_airbase_scanner.lua`
+- `src/world/tc_zone_factory.lua`
+- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/logistics/tc_fob_system.lua`
+- `src/missions/tc_mission_generator.lua`
+- `src/ai/tc_ai_cap_manager.lua`
+- `src/ui/tc_f10_menu.lua`
 
-Vorbereitete, aber noch nicht produktiv implementierte Bereiche:
+Vorbereitet oder dokumentiert:
 
-```text
-src/iads/
-src/debug/
-```
-
----
-
-## Vendor-Frameworks
-
-Vendor-Dateien liegen unter `vendor/` und werden nicht verändert.
-
-Aktive Vendor-Dateien:
-
-| Framework | Pfad | Stand |
-|---|---|---|
-| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
-| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
-| CTLD-i18n | `vendor/ctld/CTLD-i18n.lua` | geladen |
-| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
-| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
-
-Wichtig:
-
-- MIST wird aktuell in der CTLD-kompatiblen Version verwendet.
-- MOOSE wird geladen, aber noch nicht produktiv durch eigene Spawn-Logik genutzt.
-- CTLD wird geladen, aber noch nicht produktiv mit Logistics/FOB-System verbunden.
-- Skynet IADS wird geladen, aber noch nicht durch ein eigenes Theater-Command-IADS-Modul gesteuert.
-
----
-
-## Nicht erwünschte Architektur
-
-Nicht gewünscht sind Framework-Sammeldateien wie:
-
-- `tc_moose.lua`
-- `tc_mist.lua`
-- `tc_ctld.lua`
-- `tc_all_in_one.lua`
-
-Eigene Logik wird nicht nach Frameworks sortiert, sondern nach Aufgaben:
-
-- `tc_airbase_scanner.lua`
-- `tc_zone_factory.lua`
-- `tc_capture_system.lua`
-- `tc_logistics_delivery.lua`
-- `tc_fob_system.lua`
-- `tc_mission_generator.lua`
-- `tc_ai_cap_manager.lua`
-- `tc_persistence_system.lua`
-- `tc_f10_menu.lua`
+- `src/iads/`
+- `src/debug/`
 
 ---
 
 ## Aktuelle Ladefolge im Mission Editor
 
-Aktuell wird weiterhin die sichere Einzeldatei-Ladung über `DO SCRIPT FILE` genutzt.
+Aktuell wird weiter die sichere Einzeldatei-Ladung verwendet.
 
 Vendor-Ladefolge:
 
@@ -415,97 +471,166 @@ Theater-Command-Ladefolge:
 
 Wichtig:
 
-- `src/campaign/tc_capture_system.lua` wird vor MissionGenerator, AI CAP Manager, F10Menu und Main geladen.
-- `src/ui/tc_f10_menu.lua` wird nach `src/ai/tc_ai_cap_manager.lua` und vor `src/main.lua` geladen.
-- `src/main.lua` initialisiert die Runtime-Systeme.
+- `src/campaign/tc_persistence_system.lua` muss vor `src/main.lua` geladen werden.
+- `src/ui/tc_f10_menu.lua` muss vor `src/main.lua` geladen werden.
+- `src/main.lua` bleibt der Runtime-Startpunkt.
 - `src/loader.lua` bleibt aktuell die letzte eigene Datei.
-- Loader-only-Ladung per `dofile` ist noch nicht praktisch getestet.
+- Starttest Variante B mit Loader-only-`dofile` ist weiterhin offen.
+
+Aktuelle Entscheidung:
+
+- Bis Variante B praktisch geprüft ist, bleibt die sichere Einzeldatei-Ladung Standard.
 
 ---
 
-## DCS Mission Editor Hinweis
+## Vendor-Frameworks
 
-Eine per `DO SCRIPT FILE` geladene Lua-Datei wird in die `.miz` eingebettet.
+Frameworks liegen unter `vendor/` und werden nicht verändert.
 
-Nach jeder Lua-Änderung muss die Datei im Mission Editor erneut ausgewählt und die Mission gespeichert werden.
+Aktive Vendor-Dateien:
 
-Arbeitsablauf nach Lua-Änderung:
-
-1. Datei auf GitHub aktualisieren.
-2. Lokal per GitHub Desktop fetchen/pullen.
-3. DCS Mission Editor öffnen.
-4. Geänderte Datei in der passenden `DO SCRIPT FILE`-Aktion neu auswählen.
-5. Mission speichern.
-6. Alte `dcs.log` löschen oder umbenennen.
-7. DCS starten.
-8. Mission testen.
-9. Frische `dcs.log` prüfen.
-
-Für saubere Tests:
-
-1. DCS beenden.
-2. Alte `dcs.log` löschen oder umbenennen.
-3. DCS neu starten.
-4. Mission testen.
-5. DCS beenden.
-6. Neue `dcs.log` auswerten.
-
-Ein weitergeführter Log kann für gezielte Regressionen ausreichen, muss aber zeitlich sauber vom alten Abschnitt getrennt bewertet werden.
-
----
-
-## Aktuelle bestätigte Logmarker
-
-Wichtige bestätigte Marker aus dem letzten bestandenen Test:
-
-```text
-[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.3
-[TC] [F10Menu] F10 menu initialized: commands=33
-[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_2
-[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2
-[TC] [F10Menu] Active mission outcome status shown through F10
-[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared
-[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
-[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
-[TC] [F10Menu] Capture ready zones shown through F10
-[TC] [CaptureSystem] Zone captured: ZONE_AIRBASE_ABU_AL_DUHUR [BLUE]
-[TC] [CaptureSystem] Base captured: Abu al-Duhur [BLUE]
-[TC] [F10Menu] Capture ready zone applied through F10: slot=1 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE stateOnly=true
-[TC] [CaptureSystem] Capture progress updated: zones=32, ready=0, contested=0, appliedMissionEffects=1
-[TC] [F10Menu] Capture status shown through F10
-```
-
----
-
-## Aktuelle nächste Schritte
-
-Der aktuelle Abschlussstand soll sauber dokumentiert sein in:
-
-- `TASKS.md`
-- `CHANGELOG.md`
-- `README.md`
-
-Nächste sinnvolle technische Richtung:
-
-1. `Fail Active Mission 1` praktisch testen.
-2. Danach Persistence-Sandbox-Test vorbereiten.
-3. Danach kontrollierte Save-/Load-Grundlage testen.
-4. Danach CTLD-Zonen und echte CTLD-Logistik vorbereiten.
-5. Danach MOOSE-CAP-Templates vorbereiten.
-6. Danach AI Director state-only entwerfen.
-7. Danach IADS-System mit Skynet vorbereiten.
+| Framework | Pfad | Stand |
+|---|---|---|
+| MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
+| MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
+| CTLD-i18n | `vendor/ctld/CTLD-i18n.lua` | geladen |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` |
+| Skynet IADS | `vendor/skynet-iads/SkynetIADS.lua` | `3.3.0` |
 
 Wichtig:
 
-- kein automatischer produktiver Ownership-Wechsel ohne bewussten Testpfad
-- keine echten MOOSE-Spawns ohne Templates
-- keine echte CTLD-Integration ohne Mission-Editor-Zonen
-- keine produktive Persistenz ohne vorherigen DCS-Sandbox-Test
+- Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket, weil CTLD eine kompatible MIST-Version benötigt.
+- Eigene Lua-Logik gehört nach `src/`.
+- Vendor-Dateien werden nicht verändert.
+- Integrationslogik gehört in eigene fachliche Module.
+
+Nicht erwünscht:
+
+- `tc_moose.lua`
+- `tc_mist.lua`
+- `tc_ctld.lua`
+- `tc_all_in_one.lua`
 
 ---
 
-## Aktueller Merksatz
+## Aktuelle Einschränkungen
 
-Theater Command DCS bleibt aktuell bewusst **state-first**.
+Das Projekt ist weiterhin keine fertige spielbare dynamische Kampagne.
 
-Erst wenn State, UI, Capture, Mission Outcomes und Persistenz stabil getestet sind, werden echte Framework-Aktionen mit MOOSE, CTLD und Skynet produktiv angebunden.
+Noch nicht produktiv umgesetzt:
+
+- echte MOOSE-Spawns
+- echte CTLD-Logistikaktionen
+- echte CTLD-FOBs
+- echte CTLD-Crates
+- echte Skynet-IADS-Kampagnenlogik
+- produktive AI-Director-Entscheidungen
+- automatische Missionserfolgserkennung über DCS-Events
+- automatische Capture-Auswertung über reale Einheiten/Zonen
+- produktiver automatischer Restore beim Missionsstart
+- Persistenz-Hooks nach relevanten State-Änderungen
+- echte Blue-/Red-KI-Kampagnenoperationen
+
+---
+
+## Bekannte DCS-/Log-Hinweise
+
+Folgende Meldungen sind aktuell nicht als Theater-Command-Fehler zu werten, solange keine `[TC][ERROR]`, kein `SCRIPTING ERROR`, kein `Mission script error`, kein `stack traceback` und kein `attempt to` im Theater-Command-Kontext auftreten:
+
+- `DTC_MANAGER Window pointer is null`
+- `LUA-TERRAIN getObjectPosition`
+- `DX11BACKEND ... render target ... not found`
+- `INVALID ATC`
+- `ModelTimeQuantizer`
+- `Destruction shape not found`
+- negative drag / weapon drag warnings
+
+Wichtige Fehlerindikatoren:
+
+- `[TC][ERROR]`
+- `SCRIPTING ERROR`
+- `Mission script error`
+- `stack traceback`
+- `attempt to index`
+- `attempt to call`
+- `nil value`
+- `protected call failed`
+
+---
+
+## Nächster sinnvoller technischer Schritt
+
+Nächste Datei:
+
+- `src/campaign/tc_capture_system.lua`
+
+Ziel:
+
+- CaptureSystem soll bei relevanten State-Änderungen Persistence informieren.
+- Besonders bei erfolgreichem Capture Ready Apply soll der Kampagnenzustand als dirty markiert werden.
+- Autosave soll diesen geänderten Zustand anschließend automatisch sichern.
+- Kein F10-Persistence-Menü.
+- Keine Spieleraktion für Save/Load.
+- Kein produktiver Restore.
+- Weiterhin state-first.
+
+Erwarteter nächster Test:
+
+1. Mission starten.
+2. Mission über F10 aktivieren.
+3. Mission über F10 abschließen.
+4. Capture Ready Zone 1 über F10 anwenden.
+5. CaptureSystem markiert State als persistenzrelevant.
+6. Persistence autosaved automatisch.
+7. Log bestätigt Dirty-/Autosave-Zusammenhang.
+
+---
+
+## Einstieg für neue Sessions
+
+Neue Sessions sollen nicht aus Erinnerung arbeiten.
+
+Zuerst prüfen:
+
+- `README.md`
+- `ROADMAP.md`
+- `TASKS.md`
+- `CHANGELOG.md`
+- `ARCHITECTURE.md`
+- `docs/09_persistence.md`
+- `docs/10_testing.md`
+- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
+- `src/ui/tc_f10_menu.lua`
+
+Danach dort weitermachen, wo der aktuelle GitHub-Stand endet.
+
+Nächster technischer Startpunkt:
+
+- `src/campaign/tc_capture_system.lua`
+
+Konkretes Ziel:
+
+- `CaptureSystem v0.2.3`
+- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
+- kein produktiver Restore
+- kein Persistence-F10-Menü
+- keine echten MOOSE-/CTLD-/Skynet-Aktionen
+
+---
+
+## Footer
+
+Theater Command DCS ist aktuell ein wachsendes State-first-Kampagnensystem.
+
+Die aktuellen Meilensteine sind:
+
+- World State steht.
+- Capture State steht.
+- Mission State steht.
+- F10-Testbed steht.
+- Persistence Background Autosave steht.
+
+Der nächste Meilenstein ist:
+
+- State-Änderungen gezielt persistenzrelevant markieren, beginnend mit CaptureSystem.
