@@ -4,6 +4,23 @@ Diese Datei beschreibt den Missionsbereich von **Theater Command DCS**.
 
 Der Missionsbereich erzeugt dynamische Missionen aus dem aktuellen Kampagnenzustand.
 
+Erste Kampagne:
+
+- **Operation Levant Reclamation**
+
+Map:
+
+- **Syria**
+
+Ausgangslage:
+
+- Blue startet auf **Akrotiri / Zypern**
+- das syrische Festland ist zu Beginn rot kontrolliert
+- Red hält zu Beginn den Großteil der strategischen Flugplätze
+- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
+- Spieler sollen sich in eine laufende Kampagnenlage einklinken, nicht jede Aktion allein auslösen
+- Blue und Red sollen später eigene Operationen durchführen
+
 ---
 
 ## 1. Zweck des Missionsbereichs
@@ -29,27 +46,29 @@ Datenquellen sind unter anderem:
 
 Aktuell ist der Missionsbereich nicht mehr nur geplant.
 
-Der erste Mission Generator ist aktiv und getestet.
+Der Mission Generator ist aktiv, getestet und bereits mit F10Menu und CaptureSystem verbunden.
 
 ---
 
 ## 2. Aktueller technischer Stand
 
-Stand:
-
-    2026-06-29
+Stand: **2026-07-06**
 
 Aktive Datei:
 
-    src/missions/tc_mission_generator.lua
+```text
+src/missions/tc_mission_generator.lua
+```
 
 Getestete Version:
 
-    v0.2.2
+```text
+v0.2.3
+```
 
 Status:
 
-    bestanden
+- **bestanden**
 
 Bestätigt durch DCS-Logtests:
 
@@ -58,13 +77,22 @@ Bestätigt durch DCS-Logtests:
 - MissionGenerator erzeugt Missionskandidaten.
 - MissionGenerator erzeugt verfügbare Missionen.
 - MissionGenerator berücksichtigt FOB-Support.
+- MissionGenerator reserviert mindestens eine FOB-Support-Mission.
 - MissionGenerator erzeugt Mission Records mit Objectives, Briefings, Progress und Activation Metadata.
+- MissionGenerator erzeugt Outcome State.
+- MissionGenerator erzeugt Effect State.
 - MissionGenerator reserviert MOOSE-, CTLD- und Skynet-Hooks.
 - F10Menu kann Missionen anzeigen.
 - F10Menu kann Missionsdetails anzeigen.
 - F10Menu kann Missionen direkt aktivieren.
-- MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+- F10Menu kann Active Mission Outcome Status anzeigen.
+- F10Menu kann aktive Mission 1 auf `COMPLETED` setzen.
+- MissionGenerator setzt aktivierte Missionen auf `ACTIVE`.
+- MissionGenerator setzt abgeschlossene Missionen auf `COMPLETED`.
+- MissionGenerator bereitet Mission Effects state-only vor.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects state-only in Capture Pressure.
 - Aktivierung bleibt state-only.
+- Completion bleibt state-only.
 - Es werden keine echten Spawns ausgelöst.
 - Es gab keinen Theater-Command-Lua-Fehler.
 - Es gab keinen Lua-Stacktrace.
@@ -75,33 +103,59 @@ Bestätigt durch DCS-Logtests:
 
 Aktuelle MissionGenerator-Werte:
 
-    mission candidates: 69
-    fobSupportCandidates: 2
-    generated missions: 10
-    reservedCreated: 1
-    duplicatesSkipped: 1
-    typeLimitSkipped: 30
+```text
+mission candidates: 78
+fobSupportCandidates: 2
+generated missions: 10
+reservedCreated: 1
+duplicatesSkipped: 1
+typeLimitSkipped: 68
+```
 
 Aktuelle F10-Bestätigung:
 
-    F10 Commands: 26
-    Mission Details Slot 1 bestätigt
-    Mission Details Slot 2 bestätigt
-    Mission Details Slot 5 bestätigt
-    Mission Slot 1 aktiviert
-    Mission Slot 5 aktiviert
+```text
+F10 Commands: 32
+Mission Details Slot 1 bestätigt
+Mission Slot 1 aktiviert
+Active Mission Outcome Status bestätigt
+Complete Active Mission 1 bestätigt
+Capture Status bestätigt
+Capture Ready Zones bestätigt
+Pressure Contested Zones bestätigt
+```
 
-Bestätigte Aktivierungsmarker:
+Bestätigte Aktivierungs- und Outcome-Marker:
 
-    Mission status changed: MISSION_1 [ACTIVE]
-    Mission status changed: MISSION_4 [ACTIVE]
-    Mission activation prepared: stateOnly=true spawnHooks=reserved
+```text
+[TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.3
+[TC] [MissionGenerator] Mission candidate summary: candidates=78, fobSupportCandidates=2, availableBefore=0, generationSlots=10
+[TC] [MissionGenerator] Mission generation completed: 10 new missions from 78 candidates (fobSupportCandidates=2, reservedCreated=1, duplicatesSkipped=1, typeLimitSkipped=68)
+[TC] [MissionGenerator] Mission status changed: MISSION_2 [ACTIVE]
+[TC] [MissionGenerator] Mission activation prepared: MISSION_2 stateOnly=true spawnHooks=reserved
+[TC] [MissionGenerator] Mission effects prepared state-only: MISSION_2 status=COMPLETED
+[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared
+```
+
+Bestätigte Capture-Rückwirkung:
+
+```text
+[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
+[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105
+[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1
+[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
+[TC] [F10Menu] Capture ready zones shown through F10
+```
 
 Bewertung:
 
-    MissionGenerator v0.2.2 ist bestanden.
-    Missionen sind sichtbar, auswählbar und aktivierbar.
-    Missionen bleiben aktuell state-only.
+- MissionGenerator `v0.2.3` ist bestanden.
+- Missionen sind sichtbar, auswählbar, aktivierbar und state-only abschließbar.
+- Mission Completion erzeugt vorbereitete Mission Effects.
+- Der erste bestätigte Empfänger von Mission Effects ist CaptureSystem.
+- Mission Effects können Capture Pressure und Capture Progress erzeugen.
+- Capture Ready kann durch Mission Completion entstehen.
+- Missionen lösen weiterhin keine echten Spawns aus.
 
 ---
 
@@ -109,11 +163,15 @@ Bewertung:
 
 Externe Frameworks liegen unter:
 
-    vendor/
+```text
+vendor/
+```
 
 Eigene Theater-Command-Logik liegt unter:
 
-    src/
+```text
+src/
+```
 
 Der Missionsbereich gehört zur eigenen Theater-Command-Logik.
 
@@ -123,14 +181,18 @@ Dateien in `src/missions/` werden nach Theater-Command-Aufgaben benannt, nicht n
 
 Nicht gewünscht:
 
-    src/missions/tc_moose_missions.lua
-    src/missions/tc_mist_missions.lua
-    src/missions/tc_mission_all_in_one.lua
-    src/missions/tc_dynamic_everything.lua
+```text
+src/missions/tc_moose_missions.lua
+src/missions/tc_mist_missions.lua
+src/missions/tc_mission_all_in_one.lua
+src/missions/tc_dynamic_everything.lua
+```
 
 Gewünscht:
 
-    src/missions/tc_mission_generator.lua
+```text
+src/missions/tc_mission_generator.lua
+```
 
 Eine Missionsdatei darf intern Daten aus DCS, MIST, MOOSE, CTLD oder Skynet IADS vorbereiten oder nutzen.
 
@@ -142,11 +204,15 @@ Der Dateiname richtet sich aber immer nach der Theater-Command-Aufgabe.
 
 Aktuell aktive Datei:
 
-    src/missions/tc_mission_generator.lua
+```text
+src/missions/tc_mission_generator.lua
+```
 
 Aktuelle Version:
 
-    v0.2.2
+```text
+v0.2.3
+```
 
 Aufgaben:
 
@@ -162,19 +228,25 @@ Aufgaben:
 - Briefings erzeugen
 - Progress-Daten vorbereiten
 - Activation Metadata vorbereiten
+- Outcome State vorbereiten
+- Effect State vorbereiten
 - Execution Plan vorbereiten
 - Effects vorbereiten
 - MOOSE-Hooks reservieren
 - CTLD-Hooks reservieren
 - Skynet-Hooks reservieren
 - Mission Activation state-only ausführen
+- Mission Completion state-only ausführen
+- Mission Effects für Empfängersysteme vorbereiten
 
 Wichtig:
 
-    MissionGenerator scannt keine Airbases selbst.
-    MissionGenerator erzeugt keine Zonen selbst.
-    MissionGenerator ändert keinen Besitzstatus direkt.
-    MissionGenerator führt aktuell keine echten Framework-Aktionen aus.
+- MissionGenerator scannt keine Airbases selbst.
+- MissionGenerator erzeugt keine Zonen selbst.
+- MissionGenerator ändert keinen Besitzstatus direkt.
+- MissionGenerator führt aktuell keine echten Framework-Aktionen aus.
+- Besitzwechsel bleiben Aufgabe des CaptureSystems.
+- Mission Effects werden durch Fachsysteme verarbeitet.
 
 ---
 
@@ -184,17 +256,21 @@ Später können bei Bedarf weitere Missionsdateien ergänzt werden.
 
 Mögliche Dateien:
 
-    src/missions/tc_mission_registry.lua
-    src/missions/tc_mission_types.lua
-    src/missions/tc_mission_evaluator.lua
-    src/missions/tc_target_selector.lua
-    src/missions/tc_mission_effects.lua
+```text
+src/missions/tc_mission_registry.lua
+src/missions/tc_mission_types.lua
+src/missions/tc_mission_evaluator.lua
+src/missions/tc_target_selector.lua
+src/missions/tc_mission_effects.lua
+```
 
 Diese Dateien werden erst angelegt, wenn sie wirklich benötigt werden.
 
 Aktuell reicht:
 
-    src/missions/tc_mission_generator.lua
+```text
+src/missions/tc_mission_generator.lua
+```
 
 ---
 
@@ -219,11 +295,26 @@ Diese Liste ist noch nicht final.
 
 Sie dient aktuell dazu, unterschiedliche Kampagnenbedarfe abzubilden.
 
+Spätere mögliche Erweiterungen:
+
+- `CSAR`
+- `MEDEVAC`
+- `TRANSPORT`
+- `CONVOY_ESCORT`
+- `BASE_REPAIR`
+- `RUNWAY_ATTACK`
+- `ANTI_SHIP`
+- `TARCAP`
+- `BARCAP`
+- `FIGHTER_SWEEP`
+- `OCA`
+- `DCA`
+
 ---
 
 ## 8. Mission Record
 
-MissionGenerator v0.2.2 erzeugt erweiterte Mission Records.
+MissionGenerator `v0.2.3` erzeugt erweiterte Mission Records.
 
 Ein Mission Record kann aktuell enthalten:
 
@@ -245,6 +336,8 @@ Ein Mission Record kann aktuell enthalten:
 - Recommended Payload
 - Progress
 - Activation Metadata
+- Outcome State
+- Effect State
 - Execution Plan
 - Effects
 - reserved MOOSE Hook
@@ -253,33 +346,47 @@ Ein Mission Record kann aktuell enthalten:
 
 Bedeutung:
 
-    Missionen sind vorbereitete Kampagnenobjekte.
-    Sie können später mit Capture, Logistics, AI, IADS und Persistence verbunden werden.
+- Missionen sind vorbereitete Kampagnenobjekte.
+- Missionen können mit Capture, Logistics, AI, IADS und Persistence verbunden werden.
+- Missionen können state-only aktiviert werden.
+- Missionen können state-only abgeschlossen werden.
+- Missionen können Effects vorbereiten.
+- Der erste bestätigte praktische Effect-Empfänger ist CaptureSystem.
 
 ---
 
 ## 9. Mission Status
 
-Aktuell bestätigter Statuswechsel:
-
-    AVAILABLE -> ACTIVE
-
 Mögliche oder vorbereitete Mission Status:
 
-- AVAILABLE
-- ACTIVE
-- COMPLETED
-- FAILED
-- CANCELLED
-- EXPIRED
+- `AVAILABLE`
+- `ACTIVE`
+- `COMPLETED`
+- `FAILED`
+- `CANCELLED`
+- `EXPIRED`
+
+Aktuell bestätigte Statuswechsel:
+
+```text
+AVAILABLE -> ACTIVE
+ACTIVE -> COMPLETED
+```
+
+Bestätigt über F10:
+
+- Mission Slot 1 aktiviert
+- Active Mission 1 abgeschlossen
 
 Noch offen:
 
-- Mission manuell abschließen
 - Mission manuell fehlschlagen lassen
 - Mission abbrechen
+- Mission ablaufen lassen
 - Mission automatisch durch DCS-Events abschließen
-- Missionserfolg auf Capture oder Logistics anwenden
+- Missionserfolg auf Logistics anwenden
+- Missionserfolg auf AI anwenden
+- Missionserfolg auf IADS anwenden
 
 ---
 
@@ -287,27 +394,55 @@ Noch offen:
 
 Missionen können aktuell über F10 aktiviert werden.
 
-F10Menu v0.2.0 bietet:
+F10Menu `v0.2.2` bietet:
 
-- Show Available Missions
-- Show Active Missions
-- Show Mission 1 Details bis Show Mission 10 Details
-- Activate Mission 1 bis Activate Mission 10
+- `Show Available Missions`
+- `Show Active Missions`
+- `Show Mission 1 Details` bis `Show Mission 10 Details`
+- `Activate Mission 1` bis `Activate Mission 10`
 
 Bestätigt:
 
-    MissionGenerator setzt aktivierte Missionen auf ACTIVE.
-    Aktivierung erzeugt stateOnly=true.
-    Aktivierung erzeugt spawnHooks=reserved.
+- MissionGenerator setzt aktivierte Missionen auf `ACTIVE`.
+- Aktivierung erzeugt `stateOnly=true`.
+- Aktivierung erzeugt `spawnHooks=reserved`.
 
 Aktuelle Einschränkung:
 
-    Mission Activation bedeutet noch nicht, dass DCS-Einheiten gespawnt werden.
-    Mission Activation ist aktuell eine State-Änderung.
+- Mission Activation bedeutet noch nicht, dass DCS-Einheiten gespawnt werden.
+- Mission Activation ist aktuell eine State-Änderung.
+- MOOSE-, CTLD- und Skynet-Hooks bleiben reserviert.
 
 ---
 
-## 11. Verhältnis zum Core
+## 11. Mission Outcome
+
+Mission Outcome Controls sind aktiv.
+
+F10Menu `v0.2.2` bietet:
+
+- `Show Active Mission Outcome Status`
+- `Complete Active Mission 1`
+- `Fail Active Mission 1`
+
+Bestätigt:
+
+- Active Mission Outcome Status kann angezeigt werden.
+- Active Mission 1 kann auf `COMPLETED` gesetzt werden.
+- MissionGenerator setzt die Mission auf `COMPLETED`.
+- MissionGenerator bereitet Effects state-only vor.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects.
+
+Noch offen:
+
+- `Fail Active Mission 1` praktisch testen
+- Failure Effects definieren
+- `CANCELLED` und `EXPIRED` später testbar machen
+- automatische DCS-Event-Auswertung vorbereiten
+
+---
+
+## 12. Verhältnis zum Core
 
 `src/missions/` nutzt den Core.
 
@@ -323,16 +458,20 @@ Der Missionsbereich darf davon ausgehen, dass der Core bereits geladen ist.
 
 Aktuelle Ladeposition:
 
-    nach World, Campaign und Logistics
-    vor AI, UI, Main und Loader
+```text
+nach World, Campaign und Logistics
+vor AI, UI, Main und Loader
+```
 
 ---
 
-## 12. Verhältnis zum World-Bereich
+## 13. Verhältnis zum World-Bereich
 
 Der Missionsbereich nutzt Daten aus:
 
-    src/world/
+```text
+src/world/
+```
 
 Besonders wichtig:
 
@@ -343,10 +482,13 @@ Besonders wichtig:
 
 Aktuelle World-Werte:
 
-    Syria airbase-like objects: 225
-    relevante Kampagnenzonen: 46
-    missionCandidates: 32
-    logisticsCandidates: 46
+```text
+Syria airbase-like objects: 225
+relevante Kampagnenzonen: 46
+captureCandidates: 32
+missionCandidates: 32
+logisticsCandidates: 46
+```
 
 Missions nutzt diese Daten für:
 
@@ -362,11 +504,13 @@ Missions soll nicht selbst Kampagnenzonen erzeugen.
 
 ---
 
-## 13. Verhältnis zum Campaign-Bereich
+## 14. Verhältnis zum Campaign-Bereich
 
 Der Missionsbereich nutzt Daten aus:
 
-    src/campaign/
+```text
+src/campaign/
+```
 
 Besonders wichtig:
 
@@ -376,15 +520,30 @@ Besonders wichtig:
 - `TC.State.Bases`
 - `TC.State.Zones`
 
-Aktuelle Capture-Werte:
+Aktuelle Capture-Startwerte:
 
-    eligibleBases: 32
-    eligibleZones: 32
-    pressureRecords: 32
-    progressRecords: 32
-    appliedMissionEffects: 0
-    ready: 0
-    contested: 0
+```text
+eligibleBases: 32
+eligibleZones: 32
+pressureRecords: 32
+progressRecords: 32
+appliedMissionEffects: 0
+ready: 0
+contested: 0
+```
+
+Bestätigte Capture-Werte nach Mission Completion:
+
+```text
+completed mission: MISSION_2
+target zone: ZONE_AIRBASE_ABU_AL_DUHUR
+capture pressure owner: BLUE
+applied pressure: 105
+progress: 100 %
+appliedMissionEffects: 1
+ready: 1
+contested: 0
+```
 
 Missions nutzt diesen Zustand, um passende Aufträge zu erzeugen.
 
@@ -394,17 +553,27 @@ Beispiele:
 - capture-fähige Zone wird mögliches Missionsziel
 - Zone mit Pressure wird später mögliches Schwerpunktziel
 - strategische Airbase wird mögliches Strike- oder SEAD-Ziel
-- Mission Effects können später Capture-Pressure oder Capture-Progress beeinflussen
+- Mission Effects können Capture-Pressure oder Capture-Progress beeinflussen
+
+Bestätigte Rückwirkung:
+
+- Mission Completion erzeugt Mission Effects.
+- CaptureSystem verarbeitet Mission Effects.
+- Capture Pressure wird erzeugt.
+- Capture Progress wird aktualisiert.
+- Capture Ready kann entstehen.
 
 Besitzwechsel bleiben Aufgabe des CaptureSystems.
 
 ---
 
-## 14. Verhältnis zum Logistics-Bereich
+## 15. Verhältnis zum Logistics-Bereich
 
 Der Missionsbereich nutzt Daten aus:
 
-    src/logistics/
+```text
+src/logistics/
+```
 
 Besonders wichtig:
 
@@ -414,53 +583,72 @@ Besonders wichtig:
 
 Aktuelle Logistics-Werte:
 
-    logistics hubs: 46
-    blue hubs: 7
-    red hubs: 24
-    neutral hubs: 15
-    active hubs: 31
-    limited hubs: 15
-    locked hubs: 0
+```text
+logistics hubs: 46
+blue hubs: 7
+red hubs: 24
+neutral hubs: 15
+active hubs: 31
+limited hubs: 15
+locked hubs: 0
+```
 
 Aktuelle FOB-Werte:
 
-    FOB candidates: 6
-    Blue FOBs: 2
-    FOB Ercan
-    FOB Gecitkale
-    Status: UNDER_CONSTRUCTION
+```text
+FOB candidates: 6
+Blue FOBs: 2
+FOB Ercan
+FOB Gecitkale
+Status: UNDER_CONSTRUCTION
+```
 
 MissionGenerator nutzt FOBs bereits:
 
-    fobSupportCandidates: 2
-    reservedCreated: 1
+```text
+fobSupportCandidates: 2
+reservedCreated: 1
+```
 
 Bedeutung:
 
-    FOB-Support ist bereits Teil der Missionslogik.
-    CTLD-Cargo-Aktionen sind noch nicht produktiv angebunden.
+- FOB-Support ist bereits Teil der Missionslogik.
+- Mindestens eine FOB-Support-Mission wird reserviert.
+- FOB-Support wird nicht durch andere Missionstypen verdrängt.
+
+Aktuell:
+
+- CTLD-Cargo-Aktionen sind noch nicht produktiv angebunden.
+- Mission Effects wirken noch nicht produktiv auf Logistics.
+- FOB-Baufortschritt wird noch nicht durch Mission Effects verändert.
 
 ---
 
-## 15. Verhältnis zum AI-Bereich
+## 16. Verhältnis zum AI-Bereich
 
 Der Missionsbereich kann später Daten an AI liefern oder AI-Daten berücksichtigen.
 
 Aktuell aktive AI-Datei:
 
-    src/ai/tc_ai_cap_manager.lua
+```text
+src/ai/tc_ai_cap_manager.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.0
+```
 
 Aktuelle AI-Werte:
 
-    cap zone candidates: 31
-    auto-registered CAP zones: 12
-    CAP requests: 12
-    reactionState: AIR_REACTION_REQUESTED
-    threatLevel: HIGH
+```text
+cap zone candidates: 31
+auto-registered CAP zones: 12
+CAP requests: 12
+reactionState: AIR_REACTION_REQUESTED
+threatLevel: HIGH
+```
 
 Mögliche spätere Kopplungen:
 
@@ -469,23 +657,25 @@ Mögliche spätere Kopplungen:
 - aktive Logistics-Mission erzeugt Intercept-Risiko
 - abgeschlossene Missionen beeinflussen AI Director
 - CAP-State beeinflusst Missionspriorität
+- Mission Effects lösen AI-Reaktionen aus
 
 Aktuell:
 
-    AI Director ist noch nicht implementiert.
-    MissionGenerator erzeugt Missionen state-only.
+- AI Director ist noch nicht implementiert.
+- MissionGenerator erzeugt Missionen state-only.
+- Mission Effects auf AI sind noch nicht produktiv aktiv.
 
 ---
 
-## 16. Verhältnis zum IADS-Bereich
+## 17. Verhältnis zum IADS-Bereich
 
 Der Missionsbereich bereitet IADS-nahe Missionen vor.
 
 Aktuell:
 
-    Skynet IADS wird geladen.
-    Theater-Command-IADS-Modul ist noch nicht implementiert.
-    MissionGenerator reserviert Skynet-Hooks.
+- Skynet IADS wird geladen.
+- Theater-Command-IADS-Modul ist noch nicht implementiert.
+- MissionGenerator reserviert Skynet-Hooks.
 
 IADS-nahe Missionstypen:
 
@@ -502,23 +692,27 @@ Mögliche spätere Kopplung:
 
 Aktuell:
 
-    keine echte Skynet-Aktion
-    keine echte IADS-Wirkung
-    keine IADS-Persistenz
+- keine echte Skynet-Aktion
+- keine echte IADS-Wirkung
+- keine IADS-Persistenz
 
 ---
 
-## 17. Verhältnis zum UI-Bereich
+## 18. Verhältnis zum UI-Bereich
 
 Der Missionsbereich ist bereits mit dem UI-Bereich verbunden.
 
 Aktive UI-Datei:
 
-    src/ui/tc_f10_menu.lua
+```text
+src/ui/tc_f10_menu.lua
+```
 
 Getestete Version:
 
-    v0.2.0
+```text
+v0.2.2
+```
 
 F10Menu kann aktuell:
 
@@ -526,34 +720,47 @@ F10Menu kann aktuell:
 - aktive Missionen anzeigen
 - Mission Details Slot 1 bis 10 anzeigen
 - Mission Slot 1 bis 10 aktivieren
+- Active Mission Outcome Status anzeigen
+- Active Mission 1 auf `COMPLETED` setzen
+- Capture Status anzeigen
+- Capture Ready Zones anzeigen
+- Pressure Contested Zones anzeigen
 
 Bestätigt:
 
-    Mission Details Slot 1
-    Mission Details Slot 2
-    Mission Details Slot 5
-    Mission Slot 1 aktiviert
-    Mission Slot 5 aktiviert
+- Mission Details Slot 1
+- Mission Slot 1 aktiviert
+- Active Mission Outcome Status angezeigt
+- Active Mission 1 abgeschlossen
+- Capture Status angezeigt
+- Capture Ready Zones angezeigt
+- Pressure Contested Zones angezeigt
 
 Bewertung:
 
-    UI und MissionGenerator sind erfolgreich verbunden.
-    Mission Activation bleibt state-only.
+- UI und MissionGenerator sind erfolgreich verbunden.
+- UI, MissionGenerator und CaptureSystem sind über Mission Outcome und Mission Effects verbunden.
+- Mission Activation bleibt state-only.
+- Mission Completion bleibt state-only.
 
 ---
 
-## 18. Verhältnis zu Persistence
+## 19. Verhältnis zu Persistence
 
 PersistenceSystem ist vorbereitet, aber noch nicht produktiv.
 
 Aktuelle Datei:
 
-    src/campaign/tc_persistence_system.lua
+```text
+src/campaign/tc_persistence_system.lua
+```
 
 Status:
 
-    Grundstruktur lädt/startet
-    produktiver Dateischreibtest offen
+```text
+Grundstruktur lädt/startet
+produktiver Dateischreibtest offen
+```
 
 Missionsdaten sollen später persistiert werden:
 
@@ -564,17 +771,20 @@ Missionsdaten sollen später persistiert werden:
 - Missionsstatus
 - Mission Progress
 - Mission Effects
+- angewendete Mission Effects
 - Mission History
 
 Aktuell:
 
-    keine produktive Missionspersistenz
-    kein Save/Load von Missionen
-    keine Autosaves
+- keine produktive Missionspersistenz
+- kein Save/Load von Missionen
+- keine Autosaves
+
+Persistence wird sinnvoller, sobald kontrollierte Ownership-Wechsel bestätigt sind.
 
 ---
 
-## 19. State-first-Regel
+## 20. State-first-Regel
 
 Der Missionsbereich folgt aktuell strikt der state-first-Architektur.
 
@@ -583,7 +793,9 @@ Das bedeutet:
 - Missionen entstehen im State.
 - Missionen werden über F10 sichtbar.
 - Missionen können im State aktiviert werden.
+- Missionen können im State abgeschlossen werden.
 - Mission Effects werden vorbereitet.
+- Mission Effects werden durch Fachsysteme verarbeitet.
 - Framework-Hooks werden reserviert.
 - echte Framework-Aktionen bleiben deaktiviert.
 
@@ -594,37 +806,51 @@ Nicht aktiv:
 - echte Skynet-IADS-Wirkung
 - automatische DCS-Event-Auswertung
 - automatische Mission Completion
+- automatische produktive Besitzwechsel
 
 Grund:
 
-    Der Kampagnenzustand muss zuerst korrekt, sichtbar und testbar sein.
-    Danach können echte DCS-Aktionen kontrolliert angebunden werden.
+Der Kampagnenzustand muss zuerst korrekt, sichtbar und testbar sein.
+
+Danach können echte DCS-Aktionen kontrolliert angebunden werden.
 
 ---
 
-## 20. Testziele
+## 21. Testziele
 
 Der Missionsbereich gilt aktuell für den state-first Stand als bestanden, wenn:
 
 - MissionGenerator lädt.
 - MissionGenerator startet.
-- Missionskandidaten werden erkannt.
+- 78 Missionskandidaten werden erkannt.
+- 2 FOB-Support-Kandidaten werden erkannt.
 - 10 verfügbare Missionen werden erzeugt.
 - FOB-Support wird berücksichtigt.
 - mindestens eine FOB-Support-Mission wird reserviert.
 - Mission Records enthalten Objectives, Briefings, Progress und Activation Metadata.
+- Mission Records enthalten Outcome State.
+- Mission Records enthalten Effect State.
 - Mission Details sind über F10 abrufbar.
 - Missionen können über F10 direkt aktiviert werden.
-- MissionGenerator setzt aktivierte Missionen auf ACTIVE.
+- MissionGenerator setzt aktivierte Missionen auf `ACTIVE`.
 - Aktivierung bleibt state-only.
 - Spawn-Hooks bleiben reserved.
+- aktive Mission 1 kann über F10 auf `COMPLETED` gesetzt werden.
+- MissionGenerator bereitet Mission Effects vor.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects.
+- Capture Pressure wird erhöht.
+- Capture Progress wird aktualisiert.
+- Capture Ready entsteht.
+- Capture Ready Zones sind über F10 sichtbar.
 - keine Lua-Fehler auftreten.
 - keine Theater-Command-Fehler auftreten.
 
 Noch offen:
 
-- Mission completed/failed
-- Mission Effects produktiv anwenden
+- `Fail Active Mission 1` praktisch testen
+- Mission Effects auf Logistics anwenden
+- Mission Effects auf AI anwenden
+- Mission Effects auf IADS anwenden
 - automatische DCS-Event-Auswertung
 - echte MOOSE-Spawns
 - echte CTLD-Aktionen
@@ -633,21 +859,42 @@ Noch offen:
 
 ---
 
-## 21. Erwartete Logmarker
+## 22. Erwartete Logmarker
 
-Aktuelle erwartete Logmarker:
+Aktuelle erwartete MissionGenerator-Logmarker:
 
-    [TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.2
-    [TC] [MissionGenerator] Mission candidate summary: candidates=69, fobSupportCandidates=2, availableBefore=0, generationSlots=10
-    [TC] [MissionGenerator] Mission generation completed: 10 new missions from 69 candidates (fobSupportCandidates=2, reservedCreated=1, duplicatesSkipped=1, typeLimitSkipped=30)
-    [TC] [MissionGenerator] Mission status changed: MISSION_1 [ACTIVE]
-    [TC] [MissionGenerator] Mission activation prepared: MISSION_1 stateOnly=true spawnHooks=reserved
-    [TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_1
-    [TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_1
+```text
+[TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.3
+[TC] [MissionGenerator] Mission candidate summary: candidates=78, fobSupportCandidates=2, availableBefore=0, generationSlots=10
+[TC] [MissionGenerator] Mission generation completed: 10 new missions from 78 candidates (fobSupportCandidates=2, reservedCreated=1, duplicatesSkipped=1, typeLimitSkipped=68)
+[TC] [MissionGenerator] Mission status changed: MISSION_2 [ACTIVE]
+[TC] [MissionGenerator] Mission activation prepared: MISSION_2 stateOnly=true spawnHooks=reserved
+[TC] [MissionGenerator] Mission effects prepared state-only: MISSION_2 status=COMPLETED
+[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared
+```
+
+Aktuelle erwartete F10-Logmarker:
+
+```text
+[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_2
+[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2
+[TC] [F10Menu] Active mission outcome status shown through F10
+[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared
+```
+
+Aktuelle erwartete Capture-Folge nach Mission Completion:
+
+```text
+[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
+[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105
+[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1
+[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
+[TC] [F10Menu] Capture ready zones shown through F10
+```
 
 ---
 
-## 22. Abgrenzung
+## 23. Abgrenzung
 
 Nicht Aufgabe von `src/missions/`:
 
@@ -669,39 +916,38 @@ Missions erzeugt und verwaltet Aufträge.
 
 ---
 
-## 23. Nächster sinnvoller Schritt
+## 24. Nächster sinnvoller Schritt
 
 Der nächste sinnvolle Schritt liegt nicht direkt im Missionsbereich.
 
 Empfohlene nächste Datei:
 
-    src/ui/tc_f10_menu.lua
+```text
+src/ui/tc_f10_menu.lua
+```
 
 Ziel:
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+```text
+kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+```
 
-Geplante neue F10-Funktionen:
+Geplanter neuer F10-Befehl:
 
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
+```text
+Apply Capture Ready Zone 1
+```
 
 Akzeptanzkriterien:
 
 - F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
+- bisherige 32 Commands bleiben funktionsfähig.
+- neuer Capture-Apply-Command wird ergänzt.
+- Capture Ready Zone 1 kann bewusst angewendet werden.
+- Zone Ownership wird state-only aktualisiert.
+- linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
+- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
+- Logmarker zeigen eindeutig den Ownership-Wechsel.
 - keine echten Spawns
 - keine CTLD-Aktion
 - keine Skynet-Aktion
@@ -710,7 +956,7 @@ Akzeptanzkriterien:
 
 ---
 
-## 24. Zielbild
+## 25. Zielbild
 
 `src/missions/` ist die Auftragsschicht von Theater Command DCS.
 
@@ -719,6 +965,7 @@ Der Missionsbereich verbindet:
 - World-Daten
 - Campaign-State
 - Capture-Pressure
+- Capture-Progress
 - Logistics
 - FOBs
 - AI-Reaktion
@@ -728,6 +975,19 @@ Der Missionsbereich verbindet:
 
 Aktueller Status:
 
-    MissionGenerator v0.2.2 ist state-first bestanden.
-    Missionen sind über F10 sichtbar und aktivierbar.
-    Echte Framework-Ausführung folgt später.
+- MissionGenerator `v0.2.3` ist state-first bestanden.
+- Missionen sind über F10 sichtbar.
+- Missionen sind über F10 aktivierbar.
+- Missionen können über F10 state-only abgeschlossen werden.
+- Mission Effects werden vorbereitet.
+- CaptureSystem verarbeitet abgeschlossene Mission Effects.
+- Capture Pressure und Capture Progress können durch Mission Completion entstehen.
+- Capture Ready kann durch Mission Completion entstehen.
+- Capture Ready ist über F10 sichtbar.
+- Echte Framework-Ausführung folgt später.
+
+Nächster notwendiger Zwischenschritt im Gesamtprojekt:
+
+```text
+F10Menu v0.2.3 mit kontrolliertem state-only Capture Ready Apply
+```
