@@ -7,12 +7,12 @@
 -- controlled load functions and background autosave.
 --
 -- Current focus:
--- PersistenceSystem v0.2.5 converts persistence from startup test-timer logic
--- toward an internal background service. File save, validation and load functions
--- remain available internally, but player-facing F10 control is not required.
+-- PersistenceSystem v0.2.6 makes periodic autosave dirty-aware. File save,
+-- validation and load functions remain available internally, but player-facing
+-- F10 control is not required.
 --
 -- Version:
--- 0.2.5
+-- 0.2.6
 --
 -- Responsibilities:
 -- - keep campaign persistence state under TC.State.Persistence
@@ -44,7 +44,7 @@ local PersistenceSystem = {}
 PersistenceSystem.name = "tc_persistence_system"
 PersistenceSystem.displayName = "Persistence System"
 PersistenceSystem.path = "src/campaign/tc_persistence_system.lua"
-PersistenceSystem.version = "0.2.5"
+PersistenceSystem.version = "0.2.6"
 PersistenceSystem.loaded = true
 PersistenceSystem.started = false
 PersistenceSystem.finished = false
@@ -81,6 +81,7 @@ PersistenceSystem.lastAutosaveTime = 0
 PersistenceSystem.lastAutosavePath = nil
 PersistenceSystem.lastAutosaveStatus = nil
 PersistenceSystem.lastAutosaveReason = nil
+PersistenceSystem.lastAutosaveDirtyReason = nil
 
 PersistenceSystem.productiveRestoreEnabled = false
 PersistenceSystem.startupRestoreAttempted = false
@@ -964,19 +965,17 @@ local function storeFileLoadResult(result)
     return true
 end
 
-local function storeAutosaveResult(success, detail)
+local function storeAutosaveResult(status, reason, dirtyReason, filePath)
     local state = ensurePersistenceState()
 
     PersistenceSystem.lastAutosaveTime = getCurrentTime()
+    PersistenceSystem.lastAutosaveStatus = status
+    PersistenceSystem.lastAutosaveReason = reason
+    PersistenceSystem.lastAutosaveDirtyReason = dirtyReason
 
-    if success == true then
+    if status == "SAVED" then
         PersistenceSystem.autosaveCount = PersistenceSystem.autosaveCount + 1
-        PersistenceSystem.lastAutosaveStatus = "PASSED"
-        PersistenceSystem.lastAutosaveReason = "autosave_completed"
-        PersistenceSystem.lastAutosavePath = detail
-    else
-        PersistenceSystem.lastAutosaveStatus = "FAILED"
-        PersistenceSystem.lastAutosaveReason = detail or "autosave_failed"
+        PersistenceSystem.lastAutosavePath = filePath
     end
 
     if state ~= nil then
@@ -988,6 +987,7 @@ local function storeAutosaveResult(success, detail)
         state.Persistence.autosave.count = PersistenceSystem.autosaveCount
         state.Persistence.autosave.lastStatus = PersistenceSystem.lastAutosaveStatus
         state.Persistence.autosave.lastReason = PersistenceSystem.lastAutosaveReason
+        state.Persistence.autosave.lastDirtyReason = PersistenceSystem.lastAutosaveDirtyReason
         state.Persistence.autosave.lastPath = PersistenceSystem.lastAutosavePath
         state.Persistence.autosave.lastTime = PersistenceSystem.lastAutosaveTime
         state.Persistence.autosaveCount = PersistenceSystem.autosaveCount
@@ -995,9 +995,30 @@ local function storeAutosaveResult(success, detail)
         state.Persistence.lastAutosavePath = PersistenceSystem.lastAutosavePath
         state.Persistence.lastAutosaveStatus = PersistenceSystem.lastAutosaveStatus
         state.Persistence.lastAutosaveReason = PersistenceSystem.lastAutosaveReason
+        state.Persistence.lastAutosaveDirtyReason = PersistenceSystem.lastAutosaveDirtyReason
     end
 
     return true
+end
+
+local function logAutosaveDecision(status, dirtyReason, detail)
+    local message = "Periodic autosave decision: " .. tostring(status)
+
+    if status == "SAVED" or status == "FAILED" then
+        message = message .. " dirtyReason=" .. tostring(dirtyReason or "unspecified_dirty_reason")
+    end
+
+    if detail ~= nil then
+        message = message .. " detail=" .. tostring(detail)
+    end
+
+    message = message .. " productiveRestore=false"
+
+    if status == "FAILED" then
+        logWarn(message)
+    else
+        logInfo(message)
+    end
 end
 
 function PersistenceSystem.validateSnapshot(snapshot)
@@ -1381,6 +1402,7 @@ function PersistenceSystem.saveToFile(saveName, options)
     local name = saveName or getDefaultSaveName()
     local reason = options.reason or "manual_or_internal_file_save"
     local isAutosave = reason == "autosave" or options.autosave == true
+    local clearDirtyOnSuccess = options.clearDirtyOnSuccess ~= false
     local startedAt = getCurrentTime()
 
     local result = {
@@ -1395,7 +1417,9 @@ function PersistenceSystem.saveToFile(saveName, options)
         fileSystemAvailable = PersistenceSystem.isFilePersistenceAvailable(),
         writeAllowed = false,
         readVerified = false,
+        snapshotValidated = false,
         snapshotCreated = false,
+        dirtyCleared = false,
         fileSaveCount = 0
     }
 
@@ -1410,10 +1434,7 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
 
-        if isAutosave == true then
-            storeAutosaveResult(false, result.reason)
-            logWarn("Campaign state autosave blocked: file_system_unavailable")
-        else
+        if isAutosave ~= true then
             logWarn("Campaign state file save blocked: file_system_unavailable")
         end
 
@@ -1428,10 +1449,7 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
 
-        if isAutosave == true then
-            storeAutosaveResult(false, result.reason)
-            logWarn("Campaign state autosave failed: " .. tostring(result.reason))
-        else
+        if isAutosave ~= true then
             logWarn("Campaign state file save failed: " .. tostring(result.reason))
         end
 
@@ -1448,10 +1466,7 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
 
-        if isAutosave == true then
-            storeAutosaveResult(false, result.reason)
-            logWarn("Campaign state autosave failed: " .. tostring(result.reason))
-        else
+        if isAutosave ~= true then
             logWarn("Campaign state file save failed: " .. tostring(result.reason))
         end
 
@@ -1469,10 +1484,7 @@ function PersistenceSystem.saveToFile(saveName, options)
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
 
-        if isAutosave == true then
-            storeAutosaveResult(false, result.reason)
-            logWarn("Campaign state autosave failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
-        else
+        if isAutosave ~= true then
             logWarn("Campaign state file save failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
         end
 
@@ -1481,50 +1493,39 @@ function PersistenceSystem.saveToFile(saveName, options)
 
     result.writeAllowed = true
 
-    local readContent, readReason = readTextFile(filePath)
+    local verifiedSnapshot, verifiedPath, verificationReason = readSnapshotFromFile(name)
 
-    if readContent == nil then
-        result.status = "FAILED"
-        result.reason = readReason or "read_after_write_failed"
-        result.finishedAt = getCurrentTime()
-        storeFileSaveResult(result)
-
-        if isAutosave == true then
-            storeAutosaveResult(false, result.reason)
-            logWarn("Campaign state autosave verification failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
-        else
-            logWarn("Campaign state file save verification failed: " .. tostring(result.reason) .. " path=" .. tostring(filePath))
-        end
-
-        return false, result.reason
+    if verifiedPath ~= nil then
+        result.filePath = verifiedPath
     end
 
-    if string.find(readContent, "return", 1, true) == nil
-        or string.find(readContent, PersistenceSystem.saveFileMarker, 1, true) == nil then
-
+    if verifiedSnapshot == nil then
         result.status = "FAILED"
-        result.reason = "save_marker_or_return_missing"
+        result.reason = verificationReason or "read_after_write_validation_failed"
         result.finishedAt = getCurrentTime()
         storeFileSaveResult(result)
 
-        if isAutosave == true then
-            storeAutosaveResult(false, result.reason)
-            logWarn("Campaign state autosave verification failed: save_marker_or_return_missing path=" .. tostring(filePath))
-        else
-            logWarn("Campaign state file save verification failed: save_marker_or_return_missing path=" .. tostring(filePath))
+        if isAutosave ~= true then
+            logWarn(
+                "Campaign state file save verification failed: "
+                    .. tostring(result.reason)
+                    .. " path="
+                    .. tostring(result.filePath)
+            )
         end
 
         return false, result.reason
     end
 
     result.readVerified = true
+    result.snapshotValidated = true
     result.status = "PASSED"
-    result.reason = "snapshot_write_read_verified"
+    result.reason = "snapshot_write_read_validate_verified"
     result.finishedAt = getCurrentTime()
 
     PersistenceSystem.lastSaveName = name
     PersistenceSystem.lastFileSaveName = name
-    PersistenceSystem.lastFileSavePath = filePath
+    PersistenceSystem.lastFileSavePath = result.filePath
     PersistenceSystem.lastExport = copyValue(snapshot)
 
     local state = ensurePersistenceState()
@@ -1534,30 +1535,22 @@ function PersistenceSystem.saveToFile(saveName, options)
         state.Persistence.saveFileName = getDefaultSaveFileName(name)
         state.Persistence.lastSaveTime = getCurrentTime()
         state.Persistence.lastFileSaveTime = getCurrentTime()
-        state.Persistence.lastFileSavePath = filePath
+        state.Persistence.lastFileSavePath = result.filePath
         state.Persistence.fileSaveCount = (state.Persistence.fileSaveCount or 0) + 1
         result.fileSaveCount = state.Persistence.fileSaveCount
     end
 
-    clearDirty()
-    storeFileSaveResult(result)
-
-    if isAutosave == true then
-        storeAutosaveResult(true, filePath)
-        logInfo(
-            "Campaign state autosaved: path="
-                .. tostring(filePath)
-                .. " saveName="
-                .. tostring(name)
-                .. " productiveRestore=false"
-                .. " autosaveCount="
-                .. tostring(PersistenceSystem.autosaveCount)
-        )
-    else
-        logInfo("Campaign state file saved: path=" .. tostring(filePath) .. " saveName=" .. tostring(name))
+    if clearDirtyOnSuccess == true then
+        result.dirtyCleared = clearDirty()
     end
 
-    return true, filePath
+    storeFileSaveResult(result)
+
+    if isAutosave ~= true then
+        logInfo("Campaign state file saved: path=" .. tostring(result.filePath) .. " saveName=" .. tostring(name))
+    end
+
+    return true, result.filePath
 end
 
 function PersistenceSystem.validateFile(saveName, options)
@@ -1831,17 +1824,35 @@ end
 
 function PersistenceSystem.autosave()
     if PersistenceSystem.autosaveEnabled ~= true then
-        storeAutosaveResult(false, "autosave_disabled")
-        logWarn("Campaign state autosave skipped: autosave_disabled")
+        storeAutosaveResult("SKIPPED", "autosave_disabled", nil, nil)
+        logAutosaveDecision("SKIPPED", nil, "autosave_disabled")
         return false, "autosave_disabled"
     end
+
+    local state = ensurePersistenceState()
+
+    if state == nil then
+        storeAutosaveResult("FAILED", "state_unavailable", "state_unavailable", nil)
+        logAutosaveDecision("FAILED", "state_unavailable", "state_unavailable")
+        return false, "state_unavailable"
+    end
+
+    if state.Persistence.dirty ~= true then
+        storeAutosaveResult("SKIPPED", "state_unchanged", nil, nil)
+        logAutosaveDecision("SKIPPED", nil, "state_unchanged")
+        return true, "state_unchanged"
+    end
+
+    local capturedDirtyReason = state.Persistence.dirtyReason
+    local dirtyReason = capturedDirtyReason or "unspecified_dirty_reason"
+    local dirtyAt = state.Persistence.dirtyAt
 
     if PersistenceSystem.isFilePersistenceAvailable() ~= true then
         local sandboxResult = PersistenceSystem.runSandboxTest()
 
         if sandboxResult == nil or sandboxResult.fileSystemAvailable ~= true then
-            storeAutosaveResult(false, "file_system_unavailable")
-            logWarn("Campaign state autosave skipped: file_system_unavailable")
+            storeAutosaveResult("FAILED", "file_system_unavailable", dirtyReason, nil)
+            logAutosaveDecision("FAILED", dirtyReason, "file_system_unavailable")
             return false, "file_system_unavailable"
         end
     end
@@ -1850,14 +1861,48 @@ function PersistenceSystem.autosave()
         getDefaultSaveName(),
         {
             reason = "autosave",
-            autosave = true
+            autosave = true,
+            clearDirtyOnSuccess = false
         }
     )
 
     if success ~= true then
-        storeAutosaveResult(false, result or "autosave_failed")
-        return false, result
+        local failureReason = result or "autosave_failed"
+
+        storeAutosaveResult("FAILED", failureReason, dirtyReason, nil)
+        logAutosaveDecision("FAILED", dirtyReason, failureReason)
+        return false, failureReason
     end
+
+    local currentState = ensurePersistenceState()
+
+    if currentState == nil then
+        storeAutosaveResult("FAILED", "dirty_clear_state_unavailable", dirtyReason, result)
+        logAutosaveDecision("FAILED", dirtyReason, "dirty_clear_state_unavailable path=" .. tostring(result))
+        return false, "dirty_clear_state_unavailable"
+    end
+
+    local dirtyStateUnchanged = currentState.Persistence.dirty == true
+        and currentState.Persistence.dirtyReason == capturedDirtyReason
+        and currentState.Persistence.dirtyAt == dirtyAt
+
+    if dirtyStateUnchanged == true and clearDirty() ~= true then
+        storeAutosaveResult("FAILED", "dirty_clear_failed", dirtyReason, result)
+        logAutosaveDecision("FAILED", dirtyReason, "dirty_clear_failed path=" .. tostring(result))
+        return false, "dirty_clear_failed"
+    end
+
+    local dirtyCleared = dirtyStateUnchanged == true or currentState.Persistence.dirty ~= true
+    local decisionDetail = "path=" .. tostring(result) .. " dirtyCleared=" .. boolText(dirtyCleared)
+
+    if dirtyStateUnchanged ~= true and currentState.Persistence.dirty == true then
+        decisionDetail = decisionDetail
+            .. " retainedDirtyReason="
+            .. tostring(currentState.Persistence.dirtyReason or "unspecified_dirty_reason")
+    end
+
+    storeAutosaveResult("SAVED", "autosave_completed", dirtyReason, result)
+    logAutosaveDecision("SAVED", dirtyReason, decisionDetail)
 
     return true, result
 end
@@ -1892,8 +1937,18 @@ function PersistenceSystem.scheduleAutosave()
 
         if success ~= true then
             PersistenceSystem.lastError = "autosave_exception"
-            storeAutosaveResult(false, "autosave_exception:" .. tostring(result))
-            logError("Campaign state autosave exception: " .. tostring(result))
+
+            local state = getState()
+            local dirtyReason = "unspecified_dirty_reason"
+
+            if state ~= nil and state.Persistence ~= nil and state.Persistence.dirtyReason ~= nil then
+                dirtyReason = state.Persistence.dirtyReason
+            end
+
+            local failureReason = "autosave_exception:" .. tostring(result)
+
+            storeAutosaveResult("FAILED", failureReason, dirtyReason, nil)
+            logAutosaveDecision("FAILED", dirtyReason, failureReason)
         end
 
         return timer.getTime() + PersistenceSystem.autosaveIntervalSeconds
@@ -2085,6 +2140,7 @@ function PersistenceSystem.summary()
         autosaveIntervalSeconds = PersistenceSystem.autosaveIntervalSeconds,
         lastAutosaveStatus = PersistenceSystem.lastAutosaveStatus,
         lastAutosaveReason = PersistenceSystem.lastAutosaveReason,
+        lastAutosaveDirtyReason = PersistenceSystem.lastAutosaveDirtyReason,
         lastAutosavePath = PersistenceSystem.lastAutosavePath,
         lastAutosaveTime = PersistenceSystem.lastAutosaveTime,
         productiveRestoreEnabled = PersistenceSystem.productiveRestoreEnabled,
