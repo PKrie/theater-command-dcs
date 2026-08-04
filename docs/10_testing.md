@@ -75,7 +75,7 @@ Aktuell gilt:
 - kein automatischer produktiver Ownership-Wechsel ohne kontrollierten Testpfad.
 - keine echten MOOSE-, CTLD- oder Skynet-Aktionen ohne vorbereitete Templates/Zonen.
 - Persistence läuft als Hintergrundsystem, nicht als Spieler-F10-Workflow.
-- produktiver Restore bleibt deaktiviert, bis Dirty-/Change-Hooks stabil getestet sind.
+- produktiver Restore bleibt deaktiviert, bis die verbleibenden Regressionstests abgeschlossen sind und eine eigene Restore-Aufgabe freigegeben wurde.
 
 ---
 
@@ -83,7 +83,7 @@ Aktuell gilt:
 
 Stand:
 
-- 2026-07-06
+- 2026-08-04
 
 Aktueller Gesamtstatus:
 
@@ -95,7 +95,9 @@ Aktueller Gesamtstatus:
 - Zone Ownership state-only update bestanden.
 - linked Airbase Ownership state-only sync bestanden.
 - Persistence File Save/Read/Validate/Import technisch bestanden.
-- Persistence Background Autosave bestanden.
+- PersistenceSystem `v0.2.6` normal aus der gespeicherten DEV-Mission geladen.
+- echter geplanter Dirty-Autosave bestanden.
+- echte geplante unveränderte Autosave-Ticks wurden ohne Dateischreibzugriff übersprungen.
 - produktiver Auto-Restore bewusst noch deaktiviert.
 
 Bestätigte Systeme:
@@ -105,7 +107,7 @@ Bestätigte Systeme:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.5` | bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Start, `SAVED` und `SKIPPED` bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
 | MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
@@ -142,7 +144,9 @@ Aktuelle bestätigte Fähigkeiten:
 - F10Menu kann Capture Ready Zone 1 bewusst state-only anwenden.
 - AICapManager erzeugt CAP-State.
 - PersistenceSystem schreibt, liest, validiert und importiert Save-Dateien technisch.
-- PersistenceSystem speichert Campaign-State automatisch im Hintergrund.
+- PersistenceSystem speichert Dirty-Campaign-State automatisch im Hintergrund.
+- PersistenceSystem überspringt unveränderte periodische Ticks ohne die Save-Datei zu schreiben.
+- PersistenceSystem behält produktiven Startup-Restore bewusst deaktiviert.
 - Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
 
 ---
@@ -158,7 +162,7 @@ Aktueller Inhalt:
 - Map: Syria
 - Koalitionspreset: Modern
 - Blue Start: Akrotiri / Zypern
-- erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
+- erster blauer Client-Slot: `CLIENT_BLUE_FA18C_AKROTIRI_01`, F/A-18C Lot 20 auf Akrotiri
 - sichere Einzeldatei-Ladung per `DO SCRIPT FILE`
 - Vendor-Frameworks geladen
 - Theater-Command-Source-Dateien geladen
@@ -169,7 +173,18 @@ Aktueller Inhalt:
 - Capture-/Pressure-Status aktiv
 - Capture Ready Zones sichtbar
 - Capture Ready Zone 1 Apply testbar
-- Persistence Background Autosave aktiv
+- PersistenceSystem `v0.2.6` über `TC_LOAD_TC_PERSISTENCE_SYSTEM` eingebettet
+- Persistence Background Autosave dirty-aware aktiv
+
+Bestätigte Persistence-Einbettung:
+
+- Trigger-Typ: `once`
+- Bedingung: `time-after 15 seconds`
+- Resource Key: `ResKey_advancedFile_56`
+- eingebetteter Dateiname: `tc_persistence_system_v0_2_6.lua`
+- eingebettete Bytes entsprechen exakt `src/campaign/tc_persistence_system.lua`
+- gespeicherte `.miz` enthält den neuen Key und die neue Ressource
+- der alte Verweis `ResKey_Action_55` ist im gespeicherten Mission-Trigger nicht mehr vorhanden
 
 Noch nicht produktiv enthalten:
 
@@ -422,7 +437,7 @@ Aktueller getesteter Stand:
     [TC] [AirbaseScanner] Loaded src/world/tc_airbase_scanner.lua v0.2.2
     [TC] [ZoneFactory] Loaded src/world/tc_zone_factory.lua v0.2.0
     [TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.2
-    [TC] [PersistenceSystem] Loaded src/campaign/tc_persistence_system.lua v0.2.5
+    [TC] [PersistenceSystem] Loaded src/campaign/tc_persistence_system.lua v0.2.6
     [TC] [LogisticsDelivery] Loaded src/logistics/tc_logistics_delivery.lua v0.2.0
     [TC] [FobSystem] Loaded src/logistics/tc_fob_system.lua v0.2.0
     [TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.3
@@ -697,12 +712,12 @@ Erwartung:
 
 PersistenceSystem Start:
 
-    [TC] [PersistenceSystem] Loaded src/campaign/tc_persistence_system.lua v0.2.5
+    [TC] [PersistenceSystem] Loaded src/campaign/tc_persistence_system.lua v0.2.6
     [TC] [PersistenceSystem] Persistence system started
 
 Sandbox-Verfügbarkeit:
 
-    [TC] [PersistenceSystem] Persistence sandbox availability: os=false, io=true, lfs=true, require=false, load=true, loadstring=true, loadfile=true, lfsFromRequire=false
+    [TC] [PersistenceSystem] Persistence sandbox availability: os=true, io=true, lfs=true, require=false, load=true, loadstring=true, loadfile=true, lfsFromRequire=false
 
 Sandbox-Test:
 
@@ -716,9 +731,11 @@ Initialisierung:
 
     [TC] [PersistenceSystem] Persistence system initialized: sandboxStatus=PASSED, fileSystemAvailable=true, autosaveScheduled=true, autosaveInterval=120s, productiveRestore=false
 
-Autosave:
+Periodische Autosave-Entscheidungen:
 
-    [TC] [PersistenceSystem] Campaign state autosaved:
+    [TC] [PersistenceSystem] Periodic autosave decision: SAVED dirtyReason=<reason> detail=<detail> productiveRestore=false
+    [TC] [PersistenceSystem] Periodic autosave decision: SKIPPED detail=state_unchanged productiveRestore=false
+    [TC] [PersistenceSystem] Periodic autosave decision: FAILED dirtyReason=<reason> detail=<failure> productiveRestore=false
 
 Erwartete Werte:
 
@@ -727,16 +744,20 @@ Erwartete Werte:
 - `productiveRestore=false`
 - erster Autosave nach etwa 20 Sekunden
 - danach Autosave alle 120 Sekunden
-- letzter bestätigter Autosave-Test: `autosaveCount=1`
+- Dirty-State erzeugt `SAVED` und erhöht `autosaveCount`
+- unveränderter State erzeugt `SKIPPED`, schreibt keine Save-Datei und erhöht `autosaveCount` nicht
+- ein fehlgeschlagener Save erzeugt `FAILED` und behält `dirty`, `dirtyReason` und `dirtyAt`
+- bestätigter Embedded-Teststand: `autosaveCount=1` nach einem `SAVED` und drei folgenden `SKIPPED`-Ticks
 
 Wichtig:
 
-Diese alten Testmarker sollen bei `v0.2.5` nicht mehr erscheinen:
+Diese historischen Testmarker sollen bei `v0.2.6` nicht erscheinen:
 
     Persistence file save test scheduled
     Persistence file validation test scheduled
     Persistence file load test scheduled
     Campaign state file load test passed
+    Campaign state autosaved:
 
 Wenn diese Marker wieder erscheinen:
 
@@ -755,14 +776,23 @@ Lokale Datei:
 
     ...\DCS World\Scripts\MissionScripting.lua
 
-Erwarteter Zustand:
+Anforderung des Theater-Command-PersistenceSystems:
 
 - `io` entsperrt
 - `lfs` entsperrt
-- `os` gesperrt
-- `require` gesperrt
+- keine direkte Abhängigkeit von `os`
+- keine direkte Abhängigkeit von `require`
 
-Erwarteter Logstatus:
+Aktueller Zustand der DCS-SMS-Entwicklungsumgebung:
+
+- `os=true`
+- `io=true`
+- `lfs=true`
+- `require=false`
+
+Die installierten DCS-SMS-Bridge-Kommandos `exec`, `status` und `tail-log` benötigen `os`, `io` und `lfs` unsanitized in `MissionScripting.lua`. `os=true` stammt aus der Installation dieser Bridge und nicht aus dem PersistenceSystem-`v0.2.6`-Hotload. Solange die DCS-SMS-Runtime-Bridge verwendet wird, darf `os` nicht wieder gesperrt werden. Eine erneute Sanitization von `os` ist erst möglich, wenn die Runtime-Bridge entfernt oder nicht mehr benötigt wird.
+
+Historischer Zustand vor der DCS-SMS-Installation:
 
 - `os=false`
 - `io=true`
@@ -783,6 +813,10 @@ Wahrscheinliche Ursache:
 - Reparaturinstallation
 - geänderte DCS-Installation
 - falscher DCS-Installationspfad
+
+Warnung:
+
+- DCS-Updates können `MissionScripting.lua` überschreiben.
 
 ---
 
@@ -910,98 +944,132 @@ Erwartete Marker:
 
 ---
 
-## 24. End-to-End-Test: Persistence Background Autosave
+## 24. End-to-End-Test: Embedded PersistenceSystem v0.2.6 Scheduler
+
+Testdatum:
+
+- 2026-08-04
 
 Ziel:
 
-Prüfen, ob Persistence ohne Spieler-F10-Aktion automatisch speichert.
+Prüfen, ob das in die gespeicherte DEV-Mission eingebettete PersistenceSystem `v0.2.6` nach einem normalen Missionsstart selbständig einen Dirty-State speichert und folgende unveränderte Scheduler-Ticks ohne Dateischreibzugriff überspringt.
 
-Ablauf:
+Bestätigte Mission und Einbettung:
 
-1. DCS mit frischem Log starten.
-2. DEV-Mission starten.
-3. keine Persistence-F10-Aktion ausführen.
-4. Mission mindestens 30 Sekunden laufen lassen.
-5. DCS beenden.
-6. Log prüfen.
+- Mission: `Operation_Levant_Reclamation_DEV.miz`
+- Trigger: `TC_LOAD_TC_PERSISTENCE_SYSTEM`
+- Trigger-Typ: `once`
+- Bedingung: `time-after 15 seconds`
+- finale Ressource: `ResKey_advancedFile_56`
+- eingebetteter Dateiname: `tc_persistence_system_v0_2_6.lua`
+- eingebettete Bytes entsprachen exakt `src/campaign/tc_persistence_system.lua`
+- die gespeicherte `.miz` enthielt den neuen Key und die neue Ressource
+- der alte Verweis `ResKey_Action_55` war im gespeicherten Mission-Trigger nicht mehr vorhanden
 
-Bestanden, wenn:
+Normaler Missionsstart:
 
-- PersistenceSystem `v0.2.5` geladen wurde.
-- Sandbox-Test bestanden ist.
-- Autosave geplant wurde.
-- Autosave automatisch ausgeführt wurde.
-- `productiveRestore=false` bestätigt ist.
-- kein alter Save-/Validate-/Load-Testtimer erscheint.
-- kein Lua-Fehler auftritt.
+Die Mission wurde über den normalen Mission-Editor- und Simulator-Workflow gestartet. Das Spielerflugzeug ist als `CLIENT`, nicht als `PLAYER`, konfiguriert. Der manuelle Standardablauf lautet deshalb:
 
-Erwartete Marker:
+1. Mission im Mission Editor starten.
+2. In der Client-Slotauswahl `CLIENT_BLUE_FA18C_AKROTIRI_01` auswählen.
+3. Slot bestätigen.
+4. Im Simulator-Briefing `Fly` drücken.
 
-    Loaded src/campaign/tc_persistence_system.lua v0.2.5
-    Persistence sandbox availability: os=false, io=true, lfs=true
-    Persistence sandbox file test passed
+Dieser zusätzliche Client-Slot-Schritt muss bei künftigen automatisierten Mission-Editor-Tests berücksichtigt werden.
+
+Bestätigte Runtime-Initialisierung:
+
+- `TC.Campaign.PersistenceSystem.version == "0.2.6"`
+- `loaded == true`
+- `started == true`
+- `autosaveEnabled == true`
+- `autosaveScheduled == true`
+- `autosaveRunning == true`
+- `productiveRestore == false`
+
+Bestätigter Scheduler-Marker:
+
     Persistence autosave scheduled: initialDelay=20s interval=120s productiveRestore=false
-    Persistence system initialized: sandboxStatus=PASSED, fileSystemAvailable=true, autosaveScheduled=true, autosaveInterval=120s, productiveRestore=false
-    Campaign state autosaved
 
-Nicht erwartete Marker:
+Erster realer geplanter Dirty-Save:
 
-    Persistence file save test scheduled
-    Persistence file validation test scheduled
-    Persistence file load test scheduled
-    Campaign state file load test passed
+- Der erste vollständig initialisierte Campaign-State war bereits dirty.
+- Dirty-Grund: `ai_cap_needs_evaluated`
+- Dieser reale Campaign-System-Grund wurde weder ersetzt noch vor dem Scheduler-Tick gelöscht.
+- `PersistenceSystem.autosave()` wurde nicht manuell aufgerufen.
+- es war keine Persistence-F10- oder andere Spieleraktion erforderlich
+- Der Scheduler protokollierte selbständig:
+
+      Periodic autosave decision: SAVED dirtyReason=ai_cap_needs_evaluated
+
+- `autosaveCount` wechselte von `0` auf `1`.
+- `dirty` wechselte von `true` auf `false`.
+- `dirtyReason` und `dirtyAt` wurden erst nach erfolgreicher Schreib-, Read-back- und Validierungsprüfung gelöscht.
+- `lastAutosaveStatus == "SAVED"`
+- `lastAutosaveReason == "autosave_completed"`
+- `lastAutosaveDirtyReason == "ai_cap_needs_evaluated"`
+- die Campaign-Save-Datei wurde erfolgreich aktualisiert
+
+Erster und weitere reale unveränderte Scheduler-Ticks:
+
+- Der erste folgende unveränderte 120-Sekunden-Tick protokollierte:
+
+      Periodic autosave decision: SKIPPED detail=state_unchanged productiveRestore=false
+
+- Zwei weitere unveränderte geplante Ticks erzeugten dieselbe `SKIPPED`-Entscheidung.
+- `lastAutosaveStatus == "SKIPPED"`
+- `lastAutosaveReason == "state_unchanged"`
+- `dirty == false`
+- `dirtyReason == nil`
+- `dirtyAt == nil`
+- `autosaveCount` blieb exakt `1`
+- die Campaign-Save-Datei blieb über den `SKIPPED`-Tick unverändert:
+  - gleiche Dateigröße
+  - gleiche Änderungszeit
+  - gleiche SHA-256-Prüfsumme
+
+Fehlerprüfung:
+
+- kein neuer `SCRIPTING ERROR`
+- kein neuer `Mission script error`
+- kein neuer `stack traceback`
+- kein neuer `[TC][ERROR]`
+- kein neuer `[TC][WARN]`
+
+Gesamtbewertung:
+
+- Embedded PersistenceSystem `v0.2.6` Normal-Load: **BESTANDEN**
+- realer geplanter Dirty-Save: **BESTANDEN**
+- realer geplanter unveränderter Skip: **BESTANDEN**
+- Save-Datei-Nichtschreiben bei `SKIPPED`: **BESTANDEN**
+- die frühere Hotload-only-Einschränkung für den Scheduler ist damit behoben
+- der künstliche Testgrund `embedded_v0_2_6_scheduled_autosave_test` war nicht erforderlich, weil bereits ein gültiger realer Dirty-Grund vorlag
+
+Historischer Kontext:
+
+- Der Background-Autosave von `v0.2.5` war zuvor grundsätzlich bestanden.
+- Die `SAVED`-, `SKIPPED`-, `FAILED`- und Retry-Pfade von `v0.2.6` waren zuvor per kontrolliertem Hotload geprüft worden.
+- Der Test vom 2026-08-04 bestätigt nun zusätzlich den normalen Embedded-Start und die echten periodischen `v0.2.6`-Scheduler-Ticks.
 
 ---
 
-## 25. Nächster geplanter Test: Capture Dirty-/Persistence-Hook
+## 25. Verbleibende Embedded-v0.2.6-Regressionstests
 
-Nächste Datei:
+Noch ausstehend:
 
-- `src/campaign/tc_capture_system.lua`
+- Mission Completion Regression mit eingebettetem PersistenceSystem `v0.2.6`
+- Mission Failure Regression mit eingebettetem PersistenceSystem `v0.2.6`
+- Capture Ready Apply Regression mit eingebettetem PersistenceSystem `v0.2.6`
+- allgemeine Campaign-System-Regression nach diesen Aktionen
+- produktiver Startup-Restore bleibt absichtlich deaktiviert und ungetestet
 
-Geplante Version:
+Testgrundsätze:
 
-- `v0.2.3`
-
-Ziel:
-
-- CaptureSystem soll bei erfolgreichem Capture Ready Apply den Kampagnenzustand als persistenzrelevant markieren.
-- Persistence Autosave soll danach den geänderten State sichern.
-- Kein Persistence-F10-Menü.
-- Kein produktiver Restore.
-- Keine echten MOOSE-/CTLD-/Skynet-Aktionen.
-
-Geplanter Ablauf:
-
-1. DCS mit frischem Log starten.
-2. DEV-Mission starten.
-3. Mission über F10 aktivieren.
-4. Mission über F10 abschließen.
-5. Capture Ready Zone 1 über F10 anwenden.
-6. CaptureSystem loggt persistenzrelevante State-Änderung.
-7. Persistence autosaved automatisch.
-8. Log bestätigt Dirty-/Autosave-Zusammenhang.
-
-Geplante Erfolgsmarker:
-
-    [TC] [CaptureSystem] Zone captured:
-    [TC] [CaptureSystem] Base captured:
-    [TC] [CaptureSystem] Persistence dirty mark:
-    [TC] [PersistenceSystem] Campaign state autosaved:
-
-Akzeptanzkriterien:
-
-- CaptureSystem lädt als neue Version.
-- Mission Completion Pipeline bleibt stabil.
-- Mission Failure Pipeline bleibt stabil.
-- Capture Ready Apply bleibt stabil.
-- Dirty-/Persistence-Hook wird geloggt.
-- Autosave läuft weiterhin automatisch.
-- kein `SCRIPTING ERROR`
-- kein `Mission script error`
-- kein `stack traceback`
-- kein `[TC][ERROR]`
-- keine echten Framework-Aktionen
+- vorhandene reale Dirty-Gründe nicht ersetzen oder vorzeitig löschen
+- keinen manuellen Autosave verwenden, wenn Scheduler-Verhalten geprüft wird
+- keine Persistence-F10-Steuerung ergänzen
+- keine echten MOOSE-, CTLD- oder Skynet-Aktionen auslösen
+- nach jedem Test neue Logzeilen und den Save-Dateistand prüfen
 
 ---
 
@@ -1088,11 +1156,12 @@ Für neue Tests kann diese Struktur verwendet werden:
 
 Beispiel:
 
-    Datum: 2026-07-06
+    Datum: 2026-08-04
+    Mission: Operation_Levant_Reclamation_DEV.miz
     getestete Datei: src/campaign/tc_persistence_system.lua
-    erwartete Version: v0.2.5
-    tatsächliche Version im Log: v0.2.5
-    Testziel: Background Autosave ohne F10-Spieleraktion prüfen
+    erwartete Version: v0.2.6
+    tatsächliche Version im Log: v0.2.6
+    Testziel: Embedded-Scheduler für Dirty-Save und unveränderten Skip prüfen
     Ergebnis: bestanden
 
 ---
@@ -1174,17 +1243,24 @@ Beispiel:
 
 ### PersistenceSystem
 
+- version: `v0.2.6`
 - fileSystemAvailable: `true`
 - io: `true`
 - lfs: `true`
-- os: `false`
+- os: `true`
 - require: `false`
 - load: `true`
 - loadstring: `true`
 - loadfile: `true`
+- autosaveEnabled: `true`
 - autosaveScheduled: `true`
+- autosaveRunning: `true`
+- autosaveInitialDelay: `20s`
 - autosaveInterval: `120s`
-- letzter bestätigter autosaveCount: `1`
+- letzter bestätigter lastAutosaveStatus: `SKIPPED`
+- letzter bestätigter lastAutosaveReason: `state_unchanged`
+- letzter bestätigter autosaveCount: `1` nach einem `SAVED` und drei `SKIPPED`-Ticks
+- letzter bestätigter dirty-State: `false`
 - productiveRestore: `false`
 
 ---
@@ -1219,7 +1295,7 @@ Aktuell bewusst state-only:
 
 ---
 
-## 32. Abschlussstand 2026-07-06
+## 32. Abschlussstand 2026-08-04
 
 Bestanden:
 
@@ -1239,19 +1315,23 @@ Bestanden:
 - Persistence File Save
 - Persistence File Validation
 - Persistence Controlled Import
-- Persistence Background Autosave
+- PersistenceSystem `v0.2.6` als gespeicherte `.miz`-Ressource verifiziert
+- PersistenceSystem `v0.2.6` normal aus Mission Editor und Simulator gestartet
+- echter geplanter Dirty-Autosave mit `ai_cap_needs_evaluated`
+- erster und zwei weitere unveränderte geplante `SKIPPED`-Ticks
+- Save-Datei bei `SKIPPED` anhand Größe, Änderungszeit und SHA-256 unverändert
+- keine neuen Persistence-bezogenen Fehler oder Warnungen
 
 Aktuelle wichtigste offene Testaufgabe:
 
-- CaptureSystem Dirty-/Persistence-Hook testen
+- Mission Completion Regression mit eingebettetem PersistenceSystem `v0.2.6`
+- Mission Failure Regression mit eingebettetem PersistenceSystem `v0.2.6`
+- Capture Ready Apply Regression mit eingebettetem PersistenceSystem `v0.2.6`
+- allgemeine Campaign-System-Regression nach diesen Aktionen
 
-Nächste Datei:
+Bewusste Grenze:
 
-- `src/campaign/tc_capture_system.lua`
-
-Nächste geplante Version:
-
-- `v0.2.3`
+- produktiver Startup-Restore bleibt deaktiviert und ungetestet
 
 ---
 
@@ -1274,28 +1354,24 @@ Besonders prüfen:
 
 Danach nicht aus Erinnerung arbeiten.
 
-Nächster technischer Startpunkt:
+Nächster Testschwerpunkt:
 
-- `src/campaign/tc_capture_system.lua`
-
-Konkretes Ziel:
-
-- `CaptureSystem v0.2.3`
-- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
-- Background Autosave soll geänderten State sichern
-- kein Persistence-F10-Menü
-- kein produktiver Restore
-- keine echten MOOSE-/CTLD-/Skynet-Aktionen
+- bestehende Mission Completion Pipeline mit eingebettetem PersistenceSystem `v0.2.6` regressionsprüfen
+- bestehende Mission Failure Pipeline mit eingebettetem PersistenceSystem `v0.2.6` regressionsprüfen
+- Capture Ready Apply mit eingebettetem PersistenceSystem `v0.2.6` regressionsprüfen
+- anschließend allgemeinen Campaign-State und neue Logzeilen prüfen
+- produktiven Restore nicht testen oder aktivieren
+- keine echten MOOSE-, CTLD- oder Skynet-Aktionen auslösen
 
 Erwarteter Test:
 
 1. Mission starten.
-2. Mission über F10 aktivieren.
-3. Mission über F10 abschließen.
-4. Capture Ready Zone 1 über F10 anwenden.
-5. CaptureSystem markiert State als persistenzrelevant.
-6. Persistence autosaved automatisch.
-7. DCS-Log bestätigt Dirty-/Autosave-Zusammenhang.
+2. `CLIENT_BLUE_FA18C_AKROTIRI_01` auswählen und bestätigen.
+3. Im Simulator-Briefing `Fly` drücken.
+4. Mission Completion Regression durchführen.
+5. Mission Failure Regression in einem sauberen Testlauf durchführen.
+6. Capture Ready Apply Regression durchführen.
+7. Campaign-State, Persistence-State, Save-Datei und ausschließlich neue Logzeilen auswerten.
 
 ---
 
@@ -1312,4 +1388,4 @@ Aktueller Leitsatz:
 
 Der nächste Testschritt ist:
 
-- CaptureSystem an Persistence anbinden, ohne produktiven Restore und ohne echte Framework-Aktionen.
+- Embedded-`v0.2.6`-Regressionen für Mission Completion, Mission Failure und Capture Ready Apply durchführen, ohne produktiven Restore und ohne echte Framework-Aktionen.
