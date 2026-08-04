@@ -50,7 +50,9 @@ Gespeichert werden sollen unter anderem:
 Aktueller Stand:
 
 - technische Dateipersistenz ist bestanden
-- Background-Autosave ist bestanden
+- PersistenceSystem `v0.2.6` ist implementiert
+- periodischer Background-Autosave ist dirty-aware implementiert
+- Dirty-Save, unveränderter Skip, kontrollierter Schreibfehler und erfolgreicher Retry sind per DCS-SMS-Hotload getestet
 - produktiver automatischer Restore beim Missionsstart ist bewusst noch deaktiviert
 
 Persistence ist kein Spieler-F10-Feature.
@@ -65,7 +67,7 @@ Persistence läuft im Hintergrund als Teil des Kampagnensystems.
 
 Stand:
 
-- 2026-07-06
+- 2026-08-04
 
 Aktive Datei:
 
@@ -73,7 +75,7 @@ Aktive Datei:
 
 Aktuelle getestete Version:
 
-- `v0.2.5`
+- `v0.2.6`
 
 Status:
 
@@ -83,7 +85,7 @@ Architekturrolle:
 
 - internes Hintergrundsystem
 - kein Spieler-F10-Menü
-- automatischer Autosave im Hintergrund
+- automatischer, dirty-aware Autosave im Hintergrund
 - Save/Validate/Load-Funktionen intern vorhanden
 - produktiver Restore noch deaktiviert
 
@@ -104,6 +106,12 @@ Aktuell bestätigt:
 - Save-Datei kann kontrolliert in `TC.State` importiert werden.
 - Test-Timer-Kaskade wurde entfernt.
 - Background-Autosave wurde aktiviert.
+- Periodischer Autosave speichert nur bei `dirty=true`.
+- Unveränderte periodische Ticks werden ohne Dateischreibvorgang übersprungen.
+- Jeder periodische Autosave-Entscheid wird als `SAVED`, `SKIPPED` oder `FAILED` geloggt.
+- `SAVED` und `FAILED` enthalten den zugehörigen Dirty Reason.
+- Vor dem Löschen des Dirty-State wird die Datei geschrieben, zurückgelesen, kompiliert, evaluiert und validiert.
+- Fehlgeschlagene Schreib- oder Verifikationspfade behalten Dirty-State und Dirty Reason bei.
 - Autosave läuft ohne Spieleraktion.
 - `productiveRestore=false`
 
@@ -113,7 +121,8 @@ Bewertung:
 - Der Kampagnenzustand kann als Lua-Return-Datei gespeichert werden.
 - Der Kampagnenzustand kann technisch wieder importiert werden.
 - Produktiver Restore wird bewusst erst später freigeschaltet.
-- Nächster Schritt ist die Anbindung echter State-Änderungen an Persistence, beginnend mit CaptureSystem.
+- Die v0.2.6-Autosave-Entscheidungen sind kontrolliert per Hotload getestet.
+- Ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` und realer 20-/120-Sekunden-Planung ist noch ausstehend.
 
 ---
 
@@ -125,21 +134,28 @@ Lokale Datei:
 
     ...\DCS World\Scripts\MissionScripting.lua
 
-Für Theater Command DCS aktuell notwendige lokale Freigabe:
+Anforderungen des Theater Command PersistenceSystems:
 
-- `io` entsperrt
-- `lfs` entsperrt
-- `os` weiterhin gesperrt
-- `require` weiterhin gesperrt
+- `io` muss für Dateipersistenz entsperrt sein.
+- `lfs` muss für Dateipersistenz entsperrt sein.
+- PersistenceSystem benötigt `os` nicht direkt.
+- PersistenceSystem benötigt `require` nicht direkt.
 
-Bewusste Entscheidung:
+Zusätzliche Anforderungen der aktuell installierten DCS-SMS-Runtime-Bridge:
 
-- `io` wird benötigt, um Save-Dateien zu schreiben und zu lesen.
-- `lfs` wird benötigt, um den Saved-Games-Schreibpfad zu finden und den Projektordner anzulegen.
-- `os` bleibt gesperrt.
-- `require` bleibt gesperrt.
+- Die Bridge-Befehle `exec`, `status` und `tail-log` benötigen `os`, `io` und `lfs` unsanitized in `MissionScripting.lua`.
+- Solange diese DCS-SMS-Bridge-Funktionalität verwendet wird, dürfen `os`, `io` und `lfs` nicht erneut sanitisiert werden.
 
-Bestätigter Sandbox-Status im DCS-Log:
+Aktuelle tatsächliche Entwicklungsumgebung:
+
+- `os=true`
+- `io=true`
+- `lfs=true`
+- `require=false`
+
+`os=true` wurde durch die Installation der DCS-SMS-Bridge eingeführt, nicht durch den kontrollierten `v0.2.6`-Hotload. `os` könnte erst dann wieder sanitisiert werden, wenn die DCS-SMS-Runtime-Bridge entfernt wurde oder nicht mehr benötigt wird.
+
+Historischer Pre-DCS-SMS-Status der eingebetteten `v0.2.5`:
 
 - `os=false`
 - `io=true`
@@ -160,6 +176,8 @@ Wenn Persistence plötzlich wieder blockiert wird, zuerst prüfen:
 - ist `io` wieder gesperrt?
 - ist `lfs` wieder gesperrt?
 - wurde `MissionScripting.lua` durch ein DCS-Update zurückgesetzt?
+
+Wenn DCS-SMS `exec`, `status` oder `tail-log` nicht mehr funktionieren, zusätzlich prüfen, ob `os`, `io` oder `lfs` durch ein DCS-Update erneut sanitisiert wurden.
 
 Typische Problem-Marker:
 
@@ -183,6 +201,10 @@ Bestätigte Sandbox-Testdatei:
 Bestätigte Campaign-Save-Datei:
 
     C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua
+
+Aktuell verwendeter Saved-Games-Pfad:
+
+    Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua
 
 Aktuelles Save-Dateiformat:
 
@@ -212,7 +234,7 @@ Ziel:
 - bestehende In-Memory-Snapshot-Funktionalität erhalten
 - kein produktiver Save/Load-Betrieb
 
-Erster Teststatus:
+Historischer Pre-DCS-SMS-Erstteststatus:
 
 - `os=false`
 - `io=false`
@@ -413,7 +435,44 @@ Bewertung:
 - Save/Validate/Load-Funktionen bleiben intern vorhanden.
 - Autosave ist aktiv.
 - Produktiver Restore beim Missionsstart ist bewusst deaktiviert.
-- Nächster sinnvoller Schritt ist ein Dirty-/Autosave-Hook in `tc_capture_system.lua`.
+- Der damalige nächste Schritt war die später umgesetzte dirty-aware Autosave-Auswertung.
+
+---
+
+### 5.7 PersistenceSystem v0.2.6
+
+Ziel:
+
+- periodischen Autosave mit dem vorhandenen `TC.State.Persistence`-Dirty-State verbinden
+- unveränderte Ticks ohne Schreibzugriff überspringen
+- Dirty-State erst nach vollständig verifiziertem Save löschen
+- Fehler- und Retry-Pfade nachvollziehbar halten
+- produktiven Restore weiterhin deaktiviert lassen
+
+Implementierter Stand:
+
+- `TC.State.Persistence.dirty`, `dirtyReason` und `dirtyAt` sind die einzige Dirty-State-Quelle.
+- `dirty=false` führt zu `SKIPPED`, ohne die Save-Datei zu schreiben.
+- `dirty=true` führt einen Save-Versuch aus.
+- Die Save-Datei wird geschrieben, zurückgelesen, kompiliert, evaluiert und strukturell validiert.
+- Erst nach dieser Verifikation darf der zu Beginn erfasste Dirty-State gelöscht werden.
+- Schreib-, Read-back-, Compile-, Evaluate- oder Validation-Fehler führen zu `FAILED` und behalten Dirty-State sowie Dirty Reason bei.
+- Ein späterer Retry kann denselben Dirty-State erfolgreich als `SAVED` sichern.
+- Ändern sich `dirtyReason` oder `dirtyAt` während des Saves, wird der neuere Dirty-State nicht gelöscht.
+- Manuelle `saveToFile()`-Aufrufe löschen Dirty nach verifiziertem Erfolg weiterhin standardmäßig.
+- Periodischer Autosave ruft `saveToFile()` mit aufgeschobenem Dirty-Clear auf und entscheidet erst nach der Verifikation über das Löschen.
+- Der Initial-Delay bleibt `20s`, das Intervall bleibt `120s`.
+- Es existieren keine Persistence-F10-Controls; für diese Entwicklungsstufe sind auch keine vorgesehen.
+- Autosave erfordert keine Spielerinteraktion.
+- Produktiver Restore bleibt deaktiviert.
+
+Bestätigte DCS-SMS-Hotload-Pfade:
+
+- Dirty Save: `SAVED`; Dirty wurde nach erfolgreicher Verifikation gelöscht.
+- Zweiter unveränderter Aufruf: `SKIPPED`; Autosave Count blieb unverändert.
+- Kontrolliert injizierter Schreibfehler: `FAILED`; Dirty und Dirty Reason blieben erhalten, die bestehende Save-Datei blieb unverändert.
+- Retry nach Wiederherstellung von `io.open`: `SAVED`; Dirty wurde erst nach erfolgreicher Verifikation gelöscht.
+- Während dieser Tests traten keine neuen `SCRIPTING ERROR`, `Mission script error` oder `stack traceback` auf.
 
 ---
 
@@ -421,7 +480,7 @@ Bewertung:
 
 Stand:
 
-- 2026-07-06
+- 2026-08-04
 
 Bestätigte Systeme:
 
@@ -430,7 +489,7 @@ Bestätigte Systeme:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.5` | bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | implementiert, Hotload-Smoke bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
 | MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
@@ -452,14 +511,16 @@ Aktuelle bestätigte Werte:
 - F10 Commands: `33`
 - CAP Requests: `12`
 - Persistence fileSystemAvailable: `true`
-- Persistence autosaveScheduled: `true`
-- letzter bestätigter Persistence autosaveCount: `1`
+- eingebettete `v0.2.5`-Runtime während der Hotload-Tests: `autosaveScheduled=true`
+- hot-geloadete `v0.2.6`: kein eigener Scheduler gestartet
+- `v0.2.6` Autosave Count nach Dirty Save: `1`
+- unveränderter Skip und injizierter Fehler erhöhten den `v0.2.6` Autosave Count nicht
 
 Bewertung:
 
-- Die State-Grundlage ist stabil genug, um Persistenz-Hooks an echte State-Änderungen anzubinden.
-- Nächster Schritt ist nicht weiterer allgemeiner Persistence-Testcode.
-- Nächster Schritt ist der Dirty-/Autosave-Hook im CaptureSystem.
+- Die vorhandene State- und Dirty-Grundlage wird von `v0.2.6` verwendet.
+- Die synchronen Autosave-Entscheidungspfade sind in einer laufenden DEV-Mission bestätigt.
+- Als nächstes muss `v0.2.6` in die Mission-Editor-`DO SCRIPT FILE`-Kopie eingebettet und durch einen frischen vollständigen Missionsstart getestet werden.
 
 ---
 
@@ -520,7 +581,7 @@ Aktuelle relevante State-Bereiche:
 - `State.IADS`
 - `State.Persistence`
 
-PersistenceSystem `v0.2.5` speichert aktuell diese zehn Snapshot-Sektionen.
+PersistenceSystem `v0.2.6` speichert aktuell diese zehn Snapshot-Sektionen.
 
 Bestätigt:
 
@@ -559,11 +620,11 @@ Bestätigt:
 - Save-Datei enthält zehn Snapshot-Sektionen.
 - Save-Datei kann gelesen und validiert werden.
 - Save-Datei kann kontrolliert importiert werden.
-- Autosave schreibt den State im Hintergrund.
+- Dirty-aware Autosave schreibt geänderten State im Hintergrund und überspringt unveränderte Ticks.
 
-Noch nicht vorhanden:
+Noch nicht abgeschlossen:
 
-- gezielte Dirty-Hooks in allen Fachsystemen
+- vollständige fachliche Prüfung der vorhandenen Dirty-Markierungen in allen aktiven State-Systemen
 - produktiver Auto-Restore beim Missionsstart
 - Save-Datei-Rotation
 - Save-Datei-Backup
@@ -588,7 +649,9 @@ Nicht aktiv:
 
 Grund:
 
-- State-Änderungen müssen zuerst sauber persistenzrelevant markiert werden.
+- `v0.2.6` muss noch in einem frischen vollständigen Missionsstart eingebettet getestet werden.
+- Die normale 20-/120-Sekunden-Planung muss mit eingebetteter `v0.2.6` bestätigt werden.
+- Die vorhandene Dirty-Abdeckung der Fachsysteme muss vollständig geprüft werden.
 - Restore-Reihenfolge muss definiert werden.
 - Save-Datei-Kompatibilität muss geprüft werden.
 - Framework-Aktionen dürfen nicht zu früh durch Restore ausgelöst werden.
@@ -596,40 +659,58 @@ Grund:
 Aktuelle Entscheidung:
 
 - `productiveRestore=false`
-- Produktiver Restore wird erst nach Dirty-/Change-Hook-Tests freigeschaltet.
+- Produktiver Restore wird erst nach vollständigem Embedded-Regressionstest und dokumentierter Restore-Reihenfolge freigeschaltet.
 
 ---
 
 ## 11. Autosave-Verhalten
 
-Aktuelles Autosave-Verhalten in `v0.2.5`:
+Aktuelles Autosave-Verhalten in `v0.2.6`:
 
-- Autosave ist aktiviert.
-- Autosave wird beim Start des PersistenceSystems geplant.
-- erster Autosave nach 20 Sekunden
-- danach Autosave alle 120 Sekunden
-- Autosave läuft ohne Spieleraktion
-- Autosave schreibt die Campaign-Save-Datei
-- Autosave loggt eindeutig
-- produktiver Restore bleibt deaktiviert
+- Autosave ist aktiviert und wird beim Start des PersistenceSystems geplant.
+- Der Initial-Delay bleibt `20` Sekunden.
+- Das periodische Intervall bleibt `120` Sekunden.
+- Autosave läuft ohne Spieleraktion.
+- Autosave nutzt ausschließlich den vorhandenen Dirty-State unter `TC.State.Persistence`:
+  - `dirty`
+  - `dirtyReason`
+  - `dirtyAt`
+- Bei `dirty=false` wird der Tick als `SKIPPED` protokolliert und die Save-Datei nicht geschrieben.
+- Bei `dirty=true` werden Dirty Reason und Dirty-Zeitpunkt vor dem Save-Versuch erfasst.
+- Die Save-Datei wird geschrieben, zurückgelesen, kompiliert, evaluiert und strukturell validiert.
+- Erst nach dieser vollständigen Verifikation darf der erfasste Dirty-State gelöscht werden.
+- Ein fehlgeschlagener Write-, Read-back-, Compile-, Evaluate- oder Validation-Pfad wird als `FAILED` protokolliert und behält Dirty-State sowie Dirty Reason bei.
+- Nach Behebung der Fehlerursache kann derselbe Dirty-State bei einem späteren Retry als `SAVED` gesichert werden.
+- Wenn während eines laufenden Saves ein neuer Dirty-State mit anderem `dirtyReason` oder `dirtyAt` entsteht, löscht der ältere Save diesen neueren State nicht.
+- Manuelle `saveToFile()`-Aufrufe löschen Dirty nach verifiziertem Erfolg standardmäßig weiterhin.
+- Periodischer Autosave verwendet `clearDirtyOnSuccess=false` und übernimmt das Dirty-Clear erst nach seiner eigenen Verifikations- und Vergleichslogik.
+- Produktiver Restore bleibt deaktiviert.
 
-Bestätigter Logmarker:
+Periodische Entscheidungslogs:
 
-- `Persistence autosave scheduled: initialDelay=20s interval=120s productiveRestore=false`
-- `Campaign state autosaved`
+- `Periodic autosave decision: SAVED`
+- `Periodic autosave decision: SKIPPED`
+- `Periodic autosave decision: FAILED`
+
+Für `SAVED` und `FAILED` enthält das Log den relevanten Dirty Reason. Die letzten Ergebnisse werden außerdem über `lastAutosaveStatus`, `lastAutosaveReason` und `lastAutosaveDirtyReason` im Modul und in `TC.State.Persistence` gehalten.
 
 Wichtig:
 
 - Autosave ist kein Spieler-F10-Menü.
+- Für diese Entwicklungsstufe existieren keine Persistence-F10-Controls und es sind keine vorgesehen.
 - Autosave ist kein manueller Spielerworkflow.
 - Autosave läuft im Maschinenraum.
-- Der Spieler soll davon im Normalbetrieb nichts bedienen müssen.
+- Der Spieler muss im Normalbetrieb keine Save-Aktion auslösen.
 
-Aktueller Entwicklungsstand:
+Aktuell verwendete Save-Datei:
 
-- Autosave schreibt auch dann regelmäßig, wenn noch keine Dirty-Hooks vorhanden sind.
-- Nächster Schritt ist, relevante State-Änderungen explizit als dirty zu markieren.
-- Später kann Autosave optional nur bei Dirty-State schreiben oder Dirty-State priorisiert behandeln.
+    Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua
+
+Testabgrenzung:
+
+- Die Entscheidungspfade von `v0.2.6` wurden synchron per kontrolliertem DCS-SMS-Hotload getestet.
+- Der echte Scheduler der hot-geloadeten `v0.2.6` wurde bewusst nicht gestartet.
+- Ein normaler Missionsstart mit eingebetteter `v0.2.6` und den tatsächlichen 20-/120-Sekunden-Ticks ist noch ausstehend.
 
 ---
 
@@ -768,7 +849,7 @@ Persistenzziel:
 
 Noch offen:
 
-- Airbase-Änderungen gezielt dirty markieren
+- vorhandene Dirty-Markierung bei Airbase-Ownership-Änderungen im vollständigen `v0.2.6`-Regressionstest bestätigen
 - produktiver Restore von Airbase Ownership
 - Kopplung an Logistics, MissionGenerator und AI
 
@@ -812,7 +893,7 @@ Persistenzziel:
 
 Noch offen:
 
-- Zone-Änderungen gezielt dirty markieren
+- vorhandene Dirty-Markierung bei Zone-Ownership-Änderungen im vollständigen `v0.2.6`-Regressionstest bestätigen
 - produktiver Restore von Zone Ownership
 - automatische Zone-Auswertung über reale DCS-Einheiten
 
@@ -865,10 +946,11 @@ Persistenzziel:
 - Capture Pressure und Capture Progress sollen nicht nach jedem Missionsstart verloren gehen.
 - Capture Ready und Ownership-Wechsel sollen später über Missionsneustarts erhalten bleiben.
 
-Nächster konkreter Schritt:
+Aktueller Persistenzstand:
 
-- CaptureSystem soll bei erfolgreichem Capture Ready Apply den State als persistenzrelevant markieren.
-- Autosave soll diesen geänderten Zustand anschließend automatisch sichern.
+- CaptureSystem und weitere aktive State-Systeme enthalten bereits Dirty-Markierungen.
+- `v0.2.6` wertet diese Markierungen über `TC.State.Persistence` aus.
+- Noch ausstehend ist der vollständige Embedded-Regressionstest von Mission Completion, Mission Failure und Capture Ready Apply mit anschließender geplanter `v0.2.6`-Autosave-Auswertung.
 
 ---
 
@@ -910,7 +992,7 @@ Aktuelle Einschränkung:
 
 - Es gibt noch keine echten CTLD-Cargo-Aktionen.
 - Es gibt noch keinen produktiven Supply-Verbrauch.
-- Logistics Dirty-Hooks sind noch offen.
+- Die vorhandene Logistics-Dirty-Abdeckung muss vor produktivem Restore vollständig geprüft werden.
 
 ---
 
@@ -953,7 +1035,7 @@ Aktuelle Einschränkung:
 
 - Es gibt noch keine echte CTLD-FOB-Erstellung.
 - Es gibt noch keine echten CTLD-Crates.
-- FOB Dirty-Hooks sind noch offen.
+- Die vorhandene FOB-Dirty-Abdeckung muss vor produktivem Restore vollständig geprüft werden.
 
 ---
 
@@ -1007,7 +1089,7 @@ Persistenzziel:
 
 Noch offen:
 
-- Mission Dirty-Hooks
+- vollständige Prüfung der vorhandenen Mission-Dirty-Abdeckung
 - produktiver Restore von Mission State
 - automatische Missionserfolgsauswertung aus DCS-Events
 - Mission Cancel/Expire Tests
@@ -1046,7 +1128,7 @@ Aktuelle Einschränkung:
 
 - Es gibt noch keine echten MOOSE-Spawns.
 - MOOSE-Hooks bleiben reserviert.
-- AI Dirty-Hooks sind noch offen.
+- Die vorhandene AI-Dirty-Abdeckung muss vor produktivem Restore vollständig geprüft werden.
 
 ---
 
@@ -1162,30 +1244,30 @@ Später ergänzen:
 
 ## 25. Dirty-State-Konzept
 
-Ziel:
+Der Dirty-State gehört zum zentralen State und wird nicht als zweiter Mechanismus im PersistenceSystem dupliziert.
 
-State-Änderungen sollen Persistence mitteilen, dass der Kampagnenzustand speicherrelevant verändert wurde.
+Verwendete Felder unter `TC.State.Persistence`:
 
-Aktueller Stand:
+- `dirty`: zeigt an, ob speicherrelevante Änderungen vorliegen
+- `dirtyReason`: beschreibt die zuletzt markierte Änderung
+- `dirtyAt`: Zeitstempel dieser Markierung
 
-- PersistenceSystem besitzt Dirty-Grundfunktionen.
-- Autosave läuft bereits.
-- Fachsysteme markieren Änderungen noch nicht konsequent dirty.
+`TC.State.markDirty(reason)` setzt diese drei Werte. `TC.State.clearDirty()` setzt `dirty=false` und entfernt `dirtyReason` sowie `dirtyAt`.
 
-Nächster Schritt:
+Aktueller `v0.2.6`-Ablauf:
 
-- CaptureSystem soll bei erfolgreichem Capture Ready Apply den State als dirty markieren.
+1. Ein Fachsystem markiert eine speicherrelevante State-Änderung über den vorhandenen `TC.State`-Mechanismus.
+2. Der periodische Autosave überspringt `dirty=false` ohne Dateischreibvorgang.
+3. Bei `dirty=true` erfasst er `dirtyReason` und `dirtyAt` vor dem Save.
+4. `saveToFile()` schreibt die Datei und verifiziert sie durch Read-back, Compile, Evaluate und Validation.
+5. Bei einem Fehler bleiben `dirty`, `dirtyReason` und `dirtyAt` erhalten.
+6. Bei Erfolg vergleicht Autosave den aktuellen Dirty Reason und Zeitstempel mit den erfassten Werten.
+7. Nur wenn derselbe Dirty-State noch aktuell ist, wird er gelöscht.
+8. Ein während des Saves entstandener neuer Dirty-State bleibt erhalten.
 
-Erwarteter späterer Ablauf:
+Manuelle `saveToFile()`-Aufrufe löschen Dirty nach verifiziertem Erfolg weiterhin standardmäßig. Nur der periodische Autosave setzt `clearDirtyOnSuccess=false`, damit seine eigene Vergleichslogik das Löschen nach vollständiger Verifikation kontrolliert.
 
-1. Capture Ready Apply ändert Zone Ownership.
-2. Capture Ready Apply ändert linked Airbase Ownership.
-3. CaptureSystem markiert State als dirty.
-4. PersistenceSystem registriert persistenzrelevante Änderung.
-5. Autosave schreibt den geänderten State.
-6. Save-Datei enthält aktualisierte Ownership.
-
-Spätere Dirty-Hooks:
+Dirty-Abdeckung, die weiter geprüft oder später erweitert werden muss:
 
 - Mission aktiviert
 - Mission abgeschlossen
@@ -1218,18 +1300,21 @@ Aktueller Status:
 
 Warum noch deaktiviert:
 
-- Dirty-Hooks müssen zuerst funktionieren.
-- Save-Datei muss nach echten State-Änderungen geprüft werden.
+- Die v0.2.6-Tests erfolgten als kontrollierter Hotload in eine laufende DEV-Mission.
+- Die normale Mission-Editor-`DO SCRIPT FILE`-Kopie enthielt während der Tests noch `v0.2.5`.
+- Ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` ist noch ausstehend.
+- Die tatsächliche geplante 20-/120-Sekunden-Ausführung von `v0.2.6` ist noch ausstehend.
+- Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Regressionen mit eingebetteter `v0.2.6` sind noch ausstehend.
 - Restore-Reihenfolge muss definiert werden.
 - Initialisierung darf nicht überschrieben oder beschädigt werden.
 - Framework-Aktionen dürfen nicht versehentlich durch Restore ausgelöst werden.
 
 Voraussetzungen vor Aktivierung:
 
-- Capture Dirty-Hook bestanden
-- Logistics Dirty-Hooks vorbereitet
-- Mission Dirty-Hooks vorbereitet
-- Save-Datei nach State-Änderung geprüft
+- frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` bestanden
+- tatsächliche geplante 20-/120-Sekunden-Ausführung bestanden
+- Mission-Completion-, Mission-Failure- und Capture-Ready-Apply-Regressionen bestanden
+- vorhandene Dirty-Abdeckung der aktiven State-Systeme vollständig geprüft
 - Restore-Reihenfolge dokumentiert
 - inkompatible Save-Dateien werden sauber abgelehnt
 - produktiver Restore wird eindeutig im Log bestätigt
@@ -1240,7 +1325,8 @@ Voraussetzungen vor Aktivierung:
 
 Aktuelle Entscheidung:
 
-- kein Spieler-F10-Menü für Persistence
+- kein Spieler-F10-Menü und keine Persistence-F10-Controls
+- für diese Entwicklungsstufe sind keine Persistence-F10-Controls geplant
 
 Begründung:
 
@@ -1251,7 +1337,7 @@ Begründung:
 - Spieler sollen nicht Save/Load verwalten.
 - Save/Load ist Systemverhalten, kein Spielerworkflow.
 
-Möglich später:
+Außerhalb dieser Entwicklungsstufe höchstens als neues, separat zu genehmigendes Konzept denkbar:
 
 - separates Admin-/Debug-Menü
 - nur bei Bedarf
@@ -1269,44 +1355,35 @@ Aktuell nicht umsetzen:
 
 ### CaptureSystem
 
-Nächster Schritt.
+Aktueller Stand:
 
-Ziel:
-
-- Capture Ready Apply markiert State dirty.
-- Autosave sichert Ownership-Änderung.
+- Dirty-Markierungen sind im CaptureSystem vorhanden.
+- Vollständiger Embedded-Regressionstest mit `v0.2.6` steht noch aus.
 
 ### MissionGenerator
 
-Später.
+Aktueller Fokus:
 
-Ziel:
-
-- Mission Activation, Completion, Failure, Cancel und Expire persistenzrelevant markieren.
+- vorhandene Dirty-Abdeckung für Activation, Completion und Failure prüfen
+- Cancel und Expire später persistenzrelevant ergänzen und testen
 
 ### LogisticsDelivery
 
-Später.
+Aktueller Fokus:
 
-Ziel:
-
-- Supply-Änderungen und Lieferereignisse persistenzrelevant markieren.
+- vorhandene Dirty-Abdeckung prüfen und spätere Supply-Änderungen sowie Lieferereignisse vollständig abdecken
 
 ### FobSystem
 
-Später.
+Aktueller Fokus:
 
-Ziel:
-
-- FOB-Baufortschritt und FOB-Status persistenzrelevant markieren.
+- vorhandene Dirty-Abdeckung prüfen und spätere FOB-Baufortschritte sowie Statusänderungen vollständig abdecken
 
 ### AICapManager
 
-Später.
+Aktueller Fokus:
 
-Ziel:
-
-- AI-Aufträge, CAP Requests und AI-Reaktionsstatus persistenzrelevant markieren.
+- vorhandene Dirty-Abdeckung prüfen und spätere AI-Aufträge, CAP Requests sowie Reaktionsstatus vollständig abdecken
 
 ### IADS
 
@@ -1320,27 +1397,56 @@ Ziel:
 
 ## 29. Testanforderungen
 
-Für Persistence-Tests müssen Logs sauber sein.
+Für vollständige Persistence-Regressionstests müssen Logs sauber und der getestete Mission-Editor-Dateistand eindeutig sein.
 
-Vor jedem Test:
+Vor einem vollständigen Embedded-Test:
 
-1. DCS beenden.
-2. Alte `dcs.log` löschen oder umbenennen.
-3. DCS starten.
-4. Mission starten.
-5. Testaktion durchführen.
-6. DCS beenden.
-7. Frische `dcs.log` prüfen.
+1. `v0.2.6` in der Mission-Editor-`DO SCRIPT FILE`-Aktion neu auswählen.
+2. DEV-Mission speichern.
+3. DCS beenden.
+4. Alte `dcs.log` löschen oder umbenennen.
+5. DCS starten und die Mission frisch laden.
+6. Testaktionen und geplante Autosave-Ticks durchführen.
+7. DCS beenden und die frische `dcs.log` prüfen.
 
-Wichtige Erfolgsmarker für `v0.2.5`:
+Bestätigte kontrollierte DCS-SMS-Hotload-Tests für `v0.2.6`:
 
-- `Loaded src/campaign/tc_persistence_system.lua v0.2.5`
-- `Persistence sandbox availability: os=false, io=true, lfs=true`
-- `Persistence sandbox file test passed`
-- `Persistence autosave scheduled`
-- `Persistence system initialized`
-- `Campaign state autosaved`
+1. Dirty Save:
+   - Entscheidung `SAVED`
+   - Dirty wurde erst nach Read-back, Compile, Evaluate und Validation gelöscht.
+2. Unveränderter zweiter Aufruf:
+   - Entscheidung `SKIPPED`
+   - kein zusätzlicher Autosave Count
+   - kein Save-Datei-Schreibvorgang
+3. Injizierter Schreibfehler:
+   - Entscheidung `FAILED`
+   - `dirty=true` und `dirtyReason=codex_dirty_autosave_failure_retry_test` blieben erhalten
+   - bestehende Save-Datei blieb nach Größe und Prüfsumme unverändert
+4. Retry nach Wiederherstellung von `io.open`:
+   - Entscheidung `SAVED`
+   - derselbe Dirty Reason wurde gespeichert
+   - Dirty wurde erst nach erfolgreicher Verifikation gelöscht
+   - Autosave Count erhöhte sich nur für den erfolgreichen Retry
+5. Logprüfung:
+   - keine neuen `SCRIPTING ERROR`
+   - keine neuen `Mission script error`
+   - kein neuer `stack traceback`
+
+Bestätigte `v0.2.6`-Entscheidungsmarker:
+
+- `Periodic autosave decision: SAVED dirtyReason=...`
+- `Periodic autosave decision: SKIPPED detail=state_unchanged`
+- `Periodic autosave decision: FAILED dirtyReason=...`
 - `productiveRestore=false`
+
+Verbleibende Testgrenzen:
+
+- Die Tests verwendeten einen kontrollierten Hotload von `v0.2.6` in eine laufende Theater-Command-DEV-Mission.
+- Die normale Mission-Editor-`DO SCRIPT FILE`-Kopie enthielt während dieser Tests noch `v0.2.5`.
+- Ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` ist ausstehend.
+- Das tatsächliche geplante Verhalten nach 20 Sekunden und danach alle 120 Sekunden ist mit eingebetteter `v0.2.6` ausstehend.
+- Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Regressionstests sind mit eingebetteter `v0.2.6` ausstehend.
+- Produktiver Startup-Restore bleibt absichtlich deaktiviert und ungetestet.
 
 Wichtige Nicht-mehr-Marker:
 
@@ -1368,24 +1474,26 @@ Wichtige Fehlerindikatoren:
 
 Risiko:
 
-- `io` und `lfs` werden wieder gesperrt.
+- `os`, `io` und `lfs` werden durch ein DCS-Update erneut sanitisiert.
 
 Folge:
 
-- Persistence kann keine Dateien schreiben oder lesen.
+- Bei erneut sanitisiertem `io` oder `lfs` kann Persistence keine Dateien schreiben oder lesen.
+- Bei erneut sanitisiertem `os`, `io` oder `lfs` können DCS-SMS `exec`, `status` und `tail-log` ausfallen.
 
 Erkennung:
 
 - `io=false`
 - `lfs=false`
 - `Persistence sandbox blocked`
+- DCS-SMS-Bridge-Befehle schlagen fehl
 
 Gegenmaßnahme:
 
 - lokale `MissionScripting.lua` prüfen
-- `io` und `lfs` erneut freigeben
-- `os` weiterhin gesperrt lassen
-- `require` weiterhin gesperrt lassen
+- solange die DCS-SMS-Runtime-Bridge verwendet wird, `os`, `io` und `lfs` unsanitized halten
+- `require` kann weiterhin sanitisiert bleiben
+- `os` nur dann wieder sanitizen, wenn die DCS-SMS-Runtime-Bridge entfernt wurde oder nicht mehr benötigt wird
 
 ---
 
@@ -1417,7 +1525,7 @@ Risiko:
 Gegenmaßnahme:
 
 - produktiver Restore bleibt deaktiviert
-- erst Dirty-Hooks testen
+- zuerst Embedded- und Regressionstests von `v0.2.6` abschließen
 - dann Restore-Reihenfolge definieren
 - dann kontrolliert produktiven Restore freischalten
 
@@ -1433,12 +1541,14 @@ Aktuelle Gegenmaßnahme:
 
 - erster Autosave erst nach 20 Sekunden
 - Persistence startet nach den relevanten State-Grundsystemen
-- Save-Datei wird validiert
+- unveränderte Ticks werden ohne Save-Datei-Schreibvorgang übersprungen
+- geänderter State wird geschrieben und vollständig zurückgelesen, kompiliert, evaluiert und validiert
+- Dirty-State wird erst nach verifiziertem Erfolg gelöscht
+- ein während des Saves neuerer Dirty-State bleibt erhalten
 
 Später ergänzen:
 
 - Autosave nur nach Runtime-Ready
-- Dirty-State-Auswertung
 - Save-Datei-Rotation
 - letzte gültige Save-Datei behalten
 
@@ -1446,27 +1556,33 @@ Später ergänzen:
 
 ## 31. Aktueller Abschlussstand
 
-Bestätigter Stand am 2026-07-06:
+Bestätigter Stand am 2026-08-04:
 
 - DCS-Dateizugriff mit `io` und `lfs` funktioniert.
 - Sandbox-Test ist bestanden.
 - Campaign-State kann gespeichert werden.
-- Save-Datei kann gelesen werden.
-- Save-Datei kann validiert werden.
+- Save-Datei kann zurückgelesen, kompiliert, evaluiert und validiert werden.
 - Save-Datei kann kontrolliert importiert werden.
-- Background-Autosave läuft.
-- Spieler-F10-Persistence ist nicht vorgesehen.
+- PersistenceSystem `v0.2.6` ist implementiert.
+- Periodischer Autosave ist dirty-aware.
+- Unveränderte Autosave-Aufrufe werden ohne Dateischreibvorgang übersprungen.
+- Fehler behalten Dirty-State und Dirty Reason bei.
+- Ein erfolgreicher Retry löscht Dirty erst nach vollständiger Verifikation.
+- Ein neuerer Dirty-State wird durch den Abschluss eines älteren Saves nicht gelöscht.
+- Dirty Save, Skip, injizierter Schreibfehler und Retry sind per DCS-SMS-Hotload bestätigt.
+- Es existieren keine Persistence-F10-Controls und für diese Entwicklungsstufe sind keine geplant.
 - Produktiver Restore ist noch deaktiviert.
 
-Bestandene Persistence-Version:
+Implementierte und per Hotload getestete Persistence-Version:
 
-- `src/campaign/tc_persistence_system.lua v0.2.5`
+- `src/campaign/tc_persistence_system.lua v0.2.6`
 
-Aktueller wichtigster nächster Schritt:
+Aktueller wichtigster nächster Verifikationsschritt:
 
-- `src/campaign/tc_capture_system.lua v0.2.3`
-- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
-- Autosave soll geänderten Capture-State automatisch sichern
+- `v0.2.6` in die Mission-Editor-`DO SCRIPT FILE`-Kopie einbetten
+- frischen vollständigen Missionsstart durchführen
+- geplanten ersten Tick nach 20 Sekunden und Folge-Tick nach 120 Sekunden prüfen
+- Mission Completion, Mission Failure und Capture Ready Apply mit eingebetteter `v0.2.6` regressionsprüfen
 - kein produktiver Restore
 - kein Persistence-F10-Menü
 - keine echten MOOSE-/CTLD-/Skynet-Aktionen
@@ -1490,28 +1606,25 @@ Besonders prüfen:
 - `src/campaign/tc_persistence_system.lua`
 - `src/ui/tc_f10_menu.lua`
 
-Nächster technischer Startpunkt:
+Nächster technischer Teststand:
 
-- `src/campaign/tc_capture_system.lua`
-
-Konkretes Ziel:
-
-- `CaptureSystem v0.2.3`
-- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
-- Background Autosave soll geänderten State sichern
+- Mission-Editor-`DO SCRIPT FILE`-Kopie von `tc_persistence_system.lua` auf `v0.2.6` aktualisieren
+- DEV-Mission speichern und frisch vollständig starten
+- tatsächliche Scheduler-Ausführung von `v0.2.6` prüfen
+- bestehende Campaign-Pipelines mit eingebetteter `v0.2.6` regressionsprüfen
 - kein Persistence-F10-Menü
 - kein produktiver Restore
 - keine echten MOOSE-/CTLD-/Skynet-Aktionen
 
 Erwarteter Test:
 
-1. Mission starten.
-2. Mission über F10 aktivieren.
-3. Mission über F10 abschließen.
-4. Capture Ready Zone 1 über F10 anwenden.
-5. CaptureSystem markiert State als persistenzrelevant.
-6. Persistence autosaved automatisch.
-7. DCS-Log bestätigt Dirty-/Autosave-Zusammenhang.
+1. Eingebettete Runtime meldet `PersistenceSystem v0.2.6`.
+2. PersistenceSystem startet und plant Autosave mit `initialDelay=20s` und `interval=120s`.
+3. Mission Completion, Mission Failure und Capture Ready Apply bleiben stabil.
+4. Relevante State-Änderungen setzen `dirty`, `dirtyReason` und `dirtyAt`.
+5. Der geplante Dirty-Tick loggt `SAVED` und löscht Dirty erst nach Verifikation.
+6. Der folgende unveränderte Tick loggt `SKIPPED` und schreibt die Save-Datei nicht erneut.
+7. Gesamtes Log bleibt frei von neuen Theater-Command- und Lua-Fehlern.
 
 ---
 
@@ -1523,14 +1636,19 @@ Bestanden ist:
 
 - Datei schreiben
 - Datei lesen
+- Datei kompilieren und evaluieren
 - Datei validieren
 - Snapshot importieren
-- Background Autosave
+- dirty-aware Autosave-Entscheidungen `SAVED`, `SKIPPED` und `FAILED`
+- Dirty-Erhalt nach Fehler und Dirty-Clear nach erfolgreicher Verifikation
+- erfolgreicher Retry desselben Dirty-State
 
 Noch nicht aktiv ist:
 
 - produktiver automatischer Restore beim Missionsstart
 
-Der nächste sinnvolle Schritt ist:
+Noch ausstehend ist:
 
-- echte State-Änderungen persistenzrelevant markieren, beginnend mit CaptureSystem.
+- ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6`
+- die tatsächliche geplante 20-/120-Sekunden-Ausführung von `v0.2.6`
+- die vollständige Campaign-Regression mit eingebetteter `v0.2.6`
