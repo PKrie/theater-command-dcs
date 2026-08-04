@@ -1,6 +1,6 @@
-# GitHub DCS Commander
+# Theater Command SDK
 
-GitHub DCS Commander is the dedicated development toolkit for Theater Command DCS.
+The Theater Command SDK is the dedicated development toolkit for Theater Command DCS.
 
 ## Purpose
 
@@ -13,6 +13,7 @@ This toolkit provides AI-assisted development tools for:
 - Mission Editor automation
 - DCS-SMS integration
 - Campaign testing
+- Development utilities
 
 ## Scope
 
@@ -24,7 +25,9 @@ It never contains campaign logic.
 
 Campaign logic always remains inside:
 
+```
 src/
+```
 
 ## Planned Modules
 
@@ -36,9 +39,10 @@ src/
 - testing
 - export
 - reports
+- utilities
 
 ## Status
 
 Version 0.1
 
-Initial project structure.
+Initial Theater Command SDK structure.
