@@ -1,5 +1,15 @@
 # src/debug/README.md
 
+## Autoritativer Debug-/Werkzeugstand — 2026-08-04
+
+- Es gibt weiterhin kein eigenes Debug-Lua-Modul. DCS-SMS ist ausschließlich ein Entwicklungswerkzeug und kein Runtime-Framework.
+- Bewährte DCS-SMS-Fähigkeiten sind Status, Mission-/GUI-Exec, Trigger-Inspektion und -Aktionsbearbeitung, Ressourcenregistrierung mit Read-back, native Mission-Editor-Speicherung und Log-Lesen.
+- Aktuelle Runtime-Versionen umfassen PersistenceSystem `v0.2.6`, MissionGenerator `v0.2.3` und F10Menu `v0.2.3` mit 33 Befehlen.
+- Der reproduzierbare Verlust aller sechs Mission-Status-Dictionaries nach initial zehn Records bleibt ohne bekannten Writer (`PROJECT SOURCE HAS NO MATCHING WRITE SITE`). Nächster Schritt ist deshalb ein Offline/read-only `.miz`-Ressourcen-Audit ohne DCS-/DCS-SMS-Runtime.
+- Abweichende Versions-, Befehls- und Persistence-Grundstrukturaussagen unten sind historische Entwicklungsstände.
+
+---
+
 Diese Datei beschreibt den Debug-Bereich von **Theater Command DCS**.
 
 Der Debug-Bereich enthält spätere eigene Lua-Logik für Testhilfen, State-Reports, Diagnosefunktionen und kontrollierte Entwicklungswerkzeuge.
@@ -63,7 +73,7 @@ Grundprinzip:
 
 ## 3. Aktueller technischer Stand
 
-Stand:
+Historischer Stand:
 
     2026-06-29
 
@@ -108,10 +118,10 @@ Bestätigte Systeme:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden; Restore deaktiviert |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
 
@@ -510,8 +520,8 @@ Aktive Persistence-Datei:
 
 Status:
 
-    Grundstruktur lädt/startet
-    produktiver Dateischreibtest offen
+    PersistenceSystem v0.2.6 lädt/startet dirty-aware
+    Datei-Write und Read-back-Verifikation bestanden; produktiver Restore deaktiviert
 
 Mögliche spätere Debug-Ausgaben:
 
@@ -535,8 +545,9 @@ Mögliche spätere Debug-Funktionen:
 
 Aktuell:
 
-    Persistenz ist noch nicht produktiv.
-    Kein Save-/Load-Debug aktiv.
+    Persistence v0.2.6 speichert dirty-aware im Hintergrund.
+    Produktiver Restore bleibt deaktiviert.
+    Kein Save-/Load-Debug und keine Persistence-F10-Steuerung aktiv oder für diese Stufe geplant.
 
 ---
 

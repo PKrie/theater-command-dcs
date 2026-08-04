@@ -1,5 +1,11 @@
 # Campaign Design
 
+## Verbindliches Update — 2026-08-04
+
+Das Kampagnendesign bleibt state-first. PersistenceSystem `v0.2.6` speichert Dirty-State automatisch und überspringt unveränderte Ticks; produktiver Startup-Restore ist weiterhin deaktiviert. Die aktuelle DCS-SMS-Bridge-Umgebung ist `os=true`, `io=true`, `lfs=true`, `require=false`.
+
+Frühere zehn-Missionen- und F10-Pipelines bleiben historische Erfolge. Aktuell gehen Mission-Records nach der Initialgenerierung reproduzierbar verloren; Ursache und Writer sind unbekannt. `PROJECT SOURCE HAS NO MATCHING WRITE SITE`. Vor weiteren Mission- oder Capture-Regressionen erfolgt ein Offline-Audit der eingebetteten Mission-Ressourcen. Alle älteren „aktuellen“ Abschnitte sind historische Snapshots, sofern sie nicht ausdrücklich auf 2026-08-04 aktualisiert sind.
+
 Diese Datei beschreibt das Kampagnendesign der ersten Theater-Command-DCS-Kampagne.
 
 Erste Kampagne:
@@ -79,7 +85,7 @@ GitHub dokumentiert Entscheidungen, Versionen, Aufgabenstand und Testergebnisse.
 
 Stand:
 
-    2026-06-29
+    Historischer Stand 2026-06-29
 
 Aktueller Gesamtstatus:
 
@@ -707,13 +713,10 @@ Persistenz soll speichern:
 
 Aktueller Stand:
 
-    PersistenceSystem-Grundstruktur ist vorhanden.
-    Modul lädt und startet.
-    Datei-Persistenz ist noch nicht produktiv getestet.
-
-Wichtig:
-
-    DCS-Sandbox-Verhalten muss vor echter Dateipersistenz geprüft werden.
+    PersistenceSystem v0.2.6 läuft dirty-aware im Hintergrund.
+    Datei-Write und vollständige Read-back-Verifikation sind bestanden.
+    Unveränderte Ticks werden ohne Dateischreiben übersprungen.
+    Produktiver Startup-Restore bleibt deaktiviert.
 
 ---
 

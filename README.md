@@ -8,6 +8,24 @@ Erste Kampagne:
 
 - Operation Levant Reclamation
 
+## Verbindlicher Projektstand — 2026-08-04
+
+Theater Command DCS besitzt eine state-first Runtime mit dirty-aware Hintergrundpersistenz. PersistenceSystem `v0.2.6` ist in `Operation_Levant_Reclamation_DEV.miz` eingebettet und hat normale periodische `SAVED`- und `SKIPPED`-Ticks bestanden. Produktiver Startup-Restore bleibt deaktiviert und ungetestet.
+
+DCS-SMS ist ein Entwicklungs- und Mission-Editor-Werkzeug, kein Theater-Command-Runtime-Framework. Installiert und bestätigt sind Mission-Editor- und Runtime-Bridge, externe Ausführung sowie das Codex-`dcs-sms`-Skill. Die aktuelle Bridge-Umgebung ist `os=true`, `io=true`, `lfs=true`, `require=false`. Persistence selbst benötigt direkt nur `io` und `lfs`.
+
+Der Spieler-Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` ist `CLIENT`, nicht `PLAYER`. Ein normaler Teststart erfordert Mission starten, den Client-Slot auswählen und bestätigen und anschließend im Briefing `Fly` drücken.
+
+Aktueller Blocker:
+
+- MissionGenerator `v0.2.3` erzeugt zunächst zehn state-only Missionen.
+- Später sind alle sechs Mission-Status-Dictionaries leer, während `lastMissionId=10` und die Statistiken stale bleiben.
+- Der Verlust ist reproduzierbar; Ursache und Writer sind nicht identifiziert.
+- Statische Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+- Mission Completion, Mission Failure und Capture Ready Apply Regressionen sind deshalb derzeit blockiert.
+
+Nächster Schritt ist kein spekulativer Code-Fix, sondern ein read-only Offline-Byte-/SHA-256-Audit aller eingebetteten Theater-Command-Ressourcen in der gespeicherten DEV-`.miz`. Details stehen in `TASKS.md`, `docs/06_mission_generator.md` und `docs/10_testing.md`.
+
 ---
 
 ## Ausgangslage der Kampagne
@@ -85,7 +103,7 @@ Die KI soll perspektivisch auf beiden Seiten handeln:
 
 ## Aktueller Projektstand
 
-Stand: 2026-07-06
+Historischer Baseline-Stand: 2026-07-06. Der verbindliche aktuelle Stand steht oben.
 
 Das Projekt befindet sich weiterhin in einer frühen Aufbauphase, besitzt aber inzwischen eine stabil getestete State-first Runtime im DCS Mission Scripting Environment.
 
@@ -111,9 +129,9 @@ Aktuell erreicht:
 - MissionGenerator kann Missionen state-only auf `FAILED` setzen.
 - AICapManager erzeugt Blue-/Red-CAP-State.
 - F10Menu ist sichtbar, navigierbar und logbestätigt.
-- F10Menu erlaubt direkte Missionsauswahl Mission 1 bis Mission 10.
-- F10Menu erlaubt direkte Missionsaktivierung Mission 1 bis Mission 10.
-- F10Menu erlaubt Mission Outcome Controls für die erste aktive Mission.
+- F10Menu erlaubte in historischen Regressionstests direkte Missionsauswahl und -aktivierung für Mission 1 bis Mission 10.
+- F10Menu erlaubte historische Mission Outcome Controls für die erste aktive Mission.
+- Aktuell sind wegen des ungeklärten Record-Verlusts keine Missionen auswählbar.
 - F10Menu zeigt Capture-/Pressure-Status an.
 - F10Menu zeigt Capture Ready Zones und Pressure Contested Zones an.
 - F10Menu kann Capture Ready Zone 1 bewusst state-only anwenden.
@@ -149,10 +167,10 @@ Noch nicht erreicht:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.5` | bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Start, `SAVED`, `SKIPPED`, `FAILED` und Retry bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
 
@@ -223,11 +241,11 @@ Aktuell bestätigte Testwerte aus DCS-Logs:
 
 ### PersistenceSystem
 
-- Version: `v0.2.5`
+- Version: `v0.2.6`
 - `fileSystemAvailable=true`
 - `io=true`
 - `lfs=true`
-- `os=false`
+- `os=true` in der aktuellen DCS-SMS-Bridge-Umgebung
 - `require=false`
 - `load=true`
 - `loadstring=true`
@@ -237,6 +255,8 @@ Aktuell bestätigte Testwerte aus DCS-Logs:
 - Autosave-Intervall: `120s`
 - letzter bestätigter Autosave Count: `1`
 - `productiveRestore=false`
+
+Historischer Pre-DCS-SMS-Teststand war `os=false`. Solange die DCS-SMS-Runtime-Bridge aktiv ist, müssen `os`, `io` und `lfs` unsanitized bleiben. PersistenceSystem selbst benötigt `os` nicht direkt.
 
 Bestätigter Speicherordner:
 
@@ -341,6 +361,7 @@ Technischer Verlauf:
 - `v0.2.3`: Save-Datei gelesen, kompiliert, evaluiert und validiert.
 - `v0.2.4`: Save-Datei kontrolliert in `TC.State` importiert.
 - `v0.2.5`: Test-Timer-Kaskade entfernt und Background-Autosave aktiviert.
+- `v0.2.6`: periodischen Autosave dirty-aware gemacht; `SAVED`, `SKIPPED`, `FAILED` und Retry verifiziert.
 
 Aktueller Status:
 
@@ -359,12 +380,14 @@ In der lokalen DCS-Datei:
 
 müssen für dieses Projekt `io` und `lfs` entsperrt sein.
 
-Bewusster Zustand:
+Aktueller Zustand mit aktiver DCS-SMS-Runtime-Bridge:
 
-- `io` entsperrt
-- `lfs` entsperrt
-- `os` gesperrt
-- `require` gesperrt
+- `io=true`
+- `lfs=true`
+- `os=true`
+- `require=false`
+
+PersistenceSystem benötigt direkt `io` und `lfs`, aber nicht `os` oder `require`. DCS-SMS `exec`, `status` und `tail-log` benötigen `os`, `io` und `lfs` unsanitized.
 
 Hinweis:
 
@@ -560,29 +583,13 @@ Wichtige Fehlerindikatoren:
 
 ## Nächster sinnvoller technischer Schritt
 
-Nächste Datei:
+Offline Embedded Mission Resource Audit:
 
-- `src/campaign/tc_capture_system.lua`
-
-Ziel:
-
-- CaptureSystem soll bei relevanten State-Änderungen Persistence informieren.
-- Besonders bei erfolgreichem Capture Ready Apply soll der Kampagnenzustand als dirty markiert werden.
-- Autosave soll diesen geänderten Zustand anschließend automatisch sichern.
-- Kein F10-Persistence-Menü.
-- Keine Spieleraktion für Save/Load.
-- Kein produktiver Restore.
-- Weiterhin state-first.
-
-Erwarteter nächster Test:
-
-1. Mission starten.
-2. Mission über F10 aktivieren.
-3. Mission über F10 abschließen.
-4. Capture Ready Zone 1 über F10 anwenden.
-5. CaptureSystem markiert State als persistenzrelevant.
-6. Persistence autosaved automatisch.
-7. Log bestätigt Dirty-/Autosave-Zusammenhang.
+- gespeicherte DEV-`.miz` ausschließlich read-only untersuchen
+- Trigger-zu-Ressource-Mappings prüfen
+- eingebettete und Repository-Dateien per Byte-Länge und SHA-256 vergleichen
+- stale, doppelte, unerwartete oder fehlende Theater-Command-Ressourcen melden
+- keine `.miz`-Änderung, kein DCS-SMS Runtime Exec und kein spekulativer Code-Fix
 
 ---
 
@@ -607,15 +614,7 @@ Danach dort weitermachen, wo der aktuelle GitHub-Stand endet.
 
 Nächster technischer Startpunkt:
 
-- `src/campaign/tc_capture_system.lua`
-
-Konkretes Ziel:
-
-- `CaptureSystem v0.2.3`
-- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
-- kein produktiver Restore
-- kein Persistence-F10-Menü
-- keine echten MOOSE-/CTLD-/Skynet-Aktionen
+- `TASKS.md` und der dort definierte Offline Embedded Mission Resource Audit
 
 ---
 
@@ -633,4 +632,4 @@ Die aktuellen Meilensteine sind:
 
 Der nächste Meilenstein ist:
 
-- State-Änderungen gezielt persistenzrelevant markieren, beginnend mit CaptureSystem.
+- Embedded-Runtime-Drift als mögliche Ursache des reproduzierbaren Mission-Record-Verlusts read-only prüfen.

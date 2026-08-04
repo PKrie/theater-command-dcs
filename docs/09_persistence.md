@@ -1,5 +1,18 @@
 # Persistence
 
+## Verbindliches Update — 2026-08-04
+
+Die frühere Hotload-Testphase bleibt als historische Evidenz erhalten. Die anschließend offene Embedded-Scheduler-Grenze ist inzwischen geschlossen:
+
+- PersistenceSystem `v0.2.6` wurde als `ResKey_advancedFile_56` / `tc_persistence_system_v0_2_6.lua` in die gespeicherte DEV-`.miz` eingebettet.
+- Eingebettete Bytes entsprachen exakt `src/campaign/tc_persistence_system.lua`; der alte Trigger-Verweis `ResKey_Action_55` wurde entfernt.
+- Normaler Mission-Editor-/Simulator-Start lud `v0.2.6` und startete den `20s`-/`120s`-Scheduler.
+- Der reale Dirty-Grund `ai_cap_needs_evaluated` wurde als `SAVED` gesichert; Dirty wurde erst nach Verifikation gelöscht.
+- Drei folgende unveränderte Ticks waren `SKIPPED`; Save-Dateigröße, Änderungszeit und SHA-256 blieben unverändert.
+- Keine neuen Scripting Errors, `[TC][ERROR]` oder `[TC][WARN]`.
+
+Weiter offen sind nur die derzeit durch den ungelösten Mission-Record-Verlust blockierten Mission Completion-, Mission Failure- und Capture Ready Apply Regressionen sowie der spätere produktive Restore. `productiveRestore=false` bleibt verbindlich.
+
 Diese Datei beschreibt das Persistenzsystem von **Theater Command DCS**.
 
 Projekt:
@@ -122,7 +135,7 @@ Bewertung:
 - Der Kampagnenzustand kann technisch wieder importiert werden.
 - Produktiver Restore wird bewusst erst später freigeschaltet.
 - Die v0.2.6-Autosave-Entscheidungen sind kontrolliert per Hotload getestet.
-- Ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` und realer 20-/120-Sekunden-Planung ist noch ausstehend.
+- Ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` und realer 20-/120-Sekunden-Planung ist bestanden.
 
 ---
 
@@ -489,10 +502,10 @@ Bestätigte Systeme:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | implementiert, Hotload-Smoke bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Hotload- und Embedded-Scheduler bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
 
@@ -520,7 +533,7 @@ Bewertung:
 
 - Die vorhandene State- und Dirty-Grundlage wird von `v0.2.6` verwendet.
 - Die synchronen Autosave-Entscheidungspfade sind in einer laufenden DEV-Mission bestätigt.
-- Als nächstes muss `v0.2.6` in die Mission-Editor-`DO SCRIPT FILE`-Kopie eingebettet und durch einen frischen vollständigen Missionsstart getestet werden.
+- `v0.2.6` ist in die gespeicherte Mission eingebettet und durch einen frischen vollständigen Missionsstart getestet.
 
 ---
 
@@ -649,8 +662,7 @@ Nicht aktiv:
 
 Grund:
 
-- `v0.2.6` muss noch in einem frischen vollständigen Missionsstart eingebettet getestet werden.
-- Die normale 20-/120-Sekunden-Planung muss mit eingebetteter `v0.2.6` bestätigt werden.
+- Der frische Embedded-Start und die normale 20-/120-Sekunden-Planung von `v0.2.6` sind bestätigt.
 - Die vorhandene Dirty-Abdeckung der Fachsysteme muss vollständig geprüft werden.
 - Restore-Reihenfolge muss definiert werden.
 - Save-Datei-Kompatibilität muss geprüft werden.
@@ -710,7 +722,7 @@ Testabgrenzung:
 
 - Die Entscheidungspfade von `v0.2.6` wurden synchron per kontrolliertem DCS-SMS-Hotload getestet.
 - Der echte Scheduler der hot-geloadeten `v0.2.6` wurde bewusst nicht gestartet.
-- Ein normaler Missionsstart mit eingebetteter `v0.2.6` und den tatsächlichen 20-/120-Sekunden-Ticks ist noch ausstehend.
+- Ein normaler Missionsstart mit eingebetteter `v0.2.6` und den tatsächlichen 20-/120-Sekunden-Ticks ist bestanden.
 
 ---
 
@@ -1300,19 +1312,17 @@ Aktueller Status:
 
 Warum noch deaktiviert:
 
-- Die v0.2.6-Tests erfolgten als kontrollierter Hotload in eine laufende DEV-Mission.
-- Die normale Mission-Editor-`DO SCRIPT FILE`-Kopie enthielt während der Tests noch `v0.2.5`.
-- Ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` ist noch ausstehend.
-- Die tatsächliche geplante 20-/120-Sekunden-Ausführung von `v0.2.6` ist noch ausstehend.
-- Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Regressionen mit eingebetteter `v0.2.6` sind noch ausstehend.
+- Die ersten v0.2.6-Tests erfolgten historisch als kontrollierter Hotload in eine laufende DEV-Mission, deren normale `DO SCRIPT FILE`-Kopie noch `v0.2.5` enthielt.
+- Der anschließende vollständige Missionsstart mit eingebetteter `v0.2.6` und die echte geplante 20-/120-Sekunden-Ausführung sind bestanden.
+- Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Regressionen mit eingebetteter `v0.2.6` bleiben ausstehend und sind aktuell durch den ungeklärten Verlust der generierten Missionstabellen blockiert.
 - Restore-Reihenfolge muss definiert werden.
 - Initialisierung darf nicht überschrieben oder beschädigt werden.
 - Framework-Aktionen dürfen nicht versehentlich durch Restore ausgelöst werden.
 
 Voraussetzungen vor Aktivierung:
 
-- frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` bestanden
-- tatsächliche geplante 20-/120-Sekunden-Ausführung bestanden
+- frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` bestanden (erfüllt)
+- tatsächliche geplante 20-/120-Sekunden-Ausführung bestanden (erfüllt)
 - Mission-Completion-, Mission-Failure- und Capture-Ready-Apply-Regressionen bestanden
 - vorhandene Dirty-Abdeckung der aktiven State-Systeme vollständig geprüft
 - Restore-Reihenfolge dokumentiert
@@ -1441,11 +1451,10 @@ Bestätigte `v0.2.6`-Entscheidungsmarker:
 
 Verbleibende Testgrenzen:
 
-- Die Tests verwendeten einen kontrollierten Hotload von `v0.2.6` in eine laufende Theater-Command-DEV-Mission.
-- Die normale Mission-Editor-`DO SCRIPT FILE`-Kopie enthielt während dieser Tests noch `v0.2.5`.
-- Ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6` ist ausstehend.
-- Das tatsächliche geplante Verhalten nach 20 Sekunden und danach alle 120 Sekunden ist mit eingebetteter `v0.2.6` ausstehend.
-- Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Regressionstests sind mit eingebetteter `v0.2.6` ausstehend.
+- Die ersten Tests verwendeten historisch einen kontrollierten Hotload von `v0.2.6`; die damalige Mission-Editor-`DO SCRIPT FILE`-Kopie enthielt noch `v0.2.5`.
+- Ein vollständiger normaler Missionsstart mit eingebetteter `v0.2.6` ist inzwischen bestanden.
+- Das tatsächliche geplante Verhalten nach 20 Sekunden und danach alle 120 Sekunden ist mit eingebetteter `v0.2.6` bestanden: ein realer Dirty-Tick loggte `SAVED`, die folgenden unveränderten Ticks loggten `SKIPPED`, und die Save-Datei blieb bei `SKIPPED` unverändert.
+- Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Regressionstests bleiben mit eingebetteter `v0.2.6` ausstehend; sie sind aktuell durch die ungeklärten leeren Missionstabellen blockiert.
 - Produktiver Startup-Restore bleibt absichtlich deaktiviert und ungetestet.
 
 Wichtige Nicht-mehr-Marker:
@@ -1579,10 +1588,8 @@ Implementierte und per Hotload getestete Persistence-Version:
 
 Aktueller wichtigster nächster Verifikationsschritt:
 
-- `v0.2.6` in die Mission-Editor-`DO SCRIPT FILE`-Kopie einbetten
-- frischen vollständigen Missionsstart durchführen
-- geplanten ersten Tick nach 20 Sekunden und Folge-Tick nach 120 Sekunden prüfen
-- Mission Completion, Mission Failure und Capture Ready Apply mit eingebetteter `v0.2.6` regressionsprüfen
+- den gespeicherten `.miz`-Container offline und strikt read-only auf eingebettete Ressourcen, Trigger-Zuordnungen, Hash-/Versionsabweichungen, veraltete Kopien und Duplikate prüfen
+- Mission Completion, Mission Failure und Capture Ready Apply erst nach Klärung des MissionGenerator-State-Verlusts regressionsprüfen
 - kein produktiver Restore
 - kein Persistence-F10-Menü
 - keine echten MOOSE-/CTLD-/Skynet-Aktionen
@@ -1608,23 +1615,20 @@ Besonders prüfen:
 
 Nächster technischer Teststand:
 
-- Mission-Editor-`DO SCRIPT FILE`-Kopie von `tc_persistence_system.lua` auf `v0.2.6` aktualisieren
-- DEV-Mission speichern und frisch vollständig starten
-- tatsächliche Scheduler-Ausführung von `v0.2.6` prüfen
-- bestehende Campaign-Pipelines mit eingebetteter `v0.2.6` regressionsprüfen
+- gespeicherte DEV-`.miz` offline und read-only gegen die 13 autoritativen Repository-Quelldateien prüfen
+- Trigger, Ressourcen, Dateinamen, Byte-Längen, SHA-256, Versionsmarker, veraltete Kopien und Duplikate berichten
+- keine DCS-/DCS-SMS-Runtime-Aktion und keine `.miz`-Änderung durchführen
+- bestehende Campaign-Pipelines erst nach Klärung des MissionGenerator-State-Verlusts regressionsprüfen
 - kein Persistence-F10-Menü
 - kein produktiver Restore
 - keine echten MOOSE-/CTLD-/Skynet-Aktionen
 
-Erwarteter Test:
+Erwarteter Audit-Bericht:
 
-1. Eingebettete Runtime meldet `PersistenceSystem v0.2.6`.
-2. PersistenceSystem startet und plant Autosave mit `initialDelay=20s` und `interval=120s`.
-3. Mission Completion, Mission Failure und Capture Ready Apply bleiben stabil.
-4. Relevante State-Änderungen setzen `dirty`, `dirtyReason` und `dirtyAt`.
-5. Der geplante Dirty-Tick loggt `SAVED` und löscht Dirty erst nach Verifikation.
-6. Der folgende unveränderte Tick loggt `SKIPPED` und schreibt die Save-Datei nicht erneut.
-7. Gesamtes Log bleibt frei von neuen Theater-Command- und Lua-Fehlern.
+1. Für jede der 13 Quelldateien sind auslösendes Trigger-/Ressourcen-Mapping und eingebetteter Dateiname bekannt.
+2. Repository- und `.miz`-Bytes werden per Länge und SHA-256 verglichen.
+3. Versionsmarker, veraltete Kopien, fehlende Ressourcen und Duplikate werden eindeutig ausgewiesen.
+4. Die Prüfung bleibt strikt offline und verändert weder Repository noch `.miz`.
 
 ---
 
@@ -1649,6 +1653,5 @@ Noch nicht aktiv ist:
 
 Noch ausstehend ist:
 
-- ein frischer vollständiger Missionsstart mit eingebetteter `v0.2.6`
-- die tatsächliche geplante 20-/120-Sekunden-Ausführung von `v0.2.6`
-- die vollständige Campaign-Regression mit eingebetteter `v0.2.6`
+- die durch den ungeklärten MissionGenerator-State-Verlust blockierte vollständige Campaign-Regression mit eingebetteter `v0.2.6`
+- produktiver Startup-Restore; er bleibt absichtlich deaktiviert und ungetestet

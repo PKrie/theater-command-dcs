@@ -1,5 +1,15 @@
 # src/core/README.md
 
+## Autoritativer Stand — 2026-08-04
+
+- `TC.State.Missions.available`, `active`, `completed`, `failed`, `expired` und `cancelled` sind Dictionaries nach Mission Key; fachliche Counts verwenden `pairs()`.
+- `#` und `ipairs()` sind für diese Collections keine verlässliche Zählmethode. Die diagnostische `State.summary()`-Historienmessung `pairs=0` bei gleichzeitig `#=1` bleibt ungeklärt.
+- MissionGenerator `v0.2.3` erzeugte zunächst zehn Records; später waren alle sechs Status-Collections reproduzierbar leer, während `lastMissionId=10` und die Statistik erhalten blieben. Statische Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+- PersistenceSystem `v0.2.6` nutzt die bestehenden Felder `dirty`, `dirtyReason` und `dirtyAt`; der Embedded-Scheduler-Test ist bestanden, Restore bleibt deaktiviert.
+- Nächster Schritt ist ein Offline/read-only Audit der 13 eingebetteten `.miz`-Ressourcen. Ältere Stände unten sind historische Entwicklungsnotizen.
+
+---
+
 Diese Datei beschreibt den Core-Bereich von **Theater Command DCS**.
 
 Der Core ist die technische Grundschicht der eigenen Lua-Runtime.
@@ -55,7 +65,7 @@ Grundprinzip:
 
 ## 3. Aktueller technischer Stand
 
-Stand:
+Historischer Stand:
 
     2026-06-29
 
@@ -290,7 +300,7 @@ Aktuell nutzen mehrere Systeme den State produktiv state-first:
 - MissionGenerator
 - AICapManager
 - F10Menu
-- PersistenceSystem-Grundstruktur
+- PersistenceSystem `v0.2.6` mit dirty-aware Background-Autosave
 
 ---
 

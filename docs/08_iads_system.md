@@ -1,5 +1,9 @@
 # IADS System
 
+## Verbindliches Update — 2026-08-04
+
+Skynet ist geladen, aber Theater-Command-IADS bleibt state-only vorbereitet und nicht produktiv integriert. PersistenceSystem `v0.2.6` ist dirty-aware getestet; produktiver Restore und produktive IADS-Persistenz bleiben deaktiviert. MissionGenerator-IADS-Hooks sind historisch bestätigte Vorbereitung, doch der aktuelle Mission-Record-Verlust ist ungelöst. Nächster Schritt ist der Offline Embedded Mission Resource Audit. Ältere Status- und Versionsangaben sind historische Snapshots.
+
 Diese Datei beschreibt das geplante IADS-System von **Theater Command DCS**.
 
 Erste Kampagne:
@@ -102,7 +106,7 @@ Bestätigte Systeme:
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
 
@@ -193,7 +197,7 @@ Gründe:
 - SEAD/DEAD-Wirkung muss später sauber messbar sein.
 - IADS-State muss vor echter Wirkung sichtbar und debugbar sein.
 - Missionseffekte sind noch nicht produktiv an IADS gekoppelt.
-- Persistenz ist noch nicht produktiv getestet.
+- Datei-Persistenz und dirty-aware Scheduler sind getestet; produktiver Restore und produktive IADS-Integration bleiben deaktiviert.
 
 Aktuelle Entscheidung:
 
@@ -631,8 +635,8 @@ Zu speichern:
 
 Aktueller Stand:
 
-    PersistenceSystem-Grundstruktur existiert.
-    Produktiver DCS-Dateischreibtest ist noch offen.
+    PersistenceSystem v0.2.6 läuft dirty-aware; Embedded-Scheduler bestanden, Restore deaktiviert.
+    Datei-Write und Read-back-Verifikation sind bestanden; produktiver IADS-Restore ist nicht aktiv.
     IADS-State ist noch nicht implementiert.
 
 ---

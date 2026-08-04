@@ -1,5 +1,14 @@
 # src/iads/README.md
 
+## Autoritativer IADS-Stand — 2026-08-04
+
+- Es ist weiterhin kein eigenes produktives Theater-Command-IADS-Modul implementiert; Skynet bleibt unveränderter Vendor und es werden keine Runtime-Aktionen daraus abgeleitet.
+- Aktive Nachbarsysteme: CaptureSystem `v0.2.2`, MissionGenerator `v0.2.3`, PersistenceSystem `v0.2.6`, F10Menu `v0.2.3` mit 33 Befehlen.
+- Die historischen state-only IADS-Hooks bleiben Architekturvorbereitung. Der aktuelle MissionGenerator verliert nach initial zehn Records reproduzierbar alle sechs Status-Dictionaries; Ursache und Writer bleiben unbekannt (`PROJECT SOURCE HAS NO MATCHING WRITE SITE`).
+- Nächster Schritt ist der Offline/read-only Audit der eingebetteten `.miz`-Ressourcen. Abweichende Versionen und Befehlszahlen unten sind historische Entwicklungsstände.
+
+---
+
 Diese Datei beschreibt den IADS-Bereich von **Theater Command DCS**.
 
 Der IADS-Bereich enthält die eigene Theater-Command-Schicht für Integrated Air Defense Systems und die spätere Anbindung an Skynet IADS.
@@ -64,7 +73,7 @@ Grundannahme:
 
 ## 3. Aktueller technischer Stand
 
-Stand:
+Historischer Stand:
 
     2026-06-29
 
@@ -214,7 +223,7 @@ Bestätigte Systeme:
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
 
@@ -597,8 +606,8 @@ Aktuelle Persistence-Datei:
 
 Status:
 
-    Grundstruktur lädt/startet
-    produktiver Dateischreibtest offen
+    PersistenceSystem v0.2.6 lädt/startet dirty-aware
+    Datei-Write und Read-back-Verifikation bestanden; produktiver IADS-Restore nicht aktiv
 
 Zu speichernde IADS-Daten:
 

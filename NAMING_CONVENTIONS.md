@@ -1173,6 +1173,16 @@ Ausnahme:
 - DCS-Logpfade
 - konkrete Testanleitung
 
+Für in DCS eingebettete Script-Ressourcen darf ein expliziter Versionssuffix verwendet werden, wenn dadurch die DCS-Deduplizierung nach kurzem Dateinamen vermieden wird.
+
+Beispiel:
+
+```text
+tc_persistence_system_v0_2_6.lua
+```
+
+`ResKey_*`-Werte wie `ResKey_advancedFile_56` sind von DCS verwaltete Mission-Ressourcen-IDs. Sie sind keine Projektquellnamen und keine stabilen Naming-Conventions für Lua-Module.
+
 ---
 
 ## 30. Mission-Dateien
@@ -1261,34 +1271,4 @@ src/
 
 ## 33. Aktueller nächster technischer Schritt
 
-Nächster sinnvoller technischer Schritt:
-
-```text
-src/ui/tc_f10_menu.lua
-```
-
-Ziel:
-
-```text
-kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
-```
-
-Möglicher neuer F10-Befehl:
-
-```text
-Apply Capture Ready Zone 1
-```
-
-Akzeptanzkriterien:
-
-- bestehende 32 F10-Commands bleiben funktionsfähig
-- neuer Befehl wird ergänzt
-- Capture Ready Zone 1 kann bewusst angewendet werden
-- Ownership-Wechsel bleibt state-only
-- linked Airbase wird kontrolliert synchronisiert
-- Capture Pressure wird sauber zurückgesetzt oder markiert
-- klare Logmarker entstehen
-- keine echten MOOSE-Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
+Der nächste Schritt ist kein neuer Projektname und keine neue Lua-Datei. Beim Offline Embedded Mission Resource Audit werden vorhandene Triggernamen, DCS-Resource-IDs und eingebettete Dateinamen read-only inventarisiert und gegen die Repository-Namen geprüft. Neue Namen werden nur eingeführt, wenn der Audit einen belegten Bedarf zeigt.

@@ -110,11 +110,13 @@ Bestätigte Systeme:
 | PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Start, `SAVED` und `SKIPPED` bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Funktionspfade bestanden; aktueller Mission-Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
 
 Aktuelle bestätigte Fähigkeiten:
+
+Die folgenden Mission-/Capture-Fähigkeiten sind historische, weiterhin relevante Regressionsergebnisse. Sie bedeuten nicht, dass im aktuellen Lauf auswählbare Missionen vorhanden sind: MissionGenerator `v0.2.3` erzeugte zunächst zehn Missionen, später waren alle sechs Status-Collections leer.
 
 - DCS lädt Vendor-Frameworks.
 - Theater Command lädt.
@@ -1055,7 +1057,7 @@ Historischer Kontext:
 
 ## 25. Verbleibende Embedded-v0.2.6-Regressionstests
 
-Noch ausstehend:
+Noch ausstehend und aktuell durch den ungeklärten MissionGenerator-State-Verlust blockiert:
 
 - Mission Completion Regression mit eingebettetem PersistenceSystem `v0.2.6`
 - Mission Failure Regression mit eingebettetem PersistenceSystem `v0.2.6`
@@ -1070,6 +1072,45 @@ Testgrundsätze:
 - keine Persistence-F10-Steuerung ergänzen
 - keine echten MOOSE-, CTLD- oder Skynet-Aktionen auslösen
 - nach jedem Test neue Logzeilen und den Save-Dateistand prüfen
+
+---
+
+## 25A. Aktuelle MissionGenerator-Diagnose
+
+Bestätigter Lauf am 2026-08-04:
+
+- MissionGenerator `v0.2.3` wurde geladen und gestartet.
+- `MissionGenerator.start()` erzeugte den initialen Pool mit zehn Missionen.
+- `lastMissionId` erreichte `10`; die Generation-Statistik blieb ebenfalls auf zehn erzeugten Missionen.
+- In einem späteren read-only Runtime-Befund waren `available`, `active`, `completed`, `failed`, `expired` und `cancelled` alle leer.
+- Die sechs Status-Collections sind Dictionaries nach Mission Key. Korrekt gezählt wird mit `pairs()`, nicht mit `#` oder ausschließlich `ipairs()`.
+- F10 und die öffentliche Available-Abfrage fanden deshalb keine auswählbare Mission.
+- Ein zweiter normaler Lauf reproduzierte die Abfolge „zehn erzeugt, später alle sechs Collections leer“.
+- Eine Diagnoseabfrage meldete zugleich `pairs=0` und `#=1` für History. Dieser widersprüchliche Messwert bleibt ungeklärt und darf nicht als Beweis für Clear, Replacement oder einen bestimmten Writer verwendet werden.
+
+Der vollständige statische Write-Site-Audit ergab exakt:
+
+```text
+PROJECT SOURCE HAS NO MATCHING WRITE SITE
+```
+
+Begründete Grenzen der Aussage:
+
+- Kein automatisch erreichbarer Projektpfad passt zum Verlust aller sechs Collections bei erhaltenem `lastMissionId=10` und erhaltener Statistik.
+- `State.init()` und `State.reset()` würden zusätzlich Zähler zurücksetzen und Logs erzeugen.
+- `ensureMissionState()` ergänzt nur fehlende Container.
+- Mission-Transitions bewegen jeweils genau eine Mission, loggen und markieren Dirty.
+- F10 sortiert Kopien und verändert die Live-Dictionaries nicht.
+- Periodischer Persistence-Autosave importiert keinen Snapshot; produktiver Restore ist deaktiviert.
+- Der 600-Sekunden-Zeitpunkt ist eine Beobachtung, keine nachgewiesene Ursache.
+- Ursache, Writer und Mechanismus bleiben unbekannt; MissionGenerator ist weder als stabil noch als vollständig defekt klassifiziert.
+- Es wurde kein Fix implementiert.
+
+Sicherster nächster Schritt:
+
+- `Operation_Levant_Reclamation_DEV.miz` offline und strikt read-only auditieren.
+- Die 13 in `TASKS.md` aufgeführten Repository-Quellen gegen eingebettete Ressourcen, Trigger-Mappings, Dateinamen, Byte-Längen, SHA-256, Versionsmarker, veraltete oder doppelte Kopien sowie fehlende oder unerwartete Ressourcen vergleichen.
+- DCS und DCS-SMS nicht ausführen und die `.miz` nicht verändern.
 
 ---
 
@@ -1224,10 +1265,12 @@ Beispiel:
 
 - mission candidates: `78`
 - fobSupportCandidates: `2`
-- generated missions: `10`
+- generated missions: `10` beim Start; alle sechs Status-Collections waren später reproduzierbar leer
 - reservedCreated: `1`
 - duplicatesSkipped: `1`
 - typeLimitSkipped: `68`
+- lastMissionId: `10`
+- aktuelle statische Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`
 
 ### AICapManager
 
@@ -1280,6 +1323,7 @@ Noch nicht testbar beziehungsweise noch nicht produktiv:
 - produktiver automatischer Restore beim Missionsstart
 - automatische `.miz`-Generierung
 - Blue-/Red-KI-Kampagnenoperationen
+- Ursache und Writer des reproduzierbaren Mission-Record-Verlusts
 
 Aktuell bewusst state-only:
 
@@ -1305,7 +1349,7 @@ Bestanden:
 - CaptureSystem
 - LogisticsDelivery
 - FobSystem
-- MissionGenerator
+- MissionGenerator-Funktionspfade historisch bestanden; aktueller Record-Verlust ungelöst
 - AICapManager
 - F10Menu
 - Mission Completion Pipeline
@@ -1324,10 +1368,9 @@ Bestanden:
 
 Aktuelle wichtigste offene Testaufgabe:
 
-- Mission Completion Regression mit eingebettetem PersistenceSystem `v0.2.6`
-- Mission Failure Regression mit eingebettetem PersistenceSystem `v0.2.6`
-- Capture Ready Apply Regression mit eingebettetem PersistenceSystem `v0.2.6`
-- allgemeine Campaign-System-Regression nach diesen Aktionen
+- Offline Embedded Mission Resource Audit der gespeicherten DEV-`.miz`
+- erst nach Klärung der ausgeführten Ressourcen: Ursache des Mission-Record-Verlusts weiter eingrenzen
+- Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Campaign-System-Regression bleiben bis dahin blockiert
 
 Bewusste Grenze:
 
@@ -1356,22 +1399,18 @@ Danach nicht aus Erinnerung arbeiten.
 
 Nächster Testschwerpunkt:
 
-- bestehende Mission Completion Pipeline mit eingebettetem PersistenceSystem `v0.2.6` regressionsprüfen
-- bestehende Mission Failure Pipeline mit eingebettetem PersistenceSystem `v0.2.6` regressionsprüfen
-- Capture Ready Apply mit eingebettetem PersistenceSystem `v0.2.6` regressionsprüfen
-- anschließend allgemeinen Campaign-State und neue Logzeilen prüfen
-- produktiven Restore nicht testen oder aktivieren
-- keine echten MOOSE-, CTLD- oder Skynet-Aktionen auslösen
+- gespeicherte DEV-`.miz` offline und strikt read-only untersuchen
+- die 13 erwarteten Theater-Command-Quellen mit ihren Triggern und eingebetteten Ressourcen abgleichen
+- Byte-Längen, SHA-256, exakte Gleichheit, Versionen, stale/duplizierte, unerwartete und fehlende Ressourcen berichten
+- weder DCS noch DCS-SMS ausführen und weder `.miz` noch Repository verändern
 
-Erwarteter Test:
+Erwarteter Audit:
 
-1. Mission starten.
-2. `CLIENT_BLUE_FA18C_AKROTIRI_01` auswählen und bestätigen.
-3. Im Simulator-Briefing `Fly` drücken.
-4. Mission Completion Regression durchführen.
-5. Mission Failure Regression in einem sauberen Testlauf durchführen.
-6. Capture Ready Apply Regression durchführen.
-7. Campaign-State, Persistence-State, Save-Datei und ausschließlich neue Logzeilen auswerten.
+1. Trigger und Script-Actions aus dem gespeicherten `.miz`-Container inventarisieren.
+2. Resource Keys und eingebettete Dateinamen auflösen.
+3. Eingebettete Bytes gegen die in `TASKS.md` genannten 13 Repository-Dateien vergleichen.
+4. Jede Abweichung präzise berichten, ohne daraus unbelegte Ursachen abzuleiten.
+5. Erst danach den nächsten Source- oder Mission-Editor-Schritt festlegen.
 
 ---
 
@@ -1388,4 +1427,4 @@ Aktueller Leitsatz:
 
 Der nächste Testschritt ist:
 
-- Embedded-`v0.2.6`-Regressionen für Mission Completion, Mission Failure und Capture Ready Apply durchführen, ohne produktiven Restore und ohne echte Framework-Aktionen.
+- Offline Embedded Mission Resource Audit durchführen; die blockierten Mission-/Capture-Regressionen erst nach Klärung der tatsächlich eingebetteten Ressourcen fortsetzen.

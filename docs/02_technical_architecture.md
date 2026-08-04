@@ -1,5 +1,11 @@
 # Technical Architecture
 
+## Verbindliches Update — 2026-08-04
+
+PersistenceSystem `v0.2.6` ist dirty-aware und als Embedded-Scheduler bestanden. Mission-Status-Collections sind String-Key-Dictionaries und werden mit `pairs()`/`countTableKeys()` gezählt. Der aktuelle reproduzierbare Verlust aller sechs Mission-Collections hat keinen identifizierten Writer; `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+
+DCS-SMS ist Entwicklungs-/Mission-Editor-Tooling, kein Runtime-Framework. Aktuelle Bridge-Sandbox: `os=true`, `io=true`, `lfs=true`, `require=false`; Persistence selbst benötigt direkt nur `io` und `lfs`. Nächster Schritt ist der offline/read-only Embedded-Resource-Audit der gespeicherten `.miz`. Ältere als aktuell bezeichnete Abschnitte sind historische Baselines.
+
 Diese Datei beschreibt die technische Architektur von **Theater Command DCS**.
 
 Erste Kampagne:
@@ -76,7 +82,7 @@ Blue und Red sollen später eigene Operationen planen und durchführen.
 
 ## 3. Aktueller technischer Stand
 
-Stand: **2026-07-06**
+Historischer Stand: **2026-07-06**
 
 Aktueller Status:
 
@@ -102,7 +108,7 @@ Aktuell vorhanden:
 - World-System
 - Campaign-System
 - CaptureSystem
-- PersistenceSystem-Grundstruktur
+- PersistenceSystem `v0.2.6` mit dirty-aware Background-Autosave
 - LogisticsDelivery
 - FobSystem
 - MissionGenerator
@@ -126,7 +132,7 @@ Aktuell bestätigt:
 - Airbase Scanner läuft.
 - ZoneFactory läuft.
 - CaptureSystem läuft.
-- PersistenceSystem lädt/startet als Grundstruktur.
+- PersistenceSystem `v0.2.6` lädt/startet und führt verifizierte dirty-aware Autosaves aus; Restore bleibt deaktiviert.
 - LogisticsDelivery läuft.
 - FobSystem läuft.
 - MissionGenerator läuft.
@@ -154,7 +160,7 @@ Wichtiger technischer Befund:
 - CaptureSystem erzeugt **32 Progress-Records**.
 - LogisticsDelivery erzeugt **46 Logistics Hubs**.
 - FobSystem erzeugt **6 FOB-Kandidaten** und **2 Blue-FOBs**.
-- MissionGenerator erzeugt **10 verfügbare Missionen** aus **78 Kandidaten**.
+- MissionGenerator erzeugte historisch **10 verfügbare Missionen** aus **78 Kandidaten**; aktuell sind alle sechs Status-Dictionaries reproduzierbar leer.
 - F10Menu erzeugt **32 Commands**.
 - Mission Completion erzeugt einen Capture Effect.
 - `appliedMissionEffects=1` wurde bestätigt.
@@ -460,10 +466,10 @@ Bewertung:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden; Restore deaktiviert |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
 
@@ -1299,7 +1305,7 @@ src/campaign/tc_persistence_system.lua
 Aktueller Stand:
 
 - Grundstruktur vorhanden.
-- Produktiver Dateischreibtest offen.
+- Datei-Write und Read-back-Verifikation bestanden; produktiver Restore deaktiviert.
 
 Spätere Aufgaben:
 
@@ -1579,7 +1585,7 @@ Bestandene Systeme:
 | CaptureSystem | `v0.2.2` | bestanden |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
-| MissionGenerator | `v0.2.3` | bestanden |
+| MissionGenerator | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `v0.2.0` | bestanden |
 | F10Menu | `v0.2.2` | bestanden |
 

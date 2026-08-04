@@ -1,5 +1,17 @@
 # src/README.md
 
+## Autoritativer Source-Stand — 2026-08-04
+
+- Aktive Versionen: AirbaseScanner `v0.2.2`, ZoneFactory `v0.2.0`, CaptureSystem `v0.2.2`, PersistenceSystem `v0.2.6`, LogisticsDelivery `v0.2.0`, FobSystem `v0.2.0`, MissionGenerator `v0.2.3`, AICapManager `v0.2.0`, F10Menu `v0.2.3`, Loader `v0.1.0`.
+- Persistence `v0.2.6` läuft dirty-aware mit `SAVED`/`SKIPPED`/`FAILED`; Embedded-Start und echte 20-/120-Sekunden-Scheduler-Ticks sind bestanden. Produktiver Restore bleibt deaktiviert.
+- F10Menu hat 33 Befehle und keine Persistence-Steuerung.
+- MissionGenerator erzeugte in zwei normalen Läufen zunächst zehn Missionen; später waren alle sechs Status-Dictionaries leer. Ursache und Writer sind unbekannt. Statische Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+- Nächster Schritt ist der strikt read-only Offline-Audit der 13 in `TASKS.md` genannten eingebetteten `.miz`-Ressourcen. Mission-/Capture-Regressionen bleiben bis dahin blockiert.
+
+Alle abweichenden Versions-, Befehls- oder Fertigkeitsaussagen in den folgenden älteren Abschnitten sind historische Entwicklungsstände, keine aktuelle Freigabe.
+
+---
+
 Diese Datei beschreibt die eigene Lua-Source-Struktur von **Theater Command DCS**.
 
 Externe Frameworks liegen unter `vendor/`.
@@ -84,7 +96,7 @@ Die Kampagnenlogik gehört in eigene Module.
 
 ## 3. Aktueller Stand
 
-Stand: **2026-07-06**
+Historischer Stand: **2026-07-06**
 
 Aktueller Gesamtstatus:
 
@@ -260,12 +272,12 @@ Wichtig:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden; Restore deaktiviert |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | 33 Befehle; bestanden |
 
 ---
 
@@ -385,7 +397,7 @@ Aktueller getesteter Stand:
 
 ```text
 CaptureSystem: v0.2.2
-PersistenceSystem: Grundstruktur lädt/startet
+PersistenceSystem: v0.2.6, dirty-aware Embedded-Scheduler bestanden
 ```
 
 Bestätigte Capture-Startwerte:
@@ -429,7 +441,7 @@ Capture Ready kann dynamisch entstehen.
 
 Capture Ready ist über F10 sichtbar.
 
-PersistenceSystem ist vorbereitet, aber noch nicht produktiv im DCS-Dateisystem getestet.
+PersistenceSystem schreibt und verifiziert Save-Dateien automatisch; unveränderte Ticks werden ohne Schreibzugriff übersprungen. Produktiver Restore bleibt deaktiviert.
 
 ---
 
@@ -577,7 +589,7 @@ Aktuelle Mission Records enthalten:
 
 Bewertung:
 
-MissionGenerator ist bestanden.
+MissionGenerator hat historisch bestandene Funktionspfade; der aktuelle Record-Verlust ist ungelöst.
 
 Missionen können über F10 direkt ausgewählt, aktiviert und abgeschlossen werden.
 

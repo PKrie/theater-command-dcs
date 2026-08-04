@@ -1,5 +1,9 @@
 # AI Director
 
+## Verbindliches Update — 2026-08-04
+
+AICapManager `v0.2.0` bleibt state-only; echte MOOSE-Aktionen und ein produktiver AI Director sind nicht aktiv. PersistenceSystem `v0.2.6` ist dirty-aware getestet, produktiver Restore bleibt deaktiviert. Der reale Dirty-Grund `ai_cap_needs_evaluated` wurde erfolgreich gespeichert. MissionGenerator-abhängige Aussagen sind wegen des reproduzierbaren, ungelösten Mission-Record-Verlusts zu qualifizieren. Nächster Schritt ist der Offline Embedded Mission Resource Audit. Ältere Status- und Versionsangaben sind historische Snapshots.
+
 Diese Datei beschreibt den geplanten AI Director von **Theater Command DCS**.
 
 Erste Kampagne:
@@ -927,7 +931,7 @@ Noch offen:
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
 

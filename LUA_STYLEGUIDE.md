@@ -54,7 +54,7 @@ GitHub dokumentiert Architektur, Aufgaben, Teststände und Übergaben.
 
 ## 2. Aktueller technischer Stand
 
-Stand: **2026-07-06**
+Stand: **2026-08-04**
 
 Aktuell vorhanden und aktiv:
 
@@ -87,12 +87,12 @@ Aktuelle getestete Systeme:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | dirty-aware Embedded-Scheduler bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden, 33 Commands |
 
 ---
 
@@ -628,6 +628,20 @@ Dieser Schritt soll weiterhin state-only bleiben.
 
 MissionGenerator ist aktuell state-only.
 
+Mission-Status-Collections sind Dictionaries mit String-Keys wie `MISSION_1`:
+
+```lua
+TC.State.Missions.available[missionKey] = missionRecord
+```
+
+Verbindliche Zählregel:
+
+- `pairs()` oder eine Hilfsfunktion wie `countTableKeys()` für `available`, `active`, `completed`, `failed`, `expired` und `cancelled`
+- `#` und `ipairs()` dürfen nicht als autoritative Counts für diese Dictionaries verwendet werden
+- `#` und `ipairs()` bleiben korrekt für echte Arrays, zum Beispiel Histories und sortierte temporäre UI-Listen
+
+Ein Runtime-Report muss Dictionary- und Array-Semantik explizit unterscheiden. Die aktuelle `State.summary()`-Ausgabe verwendet für aktive und abgeschlossene Mission-Dictionaries noch `#` und ist deshalb für diese Counts nicht autoritativ; diese Dokumentationsfeststellung autorisiert keinen Code-Fix.
+
 Regeln:
 
 - Missionen werden aus Kampagnenlage erzeugt.
@@ -1076,7 +1090,7 @@ Regeln:
 
 ## 32. Persistenz-Regeln
 
-Persistenz ist vorbereitet, aber noch nicht produktiv getestet.
+PersistenceSystem `v0.2.6` ist dirty-aware implementiert und mit Hotload- sowie normal eingebetteten Scheduler-Tests bestanden. Produktiver Startup-Restore bleibt deaktiviert und ungetestet.
 
 Regeln:
 
@@ -1088,7 +1102,7 @@ Regeln:
 - Save/Load muss fehlertolerant sein
 - defekte Save-Dateien dürfen die Mission nicht hart zerstören
 
-Vor produktiver Persistenz zuerst testen:
+Vor produktivem Restore weiterhin testen:
 
 ```text
 minimaler State Dump
@@ -1140,31 +1154,13 @@ Ein weitergeführter Log kann für gezielte Regressionen genutzt werden, wenn de
 
 ## 35. Aktuelle nächste technische Leitlinie
 
-Der nächste sinnvolle Code-Schritt soll klein bleiben.
-
-Empfohlen:
-
-- `src/ui/tc_f10_menu.lua`
-- neuer kontrollierter F10-Befehl:
-  - `Apply Capture Ready Zone 1`
-  - oder `Confirm Capture Ready Zone 1`
-
-Ziel:
-
-- Capture Ready bewusst anwenden
-- Ownership state-only ändern
-- linked Airbase kontrolliert synchronisieren
-- Capture Pressure sauber zurücksetzen oder markieren
-- klare Logmarker erzeugen
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
+Kein spekulativer Code-Schritt ist freigegeben. Zuerst wird die gespeicherte DEV-`.miz` offline und read-only auf eingebettete Source-Drift geprüft. Erst nach Trigger-/Resource-Mapping, Byte-Längen-, SHA-256-, Versions- und Gleichheitsvergleich darf über einen MissionGenerator-Code-Fix entschieden werden.
 
 Nicht als nächstes:
 
 - keine echte MOOSE-Integration
 - keine echte CTLD-Integration
-- keine produktive Persistenz
+- kein produktiver Restore
 - kein großer AI Director
 - kein IADS-System
 

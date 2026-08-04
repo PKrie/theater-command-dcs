@@ -1,5 +1,14 @@
 # src/logistics/README.md
 
+## Autoritativer Logistics-Stand — 2026-08-04
+
+- LogisticsDelivery `v0.2.0` und FobSystem `v0.2.0` bleiben state-first implementiert und getestet.
+- PersistenceSystem `v0.2.6` speichert relevante dirty markierte State-Änderungen automatisch; unveränderte Ticks werden ohne Dateischreiben übersprungen, produktiver Restore bleibt deaktiviert.
+- Die historische MissionGenerator-FOB-Integration ist als Funktionspfad belegt. Aktuell gehen jedoch nach initial zehn generierten Missionen reproduzierbar alle sechs Status-Dictionaries verloren; Ursache und Writer sind unbekannt (`PROJECT SOURCE HAS NO MATCHING WRITE SITE`).
+- Mission-/Capture-Regressionen sind blockiert. Nächster Schritt ist der Offline/read-only Audit der eingebetteten `.miz`-Ressourcen. Abweichende ältere Angaben unten sind historische Stände.
+
+---
+
 Diese Datei beschreibt den Logistics-Bereich von **Theater Command DCS**.
 
 Der Logistics-Bereich enthält eigene Lua-Logik für Versorgung, Logistics Hubs, FOB-Kandidaten, FOB-Aufbau und spätere CTLD-Anbindung.
@@ -57,7 +66,7 @@ Grundannahme:
 
 ## 3. Aktueller technischer Stand
 
-Stand:
+Historischer Stand:
 
     2026-06-29
 
@@ -702,7 +711,7 @@ Bewertung:
 
 ## 24. Verhältnis zu Persistence
 
-Persistence soll später Logistics und FOBs speichern.
+PersistenceSystem `v0.2.6` nimmt Logistics- und FOB-State in den verifizierten Campaign-Snapshot auf; produktiver Restore bleibt deaktiviert.
 
 Aktuelle Persistence-Datei:
 
@@ -710,8 +719,8 @@ Aktuelle Persistence-Datei:
 
 Status:
 
-    Grundstruktur lädt/startet
-    produktiver Dateischreibtest offen
+    PersistenceSystem v0.2.6 lädt/startet dirty-aware
+    Datei-Write und Read-back-Verifikation bestanden
 
 Zu speichernde Logistics-Daten:
 

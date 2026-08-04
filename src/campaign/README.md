@@ -1,5 +1,15 @@
 # src/campaign/README.md
 
+## Autoritativer Campaign-Stand — 2026-08-04
+
+- CaptureSystem `v0.2.2` markiert aktive State-Änderungen dirty.
+- PersistenceSystem `v0.2.6` ist implementiert: dirty-aware periodischer Autosave, `SAVED`/`SKIPPED`/`FAILED`, verifizierter Read-back vor Dirty-Clear, Fehlererhalt und erfolgreicher Retry.
+- Normal eingebetteter Start sowie echte 20-/120-Sekunden-Ticks sind bestanden; unveränderte Ticks schreiben die Save-Datei nicht. Produktiver Restore bleibt deaktiviert und es gibt keine F10-Persistence-Controls.
+- Die historischen Mission-/Capture-Pipelines sind bestanden, ihre aktuellen Regressionen sind aber durch den ungeklärten MissionGenerator-Record-Verlust blockiert (`PROJECT SOURCE HAS NO MATCHING WRITE SITE`).
+- Nächster Schritt ist der Offline/read-only Embedded Mission Resource Audit. Abweichende Aussagen unten sind historische Entwicklungsstände.
+
+---
+
 Diese Datei beschreibt den Campaign-Bereich von **Theater Command DCS**.
 
 Der Campaign-Bereich enthält eigene Lua-Logik für strategischen Kampagnenzustand, Capture-System und Persistenzvorbereitung.
@@ -57,7 +67,7 @@ Aktuell ist der Campaign-Bereich nicht mehr nur geplant.
 
 Das CaptureSystem ist aktiv und getestet.
 
-Das PersistenceSystem ist als Grundstruktur aktiv und lädt/startet.
+Das PersistenceSystem `v0.2.6` ist als dirty-aware Background-Autosave aktiv; produktiver Restore bleibt deaktiviert.
 
 ---
 
@@ -94,7 +104,7 @@ Grundannahme:
 
 ## 3. Aktueller technischer Stand
 
-Stand: **2026-07-06**
+Historischer Stand: **2026-07-06**
 
 Aktive Dateien:
 
@@ -107,7 +117,7 @@ Getesteter Stand:
 
 ```text
 CaptureSystem: v0.2.2 bestanden
-PersistenceSystem: Grundstruktur lädt/startet
+PersistenceSystem: v0.2.6, Embedded-Scheduler und Save-Verifikation bestanden
 ```
 
 Bestätigt durch DCS-Logtests:
@@ -123,7 +133,7 @@ Bestätigt durch DCS-Logtests:
 - CaptureSystem erzeugt Capture Ready.
 - Capture Ready Zones sind über F10 sichtbar.
 - PersistenceSystem lädt.
-- PersistenceSystem startet als Grundstruktur.
+- PersistenceSystem `v0.2.6` startet als dirty-aware Background-Autosave.
 - Es gab keinen Theater-Command-Lua-Fehler.
 - Es gab keinen Lua-Stacktrace.
 
@@ -238,8 +248,8 @@ src/campaign/tc_persistence_system.lua
 
 - vorbereitete Persistenz-Grundstruktur
 - lädt/startet
-- produktiver Dateischreibtest offen
-- Save-/Load-Konzept noch nicht produktiv
+- Datei-Write und Read-back-Verifikation bestanden; produktiver Restore deaktiviert
+- Save/Autosave aktiv; produktiver Startup-Restore deaktiviert
 
 Mögliche spätere Dateien:
 
@@ -501,38 +511,25 @@ src/campaign/tc_persistence_system.lua
 
 Status:
 
-- Grundstruktur vorhanden
-- lädt/startet
-- produktiver Dateischreibtest offen
+- `v0.2.6` implementiert und normal eingebettet gestartet
+- dirty-aware periodischer Autosave mit `SAVED`, `SKIPPED` und `FAILED`
+- produktiver Startup-Restore deaktiviert
 
 Aufgaben aktuell:
 
-- PersistenceSystem als Modul bereitstellen
-- State-Struktur vorbereiten
-- Save-/Load-Konzept vorbereiten
-- defensive Grundstruktur bereitstellen
-- späteren DCS-Dateischreibtest ermöglichen
+- vorhandenen `TC.State.Persistence`-Dirty-State verwenden
+- geänderten State schreiben, zurücklesen, kompilieren, evaluieren und validieren
+- Dirty erst nach verifiziertem Erfolg löschen und neuere Dirty-Zustände schützen
+- unveränderte periodische Ticks ohne Dateischreiben überspringen
 
 Noch nicht aktiv:
 
-- produktiver Save
-- produktiver Load
-- Autosave
-- Save-Datei
-- Save-Pfad
-- Kampagnenzustand wiederherstellen
-- Missionen speichern
-- Capture-State speichern
-- Logistics-State speichern
-- FOB-State speichern
-- AI-State speichern
-- IADS-State speichern
+- produktiver automatischer Restore beim Missionsstart
+- Persistence-F10-Controls
 
 Wichtig:
 
-PersistenceSystem darf erst produktiv werden, wenn DCS-Dateizugriff sauber getestet wurde.
-
-Der Persistence-Sandbox-Test wird sinnvoller, sobald ein kontrollierter state-only Ownership-Wechsel bestätigt ist.
+Dateischreiben, Read-back-Verifikation, kontrollierter Fehler/Retry und der normal eingebettete 20-/120-Sekunden-Scheduler sind bestanden. Restore benötigt eine separate spätere Freigabe.
 
 ---
 
@@ -893,7 +890,7 @@ Das bedeutet:
 - PersistenceSystem bereitet State-Speicherung vor.
 - UI macht State sichtbar.
 - echte Besitzwechsel folgen kontrolliert.
-- produktive Persistenz folgt später.
+- dirty-aware Background-Persistence ist aktiv; produktiver Restore folgt erst nach separater Freigabe.
 
 Aktuell nicht aktiv:
 
@@ -945,7 +942,7 @@ Aktuell:
 
 ## 23. Persistenz-Grundidee
 
-Persistenz soll später speichern, was Theater Command strategisch verändert hat.
+PersistenceSystem `v0.2.6` speichert den strategischen Campaign-Snapshot automatisch; produktiver Restore bleibt deaktiviert.
 
 Beispiele:
 
@@ -991,7 +988,7 @@ CaptureSystem `v0.2.2` gilt aktuell als bestanden, wenn:
 - keine Theater-Command-Lua-Fehler auftreten.
 - keine Lua-Stacktraces auftreten.
 
-PersistenceSystem gilt aktuell als Grundstruktur bestanden, wenn:
+PersistenceSystem `v0.2.6` gilt als bestanden, wenn:
 
 - Datei lädt.
 - Modul startet.
@@ -1133,8 +1130,8 @@ Aktueller Status:
 - Mission Completion zu Capture Progress ist bestätigt.
 - Capture Ready ist bestätigt.
 - Capture Ready ist über F10 sichtbar.
-- PersistenceSystem lädt/startet als Grundstruktur.
-- produktive Besitzwechsel und Save/Load folgen später.
+- PersistenceSystem `v0.2.6` lädt/startet dirty-aware; Embedded-Scheduler und Fehler/Retry sind bestanden.
+- produktive Besitzwechsel und Startup-Restore folgen später.
 
 Nächster notwendiger Zwischenschritt im Gesamtprojekt:
 

@@ -18,6 +18,38 @@ Ausgangslage:
 - Red hält zu Beginn den Großteil der strategischen Flugplätze
 - Spieler sollen sich in eine laufende Kampagne einklinken, nicht jede Aktion allein auslösen
 
+## Verbindlicher Mission-Editor-Stand — 2026-08-04
+
+DEV-Mission:
+
+```text
+C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz
+```
+
+Persistence-Trigger:
+
+- Name: `TC_LOAD_TC_PERSISTENCE_SYSTEM`
+- Typ: `once`
+- Bedingung: `time-after 15 seconds`
+- Resource Key: `ResKey_advancedFile_56`
+- Embedded Filename: `tc_persistence_system_v0_2_6.lua`
+- eingebettete Bytes entsprechen exakt `src/campaign/tc_persistence_system.lua`
+- der alte Trigger-Verweis `ResKey_Action_55` ist entfernt
+- die Mission wurde mit der nativen Mission-Editor-Save-Aktion gespeichert und die gespeicherte `.miz` verifiziert
+
+DCS-SMS stellt Entwicklungs- und Mission-Editor-Tooling bereit, ersetzt aber keine Theater-Command-Runtime-Komponente. Externe Ausführung, Mission-Editor-Trigger-/Ressourcenoperationen und die native Save-Aktion wurden bestätigt.
+
+Der Spieler-Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` ist `CLIENT`, nicht `PLAYER`. Normaler Teststart:
+
+1. Mission aus dem Mission Editor starten.
+2. `CLIENT_BLUE_FA18C_AKROTIRI_01` in der Client-Slotauswahl wählen.
+3. Slot bestätigen.
+4. Im Simulator-Briefing `Fly` drücken.
+
+PersistenceSystem `v0.2.6` startete auf diesem Weg normal und bestand die echten `20s`-/`120s`-Scheduler-Tests. Aktuelle Einschränkung ist der reproduzierbare MissionGenerator-Record-Verlust. Mission Completion, Mission Failure und Capture Ready Apply Regressionen sind bis zur Eingrenzung blockiert.
+
+Die aktive DCS-SMS-Bridge benötigt `os=true`, `io=true`, `lfs=true`; `require=false` bleibt bestehen. DCS-Updates können `MissionScripting.lua` sowie Bridge-/Sandbox-Änderungen überschreiben.
+
 ---
 
 ## 1. Grundsatz
@@ -42,7 +74,7 @@ Alles, was sinnvoll durch Lua erkannt, berechnet oder gesteuert werden kann, sol
 
 ## 2. Aktueller Projektstand
 
-Stand: **2026-07-06**
+Historischer Baseline-Stand: **2026-07-06**. Der verbindliche aktuelle Stand steht oben.
 
 Aktueller technischer Status:
 
@@ -66,12 +98,12 @@ Aktuelle getestete Systeme:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Start und Scheduler bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden, 33 Commands |
 
 Aktueller wichtiger Befund:
 
@@ -81,8 +113,8 @@ Aktueller wichtiger Befund:
 - ZoneFactory überspringt **179 nicht geeignete airbase-like objects**
 - CaptureSystem arbeitet auf **32 capture-fähigen Zielen**
 - MissionGenerator erzeugt **78 Missionskandidaten**
-- MissionGenerator erzeugt **10 verfügbare Missionen**
-- F10Menu erzeugt **32 Commands**
+- MissionGenerator erzeugte historisch **10 verfügbare Missionen**; aktuell sind alle sechs Status-Dictionaries reproduzierbar leer
+- F10Menu erzeugt **33 Commands**
 
 Bewertung:
 
@@ -166,8 +198,11 @@ Aktueller erster Client-Slot:
 - Startort: Akrotiri
 - Starttyp: Start vom Parkplatz
 - Skill: Client
+- Gruppen-/Slotname: `CLIENT_BLUE_FA18C_AKROTIRI_01`
 
 Dieser Slot dient aktuell dazu, die Mission starten und in der Simulation laufen lassen zu können.
+
+Da der Slot `CLIENT` ist, erscheint vor dem Briefing die Client-Slotauswahl. Automatisierte und manuelle Tests müssen diesen zusätzlichen Schritt berücksichtigen.
 
 Er ist noch kein finaler Kampagnenslot.
 
@@ -767,11 +802,7 @@ Die Kampagnenlogik bleibt Lua.
 
 ## 19. Aktueller nächster Mission-Editor-Schritt
 
-Aktuell wird keine neue große Mission-Editor-Struktur gebaut.
-
-Nächster technischer Schwerpunkt liegt weiter im Code/F10-State:
-
-- kontrollierten state-only Ownership-Wechsel aus `Capture Ready Zone 1` vorbereiten
+Keine Mission-Editor-Änderung ist als nächstes freigegeben. Zuerst wird die gespeicherte `.miz` offline und read-only auditiert, um alle Theater-Command-Trigger-/Ressourcen-Mappings, eingebetteten Bytes, SHA-256, Versionen sowie stale, doppelte, unerwartete oder fehlende Skripte zu erfassen.
 
 Möglicher F10-Pfad:
 
@@ -813,4 +844,4 @@ Capture Effect Processing ist bestätigt.
 
 Capture Ready Visibility ist bestätigt.
 
-Die nächste Entwicklungsentscheidung betrifft nicht den Mission Editor, sondern den kontrollierten state-only Ownership-Wechsel aus einer Capture Ready Zone.
+Die nächste Entwicklungsentscheidung folgt erst nach dem Offline Embedded Mission Resource Audit. Die `.miz` darf dabei nicht verändert werden.

@@ -1,5 +1,14 @@
 # src/ai/README.md
 
+## Autoritativer AI-Stand — 2026-08-04
+
+- AICapManager `v0.2.0` bleibt der aktive state-first AI-Baustein; ein produktiver AI Director ist nicht implementiert.
+- Der echte Persistence-`v0.2.6`-Scheduler speicherte den realen Dirty Reason `ai_cap_needs_evaluated` erfolgreich und übersprang danach unveränderte Ticks ohne Dateischreiben.
+- MissionGenerator `v0.2.3` erzeugte zunächst zehn Records, verlor später jedoch reproduzierbar alle sechs Status-Dictionaries. Ursache und Writer sind unbekannt; Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+- Nächster Schritt ist ein Offline/read-only Embedded Mission Resource Audit. Abweichende ältere Versions-/F10-Angaben unten sind historische Stände; aktuell gelten F10Menu `v0.2.3` und 33 Befehle.
+
+---
+
 Diese Datei beschreibt den AI-Bereich von **Theater Command DCS**.
 
 Der AI-Bereich enthält eigene Lua-Logik für KI-bezogene Kampagnenentscheidungen, CAP-State und spätere AI-Director-Funktionen.
@@ -26,7 +35,7 @@ Der erste aktive AI-Baustein ist der AICapManager.
 
 ## 2. Aktueller technischer Stand
 
-Stand:
+Historischer Stand:
 
     2026-06-29
 

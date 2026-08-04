@@ -1,5 +1,16 @@
 # src/missions/README.md
 
+## Autoritativer MissionGenerator-Stand — 2026-08-04
+
+- MissionGenerator `v0.2.3` lädt, startet und erzeugt im initialen Pool zehn Missionen; `lastMissionId` und die Statistik erreichen `10`.
+- In zwei normalen Läufen waren später `available`, `active`, `completed`, `failed`, `expired` und `cancelled` vollständig leer. Diese Collections sind Dictionaries nach Mission Key und werden korrekt mit `pairs()` gezählt.
+- F10 und die öffentliche Available-Abfrage fanden deshalb keine auswählbare Mission. Eine Diagnose meldete zusätzlich widersprüchlich History `pairs=0` bei `#=1`; dieser Befund beweist keinen bestimmten Mutationsmechanismus.
+- Der vollständige statische Write-Site-Audit lautet exakt `PROJECT SOURCE HAS NO MATCHING WRITE SITE`. Ursache, Writer und Mechanismus bleiben unbekannt; weder Persistence noch der beobachtete 600-Sekunden-Zeitpunkt sind als Ursache belegt.
+- Es gibt keinen freigegebenen Code-Fix. Mission Completion, Mission Failure, Capture Ready Apply und allgemeine Regressionen sind blockiert.
+- Nächster Schritt ist der Offline/read-only Audit der 13 erwarteten eingebetteten `.miz`-Ressourcen. Ältere Erfolgsaussagen unten dokumentieren historische Funktionspfade, nicht die aktuelle Verfügbarkeit von Mission Records.
+
+---
+
 Diese Datei beschreibt den Missionsbereich von **Theater Command DCS**.
 
 Der Missionsbereich erzeugt dynamische Missionen aus dem aktuellen Kampagnenzustand.
@@ -52,7 +63,7 @@ Der Mission Generator ist aktiv, getestet und bereits mit F10Menu und CaptureSys
 
 ## 2. Aktueller technischer Stand
 
-Stand: **2026-07-06**
+Historischer Stand: **2026-07-06**
 
 Aktive Datei:
 
@@ -149,7 +160,7 @@ Bestätigte Capture-Rückwirkung:
 
 Bewertung:
 
-- MissionGenerator `v0.2.3` ist bestanden.
+- MissionGenerator `v0.2.3` hat historisch bestandene Funktionspfade; der aktuelle Record-Verlust ist ungelöst.
 - Missionen sind sichtbar, auswählbar, aktivierbar und state-only abschließbar.
 - Mission Completion erzeugt vorbereitete Mission Effects.
 - Der erste bestätigte Empfänger von Mission Effects ist CaptureSystem.
@@ -747,7 +758,7 @@ Bewertung:
 
 ## 19. Verhältnis zu Persistence
 
-PersistenceSystem ist vorbereitet, aber noch nicht produktiv.
+PersistenceSystem `v0.2.6` speichert Campaign-State dirty-aware; produktiver Restore bleibt deaktiviert. Der aktuelle Mission-Record-Verlust ist nicht als Persistence-Ursache belegt.
 
 Aktuelle Datei:
 
@@ -758,8 +769,8 @@ src/campaign/tc_persistence_system.lua
 Status:
 
 ```text
-Grundstruktur lädt/startet
-produktiver Dateischreibtest offen
+PersistenceSystem v0.2.6 lädt/startet dirty-aware
+Datei-Write und Read-back-Verifikation bestanden
 ```
 
 Missionsdaten sollen später persistiert werden:
@@ -975,8 +986,8 @@ Der Missionsbereich verbindet:
 
 Aktueller Status:
 
-- MissionGenerator `v0.2.3` ist state-first bestanden.
-- Missionen sind über F10 sichtbar.
+- MissionGenerator `v0.2.3` hat historisch bestandene state-first Pfade; der aktuelle Record-Verlust ist ungelöst.
+- Missionen waren in historischen Regressionstests über F10 sichtbar; aktuell sind die sechs Status-Dictionaries leer.
 - Missionen sind über F10 aktivierbar.
 - Missionen können über F10 state-only abgeschlossen werden.
 - Mission Effects werden vorbereitet.

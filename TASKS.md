@@ -6,6 +6,37 @@ Neue Sessions sollen zuerst diese Datei lesen und danach den aktuellen GitHub-St
 
 ---
 
+## 0. Verbindlicher Übergabestand — 2026-08-04
+
+PersistenceSystem `v0.2.6` ist implementiert, in die gespeicherte DEV-Mission eingebettet und mit echten periodischen `SAVED`- und `SKIPPED`-Ticks getestet. Die synchronen `FAILED`- und Retry-Pfade sind ebenfalls bestanden. Produktiver Startup-Restore bleibt deaktiviert und ungetestet.
+
+Aktueller Blocker:
+
+- MissionGenerator `v0.2.3` startet und erzeugt zunächst zehn state-only Missionen.
+- Spätere Laufzeitprüfungen fanden jedoch alle sechs Status-Collections leer, während `lastMissionId=10` und die Statistik `total=10`, `available=10` stehen blieben.
+- Der Verlust ist bestätigt und in einem zweiten normalen Missionslauf reproduziert.
+- Die genaue Ursache, der genaue Writer und der exakte Zeitpunkt sind nicht identifiziert.
+- Unbekannt ist, ob die Collections ersetzt, geleert oder durch die Diagnoseumgebung falsch beobachtet wurden.
+- Es wurde kein Code-Fix implementiert.
+
+Statische Audit-Klassifikation:
+
+```text
+PROJECT SOURCE HAS NO MATCHING WRITE SITE
+```
+
+Priorität 1 ist deshalb ein strikt read-only Offline-Audit der eingebetteten Theater-Command-Ressourcen in:
+
+```text
+C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz
+```
+
+Das Audit muss Trigger-Zuordnung, Resource Keys, eingebettete Dateinamen, Byte-Längen, SHA-256, exakte Byte-Gleichheit, Versionen, veraltete oder doppelte Ressourcen, unerwartete Skripte und fehlende erwartete Ressourcen berichten. Es darf weder DCS noch DCS-SMS-Runtime-Execution verwenden und die `.miz` nicht verändern.
+
+Bis dieses Audit abgeschlossen ist, sind Mission Completion, Mission Failure und Capture Ready Apply Regressionen blockiert.
+
+---
+
 ## 1. Projekt
 
 Projektname:
@@ -205,7 +236,7 @@ Aktuell nur vorbereitet oder dokumentiert:
 
 ## 6. Erfolgreich getestete Systeme
 
-Stand: 2026-07-06
+Historischer Baseline-Stand: 2026-07-06. Der verbindliche aktuelle Stand steht in Abschnitt 0.
 
 ---
 
@@ -385,7 +416,7 @@ Bewertung:
 
 Offen:
 
-- Dirty-Markierungen nach Capture-Änderungen sind im Code bereits vorhanden; die dirty-aware Autosave-Auswertung ist noch offen
+- Dirty-Markierungen nach Capture-Änderungen und die dirty-aware Autosave-Auswertung sind implementiert und getestet
 - automatische Auswertung realer Einheiten in Capture-Zonen
 - Ownership-Wechsel später an Logistics, AI, Mission Generator und IADS koppeln
 - Capture-Progress langfristig über echte DCS-Ereignisse beeinflussen
@@ -540,7 +571,7 @@ Bestätigte F10-/MissionGenerator-Interaktion:
 
 Bewertung:
 
-- MissionGenerator `v0.2.3` ist bestanden.
+- MissionGenerator `v0.2.3` hat historisch bestandene Funktionspfade; der aktuelle Record-Verlust ist ungelöst.
 - Missionsaktivierung ist stabil.
 - Mission Completion ist state-only praktisch getestet.
 - Mission Failure ist state-only praktisch getestet.
@@ -685,7 +716,7 @@ Datei:
 
 Aktuelle getestete Version:
 
-- `v0.2.5`
+- `v0.2.6`
 
 Status:
 
@@ -694,13 +725,13 @@ Status:
 Lokale Voraussetzung:
 
 - In `...\DCS World\Scripts\MissionScripting.lua` müssen `io` und `lfs` für dieses Projekt entsperrt sein.
-- `os` bleibt bewusst gesperrt.
+- Solange die installierte DCS-SMS-Runtime-Bridge verwendet wird, müssen zusätzlich `os`, `io` und `lfs` entsperrt bleiben.
 - `require` bleibt bewusst gesperrt.
 - Nach DCS-Updates kann diese lokale Änderung überschrieben werden.
 
 Aktueller bestätigter Sandbox-Status:
 
-- `os=false`
+- `os=true`
 - `io=true`
 - `lfs=true`
 - `require=false`
@@ -726,8 +757,9 @@ Bestätigter technischer Verlauf:
 - `v0.2.3`: Save-Datei gelesen, kompiliert, evaluiert und validiert.
 - `v0.2.4`: Save-Datei kontrolliert in `TC.State` importiert.
 - `v0.2.5`: Test-Timer-Kaskade entfernt und Background-Autosave aktiviert.
+- `v0.2.6`: Periodischer Autosave dirty-aware; `SAVED`, `SKIPPED`, `FAILED`, Fehlererhalt, Retry und Schutz neuerer Dirty-Zustände bestanden.
 
-Bestätigte Logmarker aus `v0.2.5`:
+Historische Logmarker aus `v0.2.5`:
 
 - `Loaded src/campaign/tc_persistence_system.lua v0.2.5`
 - `Persistence sandbox file test passed`
@@ -752,15 +784,16 @@ Bewertung:
 - Save/Validate/Load-Funktionen bleiben intern vorhanden.
 - Produktiver automatischer Restore beim Missionsstart ist noch deaktiviert.
 - Dirty-Markierungen sind in CaptureSystem und weiteren aktiven State-Systemen bereits vorhanden.
-- Periodischer Autosave wertet den Dirty-State aktuell noch nicht aus und schreibt deshalb auch unveränderte Zustände.
+- Periodischer Autosave wertet den Dirty-State aus und überspringt unveränderte Ticks ohne Dateischreibzugriff.
+- Dirty wird erst nach vollständigem Write-/Read-back-/Compile-/Evaluate-/Validation-Erfolg gelöscht.
+- Fehler behalten Dirty und Dirty Reason; ein späterer Retry kann denselben Zustand erfolgreich speichern.
 
 Offen:
 
-- periodischen Autosave in `tc_persistence_system.lua` dirty-aware machen
-- Dirty-State nach fehlgeschlagenem Save beibehalten
-- Dirty-State erst nach verifiziert erfolgreichem Save löschen
-- Saved-/Skipped-/Failed-Ergebnisse inklusive Dirty Reason eindeutig loggen
-- produktiven Restore bewusst erst nach dirty-aware Autosave-Tests aktivieren
+- produktiven Startup-Restore weiterhin deaktiviert lassen
+- blockierte Mission-/Capture-Regressionen erst nach Klärung des MissionGenerator-State-Verlusts durchführen
+- fachliche Dirty-Abdeckung der aktiven State-Systeme weiter validieren
+- produktiven Restore erst nach den blockierten Regressionen, vollständiger Dirty-Abdeckung und definierter Restore-Reihenfolge separat freigeben
 - Save-Dateiformat langfristig versionieren
 - Backup-/Rotationsstrategie für Save-Dateien definieren
 - Schutz gegen veraltete oder inkompatible Save-Dateien ergänzen
@@ -809,7 +842,7 @@ Status:
 - state-only
 - noch nicht automatisch
 - Dirty-Markierungen im CaptureSystem vorhanden
-- dirty-aware Autosave-Auswertung noch nicht getestet
+- dirty-aware Autosave-Auswertung einschließlich Fehler/Retry und Embedded-Scheduler getestet
 
 ---
 
@@ -876,7 +909,7 @@ Noch nicht produktiv umgesetzt:
 
 ## 9. Wichtigste offene Aufgaben
 
-### Priorität 1: Periodischen Autosave dirty-aware machen
+### Abgeschlossen: Periodischen Autosave dirty-aware machen
 
 Datei:
 
@@ -945,6 +978,60 @@ Erwarteter Testablauf:
 15. Dateizugriff wiederherstellen und den nächsten periodischen Tick abwarten.
 16. Log und Save-Datei bestätigen den erfolgreichen Retry; erst danach ist `dirty=false`.
 17. Gesamten neuen `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
+
+Ergebnis vom 2026-08-04:
+
+- Implementierung als PersistenceSystem `v0.2.6` abgeschlossen.
+- Hotload: `SAVED`, `SKIPPED`, kontrolliertes `FAILED` und erfolgreicher Retry bestanden.
+- Normal eingebetteter Start: Scheduler mit `20s` Initial Delay und `120s` Intervall bestanden.
+- Realer Dirty-Grund `ai_cap_needs_evaluated` wurde als `SAVED` gesichert.
+- Drei folgende unveränderte Ticks wurden als `SKIPPED` protokolliert, ohne die Save-Datei zu verändern.
+
+---
+
+### Priorität 1: Offline Embedded Mission Resource Audit
+
+Ziel:
+
+- feststellen, ob die auditierten Repository-Quellen byte-identisch zu den tatsächlich eingebetteten und ausgeführten Ressourcen sind
+- veraltete, doppelte, unerwartete oder fehlende Theater-Command-Ressourcen erkennen
+- Trigger-zu-Ressource-Zuordnungen verifizieren
+- Source-Verhalten von Embedded-Runtime-Drift unterscheiden
+
+Besonders zu vergleichen:
+
+- `src/core/tc_state.lua`
+- `src/core/tc_scheduler.lua`
+- `src/world/tc_airbase_scanner.lua`
+- `src/world/tc_zone_factory.lua`
+- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/logistics/tc_fob_system.lua`
+- `src/missions/tc_mission_generator.lua`
+- `src/ai/tc_ai_cap_manager.lua`
+- `src/ui/tc_f10_menu.lua`
+- `src/main.lua`
+- `src/loader.lua`
+
+Sicherheitsgrenzen:
+
+- offline und read-only
+- keine DCS-Runtime-Interaktion
+- kein DCS-SMS Runtime Exec
+- keine `.miz`-Änderung
+- kein spekulativer Code-Fix
+- kein produktiver Restore
+
+Akzeptanzkriterien:
+
+- jeder erwartete Trigger und jede Script-Aktion ist mit Resource Key und eingebettetem Dateinamen erfasst
+- eingebettete und Repository-Byte-Längen sowie SHA-256 sind dokumentiert
+- exakte Byte-Gleichheit ist je Ressource ausgewiesen
+- eingebettete und erwartete Versionen sind verglichen
+- veraltete, doppelte, unerwartete und fehlende Ressourcen sind eindeutig aufgelistet
+- das Ergebnis erklärt keine Ursache ohne Beleg
+- der MissionGenerator-Defekt bleibt bis zu einem Beweis ungelöst
 
 ---
 
@@ -1074,18 +1161,18 @@ Bestandene Systeme:
 | CaptureSystem | `v0.2.2` | bestanden |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
-| MissionGenerator | `v0.2.3` | bestanden |
+| MissionGenerator | `v0.2.3` | historische Funktionspfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `v0.2.0` | bestanden |
 | F10Menu | `v0.2.3` | bestanden |
-| PersistenceSystem | `v0.2.5` | bestanden |
+| PersistenceSystem | `v0.2.6` | Embedded-Scheduler, Save/Skip und Fehler/Retry bestanden |
 
 Aktuelle bestätigte Fähigkeiten:
 
 - Syria-Airbase-Scan funktioniert.
 - Kampagnenzonen werden korrekt state-only erzeugt.
 - Capture-System erzeugt Druck und Ready-Status.
-- Mission Generator erzeugt 10 Missionen mit reservierten Hooks.
-- F10Menu erlaubt Mission Details, Activation, Completion, Failure und Capture Ready Apply.
+- Mission Generator erzeugt beim Start 10 Missionen mit reservierten Hooks; die sechs Status-Dictionaries sind später reproduzierbar leer.
+- F10Menu-Funktionspfade für Mission Details, Activation, Completion, Failure und Capture Ready Apply sind historisch bestanden; aktuell fehlen auswählbare Mission Records.
 - Mission Completion kann Capture Pressure erzeugen.
 - Mission Failure bleibt ohne Capture Pressure.
 - Capture Ready Apply kann Zone und Airbase state-only auf Blue setzen.
@@ -1098,7 +1185,7 @@ Aktuelle bestätigte Fähigkeiten:
 
 Aktuelle wichtigste offene Fähigkeit:
 
-- Periodischer Autosave muss vorhandene Dirty-Markierungen auswerten, unveränderte Ticks überspringen und Dirty-State erst nach verifiziert erfolgreichem Save löschen.
+- Die Ursache des reproduzierbaren Mission-Record-Verlusts muss eingegrenzt werden; erster Schritt ist der Offline-Audit der eingebetteten Mission-Ressourcen.
 
 ---
 
@@ -1123,30 +1210,21 @@ Danach nicht mit F10-Persistence weitermachen.
 
 Nächster technischer Schritt:
 
-- `src/campaign/tc_persistence_system.lua`
-
-Konkretes Ziel:
-
-- periodischen Autosave dirty-aware machen
-- bei `dirty=true` speichern und Dirty Reason loggen
-- bei unverändertem State den Autosave-Tick klar geloggt überspringen
-- bei Save-Fehler Dirty-State und Dirty Reason beibehalten
-- Dirty-State erst nach verifiziert erfolgreichem Save löschen
-- kein produktiver Restore
-- kein Persistence-F10-Menü
-- keine echten MOOSE-/CTLD-/Skynet-Aktionen
+- Offline Embedded Mission Resource Audit der gespeicherten DEV-`.miz`.
 
 Nächster erwarteter Test:
 
-1. Mission über F10 aktivieren.
-2. Mission über F10 abschließen.
-3. Capture Ready Zone 1 über F10 anwenden.
-4. Dirty-State und Dirty Reason vor dem Autosave bestätigen.
-5. Periodischer Autosave speichert und verifiziert den geänderten State.
-6. Folgender unveränderter Tick wird ohne Dateischreibvorgang übersprungen.
-7. Kontrollierter Save-Fehler behält Dirty-State und Dirty Reason bei.
-8. Erfolgreicher Retry speichert den State und löscht Dirty erst danach.
-9. DCS-Log wird auf Saved-/Skipped-/Failed-Marker und Fehler geprüft.
+1. `.miz` ausschließlich offline und read-only öffnen.
+2. Mission-Trigger und Script-Resource-Mappings inventarisieren.
+3. Eingebettete Bytes, Längen, SHA-256 und Versionen gegen das Repository vergleichen.
+4. Veraltete, doppelte, unerwartete und fehlende Theater-Command-Ressourcen berichten.
+5. Erst danach entscheiden, ob ein Source-Code-Test oder eine Mission-Editor-Korrektur fachlich begründet ist.
+
+Blockiert bis dahin:
+
+- Mission Completion Regression
+- Mission Failure Regression
+- Capture Ready Apply Regression
 
 ---
 

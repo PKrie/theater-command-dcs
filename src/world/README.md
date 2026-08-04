@@ -1,5 +1,14 @@
 # src/world/README.md
 
+## Autoritativer World-Stand — 2026-08-04
+
+- AirbaseScanner `v0.2.2` und ZoneFactory `v0.2.0` bleiben die bestätigte World-State-Grundlage.
+- Der aktuelle Blocker liegt nicht in einem nachgewiesenen World-Write-Site: MissionGenerator erzeugte zunächst zehn Records, später waren alle sechs Mission-Status-Dictionaries leer; Ursache und Writer bleiben unbekannt.
+- Statische Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+- Nächster Schritt ist der Offline/read-only Audit der 13 in der DEV-`.miz` eingebetteten Theater-Command-Ressourcen. Abweichende Versions-/F10-Angaben unten sind historische Stände; aktuell gelten F10Menu `v0.2.3` mit 33 Befehlen und PersistenceSystem `v0.2.6`.
+
+---
+
 Diese Datei beschreibt den World-Bereich von **Theater Command DCS**.
 
 Der World-Bereich bildet die DCS-Welt in eigene Theater-Command-Strukturen ab.
@@ -54,7 +63,7 @@ Grundannahme:
 
 ## 3. Aktueller technischer Stand
 
-Stand:
+Historischer Stand:
 
     2026-06-29
 
@@ -717,7 +726,7 @@ Aktuell:
 
 ## 25. Verhältnis zu Persistence
 
-Persistence soll später World-Daten speichern oder validieren.
+PersistenceSystem `v0.2.6` nimmt World-State in den verifizierten Campaign-Snapshot auf; produktiver Restore bleibt deaktiviert.
 
 Aktuelle Persistence-Datei:
 
@@ -725,10 +734,10 @@ Aktuelle Persistence-Datei:
 
 Status:
 
-    Grundstruktur lädt/startet
-    produktiver Dateischreibtest offen
+    PersistenceSystem v0.2.6 lädt/startet dirty-aware
+    Datei-Write und Read-back-Verifikation bestanden
 
-Persistenz soll später speichern:
+Der aktuelle Campaign-Snapshot umfasst:
 
 - Airbase Keys
 - Zone Keys

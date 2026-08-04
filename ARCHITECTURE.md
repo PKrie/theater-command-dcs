@@ -18,6 +18,16 @@ Grundprinzip:
 - Lua = Kampagnensystem
 - GitHub = Projektgedächtnis
 
+## Verbindlicher Architekturstand — 2026-08-04
+
+PersistenceSystem `v0.2.6` ist ein dirty-aware Campaign-Layer-Querschnittssystem. Periodische Entscheidungen sind `SAVED`, `SKIPPED` oder `FAILED`; Dirty wird erst nach Write, Read-back, Compile, Evaluate und Validation gelöscht. Ein neuerer Dirty-State wird durch einen älteren Save-Abschluss nicht gelöscht. Produktiver Startup-Restore bleibt deaktiviert.
+
+Mission-Status-Collections sind Dictionaries mit String-Keys wie `MISSION_1`. Autoritative Zählung erfolgt mit `pairs()` beziehungsweise `countTableKeys()`, nicht mit `#` oder `ipairs()`. Historisch wurden zehn Missionen erfolgreich erzeugt und über F10 getestet. Aktuell gehen die sechs Status-Collections später reproduzierbar verloren, während IDs und Statistiken stale bleiben. Ursache und Writer sind unbekannt; die Klassifikation lautet `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+
+DCS-SMS ist ausschließlich Entwicklungs- und Mission-Editor-Tooling, kein Runtime-Framework. Die aktive Bridge-Umgebung ist `os=true`, `io=true`, `lfs=true`, `require=false`; Persistence selbst benötigt direkt nur `io` und `lfs`.
+
+Nächster Architekturtest ist der offline/read-only Vergleich der eingebetteten `.miz`-Ressourcen mit den Repository-Quellen. Bis dahin bleiben Mission Completion, Mission Failure und Capture Ready Apply Regressionen blockiert.
+
 ---
 
 ## 1. Architekturziel
@@ -61,7 +71,7 @@ Startlage:
 
 ## 3. Architekturstatus
 
-Stand: 2026-07-06
+Historischer Baseline-Stand: 2026-07-06. Der verbindliche aktuelle Stand steht oben.
 
 Aktuelle Architekturklasse:
 
@@ -405,7 +415,7 @@ Bewertung:
 - Mission Failure ohne Capture Pressure ist bestätigt.
 - Capture Ready Apply ist bestätigt.
 - Produktive automatische Capture-Auswertung über reale DCS-Einheiten ist noch offen.
-- Dirty-/Persistence-Hook ist der nächste sinnvolle Schritt.
+- Dirty-Markierungen sind vorhanden und werden durch PersistenceSystem `v0.2.6` ausgewertet.
 
 ---
 
@@ -417,7 +427,7 @@ Datei:
 
 Getestete Version:
 
-- `v0.2.5`
+- `v0.2.6`
 
 Status:
 
@@ -434,14 +444,14 @@ Architekturrolle:
 Lokale Voraussetzung:
 
 - `io` und `lfs` müssen in `...\DCS World\Scripts\MissionScripting.lua` entsperrt sein.
-- `os` bleibt gesperrt.
+- `os` ist für die aktive DCS-SMS-Runtime-Bridge unsanitized.
 - `require` bleibt gesperrt.
 
 Bestätigter Sandbox-Status:
 
 | Modul/Funktion | Status |
 |---|---|
-| `os` | `false` |
+| `os` | `true` |
 | `io` | `true` |
 | `lfs` | `true` |
 | `require` | `false` |
@@ -468,6 +478,7 @@ Technische Stufen:
 | `v0.2.3` | Save-Datei lesen, kompilieren, evaluieren und validieren | bestanden |
 | `v0.2.4` | Save-Datei kontrolliert importieren | bestanden |
 | `v0.2.5` | Background-Autosave statt Test-Timer-Kaskade | bestanden |
+| `v0.2.6` | Dirty-aware `SAVED`/`SKIPPED`/`FAILED` mit Retry und Embedded-Scheduler | bestanden |
 
 Autosave-Verhalten:
 
@@ -486,11 +497,10 @@ Architekturentscheidung:
 
 Noch offen:
 
-- Dirty-/Autosave-Hook im CaptureSystem
-- Dirty-Hooks in Logistics, FOB, MissionGenerator, AI und IADS
+- fachliche Dirty-Abdeckung der aktiven State-Systeme weiter validieren
 - Save-Dateiformat langfristig versionieren
 - Backup-/Rotationsstrategie für Save-Dateien
-- produktiven Restore erst nach stabilen Dirty-Hooks freischalten
+- produktiven Restore erst nach vollständiger Dirty-Abdeckung, blockierten Regressionen und definierter Restore-Reihenfolge freischalten
 
 ---
 
@@ -527,7 +537,8 @@ Getestete Version:
 
 Status:
 
-- bestanden
+- historisch bestandene Generierungs- und F10-Pipeline
+- aktueller Mission-Record-Verlust reproduzierbar und ungelöst
 
 Bestätigte Werte:
 
@@ -552,7 +563,7 @@ Offen:
 - CTLD Pickup-/Dropoff-Zonen
 - Supply-Verbrauch
 - CTLD-Crate-Auswertung
-- Dirty-Hooks für Persistence
+- vorhandene Dirty-Abdeckung für Logistics weiter fachlich validieren
 - Kopplung mit Capture und FOB
 
 ---
@@ -652,6 +663,13 @@ Bestätigt:
 - Completed Mission Effects können Capture Pressure erzeugen.
 - Failed Mission Effects erzeugen aktuell bewusst keinen Capture Pressure.
 - MOOSE-/CTLD-/Skynet-Hooks bleiben reserviert.
+
+Aktuelle Einschränkung:
+
+- Alle sechs Mission-Status-Dictionaries wurden nach erfolgreicher Initialgenerierung später leer beobachtet.
+- `lastMissionId=10` und Statistikwerte blieben erhalten.
+- Weder Ursache noch exakter Writer sind identifiziert; es ist unklar, ob ersetzt, geleert oder fehlerhaft beobachtet wurde.
+- Der Projektquellcode enthält keinen automatisch erreichbaren passenden Write-Site.
 
 Offen:
 
@@ -910,9 +928,9 @@ Ziele:
 
 Aktueller Status:
 
-- Background Autosave aktiv
+- dirty-aware Background Autosave aktiv
+- normal eingebettete `20s`-/`120s`-Scheduler-Ausführung bestanden
 - produktiver Restore deaktiviert
-- Dirty-Hooks noch offen
 
 Save-Dateiformat:
 
@@ -928,11 +946,11 @@ Speicherordner:
 
 - `Saved Games\DCS.openbeta\TheaterCommandDCS`
 
-Aktuelle lokale DCS-Sandbox:
+Aktuelle lokale DCS-SMS-Bridge-Umgebung:
 
 - `io=true`
 - `lfs=true`
-- `os=false`
+- `os=true`
 - `require=false`
 
 Autosave:
@@ -943,7 +961,7 @@ Autosave:
 Produktiver Restore:
 
 - nicht aktiv
-- darf erst nach Dirty-Hook-Tests aktiviert werden
+- darf erst nach vollständiger Dirty-Abdeckung, den blockierten Regressionen und definierter Restore-Reihenfolge aktiviert werden
 
 Architekturentscheidung:
 
@@ -953,7 +971,7 @@ Architekturentscheidung:
 
 Nächster Schritt:
 
-- CaptureSystem markiert erfolgreiche Capture-Änderungen als persistenzrelevant.
+- Offline Embedded Mission Resource Audit; kein Persistence- oder MissionGenerator-Code-Fix ohne neue Evidenz.
 
 ---
 
@@ -994,7 +1012,7 @@ Aktuell nicht aktiv:
 Begründung:
 
 - Die State-Schicht muss zuerst stabil bleiben.
-- Persistence-Hooks müssen an echten State-Änderungen getestet werden.
+- Dirty-aware Persistence ist an echten State-Änderungen getestet; der aktuelle MissionGenerator-State-Verlust muss vor weiteren Regressionen geklärt werden.
 - Produktiver Restore darf Initialisierungsreihenfolge nicht beschädigen.
 - Framework-Aktionen werden später einzeln angebunden.
 
@@ -1083,7 +1101,7 @@ Risiko:
 Gegenmaßnahme:
 
 - Restore bleibt deaktiviert.
-- Erst Dirty-Hooks testen.
+- Dirty-Abdeckung vollständig auditieren und blockierte Regressionen nach Klärung des MissionGenerator-State-Verlusts durchführen.
 - Dann Restore-Reihenfolge definieren.
 - Dann produktiven Restore kontrolliert freischalten.
 
@@ -1107,18 +1125,7 @@ Gegenmaßnahme:
 
 ## 21. Nächster technischer Schritt
 
-Nächste Datei:
-
-- `src/campaign/tc_capture_system.lua`
-
-Ziel:
-
-- `CaptureSystem v0.2.3`
-- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
-- Autosave soll geänderten Capture-State automatisch sichern
-- kein Persistence-F10-Menü
-- kein produktiver Restore
-- keine echten MOOSE-/CTLD-/Skynet-Aktionen
+Read-only Offline-Audit der in `Operation_Levant_Reclamation_DEV.miz` eingebetteten Theater-Command-Ressourcen. Der Audit verifiziert Trigger-Mappings, Byte-Längen, SHA-256, exakte Byte-Gleichheit, Versionen sowie stale, doppelte, unerwartete oder fehlende Skripte.
 
 Akzeptanzkriterien:
 
@@ -1154,10 +1161,10 @@ Bestandene Systeme:
 | CaptureSystem | `v0.2.2` | bestanden |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
-| MissionGenerator | `v0.2.3` | bestanden |
+| MissionGenerator | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `v0.2.0` | bestanden |
 | F10Menu | `v0.2.3` | bestanden |
-| PersistenceSystem | `v0.2.5` | bestanden |
+| PersistenceSystem | `v0.2.6` | Embedded-Start und dirty-aware Scheduler bestanden |
 
 Aktuelle Meilensteine:
 
@@ -1173,7 +1180,7 @@ Aktuelle Meilensteine:
 
 Nächster Meilenstein:
 
-- State-Änderungen gezielt persistenzrelevant markieren, beginnend mit CaptureSystem.
+- Embedded-Source-Drift als möglichen Faktor des Mission-Record-Verlusts prüfen.
 
 ---
 
@@ -1198,16 +1205,7 @@ Danach nicht aus Erinnerung arbeiten.
 
 Nächster technischer Startpunkt:
 
-- `src/campaign/tc_capture_system.lua`
-
-Konkretes Ziel:
-
-- `CaptureSystem v0.2.3`
-- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
-- Background Autosave soll geänderten State sichern
-- kein Persistence-F10-Menü
-- kein produktiver Restore
-- keine echten MOOSE-/CTLD-/Skynet-Aktionen
+- `TASKS.md`: Offline Embedded Mission Resource Audit
 
 ---
 

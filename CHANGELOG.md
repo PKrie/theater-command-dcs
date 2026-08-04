@@ -19,7 +19,89 @@ Grundprinzip:
 
 ---
 
+## 2026-08-04
+
+### PersistenceSystem v0.2.6 und Dirty-aware Autosave
+
+- Periodischer Autosave verwendet den vorhandenen `TC.State.Persistence`-Dirty-State.
+- Unveränderte Ticks werden als `SKIPPED` ohne Dateischreibzugriff protokolliert.
+- Dirty Ticks werden als `SAVED` oder `FAILED` protokolliert; beide relevanten Pfade enthalten den Dirty Reason.
+- Write, Read-back, Compile, Evaluate und Validation müssen erfolgreich sein, bevor Dirty gelöscht wird.
+- Fehler behalten `dirty`, `dirtyReason` und `dirtyAt`; ein erfolgreicher Retry ist bestätigt.
+- Ein neuerer Dirty-State wird nicht durch den Abschluss eines älteren Saves gelöscht.
+- `20s` Initial Delay, `120s` Intervall und `productiveRestore=false` bleiben erhalten.
+- Es gibt keine Persistence-Spieler-F10-Controls und für diese Entwicklungsstufe sind keine geplant.
+
+### Hotload- und Fehlerpfadtests
+
+- `SAVED` und anschließendes `SKIPPED` bestanden.
+- Kontrolliert injizierter Schreibfehler erzeugte `FAILED` und behielt Dirty-State sowie Dirty Reason.
+- Die bestehende Save-Datei blieb beim injizierten Fehler unverändert.
+- Retry nach Wiederherstellung von `io.open` erzeugte `SAVED` und löschte Dirty erst nach erfolgreicher Verifikation.
+- Keine neuen Scripting Errors oder Stack Tracebacks.
+
+### Persistence-Ressource in DEV-Mission ersetzt und gespeichert
+
+- Trigger: `TC_LOAD_TC_PERSISTENCE_SYSTEM`
+- Typ: `once`
+- Bedingung: `time-after 15 seconds`
+- Resource Key: `ResKey_advancedFile_56`
+- Embedded Filename: `tc_persistence_system_v0_2_6.lua`
+- Embedded Bytes entsprachen exakt `src/campaign/tc_persistence_system.lua`.
+- Die gespeicherte `.miz` enthält den neuen Key und die neue Ressource.
+- Der alte Trigger-Verweis `ResKey_Action_55` wurde entfernt.
+- Die native Mission-Editor-Save-Aktion wurde über den DCS-SMS-GUI-Bridge-Pfad verifiziert.
+
+### Normaler Embedded-Scheduler-Test
+
+- PersistenceSystem `v0.2.6` lud über den normalen Mission-Editor-/Simulator-Workflow.
+- Der Client-Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` musste ausgewählt und bestätigt werden; danach wurde im Briefing `Fly` gedrückt.
+- Der reale Dirty-Grund `ai_cap_needs_evaluated` wurde selbständig als `SAVED` gespeichert.
+- `autosaveCount` wechselte von `0` auf `1`; Dirty wurde nach Verifikation gelöscht.
+- Drei folgende unveränderte Scheduler-Ticks waren `SKIPPED`.
+- Dateigröße, Änderungszeit und SHA-256 der Save-Datei blieben bei `SKIPPED` unverändert.
+- Keine neuen `[TC][ERROR]`, `[TC][WARN]`, Scripting Errors oder Stack Tracebacks.
+- Die frühere Hotload-only-Scheduler-Einschränkung ist damit behoben.
+
+### DCS-SMS-Entwicklungsumgebung
+
+- Installierte CLI: `C:\Tools\dcs-sms\dcs-sms.exe`
+- Mission-Editor- und Runtime-Bridge sowie externe Ausführung sind operational.
+- Aktuelle Bridge-Umgebung: `os=true`, `io=true`, `lfs=true`, `require=false`.
+- PersistenceSystem selbst benötigt direkt `io` und `lfs`, nicht `os` oder `require`.
+- DCS-SMS `exec`, `status` und `tail-log` benötigen `os`, `io` und `lfs` unsanitized.
+- DCS-Updates können `MissionScripting.lua` überschreiben.
+
+### MissionGenerator-Record-Verlust untersucht
+
+- MissionGenerator `v0.2.3` startete und erzeugte zehn state-only Missionen.
+- Der erste Persistence-Snapshot enthielt zehn verfügbare Missionen, eine `generationHistory`-Entry, `lastMissionId=10` und `lastGenerationTime=22.801`.
+- Später wurden alle sechs Status-Collections leer beobachtet, während `lastMissionId=10` und Statistiken `total=10`, `available=10` stehen blieben.
+- Der Verlust wurde in einem zweiten normalen Missionslauf reproduziert.
+- Mission-Collections sind Dictionaries und müssen mit `pairs()` beziehungsweise `countTableKeys()` gezählt werden; `#` und `ipairs()` sind nicht autoritativ.
+- Die widersprüchliche Messung `generationHistory pairs=0`, `#=1` ist kein normales Lua-Verhalten und bleibt ungeklärt.
+- Weder exakter Zeitpunkt noch Writer oder Mechanismus sind identifiziert; es ist unbekannt, ob die Collections ersetzt, geleert oder falsch beobachtet wurden.
+- PersistenceSystem und Main-Heartbeat sind nicht als Ursache belegt.
+- Es wurde kein Code-Fix implementiert.
+
+Statische Klassifikation:
+
+```text
+PROJECT SOURCE HAS NO MATCHING WRITE SITE
+```
+
+Nächste Untersuchung:
+
+- offline/read-only Audit der eingebetteten Theater-Command-Ressourcen in `Operation_Levant_Reclamation_DEV.miz`
+- Trigger- und Resource-Mappings sowie Byte-Längen, SHA-256, Versionen, stale/duplizierte/unerwartete/fehlende Skripte prüfen
+- Mission Completion, Mission Failure und Capture Ready Apply Regressionen bleiben bis zur Eingrenzung blockiert
+- produktiver Restore bleibt deaktiviert und ungetestet
+
+---
+
 ## 2026-07-06
+
+Die folgenden Einträge sind der historische Stand dieser Session. Insbesondere `os=false`, Persistence-Versionen bis `v0.2.5` und damalige nächste Schritte sind keine aktuellen Anweisungen.
 
 ### Session-Schwerpunkt
 

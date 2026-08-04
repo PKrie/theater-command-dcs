@@ -2,6 +2,55 @@
 
 Diese Datei beschreibt den Mission Generator von **Theater Command DCS**.
 
+## Verbindlicher Diagnose-Stand — 2026-08-04
+
+MissionGenerator `v0.2.3` startet normal und erzeugt zunächst zehn state-only Missionen. Die früheren Generierungs-, F10-, Activation-, Completion- und Failure-Tests bleiben gültige historische Ergebnisse.
+
+Aktuell bestätigter Defekt:
+
+- Der erste Persistence-Snapshot enthielt zehn verfügbare Missionen, eine `generationHistory`-Entry, `lastMissionId=10` und `lastGenerationTime=22.801`.
+- Spätere Runtime-Inspektionen fanden `available`, `active`, `completed`, `failed`, `expired` und `cancelled` leer.
+- `lastMissionId` blieb `10`; Statistiken blieben stale mit `total=10`, `available=10`.
+- Es gab keinen Fund in einer anderen Status-Collection und keine Activation-, Completion-, Failure-, Cancellation-, Expiration-, State-Reset- oder Persistence-Import-Logs.
+- Der Verlust wurde in einem zweiten normalen Missionslauf reproduziert: Ein Gate sah zehn Missionen, eine spätere Baseline null.
+- Der genaue Ersatz-/Clear-Zeitpunkt wurde nicht erfasst.
+
+Mission-Status-Collections sind Dictionaries mit `MISSION_n`-String-Keys. Autoritative Counts verwenden `pairs()` oder `countTableKeys()`. `#` und `ipairs()` sind dafür nicht autoritativ; sie bleiben für echte Arrays wie Histories oder sortierte temporäre Listen korrekt.
+
+Diagnostische Widersprüchlichkeit:
+
+- `generationHistory` wurde einmal mit `pairs()` als `0`, mit `#` aber als `1` gemeldet.
+- Das ist kein normales Lua-Tabellenverhalten.
+- Der Projektquellcode überschreibt weder `pairs`, `next`, Tabellen-Metatables noch Iteratorverhalten.
+- Diagnoseumgebung oder beobachtetes Runtime-Objekt bleiben mögliche Faktoren; die Messung beweist weder Clear noch Replacement.
+
+Statischer Write-Site-Audit:
+
+```text
+PROJECT SOURCE HAS NO MATCHING WRITE SITE
+```
+
+- Kein automatisch erreichbarer Projektpfad passt zum beobachteten Verlust aller sechs Collections.
+- `State.init()` und `State.reset()` würden auch `lastMissionId` zurücksetzen und Logs erzeugen.
+- `ensureMissionState()` erzeugt nur fehlende Container.
+- Mission-Transitions bewegen genau eine Mission, loggen und markieren Dirty.
+- F10Menu kopiert in temporäre Arrays vor dem Sortieren und verändert die Live-Dictionaries nicht.
+- Persistence autosaved getrennte Snapshot-Kopien und importiert beim Autosave nicht.
+- Ein Persistence-Import könnte `Missions` ersetzen, wird aber nicht automatisch aufgerufen und würde loggen.
+- Main-Heartbeat erhöht nur `Campaign.tick` und `Meta.updatedAt`; es gibt keinen 300-/600-Sekunden-Missionsmutationscallback.
+- Projektcode übergibt `TC.State.Missions` nicht an MOOSE, MIST, CTLD oder Skynet.
+
+Bewertung:
+
+- Mission-Record-Verlust ist bestätigt und reproduzierbar.
+- Ursache, Writer und Mechanismus bleiben ungelöst; unbekannt ist, ob ersetzt, geleert oder falsch beobachtet wurde.
+- Es wurde kein Code-Fix implementiert.
+- PersistenceSystem und der 600-Sekunden-Zeitpunkt dürfen nicht als Ursache behauptet werden.
+- MissionGenerator ist weder generell stabil noch als vollständig defekt klassifiziert.
+- Mission Completion, Mission Failure und Capture Ready Apply Regressionen sind blockiert.
+
+Nächster Schritt ist ein offline/read-only Audit der in `Operation_Levant_Reclamation_DEV.miz` eingebetteten Theater-Command-Ressourcen mit Trigger-Mapping, Byte-Längen, SHA-256, exakter Gleichheit, Versionen sowie stale, doppelten, unerwarteten und fehlenden Ressourcen.
+
 Erste Kampagne:
 
 - **Operation Levant Reclamation**
@@ -59,7 +108,7 @@ Das bedeutet:
 
 ## 2. Aktueller technischer Stand
 
-Stand: **2026-07-06**
+Historischer Teststand: **2026-07-06**
 
 Aktive Datei:
 
@@ -73,9 +122,9 @@ Getestete Version:
 v0.2.3
 ```
 
-Status:
+Historischer Status:
 
-- **bestanden**
+- **bestanden für die damals getestete Generierungs- und F10-Pipeline**
 
 Bestätigt durch DCS-Logtests:
 
@@ -109,9 +158,9 @@ Bestätigt durch DCS-Logtests:
 
 ---
 
-## 3. Aktuelle bestätigte Werte
+## 3. Historisch bestätigte Werte
 
-Aktuell bestätigte MissionGenerator-Werte:
+Damals bestätigte MissionGenerator-Werte:
 
 ```text
 mission candidates: 78
@@ -149,7 +198,7 @@ Bestätigte Aktivierungs- und Outcome-Marker:
 
 Bewertung:
 
-- MissionGenerator `v0.2.3` ist bestanden.
+- MissionGenerator `v0.2.3` hat historisch bestandene Funktionspfade; der aktuelle Record-Verlust ist ungelöst.
 - Missionen sind fachlich deutlich stärker modelliert als im ersten Stand.
 - Missionen können über F10 direkt ausgewählt, aktiviert und abgeschlossen werden.
 - Mission Completion erzeugt vorbereitete Mission Effects.
@@ -1194,67 +1243,13 @@ State-first bleibt vor echter Framework-Ausführung.
 
 ## 37. Nächster MissionGenerator-Schritt
 
-Der nächste direkte MissionGenerator-Test wäre:
-
-```text
-Fail Active Mission 1
-```
-
-Ziel:
-
-- `MissionGenerator.failMission()` praktisch bestätigen
-- Failure Outcome prüfen
-- Failure Effects prüfen
-- entscheiden, ob Failure neutral, gegnerisch oder negativ auf Kampagnenstate wirken soll
-
-Aber:
-
-Der aktuell empfohlene nächste Code-Schritt betrifft nicht direkt MissionGenerator, sondern UI/Capture.
-
-Grund:
-
-- Completion funktioniert.
-- Capture Pressure funktioniert.
-- Capture Ready ist sichtbar.
-- Der nächste logische Schritt ist ein kontrollierter state-only Ownership-Wechsel aus Capture Ready.
+Kein MissionGenerator-Code-Fix ist ohne neue Evidenz freigegeben. Zuerst muss der Offline Embedded Mission Resource Audit klären, ob die ausgeführten Ressourcen byte-identisch zu den auditierten Repository-Dateien waren.
 
 ---
 
 ## 38. Nächster Gesamtprojektschritt
 
-Empfohlene nächste Datei:
-
-```text
-src/ui/tc_f10_menu.lua
-```
-
-Ziel:
-
-```text
-kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
-```
-
-Mögliche neue F10-Funktion:
-
-```text
-Apply Capture Ready Zone 1
-```
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 32 Commands bleiben funktionsfähig.
-- neuer Capture-Apply-Command wird ergänzt.
-- Capture Ready Zone 1 kann bewusst angewendet werden.
-- Zone Ownership wird state-only aktualisiert.
-- linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
-- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
-- Logmarker zeigen eindeutig den Ownership-Wechsel.
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
+Offline Embedded Mission Resource Audit der gespeicherten DEV-`.miz`, strikt read-only und ohne DCS-/DCS-SMS-Runtime-Interaktion. Erst danach kann ein fachlich begründeter Folgeschritt definiert werden.
 
 ---
 
@@ -1292,15 +1287,15 @@ Aktuelle Gegenmaßnahmen:
 
 ---
 
-## 40. Aktuelle Akzeptanzkriterien
+## 40. Historisch bestandene und aktuell blockierte Akzeptanzkriterien
 
-Aktuell bestanden:
+Historisch bestanden:
 
 - MissionGenerator lädt.
 - MissionGenerator startet.
 - 78 Missionskandidaten werden erkannt.
 - 2 FOB-Support-Kandidaten werden erkannt.
-- 10 verfügbare Missionen werden erzeugt.
+- 10 verfügbare Missionen wurden im historischen Initialtest erzeugt; aktuell gehen alle sechs Status-Dictionaries später verloren.
 - mindestens eine FOB-Support-Mission wird reserviert.
 - Mission Details sind über F10 abrufbar.
 - Missionen können über F10 direkt aktiviert werden.
@@ -1319,7 +1314,9 @@ Aktuell bestanden:
 
 Noch offen:
 
-- `Fail Active Mission 1` praktisch testen
+- aktuellen Mission-Record-Verlust erklären
+- Embedded-Ressourcen offline verifizieren
+- Mission Completion, Mission Failure und Capture Ready Apply regressionsprüfen, sobald Missionen stabil verfügbar sind
 - Mission Effects auf Logistics anwenden
 - Mission Effects auf AI anwenden
 - Mission Effects auf IADS anwenden
@@ -1338,24 +1335,24 @@ Noch offen:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pipeline bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden, 33 Commands |
 
 ---
 
 ## 42. Aktueller Status
 
-MissionGenerator ist für den aktuellen state-first Entwicklungsstand bestanden.
+MissionGenerator besitzt einen historisch bestandenen state-first Funktionsumfang, ist im aktuellen Lauf wegen des reproduzierbaren Mission-Record-Verlusts aber nicht als stabil freigegeben.
 
 Aktuelle Fähigkeit:
 
 - Missionen entstehen aus klassifizierten Kampagnendaten.
 - FOB-Support wird berücksichtigt.
-- 10 verfügbare Missionen werden erzeugt.
+- MissionGenerator erzeugt initial 10 Missionen; die sechs Status-Dictionaries sind später reproduzierbar leer.
 - Missionen enthalten Objectives, Briefings, Progress, Activation Metadata, Outcome State und Effect State.
 - Missionen können über F10 direkt angezeigt werden.
 - Missionen können über F10 direkt aktiviert werden.
@@ -1370,11 +1367,11 @@ Aktuelle Fähigkeit:
 Nächster sinnvoller Schritt:
 
 ```text
-kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
+Offline Embedded Mission Resource Audit
 ```
 
-Danach:
+Danach erst, abhängig vom Audit:
 
-- Failure-Pfad praktisch testen
-- Persistence-Sandbox-Test vorbereiten
+- Ursache weiter eingrenzen oder belegten Source-/Mission-Editor-Fix planen
+- blockierte Mission/Capture-Regressionen wiederholen
 - Logistics-/AI-/IADS-Effects später schrittweise anbinden

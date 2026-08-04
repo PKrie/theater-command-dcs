@@ -1,5 +1,15 @@
 # src/ui/README.md
 
+## Autoritativer UI-Stand — 2026-08-04
+
+- F10Menu `v0.2.3` erzeugt 33 Befehle.
+- Es existieren keine Persistence-F10-Controls und für diese Entwicklungsstufe sind keine geplant; Autosave benötigt keine Spielerinteraktion.
+- Missionslisten lesen die Mission-State-Dictionaries. Im aktuellen reproduzierten Defekt sind alle sechs Status-Collections leer, daher sieht das Menü keine auswählbare Mission; die früher bestätigten Auswahl-/Outcome-Flows bleiben historische Regressionsergebnisse.
+- Der UI-Code ist nicht als Writer des Record-Verlusts belegt: Für Sortierung werden temporäre Arrays verwendet. Statische Gesamtklassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+- Nächster Schritt ist der Offline/read-only Embedded Mission Resource Audit, nicht eine neue F10-Funktion. Abweichende ältere Angaben unten sind historische Stände.
+
+---
+
 Diese Datei beschreibt den UI-Bereich von **Theater Command DCS**.
 
 Der UI-Bereich enthält eigene Lua-Logik für Spielerinteraktion, F10-Menüs, Statusanzeigen und spätere Debug-/Kampagnensteuerung.
@@ -54,7 +64,7 @@ Das F10-Menü ist sichtbar, navigierbar und bereits mit MissionGenerator und Cap
 
 ## 2. Aktueller technischer Stand
 
-Stand: **2026-07-06**
+Historischer Stand: **2026-07-06**
 
 Aktive Datei:
 
@@ -62,7 +72,7 @@ Aktive Datei:
 src/ui/tc_f10_menu.lua
 ```
 
-Getestete Version:
+Historisch getestete Version in diesem Abschnitt:
 
 ```text
 v0.2.2
@@ -103,7 +113,7 @@ Bestätigt durch DCS-Logtests:
 
 ---
 
-## 3. Aktuelle Menüstruktur
+## 3. Historische Menüstruktur vor v0.2.3
 
 Aktuelle F10-Struktur:
 
@@ -151,7 +161,7 @@ F10
         └── Show AI CAP Status
 ```
 
-Bestätigte Commands:
+Historisch bestätigte Commands:
 
 ```text
 commands: 32
@@ -159,9 +169,9 @@ commands: 32
 
 ---
 
-## 4. Aktuelle F10-Funktionen
+## 4. Historische F10-Funktionen vor v0.2.3
 
-Aktuell unterstützt F10Menu `v0.2.2`:
+Historisch unterstützte F10Menu `v0.2.2`:
 
 - verfügbare Missionen anzeigen
 - aktive Missionen anzeigen
@@ -559,27 +569,12 @@ src/campaign/tc_persistence_system.lua
 Status:
 
 ```text
-Grundstruktur vorhanden
-lädt/startet
-produktiver Dateischreibtest offen
+v0.2.6 implementiert
+Embedded-Scheduler SAVED und SKIPPED bestanden
+produktiver Restore deaktiviert
 ```
 
-Spätere mögliche F10-Funktionen:
-
-- Save Campaign
-- Load Campaign
-- Show Save Status
-- Debug Save Test
-- Debug Load Test
-
-Aktuell nicht vorgesehen:
-
-- Persistence-F10-Funktionen als nächster Schritt
-
-Grund:
-
-- Zuerst muss kontrollierter Ownership-Wechsel aus Capture Ready getestet werden.
-- Danach ist Persistence deutlich sinnvoller, weil dann echte State-Änderungen gespeichert werden können.
+Es existieren keine Persistence-F10-Funktionen und für diese Entwicklungsstufe sind keine geplant. Autosave läuft ohne Spielerinteraktion.
 
 ---
 
@@ -810,14 +805,14 @@ Akzeptanzkriterien:
 Nach kontrolliertem Capture Ready Apply:
 
 1. `Fail Active Mission 1` praktisch testen
-2. Persistence-Sandbox-Test optional über Debug-F10 vorbereiten
+2. Persistence weiterhin ohne F10-Steuerung als Hintergrundsystem behandeln
 3. Mission Effects auf Logistics später sichtbar machen
 4. Mission Effects auf AI später sichtbar machen
 5. Mission Effects auf IADS später sichtbar machen
 6. AI Director Status später anzeigen
 7. IADS Status später anzeigen
 8. Debug-Menü getrennt aufbauen
-9. Persistence-Menü später getrennt aufbauen
+9. Persistence-Menü in dieser Entwicklungsstufe nicht planen; jede spätere Admin-/Debug-Idee benötigt eine separate Freigabe
 
 Mögliche spätere Menüs:
 
@@ -825,7 +820,7 @@ Mögliche spätere Menüs:
 Theater Command
 Theater Command Debug
 Theater Command Admin
-Theater Command Persistence
+Theater Command Persistence (historische Idee, aktuell nicht geplant)
 ```
 
 Diese Struktur ist noch nicht final.
@@ -890,10 +885,10 @@ Zuerst muss die State-Sichtbarkeit stabil bleiben und der nächste Ownership-Sch
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden; Restore deaktiviert |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
 

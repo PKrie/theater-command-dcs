@@ -1,5 +1,9 @@
 # Logistics System
 
+## Verbindliches Update — 2026-08-04
+
+LogisticsDelivery `v0.2.0` und FobSystem `v0.2.0` bleiben state-only; CTLD ist nicht produktiv angebunden. PersistenceSystem `v0.2.6` nimmt Logistics- und FOB-State in den Snapshot auf, produktiver Restore bleibt deaktiviert. MissionGenerator-abhängige FOB-Support-Ergebnisse sind historische Erfolge; der aktuelle Mission-Record-Verlust ist reproduzierbar und ungelöst. Nächster Schritt ist ein Offline Embedded Mission Resource Audit, kein Logistics-Code-Fix. Ältere Statusangaben sind historische Snapshots.
+
 Diese Datei beschreibt das Logistiksystem von **Theater Command DCS**.
 
 Erste Kampagne:
@@ -703,8 +707,8 @@ FOB-Persistenz:
 
 Aktueller Stand:
 
-    PersistenceSystem-Grundstruktur existiert.
-    Produktiver Dateischreibtest ist offen.
+    PersistenceSystem v0.2.6 läuft dirty-aware; Embedded-Scheduler bestanden, Restore deaktiviert.
+    Datei-Write und Read-back-Verifikation sind bestanden; produktiver Restore bleibt deaktiviert.
 
 ---
 
@@ -721,7 +725,7 @@ Bestätigt:
 
     F10Menu ist sichtbar.
     F10Menu ist navigierbar.
-    F10Menu erzeugt 26 Commands.
+    F10Menu v0.2.3 erzeugt 33 Commands.
     Missionen können angezeigt und aktiviert werden.
     Logistik- und FOB-Status sind Bestandteil der UI-Struktur.
 
@@ -829,7 +833,7 @@ Noch offen:
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
 

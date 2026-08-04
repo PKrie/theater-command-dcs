@@ -1,5 +1,13 @@
 # Mission Editor Basics
 
+## Verbindliches Update — 2026-08-04
+
+`Operation_Levant_Reclamation_DEV.miz` enthält PersistenceSystem `v0.2.6` unter Trigger `TC_LOAD_TC_PERSISTENCE_SYSTEM`, `once`, `time-after 15 seconds`, Resource Key `ResKey_advancedFile_56`, Embedded Filename `tc_persistence_system_v0_2_6.lua`. Eingebettete Bytes und Repository-Quelle waren identisch; der alte Verweis `ResKey_Action_55` wurde entfernt und die native Mission-Editor-Save-Aktion verifiziert.
+
+Der Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` ist `CLIENT`: Mission starten, Slot auswählen, bestätigen, im Briefing `Fly` drücken. DCS-SMS ist nur Entwicklungs-/Mission-Editor-Tooling. DCS-Updates können Bridge- und `MissionScripting.lua`-Änderungen überschreiben.
+
+Der aktuelle MissionGenerator-Record-Verlust blockiert Mission Completion, Mission Failure und Capture Ready Apply Regressionen. Nächster Schritt ist kein Mission-Editor-Edit, sondern ein offline/read-only Embedded-Resource-Audit. Ältere „aktuelle“ Abschnitte sind historische Snapshots.
+
 Diese Datei beschreibt die grundlegende Rolle des DCS Mission Editors im Projekt **Theater Command DCS**.
 
 Erste Kampagne:
@@ -70,7 +78,7 @@ Aktuelle Entscheidung:
 
 Stand:
 
-    2026-06-29
+    Historischer Stand 2026-06-29
 
 Aktuelle technische Entwicklungsmission:
 
@@ -131,13 +139,13 @@ Bestätigt wurde:
 - Airbase Scanner läuft
 - ZoneFactory läuft
 - CaptureSystem läuft
-- PersistenceSystem lädt/startet als Grundstruktur
+- PersistenceSystem `v0.2.6` lädt/startet als dirty-aware Background-Autosave
 - LogisticsDelivery läuft
 - FobSystem läuft
 - MissionGenerator läuft
 - AICapManager läuft
 - F10Menu läuft
-- F10Menu erzeugt 26 Commands
+- F10Menu `v0.2.3` erzeugt 33 Commands
 - Missionen können über F10 direkt ausgewählt werden
 - Missionen können über F10 direkt aktiviert werden
 - Loader beendet sauber
@@ -150,8 +158,8 @@ Wichtiger aktueller Befund:
     CaptureSystem erzeugt 32 Pressure-Records und 32 Progress-Records.
     LogisticsDelivery erzeugt 46 Logistics Hubs.
     FobSystem erzeugt 6 FOB-Kandidaten und 2 Blue-FOBs.
-    MissionGenerator erzeugt 10 verfügbare Missionen aus 69 Kandidaten.
-    F10Menu erzeugt 26 Commands.
+    MissionGenerator erzeugte in diesem historischen Test 10 verfügbare Missionen aus 69 Kandidaten; aktuell sind alle sechs Status-Dictionaries reproduzierbar leer.
+    F10Menu v0.2.3 erzeugt 33 Commands.
 
 Bewertung:
 
@@ -659,10 +667,10 @@ Aktuelle Entscheidung:
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
 | CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | Grundstruktur | lädt/startet |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden; Restore deaktiviert |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.2` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
 
