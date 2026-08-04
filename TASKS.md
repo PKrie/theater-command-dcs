@@ -385,7 +385,7 @@ Bewertung:
 
 Offen:
 
-- Dirty-/Persistence-Hook nach Capture-Änderungen
+- Dirty-Markierungen nach Capture-Änderungen sind im Code bereits vorhanden; die dirty-aware Autosave-Auswertung ist noch offen
 - automatische Auswertung realer Einheiten in Capture-Zonen
 - Ownership-Wechsel später an Logistics, AI, Mission Generator und IADS koppeln
 - Capture-Progress langfristig über echte DCS-Ereignisse beeinflussen
@@ -751,13 +751,16 @@ Bewertung:
 - Autosave-Intervall beträgt aktuell 120 Sekunden.
 - Save/Validate/Load-Funktionen bleiben intern vorhanden.
 - Produktiver automatischer Restore beim Missionsstart ist noch deaktiviert.
-- Das ist aktuell korrekt, weil zuerst Dirty-/Change-Hooks in den Kampagnensystemen ergänzt werden müssen.
+- Dirty-Markierungen sind in CaptureSystem und weiteren aktiven State-Systemen bereits vorhanden.
+- Periodischer Autosave wertet den Dirty-State aktuell noch nicht aus und schreibt deshalb auch unveränderte Zustände.
 
 Offen:
 
-- Dirty-/Autosave-Hook in `tc_capture_system.lua`
-- später Dirty-Hooks in Logistics, FOB, MissionGenerator, AI und IADS
-- produktiven Restore bewusst erst nach Hook-Tests aktivieren
+- periodischen Autosave in `tc_persistence_system.lua` dirty-aware machen
+- Dirty-State nach fehlgeschlagenem Save beibehalten
+- Dirty-State erst nach verifiziert erfolgreichem Save löschen
+- Saved-/Skipped-/Failed-Ergebnisse inklusive Dirty Reason eindeutig loggen
+- produktiven Restore bewusst erst nach dirty-aware Autosave-Tests aktivieren
 - Save-Dateiformat langfristig versionieren
 - Backup-/Rotationsstrategie für Save-Dateien definieren
 - Schutz gegen veraltete oder inkompatible Save-Dateien ergänzen
@@ -805,7 +808,8 @@ Status:
 - bestanden
 - state-only
 - noch nicht automatisch
-- noch ohne Persistence Dirty-Hook
+- Dirty-Markierungen im CaptureSystem vorhanden
+- dirty-aware Autosave-Auswertung noch nicht getestet
 
 ---
 
@@ -865,36 +869,55 @@ Noch nicht produktiv umgesetzt:
 - automatische Missionserfolgserkennung über DCS-Events
 - automatische Capture-Auswertung über reale Einheiten/Zonen
 - produktiver automatischer Restore beim Missionsstart
-- Persistenz-Hooks nach relevanten State-Änderungen
+- dirty-aware Autosave-Auswertung und eindeutige Saved-/Skipped-/Failed-Diagnostik
 - echte Blue-/Red-KI-Kampagnenoperationen
 
 ---
 
 ## 9. Wichtigste offene Aufgaben
 
-### Priorität 1: CaptureSystem an Persistence anbinden
+### Priorität 1: Periodischen Autosave dirty-aware machen
 
 Datei:
 
-- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
+
+Aktueller Befund:
+
+- `TC.State.markDirty()` verwaltet bereits `dirty`, `dirtyReason` und `dirtyAt`.
+- CaptureSystem und weitere aktive State-Systeme markieren relevante Änderungen bereits dirty.
+- Der periodische Autosave prüft den Dirty-State aktuell nicht und schreibt bei jedem Tick.
 
 Ziel:
 
-- CaptureSystem soll bei relevanten State-Änderungen Persistence informieren.
-- Besonders bei erfolgreichem Capture Ready Apply soll der Kampagnenzustand als dirty markiert werden.
-- Autosave soll diesen geänderten Zustand anschließend automatisch sichern.
+- Periodischer Autosave speichert nur, wenn der Kampagnenzustand dirty ist.
+- Unveränderte periodische Autosave-Ticks werden ohne Dateischreibvorgang übersprungen.
+- Nach einem fehlgeschlagenen Save bleibt der Kampagnenzustand dirty.
+- Dirty-State wird erst nach einem verifiziert erfolgreichen Save gelöscht.
+- Der beim Autosave vorliegende Dirty Reason wird eindeutig geloggt.
+- Jeder periodische Autosave-Tick loggt klar, ob er gespeichert, übersprungen oder fehlgeschlagen ist.
 - Kein F10-Persistence-Menü.
 - Keine Spieleraktion für Save/Load.
 - Kein produktiver Restore.
-- Weiterhin state-first.
+- Keine echten MOOSE-, CTLD- oder Skynet-Runtime-Aktionen.
+- Weiterhin state-first und als interner Hintergrunddienst.
 
 Akzeptanzkriterien:
 
-- `CaptureSystem v0.2.3` lädt sauber.
+- `PersistenceSystem` lädt und startet sauber.
+- Die bestehende Autosave-Planung mit initialem Delay und periodischem Intervall bleibt funktionsfähig.
 - Mission Completion Pipeline bleibt stabil.
+- Mission Failure Pipeline bleibt stabil.
 - Capture Ready Apply bleibt stabil.
-- Nach Capture Apply wird ein Dirty-/Persistence-Hook geloggt.
-- Persistence Autosave läuft danach weiterhin automatisch.
+- Ein periodischer Tick mit `dirty=true` schreibt und verifiziert die Campaign-Save-Datei.
+- Das Save-Log enthält den Dirty Reason und kennzeichnet das Ergebnis eindeutig als gespeichert.
+- Nach dem verifiziert erfolgreichen Save ist `dirty=false`.
+- Ein nachfolgender Tick ohne State-Änderung schreibt keine Datei und wird eindeutig als übersprungen geloggt.
+- Ein absichtlich herbeigeführter Save-Fehler wird eindeutig als fehlgeschlagen geloggt.
+- Nach einem fehlgeschlagenen Save bleiben `dirty=true`, `dirtyReason` und die zu sichernde State-Änderung erhalten.
+- Nach Wiederherstellung des Dateizugriffs kann ein späterer Tick denselben Dirty-State erfolgreich speichern und erst dann löschen.
+- `productiveRestore=false` bleibt unverändert.
+- Es werden keine Persistence-F10-Controls hinzugefügt.
 - Kein `SCRIPTING ERROR`.
 - Kein `Mission script error`.
 - Kein `stack traceback`.
@@ -909,9 +932,19 @@ Erwarteter Testablauf:
 2. Mission über F10 aktivieren.
 3. Mission über F10 abschließen.
 4. Capture Ready Zone 1 über F10 anwenden.
-5. CaptureSystem markiert State als persistenzrelevant.
-6. Persistence autosaved automatisch.
-7. Log bestätigt Dirty-/Autosave-Zusammenhang.
+5. Vor dem nächsten Autosave-Tick `dirty=true` und den gesetzten `dirtyReason` bestätigen.
+6. Nächsten periodischen Autosave-Tick abwarten.
+7. Log bestätigt einen gespeicherten Autosave inklusive Dirty Reason.
+8. Save-Datei prüfen und `dirty=false` nach erfolgreicher Schreib-/Leseverifikation bestätigen.
+9. Ohne weitere State-Änderung den folgenden periodischen Tick abwarten.
+10. Log bestätigt einen übersprungenen Autosave; die Save-Datei wird nicht erneut geschrieben.
+11. State kontrolliert erneut dirty markieren und für den Test einen kontrollierten Dateischreibfehler herstellen.
+12. Nächsten periodischen Autosave-Tick abwarten.
+13. Log bestätigt einen fehlgeschlagenen Autosave inklusive Dirty Reason und Fehlergrund.
+14. Bestätigen, dass `dirty=true` und `dirtyReason` nach dem Fehler erhalten bleiben.
+15. Dateizugriff wiederherstellen und den nächsten periodischen Tick abwarten.
+16. Log und Save-Datei bestätigen den erfolgreichen Retry; erst danach ist `dirty=false`.
+17. Gesamten neuen `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
 
 ---
 
@@ -927,7 +960,7 @@ Status:
 
 Voraussetzungen:
 
-- Dirty-/Change-Hooks mindestens für CaptureSystem erfolgreich getestet
+- dirty-aware Autosave mit Saved-/Skipped-/Failed-Pfaden erfolgreich getestet
 - Save-Datei nach echter State-Änderung geprüft
 - keine Regression beim Autosave
 - klares Restore-Verhalten bei veralteten Save-Dateien definiert
@@ -944,23 +977,25 @@ Noch nicht jetzt aktivieren.
 
 ---
 
-### Priorität 3: Logistics mit Persistence verbinden
+### Priorität 3: Dirty-Abdeckung der aktiven State-Systeme validieren
 
 Dateien später:
 
 - `src/logistics/tc_logistics_delivery.lua`
 - `src/logistics/tc_fob_system.lua`
+- `src/missions/tc_mission_generator.lua`
+- `src/ai/tc_ai_cap_manager.lua`
 
 Ziele:
 
-- Lieferungen als State-Änderung markieren
-- FOB-Baufortschritt persistenzrelevant markieren
-- Supply-Verbrauch persistieren
-- später CTLD-Lieferereignisse auswerten
+- vorhandene Dirty-Markierungen auf fachlich relevante State-Änderungen prüfen
+- fehlende oder zu häufige Dirty-Markierungen gezielt korrigieren
+- Dirty Reasons pro Fachsystem eindeutig und stabil halten
+- spätere echte Supply-, Missions- und AI-Änderungen persistenzrelevant behandeln
 
 Voraussetzung:
 
-- CaptureSystem Dirty-Hook bestanden
+- dirty-aware Autosave in `tc_persistence_system.lua` bestanden
 
 ---
 
@@ -1063,7 +1098,7 @@ Aktuelle bestätigte Fähigkeiten:
 
 Aktuelle wichtigste offene Fähigkeit:
 
-- State-Änderungen müssen Persistenzrelevanz auslösen, beginnend mit CaptureSystem.
+- Periodischer Autosave muss vorhandene Dirty-Markierungen auswerten, unveränderte Ticks überspringen und Dirty-State erst nach verifiziert erfolgreichem Save löschen.
 
 ---
 
@@ -1088,12 +1123,15 @@ Danach nicht mit F10-Persistence weitermachen.
 
 Nächster technischer Schritt:
 
-- `src/campaign/tc_capture_system.lua`
+- `src/campaign/tc_persistence_system.lua`
 
 Konkretes Ziel:
 
-- `CaptureSystem v0.2.3`
-- Dirty-/Persistence-Hook bei erfolgreichem Capture Ready Apply
+- periodischen Autosave dirty-aware machen
+- bei `dirty=true` speichern und Dirty Reason loggen
+- bei unverändertem State den Autosave-Tick klar geloggt überspringen
+- bei Save-Fehler Dirty-State und Dirty Reason beibehalten
+- Dirty-State erst nach verifiziert erfolgreichem Save löschen
 - kein produktiver Restore
 - kein Persistence-F10-Menü
 - keine echten MOOSE-/CTLD-/Skynet-Aktionen
@@ -1103,9 +1141,12 @@ Nächster erwarteter Test:
 1. Mission über F10 aktivieren.
 2. Mission über F10 abschließen.
 3. Capture Ready Zone 1 über F10 anwenden.
-4. CaptureSystem loggt persistenzrelevante State-Änderung.
-5. Persistence autosaved im Hintergrund.
-6. DCS-Log wird auf Fehler geprüft.
+4. Dirty-State und Dirty Reason vor dem Autosave bestätigen.
+5. Periodischer Autosave speichert und verifiziert den geänderten State.
+6. Folgender unveränderter Tick wird ohne Dateischreibvorgang übersprungen.
+7. Kontrollierter Save-Fehler behält Dirty-State und Dirty Reason bei.
+8. Erfolgreicher Retry speichert den State und löscht Dirty erst danach.
+9. DCS-Log wird auf Saved-/Skipped-/Failed-Marker und Fehler geprüft.
 
 ---
 
