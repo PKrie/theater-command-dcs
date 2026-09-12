@@ -18,7 +18,7 @@ Ausgangslage:
 - Red hält zu Beginn den Großteil der strategischen Flugplätze
 - Spieler sollen sich in eine laufende Kampagne einklinken, nicht jede Aktion allein auslösen
 
-## Verbindlicher Mission-Editor-Stand — 2026-08-04
+## Verbindlicher Mission-Editor-Stand — 2026-09-12
 
 DEV-Mission:
 
@@ -26,18 +26,49 @@ DEV-Mission:
 C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz
 ```
 
-Persistence-Trigger:
+Für das Offline Embedded Mission Resource Audit wurde zusätzlich eine MCP_TEST-Kopie der DEV-Mission herangezogen; ein eigener fester Dateiname/Pfad für diese Kopie ist im Projektstand nicht dokumentiert.
+
+Persistence-Trigger (aktiv):
 
 - Name: `TC_LOAD_TC_PERSISTENCE_SYSTEM`
 - Typ: `once`
 - Bedingung: `time-after 15 seconds`
 - Resource Key: `ResKey_advancedFile_56`
 - Embedded Filename: `tc_persistence_system_v0_2_6.lua`
-- eingebettete Bytes entsprechen exakt `src/campaign/tc_persistence_system.lua`
-- der alte Trigger-Verweis `ResKey_Action_55` ist entfernt
-- die Mission wurde mit der nativen Mission-Editor-Save-Aktion gespeichert und die gespeicherte `.miz` verifiziert
+- Der aktive Embedded-Inhalt war beim Audit vom 2026-09-12 byte-identisch mit `src/campaign/tc_persistence_system.lua`.
 
-DCS-SMS stellt Entwicklungs- und Mission-Editor-Tooling bereit, ersetzt aber keine Theater-Command-Runtime-Komponente. Externe Ausführung, Mission-Editor-Trigger-/Ressourcenoperationen und die native Save-Aktion wurden bestätigt.
+Altressource `ResKey_Action_55` / `tc_persistence_system.lua` (präzisiert):
+
+- Der alte TRIGGER-VERWEIS auf diese Ressource wurde entfernt.
+- Die alte Ressource selbst liegt weiterhin verwaist in der `.miz`.
+- Sie wird von keinem Trigger referenziert.
+- Sie wird nicht geladen.
+- Sie ist nicht byte-identisch zur aktuellen Persistence-Quelle.
+- Sie war nicht Ursache der früheren Symptome.
+- Sie ist eine separate, spätere Cleanup-Aufgabe.
+- Die Aussage "`ResKey_Action_55` ist vollständig aus der `.miz` entfernt" ist nach aktuellem Audit falsch und wird hier nicht mehr verwendet.
+
+Offline READ-ONLY Embedded Mission Resource Audit vom 2026-09-12:
+
+- DEV und MCP_TEST waren beim Audit byte-identisch.
+- 13/13 für den damaligen Blocker relevante aktive Theater-Command-Ressourcen waren `EXACT_MATCH` zum Repository.
+- 0 aktive Byte-Mismatches.
+- 0 fehlende bzw. Mapping-fehlerhafte aktive Ressourcen.
+- keine aktive Embedded-Runtime-Drift.
+- Damit ist der frühere Verdacht widerlegt, Embedded Source Drift könnte den (ebenfalls widerlegten) Mission-Record-Verlust verursacht haben.
+
+Mission-Record-Diagnose (kompakt; vollständige Herleitung siehe `TASKS.md`):
+
+- Mission Records gingen zu keinem Zeitpunkt verloren.
+- Mission-State-Collections sind String-keyed Dictionaries; `#` ist kein gültiger autoritativer Count.
+- Live bestätigt: `statistics.available=10`, `pairs()`-Count `available=10`, `#available=0`.
+- Der Source-Bug lag in `src/core/tc_state.lua` -> `State.summary()`; Fix mit pairs-basierter `countEntries()`-Funktion, live bestanden.
+
+DCS-SMS stellt Entwicklungs-/Mission-Editor-/Diagnosewerkzeug bereit, kein Theater-Command-Runtime-Framework. Aktueller Stand:
+
+- DCS-SMS `v0.27.2`, Hook `me-bridge-0.27.2`.
+- Nach einem DCS-Update wurde der MissionScripting-Hook erneut installiert/repariert.
+- Auto-Routing per `dcs-sms exec --code "..."` erreicht das Mission Environment; `TC` ist darüber als Table erreichbar.
 
 Der Spieler-Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` ist `CLIENT`, nicht `PLAYER`. Normaler Teststart:
 
@@ -46,7 +77,15 @@ Der Spieler-Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` ist `CLIENT`, nicht `PLAYER`. N
 3. Slot bestätigen.
 4. Im Simulator-Briefing `Fly` drücken.
 
-PersistenceSystem `v0.2.6` startete auf diesem Weg normal und bestand die echten `20s`-/`120s`-Scheduler-Tests. Aktuelle Einschränkung ist der reproduzierbare MissionGenerator-Record-Verlust. Mission Completion, Mission Failure und Capture Ready Apply Regressionen sind bis zur Eingrenzung blockiert.
+PersistenceSystem `v0.2.6` startet auf diesem Weg normal. Am 2026-09-12 erneut bestätigt:
+
+- Mission Completion erneut bestanden.
+- Mission Failure erneut bestanden.
+- Capture Ready Apply erneut bestanden.
+- Background Persistence `SAVED` für diese echten State-Änderungen bestätigt.
+- `productiveRestore=false`.
+
+Priority 3 (allgemeine Dirty-Coverage der restlichen aktiven State-Systeme) bleibt trotzdem offen.
 
 Die aktive DCS-SMS-Bridge benötigt `os=true`, `io=true`, `lfs=true`; `require=false` bleibt bestehen. DCS-Updates können `MissionScripting.lua` sowie Bridge-/Sandbox-Änderungen überschreiben.
 
@@ -85,11 +124,25 @@ Aktueller technischer Status:
 - Loader prüft die Umgebung und beendet sauber
 - F10-Menü ist sichtbar und navigierbar
 - Missionen können über F10 angezeigt und aktiviert werden
-- aktive Mission 1 kann über F10 auf `COMPLETED` gesetzt werden
+- Mission 1 bis Mission 10 sind vorhanden und auswählbar
+- Mission Activation funktioniert
+- aktive Mission kann über F10 state-only auf `COMPLETED` gesetzt werden
+- aktive Mission kann über F10 state-only auf `FAILED` gesetzt werden
 - Mission Effects werden state-only vorbereitet
-- CaptureSystem übernimmt abgeschlossene Mission Effects state-only in Capture Pressure
+- CaptureSystem übernimmt abgeschlossene Mission Effects state-only in Capture Pressure (Mission Completion -> Capture Pressure funktioniert)
 - Capture Ready entsteht dynamisch
 - Capture Ready Zones sind über F10 sichtbar
+- Capture Ready Apply funktioniert
+- Zone Ownership und linked Airbase Ownership wurden state-only aktualisiert
+- Background Autosave reagiert auf echte Dirty-State-Änderungen
+- Capture Read-/Getter-Pfade erzeugen nach Fix kein falsches Dirty mehr
+- Ownership-No-Op verändert keinen persistierten State
+
+Weiterhin nicht behauptet:
+
+- automatische echte Capture-Auswertung
+- produktiver Restore
+- echte Framework-Spawns
 
 Aktuelle getestete Systeme:
 
@@ -97,12 +150,12 @@ Aktuelle getestete Systeme:
 |---|---|---:|---|
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Start und Scheduler bestanden |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden; Read-Dirty- und Ownership-No-Op-Regressions bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Start, `SAVED`, `SKIPPED`, `FAILED` und Retry bestanden; `productiveRestore=false` |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage als nächster Priority-3-Audit ausstehend |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage noch ausstehend |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | state-only Activation, Completion, Failure und Effects bestanden; Record-Loss-Verdacht widerlegt; allgemeine Dirty-Coverage noch ausstehend |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | state-first bestanden; `reactToActiveMissions`-Sonderfall bewertet; allgemeine Dirty-Coverage noch ausstehend |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden, 33 Commands |
 
 Aktueller wichtiger Befund:
@@ -113,7 +166,9 @@ Aktueller wichtiger Befund:
 - ZoneFactory überspringt **179 nicht geeignete airbase-like objects**
 - CaptureSystem arbeitet auf **32 capture-fähigen Zielen**
 - MissionGenerator erzeugt **78 Missionskandidaten**
-- MissionGenerator erzeugte historisch **10 verfügbare Missionen**; aktuell sind alle sechs Status-Dictionaries reproduzierbar leer
+- MissionGenerator erzeugt **10 Mission Records**; die Collections sind String-keyed Dictionaries
+- `pairs()`-Count bestätigt 10 verfügbare Missionen; `#` liefert dort `0` und ist nicht autoritativ
+- der frühere Record-Loss-Verdacht ist widerlegt
 - F10Menu erzeugt **33 Commands**
 
 Bewertung:
@@ -151,9 +206,12 @@ Noch nicht produktiv enthalten:
 - echte MOOSE-Spawns
 - echte CTLD-FOBs
 - echte CTLD-Cargo-Flüge
-- produktive Persistenz
+- produktiver automatischer Startup-Restore
+- automatische Kampagnenfortsetzung aus Save beim Missionsstart
 - automatische Missionserfolgsauswertung
 - automatische Capture-Auswertung mit Besitzwechsel
+
+Background Autosave selbst ist bereits aktiv und getestet (siehe Verbindlicher Mission-Editor-Stand oben); nur der produktive Startup-Restore bleibt deaktiviert.
 
 Diese Mission ist aktuell ein technischer Testträger.
 
@@ -464,6 +522,8 @@ Arbeitsablauf nach jeder Lua-Änderung:
 12. DCS beenden
 13. frische `dcs.log` auswerten
 
+Der Embedded Audit vom 2026-09-12 hat bestätigt, dass die relevanten aktiv geladenen Ressourcen byte-identisch zu den Repository-Dateien sein können und dass diese Prüfung ein geeignetes Mittel gegen Runtime-Drift ist.
+
 ---
 
 ## 12. Aktueller erfolgreicher Teststand
@@ -508,16 +568,41 @@ Wichtige positive Log-Einträge:
 Bestätigte modulübergreifende Pipeline:
 
 ```text
-F10 Mission Selection
+Mission Details
 Mission Activation
 Mission Completion
-Mission Effect Preparation
-CaptureSystem Effect Processing
-Capture Pressure Update
-Capture Progress Update
-Capture Ready Detection
-F10 Capture Ready Visibility
+Mission Effects
+Capture Pressure
+Capture Progress
+Capture Ready
+Capture Ready Apply
+Zone Ownership Update
+Linked Airbase Ownership Sync
+Background Autosave
 ```
+
+Zusätzlich separat bestätigt, Mission Failure:
+
+```text
+Mission Failure -> Failure Effects prepared -> CaptureSystem verarbeitet -> kein Capture Pressure
+```
+
+Am 2026-09-12 erneut live bestätigt:
+
+- Mission Completion
+- Mission Failure
+- Capture Ready Apply
+
+Persistence dabei: `SAVED`, spezifische `dirtyReason`, `dirtyCleared=true`. Keine echten MOOSE-/CTLD-/Skynet-Aktionen.
+
+Final bestätigter CaptureSystem-Embed nach dem letzten Fix (Capture Dirty Tracking Fix und Ownership No-Op Fix):
+
+- MIZ Entry: `l10n/DEFAULT/tc_capture_system.lua`
+- Bytes: `91160`
+- SHA-256: `06326C028388C6737BDB01C8C29C8F029375D612D72ADC1A02F49BFD9DAE9DCE`
+- Repository-SHA-256 identisch, `MATCH=True`
+
+Dieser Embedded-Stand deckt die Capture-Dirty-Tracking- und Ownership-No-Op-Korrekturen ab. Damit ist Priority 3 insgesamt nicht abgeschlossen — die übrigen State-Systeme sind separat zu prüfen.
 
 Bestätigter Capture-Test:
 
@@ -540,6 +625,23 @@ Bewertung:
 - Es gab keine `Mission script error`.
 - Es gab keinen `stack traceback`.
 - Es gab kein `attempt to`.
+
+Priority 3 / Dirty-Coverage (Status, ausführlicher Audit siehe `TASKS.md`):
+
+Bereits geklärt:
+
+- Capture Getter/Derived Dirty
+- Capture Ownership No-Op
+- `reactToActiveMissions()` Sonderfall
+
+Noch offen:
+
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/logistics/tc_fob_system.lua`
+- `src/missions/tc_mission_generator.lua`
+- `src/ai/tc_ai_cap_manager.lua`
+
+Nächster technischer Schritt nach Dokumentationsabschluss: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Dafür ist zunächst keine Mission-Editor-Änderung erforderlich.
 
 ---
 
@@ -708,8 +810,10 @@ Diese Elemente werden bewusst noch nicht alle gebaut.
 
 Grund:
 
-- Zuerst muss der State weiter stabil, sichtbar und kontrollierbar sein.
-- Danach folgen Persistenz, Debug und echte Framework-Ausführung.
+- Der State bleibt zuerst stabil/testbar.
+- Priority 3 Dirty-Coverage wird abgeschlossen.
+- Produktiver Restore folgt später separat.
+- Danach folgt echte Framework-Ausführung schrittweise.
 
 ---
 
@@ -802,23 +906,19 @@ Die Kampagnenlogik bleibt Lua.
 
 ## 19. Aktueller nächster Mission-Editor-Schritt
 
-Keine Mission-Editor-Änderung ist als nächstes freigegeben. Zuerst wird die gespeicherte `.miz` offline und read-only auditiert, um alle Theater-Command-Trigger-/Ressourcen-Mappings, eingebetteten Bytes, SHA-256, Versionen sowie stale, doppelte, unerwartete oder fehlende Skripte zu erfassen.
+Aktuell ist KEINE neue Mission-Editor-Bauaufgabe als nächster Schritt freigegeben.
 
-Möglicher F10-Pfad:
+Grund: Der nächste technische Schritt liegt im Lua-/State-Audit — READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Dafür ist zunächst:
 
-```text
-Theater Command > Status > Show Capture Ready Zones
-Theater Command > Status > Apply Capture Ready Zone 1
-```
+- keine neue Zone
+- kein neues Template
+- kein Triggerumbau
+- kein Re-Embed
+- keine `.miz`-Änderung
 
-Danach kann geprüft werden:
+notwendig. Der Embedded Resource Audit ist bereits bestanden (siehe Verbindlicher Mission-Editor-Stand oben).
 
-- ob die Zone Ownership sauber state-only wechselt
-- ob Linked Airbase Ownership kontrolliert synchronisiert wird
-- ob Capture Pressure danach sauber zurückgesetzt oder markiert wird
-- ob der Ownership-Wechsel später persistiert werden kann
-
-Erst danach werden größere Mission-Editor-Elemente empfohlen:
+Größere Mission-Editor-Arbeiten bleiben später:
 
 - CTLD-Zonen
 - MOOSE-Templates
@@ -830,18 +930,23 @@ Erst danach werden größere Mission-Editor-Elemente empfohlen:
 
 ## 20. Aktueller Status
 
-Die DEV-Mission ist als technischer Testträger funktionsfähig.
+Bestätigt:
 
-Starttest-Variante A ist bestanden.
+- DEV-Mission als technischer Testträger funktionsfähig
+- Starttest-Variante A bestanden
+- F10Menu aktiv und bestätigt
+- Mission Activation bestanden
+- Mission Completion bestanden
+- Mission Failure bestanden
+- Capture Effect Processing bestanden
+- Capture Ready Visibility bestanden
+- Capture Ready Apply bestanden
+- Zone Ownership Update bestanden
+- Linked Airbase Ownership Sync bestanden
+- dirty-aware Background Autosave bestanden
+- Embedded Resource Audit bestanden
+- CaptureSystem final re-embedded und byte-identisch zum Repository
 
-F10Menu ist aktiv und bestätigt.
+Nächster technischer Schritt:
 
-Mission Activation ist bestätigt.
-
-Mission Completion ist bestätigt.
-
-Capture Effect Processing ist bestätigt.
-
-Capture Ready Visibility ist bestätigt.
-
-Die nächste Entwicklungsentscheidung folgt erst nach dem Offline Embedded Mission Resource Audit. Die `.miz` darf dabei nicht verändert werden.
+Priority 3 fortsetzen mit READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Keine Mission-Editor-Änderung erforderlich.
