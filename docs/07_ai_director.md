@@ -1,8 +1,18 @@
 # AI Director
 
-## Verbindliches Update — 2026-08-04
+## Verbindliches Update — 2026-09-12
 
-AICapManager `v0.2.0` bleibt state-only; echte MOOSE-Aktionen und ein produktiver AI Director sind nicht aktiv. PersistenceSystem `v0.2.6` ist dirty-aware getestet, produktiver Restore bleibt deaktiviert. Der reale Dirty-Grund `ai_cap_needs_evaluated` wurde erfolgreich gespeichert. MissionGenerator-abhängige Aussagen sind wegen des reproduzierbaren, ungelösten Mission-Record-Verlusts zu qualifizieren. Nächster Schritt ist der Offline Embedded Mission Resource Audit. Ältere Status- und Versionsangaben sind historische Snapshots.
+Der vollständige AI Director ist weiterhin **nicht implementiert**. Aktiv ist ausschließlich das vorbereitende AI-Fachmodul `src/ai/tc_ai_cap_manager.lua`, `v0.2.0`, state-first funktional bestanden. Es gibt keine autonome Blue-/Red-Kampagnenplanung und keine echten CAP-, GCI-, Strike-, SEAD-, DEAD-, CAS- oder Transportoperationen durch dieses AI-System. MOOSE-Hooks bleiben vorbereitet (`spawn=MOOSE_PENDING`).
+
+MissionGenerator `v0.2.3` erzeugt 10 Mission Records. Seine Status-Collections sind String-keyed Lua-Dictionaries; live bestätigt sind `statistics.available=10`, `pairs()`-Count `=10` und `#available=0`. Der Längenoperator `#` ist dafür nicht autoritativ. Der Record-Loss-Verdacht ist widerlegt; der tatsächliche Bug lag in `src/core/tc_state.lua` -> `State.summary()`. Der pairs-basierte `countEntries()`-Fix ist live bestanden. MissionGenerator-abhängige Aussagen sind durch diesen früheren Diagnosefehler nicht mehr eingeschränkt.
+
+Der Offline Embedded Mission Resource Audit ist abgeschlossen: DEV und MCP_TEST waren beim Audit byte-identisch, 13/13 relevante aktive Theater-Command-Ressourcen waren `EXACT_MATCH`; keine aktive Embedded-Runtime-Drift.
+
+PersistenceSystem `v0.2.6` ist dirty-aware: Embedded Start, `20s`-/`120s`-Scheduler, `SAVED`, `SKIPPED`, kontrollierter `FAILED`-Pfad und Retry bestanden. Mission Completion, Mission Failure und Capture Ready Apply wurden am 2026-09-12 erneut live bestanden, einschließlich Background Save. `productiveRestore=false`.
+
+AI-State gehört zum Persistence-Snapshot. Der reale Dirty-Grund `ai_cap_needs_evaluated` wurde vom Background-Autosave gespeichert. `reactToActiveMissions()` ist dagegen nicht produktiv verdrahtet; sein latenter Dirty-Randfall ist bewertet (Abschnitt 13). Das ersetzt keine vollständige AICapManager-Dirty-Coverage. Priority 3 bleibt offen; nächster technischer Einzelschritt ist der READ-ONLY Dirty-Coverage-Audit von LogisticsDelivery.
+
+Referenzen: `README.md`, `ROADMAP.md`, `TASKS.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `MISSION_EDITOR_SETUP.md`, `docs/00_project_overview.md`, `docs/02_technical_architecture.md`, `docs/06_mission_generator.md`, `docs/09_persistence.md` und `docs/10_testing.md`. AI-spezifische Source-Aussagen sind READ ONLY gegen AICapManager, State, PersistenceSystem und die produktiven `src/`-Call-Sites geprüft.
 
 Diese Datei beschreibt den geplanten AI Director von **Theater Command DCS**.
 
@@ -45,7 +55,7 @@ Der vorhandene `AICapManager` ist ein erstes vorbereitendes Teilmodul für CAP-S
 
 Stand:
 
-    2026-06-29
+    2026-09-12
 
 Aktive AI-Datei:
 
@@ -57,7 +67,7 @@ Getestete Version:
 
 Status:
 
-    bestanden
+    state-first funktional bestanden
 
 Geplante spätere Datei:
 
@@ -71,6 +81,8 @@ Aktuell vorhanden:
 - CAP-Zonen-Kandidaten
 - CAP-Requests
 - Blue-/Red-CAP-State
+- `reactionState` und `threatLevel`
+- AI-State im Persistence-Snapshot
 - MOOSE-Hooks vorbereitet
 - `spawn=MOOSE_PENDING` als erwarteter Zustand
 
@@ -87,7 +99,10 @@ Noch nicht vorhanden:
 - echte AI-Mission Packages
 - echte GCI-Reaktion
 - Verlustauswertung
-- AI-Persistenz
+- produktiver AI-Restore
+- vollständig auditierte allgemeine AICapManager-Dirty-Coverage
+
+`src/ai/tc_ai_director.lua` ist geplant, nicht vorhanden oder aktiv. AI-State wird bereits gespeichert; beim Missionsstart wird er noch nicht produktiv restauriert (`productiveRestore=false`).
 
 ---
 
@@ -113,6 +128,8 @@ Bewertung:
     CAP-Bedarf wird aus Kampagnenzonen abgeleitet.
     Es werden noch keine echten MOOSE-CAP-Flüge gespawnt.
     `spawn=MOOSE_PENDING` ist aktuell korrekt und erwartet.
+
+AICapManager ist funktional bestätigt und bereitet CAP-Bedarf state-only vor. Die allgemeine Dirty-Coverage bleibt trotzdem offen; die zwölf Requests sind keine zwölf realen CAP-Flüge.
 
 ---
 
@@ -212,12 +229,15 @@ Aktuelle vorgelagerte bestätigte Werte:
     Logistics Hubs: 46
     FOB-Kandidaten: 6
     Blue FOBs: 2
-    Mission candidates: 69
-    verfügbare Missionen: 10
+    Mission candidates: 78
+    FOB Support candidates: 2
+    Mission Records: 10
     CAP-Zonen-Kandidaten: 31
     CAP Requests: 12
 
 Diese Datenbasis ist inzwischen stabil genug, um den AI Director später sinnvoll aufzubauen.
+
+Mission Records liegen in String-keyed Status-Dictionaries. `pairs()` bzw. pairs-basierte Zählhelfer sind autoritativ; eine Record-Loss-Einschränkung besteht nicht mehr.
 
 ---
 
@@ -302,7 +322,7 @@ Wichtig:
 
 CaptureSystem liefert Ownership, Capture-Eligibility, Capture-Pressure und Capture-Progress.
 
-Aktuelle Werte:
+Bestätigte Startwerte:
 
     eligibleBases: 32
     eligibleZones: 32
@@ -328,7 +348,10 @@ Aktuell:
 
     CaptureSystem erzeugt Pressure und Progress.
     AI Director verarbeitet diese Daten noch nicht produktiv.
-    Nächster Schritt ist zunächst F10-Sichtbarkeit für Capture-/Pressure-Daten.
+    Capture Ready und Capture-/Pressure-F10-Sichtbarkeit sind bestanden.
+    Capture Ready Apply, Zone Ownership Update und linked Airbase Ownership Sync sind bestanden.
+    Mission Completion -> Capture Pressure ist bestätigt.
+    Mission Failure -> kein Capture Pressure ist bestätigt.
 
 ---
 
@@ -360,6 +383,8 @@ Aktuell:
 
     Logistics Hubs existieren im State.
     AI Director nutzt sie noch nicht produktiv.
+
+LogisticsDelivery ist funktional bestanden. Die allgemeine Logistics-Dirty-Coverage wurde noch nicht systematisch auditiert; LogisticsDelivery ist der nächste Priority-3-Audit. Eine produktive AI-Logistics-Verknüpfung besteht nicht.
 
 ---
 
@@ -400,6 +425,8 @@ Aktuell:
     MissionGenerator nutzt FOBs bereits für FOB-Support.
     AI Director nutzt FOBs noch nicht produktiv.
 
+Die allgemeine FOB-Dirty-Coverage bleibt offen. Es werden keine echten CTLD-FOBs erzeugt.
+
 ---
 
 ## 12. Verhältnis zu MissionGenerator
@@ -408,12 +435,12 @@ MissionGenerator erzeugt Missionen aus Kampagnenzustand.
 
 Aktuelle Werte:
 
-    mission candidates: 69
+    mission candidates: 78
     fobSupportCandidates: 2
     generated missions: 10
     reservedCreated: 1
     duplicatesSkipped: 1
-    typeLimitSkipped: 30
+    typeLimitSkipped: 68
 
 AI Director soll später mit MissionGenerator zusammenarbeiten.
 
@@ -425,7 +452,7 @@ MissionGenerator:
 - verwaltet Mission Records
 - verwaltet Mission Status
 - bereitet Mission Effects vor
-- stellt Missionen im F10 bereit
+- stellt Mission-Daten für die F10-Anzeige bereit
 
 AI Director:
 
@@ -441,6 +468,8 @@ Aktuell:
     MissionGenerator arbeitet state-only.
     F10Menu kann Missionen aktivieren.
     AI Director ist noch nicht angebunden.
+
+Bestätigt sind 10 Mission Records, Activation, Completion, Failure und Effects sowie Completion -> Capture Pressure und Failure -> kein Capture Pressure. MissionGenerator bleibt state-only; ein AI Director ist nicht produktiv mit ihm verdrahtet. Die allgemeine MissionGenerator-Dirty-Coverage bleibt offen.
 
 ---
 
@@ -471,6 +500,28 @@ Aktuell:
 
     AICapManager läuft eigenständig state-only.
     AI Director existiert noch nicht.
+
+### 13.1 reactToActiveMissions(options) — READ-ONLY Auditbefund
+
+`CapManager.reactToActiveMissions(options)` existiert. Die Funktion liest aktive Missionen und kann über `requestCap()` CAP-Reaktionen für deren Zielzonen anfordern. Danach ruft sie `updateReactionState()` und `updateStatistics()` auf; am Ende steht kein eigener `markDirty()`-Call.
+
+Die repo-weite Prüfung der produktiven Source ergab keine Call-Site: weder aus `CapManager.start()`, Scheduler/Timer, `main.lua`, `loader.lua`, F10 noch anderen produktiven `src/`-Pfaden. Es besteht daher noch keine automatische Mission->AI-CAP-Reaktionskette.
+
+Klassifikation: **B) latenter Missing-Dirty-Randfall in derzeit nicht verdrahtetem Code.**
+
+Bei einem echten neuen CAP-Request greift `addCapToContainer()` mit `markDirty("ai_cap_record_changed")`. Bei späterer Verdrahtung könnten jedoch insbesondere `reactionState`, `threatLevel`, `capStatistics` und `lastUpdate` im `requested==0`-Pfad geändert werden, ohne dass ein sicherer Request-Dirty-Pfad greift.
+
+Aktuell ist dies **kein gegenwärtiger Runtime-Persistence-Bug**. Kein Code-Fix jetzt; bei späterer Verdrahtung erneut prüfen. Die allgemeine AICapManager-Dirty-Coverage bleibt unabhängig von diesem bewerteten Sonderfall in Priority 3 offen.
+
+### 13.2 evaluateCapNeeds() — bestätigter AI-Dirty-/Save-Pfad
+
+`evaluateCapNeeds()` ist ein anderer Pfad und wird von `CapManager.start()` aufgerufen. Nach der Evaluation sowie `updateReactionState()` und `updateStatistics()` setzt er ausdrücklich `markDirty("ai_cap_needs_evaluated")`.
+
+Der normale Background-Scheduler hat diesen realen Dirty-Grund bereits gespeichert:
+
+    Periodic autosave decision: SAVED dirtyReason=ai_cap_needs_evaluated
+
+Danach war `dirty=false`; spätere unveränderte Scheduler-Ticks wurden mit `SKIPPED` ohne Dateischreiben übersprungen. Der Save erforderte keine Spieleraktion. Das bestätigt einen funktionierenden AI-Dirty-/Persistence-Pfad, aber keine vollständige Dirty-Coverage des gesamten AICapManager.
 
 ---
 
@@ -589,9 +640,11 @@ Aktuell:
 
 ## 18. AI-State-Modell
 
-Der spätere AI Director soll eigenen State erzeugen.
+Aktuell vorhanden ist AICapManager-bezogener State unter `State.AI`: unter anderem `capZones`, `capZoneCandidates`, `capRequests`, `reactionState`, `threatLevel`, `capStatistics` und `lastUpdate`.
 
-Mögliche State-Bereiche:
+Geplanter Director-State — ausschließlich Zukunftsmodell, nicht produktiv implementiert:
+
+Der spätere AI Director soll eigenen State erzeugen. Mögliche State-Bereiche:
 
     State.AI.Director
     State.AI.Operations
@@ -628,6 +681,10 @@ Aktuell:
     AICapManager erzeugt bereits AI-CAP-State.
     Ein Director-State ist noch nicht implementiert.
 
+Persistence führt `AI` in `PersistenceSystem.sections` und kopiert diesen Bereich in den serialisierbaren Snapshot. AI-State wird gespeichert, aber beim Missionsstart noch nicht produktiv restauriert (`productiveRestore=false`).
+
+Vor Restore bleiben erforderlich: Priority 3 abschließen, Restore-/Initialisierungsreihenfolge definieren, Save-Kompatibilität/Versionierung festlegen, kontrollierten Restore-Test durchführen und unbeabsichtigte Framework-Hooks beim Restore ausschließen. Daraus entsteht aktuell keine autonome AI aus restauriertem State.
+
 ---
 
 ## 19. Entscheidungsfaktoren
@@ -662,6 +719,8 @@ Aktuell:
 
     Viele dieser Daten existieren bereits state-first.
     Sie sind aber noch nicht in einem AI-Director-Modell zusammengeführt.
+
+Mission Completion/Failure und Capture Ready Apply sind als State-/Outcome-Pfade technisch bestätigt und damit mögliche spätere Inputs. Kein AI Director führt diese Daten aktuell zu autonomen Entscheidungen zusammen.
 
 ---
 
@@ -716,9 +775,12 @@ Mögliche Ereignisse:
 Aktueller Stand:
 
     Mission Activation ist bestätigt.
-    Mission completed/failed ist noch nicht produktiv.
-    CaptureSystem erzeugt Pressure/Progress.
-    Ereignisbasierte AI-Reaktionen sind noch nicht aktiv.
+    Mission Completion, Mission Failure und Mission Effects sind funktional bestätigt.
+    Capture Pressure, Capture Progress und Capture Ready sind bestätigt.
+    Capture Ready Apply, Zone Ownership Update und linked Airbase Ownership Sync sind bestätigt.
+    Ereignisbasierte autonome AI-Director-Reaktionen sind weiterhin nicht aktiv.
+
+Getesteter Event-/State-Pfad bedeutet noch keine autonome AI-Reaktion. `reactToActiveMissions()` ist nicht produktiv verdrahtet (Abschnitt 13).
 
 ---
 
@@ -726,19 +788,23 @@ Aktueller Stand:
 
 F10Menu ist aktuell aktiv.
 
-F10Menu v0.2.0 kann anzeigen:
+F10Menu `v0.2.3` ist mit 33 Commands bestanden. Aktuell bestätigt:
 
-- verfügbare Missionen
-- aktive Missionen
-- Missionsdetails
-- Kampagnenstatus
-- Logistics Status
-- FOB Status
-- AI CAP Status
-
-F10Menu kann aktuell:
-
-- Mission 1 bis Mission 10 aktivieren
+- Show Available Missions
+- Show Active Missions
+- Mission Details 1–10
+- Mission Activation 1–10
+- Active Mission Outcome Status
+- Complete Active Mission 1
+- Fail Active Mission 1
+- Show Campaign Status
+- Show Capture Status
+- Show Capture Ready Zones
+- Apply Capture Ready Zone 1
+- Show Pressure Contested Zones
+- Show Logistics Status
+- Show FOB Status
+- Show AI CAP Status
 
 AI-bezogene aktuelle F10-Funktion:
 
@@ -758,13 +824,7 @@ Spätere AI-F10-Funktionen:
 - Debug Pause AI Director
 - Debug Resume AI Director
 
-Aktuell nächster UI-Schritt:
-
-    Capture-/Pressure-Status anzeigen, nicht AI Director.
-
-Grund:
-
-    AI Director braucht sichtbare Capture-/Pressure-Daten als spätere Entscheidungsgrundlage.
+Capture-/Pressure-Sichtbarkeit ist abgeschlossen. Es gibt weiterhin kein produktives AI-Director-F10-Menü; die oben genannten Director-/Debug-Befehle sind ausschließlich Zukunftsideen.
 
 ---
 
@@ -785,8 +845,10 @@ Beispiele:
 Aktueller Stand:
 
     Mission Effects sind im MissionGenerator vorbereitet.
-    CaptureSystem kann Mission Effects state-only vorbereiten.
+    CaptureSystem verarbeitet abgeschlossene Capture-relevante Mission Effects state-only.
     AI Director verarbeitet Mission Effects noch nicht.
+
+Mission Failure ist ebenfalls funktional bestätigt; der getestete Capture-Pfad verarbeitet die Failure Effects mit `applied=0` und erzeugt keinen Capture Pressure. Eine autonome AI-Reaktion auf Mission Effects ist nicht aktiv.
 
 ---
 
@@ -805,12 +867,14 @@ Geplante Zuordnung:
 
 Regel:
 
-    AI Director trifft Entscheidungen.
+    Der geplante AI Director soll Entscheidungen treffen.
     Fachmodule oder Bridges lösen später konkrete Framework-Aktionen aus.
 
 Aktuell:
 
     keine echte Framework-Ausführung durch AI Director.
+
+MOOSE ist geladen, wird aber nicht produktiv für AI-Spawns genutzt. CTLD ist geladen und wird nicht produktiv durch AI genutzt. Skynet ist geladen; ein eigener produktiver AI-/IADS-Director fehlt. MIST bleibt nach Bedarf ein Werkzeug. Frameworks bestimmen nicht die fachliche Architekturordnung.
 
 ---
 
@@ -820,11 +884,11 @@ Geplante Datei:
 
     src/ai/tc_ai_director.lua
 
-Mögliche erste Version:
+Mögliche erste Version (bestehendes Konzept, keine implementierte Version):
 
     v0.1.0
 
-Erster sinnvoller Umfang:
+Möglicher späterer Anfangsumfang (kein aktueller Implementierungsauftrag):
 
 - Modul lädt
 - State initialisiert
@@ -841,31 +905,33 @@ Erster sinnvoller Umfang:
 
 Noch nicht jetzt:
 
-    Der AI Director sollte erst nach besserer F10-/Debug-Sichtbarkeit begonnen werden.
+    F10-/Capture-Sichtbarkeit ist vorhanden.
+    Zuerst Priority 3 abschließen und bestehende State-Module persistence-seitig absichern.
+    productiveRestore bleibt false; echte Framework-Ausführung folgt später.
+    Keine neuen Großsysteme parallel beginnen.
 
 ---
 
 ## 26. Warum der AI Director noch nicht der nächste Schritt ist
 
-Der AI Director ist ein zentrales System, aber aktuell noch nicht der nächste sinnvolle Schritt.
+Capture Pressure, Capture Ready Zones und Pressure Contested Zones sind bereits über F10 sichtbar. Mission Completion/Failure, Mission Effects, Capture Ready Apply und Background Persistence sind getestet. Diese Punkte sind keine offenen Vorbedingungen mehr.
 
-Gründe:
+Der aktuelle nächste Meilenstein ist Priority 3: die allgemeine Dirty-Coverage bereits aktiver State-Systeme abschließen. **Priority 3 ist nicht abgeschlossen.**
 
-- Capture-Pressure ist zwar vorhanden, aber im Spiel noch nicht sichtbar.
-- Capture Ready Zones sind noch nicht über F10 sichtbar.
-- Pressure Contested Zones sind noch nicht über F10 sichtbar.
-- Mission completed/failed ist noch nicht testbar.
-- Mission Effects sind noch nicht praktisch geprüft.
-- Persistence ist noch nicht getestet.
-- IADS-System ist noch nicht angebunden.
-- echte Framework-Aktionen sind noch deaktiviert.
+Bereits geklärt:
 
-Deshalb gilt:
+- Capture Getter-/Derived-Dirty.
+- Capture Ownership No-Op.
+- `reactToActiveMissions()`-Sonderfall (latent, nicht verdrahtet).
 
-    Erst Capture-/Pressure-Sichtbarkeit.
-    Dann Mission completed/failed.
-    Dann Mission Effects testen.
-    Danach AI Director state-only beginnen.
+Noch systematisch zu prüfen, jeweils ein Modul pro Schritt:
+
+1. `src/logistics/tc_logistics_delivery.lua`
+2. `src/logistics/tc_fob_system.lua`
+3. `src/missions/tc_mission_generator.lua`
+4. `src/ai/tc_ai_cap_manager.lua`
+
+Für AICapManager gilt: funktional bestanden ist keine vollständig bestandene Dirty-Coverage. Erst danach wird die nächste Architekturentscheidung getroffen; AI Director wird nicht vorgezogen.
 
 ---
 
@@ -893,6 +959,13 @@ Gegenmaßnahmen:
 - keine parallelen Großsysteme
 - Tests mit frischer dcs.log
 
+Background Persistence funktioniert. Das aktuelle Persistence-Risiko liegt in der noch nicht vollständig auditierten Dirty-Coverage aller AI-Mutationspfade und im späteren Restore.
+
+- Autonome AI darf keine persistierten State-Änderungen ohne Dirty erzeugen.
+- Reine AI-Reads und echte No-Ops dürfen kein unnötiges Dirty erzeugen.
+- Später verdrahtete Funktionen wie `reactToActiveMissions()` müssen vor Aktivierung Dirty-seitig erneut geprüft werden.
+- Produktiver AI-Restore bleibt deaktiviert; Voraussetzungen siehe Abschnitt 18.
+
 ---
 
 ## 28. Aktuelle Akzeptanzkriterien für AICapManager
@@ -910,6 +983,12 @@ Aktuell bestanden:
 - keine Lua-Fehler.
 - keine Theater-Command-Fehler.
 
+Zusätzlich bestätigt:
+
+- `evaluateCapNeeds()` setzt den realen Dirty-Grund `ai_cap_needs_evaluated`.
+- Background Autosave hat darauf mit `SAVED` reagiert; danach `dirty=false` und unveränderte Ticks `SKIPPED`.
+- `reactToActiveMissions()` ist READ-ONLY auditiert und als latent/unwired klassifiziert.
+
 Noch offen:
 
 - echte MOOSE-CAP-Flüge
@@ -918,86 +997,63 @@ Noch offen:
 - Blue-/Red-Operationsplanung
 - Ressourcenmodell
 - Verlustauswertung
-- AI-Persistenz
+- produktiver AI-Restore
+- vollständig auditierte allgemeine AICapManager-Dirty-Coverage
 
 ---
 
 ## 29. Aktueller getesteter Systemstand
 
+Stand: **2026-09-12**.
+
 | System | Datei | Version | Status |
 |---|---|---:|---|
 | Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | funktional bestanden; Read-Dirty- und Ownership-No-Op-Regressionen bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded Start, SAVED, SKIPPED, FAILED, Retry und Campaign-Persistence-Regressionen bestanden; productiveRestore=false |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage ist nächster Priority-3-Audit |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | funktional bestanden; allgemeine Dirty-Coverage offen |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | 10 Mission Records; Activation, Completion, Failure und Effects bestanden; Record-Loss widerlegt; allgemeine Dirty-Coverage offen |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | state-first bestanden; reactToActiveMissions()-Sonderfall bewertet; allgemeine Dirty-Coverage offen |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden; 33 Commands |
 
 ---
 
 ## 30. Nächster sinnvoller Schritt
 
-Der nächste sinnvolle Schritt liegt nicht direkt beim AI Director.
+Nächster technischer Projektschritt: **Priority 3 — READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`**.
 
-Empfohlene nächste Datei:
+Audit-Ziele:
 
-    src/ui/tc_f10_menu.lua
+- persistierte Logistics-State-Writes erfassen.
+- `markDirty()`-Pfade erfassen.
+- Call-Sites prüfen.
+- echte Mutationen von Reads/No-Ops unterscheiden und auf Dirty-Coverage prüfen.
+- Dirty Reasons bewerten.
+- runtime-only und persistierten State unterscheiden.
+- keine Codeänderung ohne belegten Befund.
 
-Ziel:
-
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
-
-Geplante neue F10-Funktionen:
-
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
+AI Director ist nicht der nächste technische Schritt. FOB, MissionGenerator und AICapManager folgen später einzeln; dieser Dokumentationsschritt führt ihre allgemeinen Audits nicht vorweg.
 
 ---
 
 ## 31. Aktueller Status
 
-AI-seitig ist aktuell nur der AICapManager aktiv und bestanden.
+AI-seitig aktiv ist ausschließlich **AICapManager `v0.2.0`**, state-first funktional bestanden.
 
-Der vollständige AI Director ist noch nicht implementiert.
+Bestätigt:
 
-Aktuelle Fähigkeit:
+- 31 CAP-Zonen-Kandidaten.
+- 12 auto-registrierte CAP-Zonen.
+- 12 CAP Requests.
+- `reactionState=AIR_REACTION_REQUESTED`.
+- `threatLevel=HIGH`.
+- state-only, `spawn=MOOSE_PENDING`.
+- `evaluateCapNeeds()`-Dirty-Pfad durch Background Autosave gespeichert.
+- `reactToActiveMissions()` existiert, ist aber nicht produktiv verdrahtet.
+- AI-State gehört zum gespeicherten Snapshot; `productiveRestore=false`.
 
-- CAP-Zonen-Kandidaten werden erkannt.
-- CAP-Requests werden erzeugt.
-- AI-CAP-State ist vorhanden.
-- F10Menu kann AI CAP Status anzeigen.
-- MOOSE-CAP-Spawns sind vorbereitet, aber nicht aktiv.
+Nicht implementiert sind der vollständige AI Director, autonome Blue-/Red-Operationen, echte MOOSE CAP, produktive GCI-Logik und ein produktives AI-Ressourcenmodell.
 
-Nächster notwendiger Zwischenschritt:
-
-    Capture-/Pressure-Sichtbarkeit im F10-Menü.
-
-Danach sinnvoll:
-
-    Mission completed/failed testbar machen.
-    Mission Effects kontrolliert testen.
-    Erst danach AI Director state-only beginnen.
+Priority 3 bleibt offen. Nächster technischer Einzelschritt ist der READ-ONLY Dirty-Coverage-Audit von LogisticsDelivery. Danach folgen separat FOB, MissionGenerator und AICapManager. Erst danach steht eine neue AI-Director-Implementierungsentscheidung an.
