@@ -74,9 +74,15 @@ Bekannte, derzeit nicht ursächliche Cleanup-Aufgabe:
 
 - Verwaiste alte Persistence-Ressource `ResKey_Action_55` (`tc_persistence_system.lua`) in der DEV-`.miz` ist bekannt, wird nicht geladen und war nicht ursächlich für vergangene Symptome. Bereinigung ist ein separater, unpriorisierter Cleanup-Schritt.
 
+Zusätzlich am 2026-09-12 bestätigt — Mission Completion, Mission Failure und Capture Ready Apply Regressionen: **alle drei BESTANDEN**
+
+- Vollständige Ergebnisse mit Runtime-State und Persistence-Nachweis siehe Abschnitt 7.1–7.3.
+- Persistence hat alle drei State-Änderungen als dirty erkannt und per periodischem Autosave `SAVED` gesichert; `dirtyCleared=true` in allen drei Fällen, `productiveRestore=false` weiterhin unverändert.
+- Bekannte kosmetische Auffälligkeit: Die F10-Ausgabe beim Capture Apply zeigte „Owner: BLUE -> BLUE" statt des tatsächlichen Wechsels. Der Runtime-State bestätigt eindeutig `previousOwner=RED` und den neuen Owner `BLUE`. Dies ist eine reine Anzeige-/Logging-Auffälligkeit im F10-Menü, kein CaptureSystem-Fehler. Keine Codeänderung abgeleitet.
+
 Nächster technischer Schritt:
 
-- Die zuvor wegen des vermeintlichen Record-Verlusts blockierten Regressionen aus Abschnitt 7 (Mission Completion, Mission Failure, Capture Ready Apply) jetzt mit dem gefixten `tc_state.lua` praktisch erneut durchführen und mit einer frischen `dcs.log` bestätigen. Danach gemäß Priorität 3 in Abschnitt 9 mit der Validierung der Dirty-Abdeckung der aktiven State-Systeme fortfahren.
+- Priorität 3 (Abschnitt 9): Dirty-Abdeckung der aktiven State-Systeme (`tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua`, `tc_ai_cap_manager.lua`) vollständig validieren. Die Vorbedingung — Mission Completion, Mission Failure und Capture Ready Apply Regressionen bestanden — ist mit dem Ergebnis vom 2026-09-12 erfüllt.
 
 ---
 
@@ -867,9 +873,8 @@ Bewertung:
 Offen:
 
 - produktiven Startup-Restore weiterhin deaktiviert lassen
-- Mission-/Capture-Regressionen praktisch erneut bestätigen, nachdem der vermeintliche MissionGenerator-State-Verlust am 2026-09-12 als Diagnosefehler in `tc_state.lua` (`#` statt `pairs()`) aufgeklärt und behoben wurde
-- fachliche Dirty-Abdeckung der aktiven State-Systeme weiter validieren
-- produktiven Restore erst nach den in Abschnitt 7 praktisch erneut bestätigten Regressionen, vollständiger Dirty-Abdeckung und definierter Restore-Reihenfolge separat freigeben
+- fachliche Dirty-Abdeckung der aktiven State-Systeme weiter validieren (Priorität 3, Abschnitt 9) — Mission-/Capture-Regressionen sind am 2026-09-12 bereits erneut bestanden (siehe Abschnitt 7.1–7.3)
+- produktiven Restore erst nach vollständiger Dirty-Abdeckung und definierter Restore-Reihenfolge separat freigeben
 - Save-Dateiformat langfristig versionieren
 - Backup-/Rotationsstrategie für Save-Dateien definieren
 - Schutz gegen veraltete oder inkompatible Save-Dateien ergänzen
@@ -900,6 +905,40 @@ Status:
 - keine echten CTLD-Aktionen
 - keine echten Skynet-Aktionen
 
+Erneut bestätigt am 2026-09-12 (nach dem `tc_state.lua`-Fix aus Abschnitt 0):
+
+Ablauf:
+
+- verfügbare Mission über F10 aktiviert
+- Mission anschließend über F10 abgeschlossen
+
+Runtime-State über DCS-SMS:
+
+- `available=9`
+- `active=0`
+- `completed=1`
+- `failed=0`
+- `statistics.available=9`
+- `statistics.active=0`
+- `statistics.completed=1`
+- `total=10`
+
+Log:
+
+- `Mission status changed -> ACTIVE`
+- `Mission outcome -> COMPLETED`
+- `stateOnly=true`
+- `effects=prepared`
+
+Persistence:
+
+- Periodic autosave decision: `SAVED`
+- `dirtyReason=f10_active_mission_1_completed`
+- `dirtyCleared=true`
+- `productiveRestore=false`
+
+Status am 2026-09-12: **BESTANDEN**
+
 ---
 
 ### 7.2 Capture Ready Apply
@@ -920,6 +959,43 @@ Status:
 - Dirty-Markierungen im CaptureSystem vorhanden
 - dirty-aware Autosave-Auswertung einschließlich Fehler/Retry und Embedded-Scheduler getestet
 
+Erneut bestätigt am 2026-09-12 (nach dem `tc_state.lua`-Fix aus Abschnitt 0):
+
+Capture Ready vor Apply:
+
+- Zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
+- Owner-Wechsel: `RED -> BLUE`
+- Progress: `100%`
+
+Apply-Ergebnis:
+
+- `Zone captured: ZONE_AIRBASE_ABU_AL_DUHUR [BLUE]`
+- `Base captured: Abu al-Duhur [BLUE]`
+- F10 Apply erfolgreich
+- `stateOnly=true`
+
+Runtime-State über DCS-SMS danach:
+
+- `zoneOwner=BLUE`
+- `previousOwner=RED`
+- `baseOwner=BLUE`
+- `progress=0`
+- `status=STABLE`
+- `captureReady=false`
+
+Persistence:
+
+- Periodic autosave decision: `SAVED`
+- `dirtyReason=f10_capture_ready_zone_1_applied`
+- `dirtyCleared=true`
+- `productiveRestore=false`
+
+Bekannte kosmetische Auffälligkeit (kein CaptureSystem-Fehler):
+
+- Die F10-Ausgabe zeigte beim Apply „Owner: BLUE -> BLUE" statt des tatsächlichen Wechsels. Der Runtime-State bestätigt eindeutig `previousOwner=RED` und den neuen Owner `BLUE`. Dies ist eine reine Anzeige-/Logging-Auffälligkeit im F10-Menü und wird nicht als CaptureSystem-Fehler gewertet. Keine Codeänderung abgeleitet.
+
+Status am 2026-09-12: **BESTANDEN**
+
 ---
 
 ### 7.3 Mission Failure
@@ -939,6 +1015,36 @@ Status:
 - bestanden
 - state-only
 - erwartetes Verhalten
+
+Erneut bestätigt am 2026-09-12 (im Anschluss an die erneut bestandene Completion-Regression, nach dem `tc_state.lua`-Fix aus Abschnitt 0):
+
+Runtime-State über DCS-SMS:
+
+- `available=8`
+- `active=0`
+- `completed=1`
+- `failed=1`
+- `statistics.available=8`
+- `statistics.active=0`
+- `statistics.completed=1`
+- `statistics.failed=1`
+- `total=10`
+
+Log:
+
+- `Mission status changed -> ACTIVE`
+- `Mission outcome -> FAILED`
+- `stateOnly=true`
+- `effects=prepared`
+
+Persistence:
+
+- Periodic autosave decision: `SAVED`
+- `dirtyReason=f10_active_mission_1_failed`
+- `dirtyCleared=true`
+- `productiveRestore=false`
+
+Status am 2026-09-12: **BESTANDEN**
 
 ---
 
@@ -1169,6 +1275,7 @@ Ziele:
 Voraussetzung:
 
 - dirty-aware Autosave in `tc_persistence_system.lua` bestanden
+- Mission Completion, Mission Failure und Capture Ready Apply Regressionen bestanden — erfüllt am 2026-09-12 (siehe Abschnitt 7.1–7.3)
 
 ---
 
@@ -1262,6 +1369,7 @@ Aktuelle bestätigte Fähigkeiten:
 - Mission Completion kann Capture Pressure erzeugen.
 - Mission Failure bleibt ohne Capture Pressure.
 - Capture Ready Apply kann Zone und Airbase state-only auf Blue setzen.
+- Mission Completion, Mission Failure und Capture Ready Apply sind am 2026-09-12 mit echtem Runtime-State und dirty-aware Autosave-Nachweis erneut bestanden (siehe Abschnitt 7.1–7.3).
 - Persistence kann DCS-Dateien schreiben und lesen.
 - Persistence speichert Campaign-State als Lua-Return-Datei.
 - Persistence validiert Save-Dateien.
@@ -1271,7 +1379,7 @@ Aktuelle bestätigte Fähigkeiten:
 
 Aktuelle wichtigste offene Fähigkeit:
 
-- Mission Completion, Mission Failure und Capture Ready Apply Regressionen jetzt mit dem gefixten `tc_state.lua` praktisch erneut bestätigen (siehe Abschnitt 0 und Abschnitt 12).
+- Vollständige Dirty-Abdeckung der aktiven State-Systeme validieren (Priorität 3, Abschnitt 9), nachdem Mission Completion, Mission Failure und Capture Ready Apply Regressionen am 2026-09-12 bestanden sind (siehe Abschnitt 7.1–7.3).
 
 ---
 
@@ -1296,17 +1404,17 @@ Danach nicht mit F10-Persistence weitermachen.
 
 Nächster technischer Schritt:
 
-- Mission Completion, Mission Failure und Capture Ready Apply Regressionen (Abschnitt 7.1–7.3) mit dem gefixten `tc_state.lua` praktisch erneut durchführen und mit einer frischen `dcs.log` bestätigen. Danach gemäß Priorität 3 (Abschnitt 9) mit der Validierung der Dirty-Abdeckung der aktiven State-Systeme fortfahren.
+- Priorität 3 (Abschnitt 9): Dirty-Abdeckung der aktiven State-Systeme (`tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua`, `tc_ai_cap_manager.lua`) vollständig validieren.
 
 Nächster erwarteter Test:
 
-1. Mission über F10 aktivieren, abschließen bzw. fehlschlagen lassen und anschließend Capture Ready Zone 1 anwenden.
-2. Laufenden Runtime-State währenddessen mit DCS-SMS gegen `pairs()`-Counts prüfen.
-3. Ergebnis in Abschnitt 7 mit Datum aktualisieren.
-4. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
-5. Erst danach mit Priorität 3 (Dirty-Abdeckung der aktiven State-Systeme) fortfahren.
+1. Vorhandene Dirty-Markierungen je State-System gegen fachlich relevante State-Änderungen prüfen.
+2. Fehlende oder zu häufige Dirty-Markierungen gezielt identifizieren und korrigieren.
+3. Dirty Reasons pro Fachsystem eindeutig und stabil halten.
+4. Ergebnis in Abschnitt 9 (Priorität 3) mit Datum dokumentieren.
+5. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
 
-Nicht mehr blockiert (siehe Abschnitt 0, Stand 2026-09-12):
+Bestanden am 2026-09-12 (nicht erneut zu wiederholen, siehe Abschnitt 7.1–7.3):
 
 - Mission Completion Regression
 - Mission Failure Regression
