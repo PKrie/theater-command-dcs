@@ -18,15 +18,39 @@ Grundprinzip:
 - Lua = Kampagnensystem
 - GitHub = Projektgedächtnis
 
-## Verbindlicher Architekturstand — 2026-08-04
+## Verbindlicher Architekturstand — 2026-09-12
 
-PersistenceSystem `v0.2.6` ist ein dirty-aware Campaign-Layer-Querschnittssystem. Periodische Entscheidungen sind `SAVED`, `SKIPPED` oder `FAILED`; Dirty wird erst nach Write, Read-back, Compile, Evaluate und Validation gelöscht. Ein neuerer Dirty-State wird durch einen älteren Save-Abschluss nicht gelöscht. Produktiver Startup-Restore bleibt deaktiviert.
+**A) Mission-State-Diagnose**
 
-Mission-Status-Collections sind Dictionaries mit String-Keys wie `MISSION_1`. Autoritative Zählung erfolgt mit `pairs()` beziehungsweise `countTableKeys()`, nicht mit `#` oder `ipairs()`. Historisch wurden zehn Missionen erfolgreich erzeugt und über F10 getestet. Aktuell gehen die sechs Status-Collections später reproduzierbar verloren, während IDs und Statistiken stale bleiben. Ursache und Writer sind unbekannt; die Klassifikation lautet `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
+Der frühere Verdacht auf einen Mission-Record-Verlust existierte nicht als reales Datenproblem. `State.Missions.available`, `.active`, `.completed`, `.failed`, `.expired` und `.cancelled` sind String-keyed Lua-Dictionaries (Schlüssel wie `MISSION_1`); der Längenoperator `#` ist auf solchen Dictionaries kein autoritativer Count. Live bestätigt: `statistics.available = 10`, `pairs()`-Count `= 10`, `#available = 0`. Tatsächlicher Source-Bug: `src/core/tc_state.lua`, `State.summary()`, wo Mission-Dictionaries teilweise mit `#` statt `pairs()` gezählt wurden. Fix: pairs-basierte Hilfsfunktion `countEntries()`. Der Fix wurde committed, gepusht, in der DEV-`.miz` neu eingebettet und live getestet. Eine repository-weite Prüfung fand keine weiteren entsprechenden Mission-Dictionary-Count-Bugs.
 
-DCS-SMS ist ausschließlich Entwicklungs- und Mission-Editor-Tooling, kein Runtime-Framework. Die aktive Bridge-Umgebung ist `os=true`, `io=true`, `lfs=true`, `require=false`; Persistence selbst benötigt direkt nur `io` und `lfs`.
+**B) Embedded Runtime**
 
-Nächster Architekturtest ist der offline/read-only Vergleich der eingebetteten `.miz`-Ressourcen mit den Repository-Quellen. Bis dahin bleiben Mission Completion, Mission Failure und Capture Ready Apply Regressionen blockiert.
+Das Offline Embedded Mission Resource Audit ist bestanden: DEV- und MCP_TEST-`.miz` waren byte-identisch; 13/13 relevante aktive Theater-Command-Ressourcen waren byte-identisch zum Repository; 0 aktive Source-Mismatches; keine aktive Embedded-Runtime-Drift. Cleanup-Altlast: `ResKey_Action_55` verweist verwaist auf die nicht mehr aktive `tc_persistence_system.lua` (nicht referenziert, nicht geladen, nicht ursächlich). Aktiv ist `tc_persistence_system_v0_2_6.lua`.
+
+**C) DCS-SMS**
+
+Aktueller Tooling-Stand: DCS-SMS `v0.27.2`, Hook `me-bridge-0.27.2`. Auto-Routing per `dcs-sms exec --code "..."` erreicht korrekt das Mission Environment; TC ist erreichbar. Architekturgrenze unverändert: DCS-SMS ist Entwicklungs-/Diagnosewerkzeug, kein Theater-Command-Runtime-Framework.
+
+**D) Bestandene End-to-End-Regressionen**
+
+Am 2026-09-12 erneut live bestanden: Mission Completion, Mission Failure, Capture Ready Apply. Diese Pfade sind damit nicht mehr blockiert. Persistence bestätigte bei echten Änderungen `dirty`, eine spezifische `dirtyReason`, `SAVED` und `dirtyCleared=true`. `productiveRestore=false` bleibt unverändert.
+
+**E) Capture Dirty Semantik**
+
+Fix "Fix capture dirty state tracking": zuvor konnten reine Read-/Getter-Pfade persistenzrelevanten Dirty-State verursachen. Nach dem Fix live bestätigt für `getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`: alle `dirty=false`, `reason=nil`. Eine echte Capture-Pressure-Mutation ergibt `dirty=true`, `reason=capture_pressure_set`; Rollback vollständig. Architekturelle Aussage: Read-/Derived-State-Pfade dürfen keinen Persistenz-Dirty-State erzeugen, wenn sich der persistierte fachliche Zustand nicht verändert.
+
+**F) Ownership-No-Op**
+
+Fix "Fix ownership no-op state mutations": `setZoneOwner()`/`setBaseOwner()` sind bei identischem Owner jetzt semantische No-Ops — kein Record-Timestamp-Write, keine Registry-Reassign, kein World-Sync, kein Progress-Write, kein `refreshAllCounters()`, kein Event, kein Dirty. `progress.previousOwner` bleibt historisch korrekt erhalten. Live bestätigt: `dirty=false`, keine relevanten Timestamp-/Progress-/lastUpdate-Änderungen. Final eingebettete CaptureSystem-Datei: `91160` Bytes, SHA-256 `06326C028388C6737BDB01C8C29C8F029375D612D72ADC1A02F49BFD9DAE9DCE`, `MATCH=True` zum Repository.
+
+**G) AI CAP `reactToActiveMissions()`**
+
+READ-ONLY geprüft. `CapManager.reactToActiveMissions(options)` hat aktuell keine produktive Call-Site — nicht aufgerufen durch `CapManager.start()`, Scheduler, `main.lua`, `loader.lua`, F10 oder andere `src/`-Pfade. Klassifikation: latenter Missing-Dirty-Fall in derzeit nicht verdrahtetem Code. Aktuell kein Runtime-Persistence-Bug; kein Fix jetzt. Bei späterer Verdrahtung ist die Dirty-Semantik erneut zu prüfen.
+
+**H) Priority 3**
+
+Priority 3 ist NICHT abgeschlossen. Bereits geklärt: Capture Getter/Derived Dirty, Ownership No-Op, `reactToActiveMissions()`-Sonderfall. Noch allgemeine Dirty-Coverage-Prüfung notwendig für `src/logistics/tc_logistics_delivery.lua`, `src/logistics/tc_fob_system.lua`, `src/missions/tc_mission_generator.lua`, `src/ai/tc_ai_cap_manager.lua`. Nächster technischer Einzelschritt nach Dokumentationsabschluss: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`.
 
 ---
 
@@ -110,6 +134,15 @@ Aktuell bestätigt:
 - PersistenceSystem kann Save-Dateien lesen, kompilieren, evaluieren und validieren.
 - PersistenceSystem kann Save-Dateien kontrolliert importieren.
 - PersistenceSystem läuft als unsichtbarer Background-Autosave-Service.
+- Mission Records sind vorhanden und korrekt String-keyed.
+- Mission Activation ist live bestätigt.
+- Mission Completion ist live bestätigt.
+- Mission Failure ist live bestätigt.
+- Capture Ready Apply ist live bestätigt.
+- Capture Read-Pfade sind dirty-neutral.
+- echte Capture-Mutationen markieren State dirty.
+- Ownership-No-Ops ändern keinen persistierten State.
+- Embedded Runtime entspricht für die auditierten aktiven Ressourcen dem Repository.
 
 Aktuelle bewusste Einschränkungen:
 
@@ -122,6 +155,7 @@ Aktuelle bewusste Einschränkungen:
 - keine automatische Capture-Auswertung aus realen DCS-Einheiten/Zonen
 - kein automatischer produktiver Ownership-Wechsel ohne bewusste Testaktion
 - keine automatische `.miz`-Generierung
+- allgemeine Priority-3-Dirty-Coverage von vier aktiven State-Modulen (Logistics, FOB, MissionGenerator, AI CAP Manager) noch offen
 
 ---
 
@@ -220,6 +254,12 @@ Architekturregel:
 - Core-Dateien sollen keine konkrete Kampagnenlogik enthalten.
 - Core-Dateien stellen Basisdienste bereit.
 - Fachlogik liegt in World, Campaign, Logistics, Missions, AI, IADS oder UI.
+
+Technische State-Invariante:
+
+- `State.summary()` und vergleichbare Auswertungen dürfen String-keyed Dictionaries (z. B. die Mission-Status-Collections) nicht mit `#` zählen.
+- Für diese Dictionary-Collections gilt ausschließlich `pairs()`-basierte Zählung über Helfer wie `countEntries()`/`countTableKeys()`.
+- `#` und `ipairs()` sind für diese Collections nicht autoritativ.
 
 ---
 
@@ -411,11 +451,12 @@ Bestätigter Failure-Fall:
 Bewertung:
 
 - CaptureSystem ist state-first stabil.
-- Mission Completion zu Capture Pressure ist bestätigt.
-- Mission Failure ohne Capture Pressure ist bestätigt.
-- Capture Ready Apply ist bestätigt.
+- Am 2026-09-12 erneut bestätigt: Completion → Capture Pressure, Failure ohne Capture Pressure, Capture Ready Apply, linked Airbase Ownership Sync.
 - Produktive automatische Capture-Auswertung über reale DCS-Einheiten ist noch offen.
-- Dirty-Markierungen sind vorhanden und werden durch PersistenceSystem `v0.2.6` ausgewertet.
+- Read-Semantik: reine Getter erzeugen ohne tatsächliche State-Änderung keinen Dirty-State; sieben geprüfte APIs (`getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`) haben das bestanden.
+- Mutation-Semantik: eine echte Pressure-Mutation erzeugt `dirty=true` mit dem spezifischen Grund `capture_pressure_set`.
+- Ownership-No-Op: ein identischer Owner führt zu keiner persistierten Mutation, `previousOwner` bleibt erhalten, es gibt keine Timestamp-/Capture-lastUpdate-Mutation, `dirty` bleibt `false`.
+- CaptureSystem-Dirty-Semantik ist für die heute geprüften Read-/Pressure-/Ownership-No-Op-Pfade live verifiziert. Das bedeutet nicht, dass damit die gesamte projektweite Dirty-Coverage (Priority 3) abgeschlossen ist — die übrigen State-Systeme sind separat zu prüfen.
 
 ---
 
@@ -497,10 +538,20 @@ Architekturentscheidung:
 
 Noch offen:
 
-- fachliche Dirty-Abdeckung der aktiven State-Systeme weiter validieren
+- fachliche Dirty-Abdeckung der aktiven State-Systeme weiter validieren (Priority 3: CaptureSystem bestätigt, Logistics/FOB/MissionGenerator/AI CAP Manager noch offen)
 - Save-Dateiformat langfristig versionieren
 - Backup-/Rotationsstrategie für Save-Dateien
-- produktiven Restore erst nach vollständiger Dirty-Abdeckung, blockierten Regressionen und definierter Restore-Reihenfolge freischalten
+- produktiven Restore erst nach vollständiger Priority-3-Dirty-Coverage, definierter Restore-/Initialisierungsreihenfolge, Kompatibilitäts-/Versionsstrategie und separatem kontrolliertem Restore-Test freischalten
+
+PersistenceSystem-Verhalten (bestätigt):
+
+- internes Background-System, kein Spieler-F10-Workflow
+- dirty-aware Autosave, initial nach `20s`, danach alle `120s`
+- `SAVED` bestanden, `SKIPPED` bestanden, kontrollierter `FAILED`-Pfad bestanden, Retry bestanden
+- Dirty bleibt bei fehlgeschlagenem Save bestehen
+- Dirty wird erst nach Write, Read-back, Compile, Evaluate und Validation gelöscht
+- ein älterer Save darf einen neueren Dirty-State nicht löschen
+- `productiveRestore=false`
 
 ---
 
@@ -537,8 +588,9 @@ Getestete Version:
 
 Status:
 
-- historisch bestandene Generierungs- und F10-Pipeline
-- aktueller Mission-Record-Verlust reproduzierbar und ungelöst
+- bestanden
+- funktionale State-first-Grundlage bestanden
+- allgemeine Dirty-Coverage dieses Moduls noch nicht auditiert (nächster konkreter Priority-3-Kandidat)
 
 Bestätigte Werte:
 
@@ -563,8 +615,8 @@ Offen:
 - CTLD Pickup-/Dropoff-Zonen
 - Supply-Verbrauch
 - CTLD-Crate-Auswertung
-- vorhandene Dirty-Abdeckung für Logistics weiter fachlich validieren
 - Kopplung mit Capture und FOB
+- fachliche Dirty-Abdeckung READ-ONLY prüfen (Priority 3, noch nicht auditiert); danach erst über einen eventuellen Fix entscheiden
 
 ---
 
@@ -609,8 +661,8 @@ Offen:
 
 - echte CTLD-FOB-Erstellung
 - CTLD-Crates mit FOB-Baufortschritt koppeln
-- FOB-Zustand persistenzrelevant markieren
 - FOBs später für Spieler und AI als Forward Operations Bases nutzen
+- allgemeine Dirty-Coverage dieses Moduls im Rahmen von Priority 3 noch zu prüfen
 
 ---
 
@@ -664,12 +716,17 @@ Bestätigt:
 - Failed Mission Effects erzeugen aktuell bewusst keinen Capture Pressure.
 - MOOSE-/CTLD-/Skynet-Hooks bleiben reserviert.
 
-Aktuelle Einschränkung:
+Historische Diagnose (widerlegt, Stand 2026-08-04):
 
-- Alle sechs Mission-Status-Dictionaries wurden nach erfolgreicher Initialgenerierung später leer beobachtet.
-- `lastMissionId=10` und Statistikwerte blieben erhalten.
-- Weder Ursache noch exakter Writer sind identifiziert; es ist unklar, ob ersetzt, geleert oder fehlerhaft beobachtet wurde.
-- Der Projektquellcode enthält keinen automatisch erreichbaren passenden Write-Site.
+- Es wurde beobachtet, dass alle sechs Mission-Status-Dictionaries nach erfolgreicher Initialgenerierung später leer erschienen, während `lastMissionId=10` und Statistikwerte erhalten blieben.
+- Diese Beobachtung war ein Diagnosefehler: die Mission-Dictionaries sind string-keyed (Schlüssel wie `MISSION_1`), der verwendete Längenoperator `#` liefert darauf keinen verlässlichen Wert. Ein echter Datenverlust bestand nicht.
+- Der tatsächliche Fehler lag in `src/core/tc_state.lua` (`State.summary()`) und wurde am 2026-09-12 durch eine pairs-basierte `countEntries()`-Hilfsfunktion behoben; siehe Verbindlicher Architekturstand oben.
+
+Aktueller Stand (2026-09-12):
+
+- MissionGenerator `v0.2.3` ist funktional bestätigt: 10 Mission Records, Activation, Completion, Failure und Effects erneut bestanden.
+- Keine echten Framework-Spawns (MOOSE/CTLD/Skynet) sind aktiv.
+- Die allgemeine Dirty-Coverage dieses Moduls ist im Rahmen von Priority 3 noch nicht systematisch auditiert.
 
 Offen:
 
@@ -677,7 +734,7 @@ Offen:
 - Mission `EXPIRED` testbar machen
 - Missionserfolg aus DCS-Events ableiten
 - echte Mission Execution über Frameworks
-- Mission State persistenzrelevant markieren
+- MissionGenerator-Dirty-Coverage in Priority 3 systematisch auditieren
 
 ---
 
@@ -720,6 +777,8 @@ Bewertung:
 
 - AI CAP Manager besitzt eine stabile State-Grundlage.
 - Echter MOOSE-Spawn bleibt `MOOSE_PENDING`.
+- `reactToActiveMissions()`: public API vorhanden, aktuell keine Call-Site; nicht im `start()`/Scheduler-/Main-/Loader-/F10-Lifecycle verdrahtet. Deshalb aktuell kein Runtime-Persistence-Bug. Ein hypothetischer `requested==0`-Dirty-Randfall ist latent und wird erst bei tatsächlicher Verdrahtung behoben/getestet.
+- Keine echte MOOSE-Ausführung ist aktiv.
 
 Offen:
 
@@ -727,7 +786,7 @@ Offen:
 - MOOSE SPAWN anbinden
 - AI_A2A_DISPATCHER prüfen
 - CAP-Verluste und CAP-Erfolge auswerten
-- AI-Zustand persistenzrelevant markieren
+- allgemeine Dirty-Coverage des AICapManager im Rahmen von Priority 3 separat prüfen
 
 ---
 
@@ -897,6 +956,13 @@ Aktueller bestätigter State-first-Datenfluss:
 11. Capture Ready kann bewusst angewendet werden.
 12. PersistenceSystem speichert Campaign-State im Hintergrund.
 
+Dirty-Semantik im Datenfluss:
+
+- Persistence reagiert auf Dirty-State statt blind jeden periodischen Tick zu schreiben.
+- reine fachliche Reads sollen keine Dirty-Auslösung erzeugen.
+- echte State-Mutationen sollen Dirty setzen.
+- diese Semantik ist im CaptureSystem für die heute getesteten Pfade bestätigt (siehe Abschnitt 8.1).
+
 Bestätigte End-to-End-Kette:
 
 - Mission Details
@@ -909,6 +975,8 @@ Bestätigte End-to-End-Kette:
 - Zone Ownership Update
 - Airbase Ownership Sync
 - Background Autosave
+
+Diese Kette wurde am 2026-09-12 erneut bestätigt und ist nicht mehr durch den früheren (widerlegten) Mission-Record-Verlust blockiert.
 
 ---
 
@@ -961,7 +1029,8 @@ Autosave:
 Produktiver Restore:
 
 - nicht aktiv
-- darf erst nach vollständiger Dirty-Abdeckung, den blockierten Regressionen und definierter Restore-Reihenfolge aktiviert werden
+- darf erst aktiviert werden nach: (1) vollständiger Priority-3-Dirty-Coverage, (2) definierter Restore-/Initialisierungsreihenfolge, (3) geklärter Kompatibilitäts-/Versionsstrategie, (4) separatem, kontrolliertem Restore-Test
+- die Regressionen Mission Completion, Mission Failure und Capture Ready Apply sind bereits bestanden und keine offene Voraussetzung mehr
 
 Architekturentscheidung:
 
@@ -971,7 +1040,7 @@ Architekturentscheidung:
 
 Nächster Schritt:
 
-- Offline Embedded Mission Resource Audit; kein Persistence- oder MissionGenerator-Code-Fix ohne neue Evidenz.
+- Priority 3 fortsetzen: zunächst READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`; kein Persistence-Code-Fix ohne neue, belegte Evidenz.
 
 ---
 
@@ -1011,10 +1080,11 @@ Aktuell nicht aktiv:
 
 Begründung:
 
-- Die State-Schicht muss zuerst stabil bleiben.
-- Dirty-aware Persistence ist an echten State-Änderungen getestet; der aktuelle MissionGenerator-State-Verlust muss vor weiteren Regressionen geklärt werden.
-- Produktiver Restore darf Initialisierungsreihenfolge nicht beschädigen.
-- Framework-Aktionen werden später einzeln angebunden.
+- State-first bleibt Architekturprinzip.
+- Dirty-aware Persistence funktioniert und ist an echten State-Änderungen getestet.
+- allgemeine Dirty-Coverage wird in Priority 3 systematisch geprüft.
+- produktiver Restore bleibt bis danach deaktiviert.
+- Framework-Aktionen bleiben reserviert und werden später einzeln angebunden.
 
 ---
 
@@ -1100,10 +1170,11 @@ Risiko:
 
 Gegenmaßnahme:
 
-- Restore bleibt deaktiviert.
-- Dirty-Abdeckung vollständig auditieren und blockierte Regressionen nach Klärung des MissionGenerator-State-Verlusts durchführen.
-- Dann Restore-Reihenfolge definieren.
-- Dann produktiven Restore kontrolliert freischalten.
+- Restore deaktiviert lassen.
+- Priority 3 Dirty-Coverage vollständig abschließen.
+- Restore-/Initialisierungsreihenfolge definieren.
+- Save-Kompatibilität/Versionierung berücksichtigen.
+- produktiven Restore danach separat und kontrolliert testen.
 
 ---
 
@@ -1125,28 +1196,22 @@ Gegenmaßnahme:
 
 ## 21. Nächster technischer Schritt
 
-Read-only Offline-Audit der in `Operation_Levant_Reclamation_DEV.miz` eingebetteten Theater-Command-Ressourcen. Der Audit verifiziert Trigger-Mappings, Byte-Längen, SHA-256, exakte Byte-Gleichheit, Versionen sowie stale, doppelte, unerwartete oder fehlende Skripte.
+Das Offline Embedded Mission Resource Audit ist abgeschlossen und bestanden. Der nächste technische Schritt ist die Fortsetzung von Priority 3: allgemeine Dirty-Coverage der aktiven State-Systeme weiter validieren.
 
-Akzeptanzkriterien:
+Nächste einzelne Datei:
 
-- CaptureSystem lädt sauber.
-- Mission Completion Pipeline bleibt stabil.
-- Mission Failure Pipeline bleibt stabil.
-- Capture Ready Apply bleibt stabil.
-- Nach Capture Apply wird eine persistenzrelevante State-Änderung geloggt.
-- Persistence Autosave läuft weiterhin automatisch.
-- Keine Lua-Fehler.
-- Keine echten Framework-Aktionen.
+- `src/logistics/tc_logistics_delivery.lua`, zunächst READ ONLY.
 
-Erwarteter Test:
+Audit-Ziele:
 
-1. Mission starten.
-2. Mission über F10 aktivieren.
-3. Mission über F10 abschließen.
-4. Capture Ready Zone 1 über F10 anwenden.
-5. CaptureSystem markiert State als persistenzrelevant.
-6. Persistence autosaved automatisch.
-7. DCS-Log bestätigt Dirty-/Autosave-Zusammenhang.
+- alle Writes auf persistierten Logistics-State erfassen
+- alle `markDirty()`-Pfade erfassen
+- prüfen, ob reale Mutationen zuverlässig dirty setzen
+- prüfen, ob No-Ops/Reads unnötig dirty setzen
+- Dirty Reasons bewerten
+- keine Codeänderung ohne konkreten belegten Befund
+
+Danach wird erst das Ergebnis bewertet, bevor über Fix/Test entschieden wird. Es wird nicht parallel bereits an FobSystem, MissionGenerator oder AICapManager gearbeitet.
 
 ---
 
@@ -1158,13 +1223,13 @@ Bestandene Systeme:
 |---|---:|---|
 | Airbase Scanner | `v0.2.2` | bestanden |
 | ZoneFactory | `v0.2.0` | bestanden |
-| CaptureSystem | `v0.2.2` | bestanden |
-| LogisticsDelivery | `v0.2.0` | bestanden |
+| CaptureSystem | `v0.2.2` | bestanden; zusätzlich Read-Dirty- und Ownership-No-Op-Regressions bestanden |
+| LogisticsDelivery | `v0.2.0` | funktional bestanden; Dirty-Coverage als nächster Priority-3-Audit ausstehend |
 | FobSystem | `v0.2.0` | bestanden |
-| MissionGenerator | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
-| AICapManager | `v0.2.0` | bestanden |
+| MissionGenerator | `v0.2.3` | state-only Activation, Completion, Failure und Effects bestanden; Record-Loss-Verdacht widerlegt; allgemeine Dirty-Coverage noch ausstehend |
+| AICapManager | `v0.2.0` | funktional state-first bestanden; `reactToActiveMissions()`-Sonderfall bewertet; allgemeine Dirty-Coverage noch ausstehend |
 | F10Menu | `v0.2.3` | bestanden |
-| PersistenceSystem | `v0.2.6` | Embedded-Start und dirty-aware Scheduler bestanden |
+| PersistenceSystem | `v0.2.6` | Embedded-Start, `SAVED`, `SKIPPED`, `FAILED`, Retry bestanden; `productiveRestore=false` |
 
 Aktuelle Meilensteine:
 
@@ -1177,10 +1242,17 @@ Aktuelle Meilensteine:
 - AI CAP State steht.
 - F10-Testbed steht.
 - Persistence Background Autosave steht.
+- Embedded Resource Audit bestanden.
+- Mission-State-Diagnose korrigiert.
+- Mission Completion Regression bestanden.
+- Mission Failure Regression bestanden.
+- Capture Ready Apply Regression bestanden.
+- Capture Dirty Read Semantik bestanden.
+- Ownership-No-Op bestanden.
 
 Nächster Meilenstein:
 
-- Embedded-Source-Drift als möglichen Faktor des Mission-Record-Verlusts prüfen.
+- Priority 3 Dirty-Coverage vollständig abschließen.
 
 ---
 
@@ -1201,11 +1273,17 @@ Besonders prüfen:
 - `src/campaign/tc_persistence_system.lua`
 - `src/ui/tc_f10_menu.lua`
 
+Für den nächsten technischen Schritt zusätzlich, nur soweit zum Dirty-Coverage-Audit nötig:
+
+- `src/logistics/tc_logistics_delivery.lua`
+- `src/core/tc_state.lua`
+- `src/campaign/tc_persistence_system.lua`
+
 Danach nicht aus Erinnerung arbeiten.
 
 Nächster technischer Startpunkt:
 
-- `TASKS.md`: Offline Embedded Mission Resource Audit
+- `TASKS.md` Priority 3 → READ-ONLY Dirty-Coverage-Audit → `src/logistics/tc_logistics_delivery.lua`
 
 ---
 
@@ -1213,8 +1291,9 @@ Nächster technischer Startpunkt:
 
 Die Architektur folgt aktuell diesem Leitsatz:
 
-- Erst State stabilisieren.
-- Dann State persistent machen.
-- Dann State-Änderungen persistenzrelevant markieren.
-- Dann produktiven Restore kontrolliert freischalten.
-- Dann Framework-Aktionen produktiv anbinden.
+1. Erst State stabilisieren.
+2. Fachliche State-Mutationen sauber von Reads/No-Ops trennen.
+3. Echte Mutationen dirty markieren.
+4. Dirty-Coverage vollständig validieren.
+5. Danach produktiven Restore kontrolliert freischalten.
+6. Framework-Aktionen anschließend schrittweise produktiv anbinden.
