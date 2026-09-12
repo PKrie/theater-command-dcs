@@ -82,6 +82,20 @@ local function getConstant(categoryName, keyName, fallback)
   return config.constants[categoryName][keyName]
 end
 
+local function countEntries(dictionary)
+  if type(dictionary) ~= "table" then
+    return 0
+  end
+
+  local count = 0
+
+  for _ in pairs(dictionary) do
+    count = count + 1
+  end
+
+  return count
+end
+
 local function copyValue(value)
   if type(value) ~= "table" then
     return value
@@ -481,8 +495,8 @@ function State.summary()
     tick = State.Campaign.tick,
     basesTotal = State.Bases.total,
     zonesTotal = State.Zones.total,
-    activeMissions = #State.Missions.active,
-    completedMissions = #State.Missions.completed,
+    activeMissions = countEntries(State.Missions.active),
+    completedMissions = countEntries(State.Missions.completed),
     logisticsEnabled = State.Logistics.enabled,
     iadsEnabled = State.IADS.enabled
   }
