@@ -6,34 +6,110 @@ Neue Sessions sollen zuerst diese Datei lesen und danach den aktuellen GitHub-St
 
 ---
 
-## 0. Verbindlicher Übergabestand — 2026-08-04
+## 0. Verbindlicher Übergabestand — 2026-09-12
+
+Der am 2026-08-04 vermutete Mission-Record-Verlust ist widerlegt. Es gab zu keinem Zeitpunkt einen tatsächlichen Verlust von Mission Records. Ursache der früheren Fehldiagnose war ein Diagnosefehler: der Lua-Längenoperator `#` liefert auf String-keyed Dictionaries keinen korrekten Count.
+
+DCS-MCP:
+
+- DCS-MCP wurde erfolgreich eingerichtet und für die Syria Map getestet.
+
+Priorität 1 — Offline Embedded Mission Resource Audit: **BESTANDEN**
+
+Ein strikt READ-ONLY Audit der gespeicherten DEV-Mission wurde durchgeführt:
+
+- DEV-Mission und MCP_TEST-Kopie waren beim Audit byte-identisch (identische Größe, identischer SHA-256).
+- Die 13 für den vormaligen Blocker relevanten aktiven Theater-Command-Ressourcen waren sämtlich byte-identisch mit dem Repository: `13/13 EXACT_MATCH`, `0` Byte-Mismatches, `0` fehlende oder mapping-fehlerhafte aktive Ressourcen.
+- Eine verwaiste alte Persistence-Ressource wurde gefunden: `ResKey_Action_55` (`tc_persistence_system.lua`) — nicht von einem Trigger referenziert, nicht byte-identisch zum aktuellen Repository, wird **nicht** geladen. Siehe „Bekannte Cleanup-Aufgabe" unten.
+- Aktiv geladen wird `tc_persistence_system_v0_2_6.lua`; diese aktive Datei war byte-identisch zu `src/campaign/tc_persistence_system.lua`.
+- Damit ist Embedded-Runtime-Drift als Ursache des vermeintlichen Mission-Record-Verlusts ausgeschlossen.
+
+Runtime-Diagnose mit DCS-SMS `v0.27.2`:
+
+- `TC.State.Missions.statistics.available = 10`
+- `pairs()`-Count von `TC.State.Missions.available` = `10`
+- `#TC.State.Missions.available` = `0`
+
+Damit eindeutig bestätigt:
+
+- Die zehn Mission Records waren zu keinem Zeitpunkt verschwunden.
+- Die frühere Diagnose eines Mission-Record-Verlusts vom 2026-08-04 war falsch.
+- `State.Missions.available/active/completed/failed/expired/cancelled` sind String-keyed Dictionaries (Keys wie `MISSION_1`); der Lua-Längenoperator `#` liefert darauf keinen korrekten Count. Autoritativ ist ausschließlich `pairs()` bzw. eine pairs-basierte Zählfunktion.
+
+Bestätigter Source-Bug und Fix:
+
+- `src/core/tc_state.lua` -> `State.summary()` verwendete `#State.Missions.active` und `#State.Missions.completed`.
+- Fix: lokale pairs()-basierte Hilfsfunktion `countEntries()` ergänzt; beide falschen `#`-Counts durch `countEntries(...)` ersetzt.
+- Fix wurde committed und gepusht.
+- Aktualisierte `tc_state.lua` wurde neu in die DEV-`.miz` eingebettet: neuer Resource Key `ResKey_Action_57`; `TC_LOAD_TC_STATE` referenziert `ResKey_Action_57` -> `tc_state.lua`.
+- Eingebettete `tc_state.lua` ist byte-identisch mit dem Repository.
+
+Runtime-Regression des Fixes: **bestanden**
+
+- `State.summary()` mit leerem State: `pairs=0` / `summary=0`.
+- Temporärer String-Key in `State.Missions.active` -> `State.summary().activeMissions = 1`.
+- Fix damit live bestätigt.
+- Temporärer Testeintrag wurde im selben Lua-Aufruf wieder entfernt.
+
+Repository-weite READ-ONLY Prüfung auf verwandte Bugs:
+
+- Keine weiteren fehlerhaften oder wahrscheinlich fehlerhaften `#`-Counts auf Mission-State-Dictionaries gefunden.
+- `MissionGenerator` verwendet dort bereits durchgängig pairs-basierte Counts (`countTableKeys()`).
+- Andere `#`-Nutzungen im Projekt betreffen echte numerische Arrays und sind unproblematisch.
+
+DCS-SMS:
+
+- Aktualisiert von `0.27.1` auf `0.27.2`.
+- Hook `me-bridge-0.27.2`.
+- Auto-Routing per `dcs-sms exec --code ...` erreicht korrekt das Mission Environment.
+- `TC` ist darüber als Table erreichbar.
+
+Damit entfallen folgende frühere Blockierungen:
+
+- Mission Completion Regression ist nicht mehr wegen eines vermeintlichen Mission-Record-Verlusts blockiert.
+- Mission Failure Regression ist nicht mehr wegen eines vermeintlichen Mission-Record-Verlusts blockiert.
+- Capture Ready Apply Regression ist nicht mehr wegen eines vermeintlichen Mission-Record-Verlusts blockiert.
+
+Bekannte, derzeit nicht ursächliche Cleanup-Aufgabe:
+
+- Verwaiste alte Persistence-Ressource `ResKey_Action_55` (`tc_persistence_system.lua`) in der DEV-`.miz` ist bekannt, wird nicht geladen und war nicht ursächlich für vergangene Symptome. Bereinigung ist ein separater, unpriorisierter Cleanup-Schritt.
+
+Nächster technischer Schritt:
+
+- Die zuvor wegen des vermeintlichen Record-Verlusts blockierten Regressionen aus Abschnitt 7 (Mission Completion, Mission Failure, Capture Ready Apply) jetzt mit dem gefixten `tc_state.lua` praktisch erneut durchführen und mit einer frischen `dcs.log` bestätigen. Danach gemäß Priorität 3 in Abschnitt 9 mit der Validierung der Dirty-Abdeckung der aktiven State-Systeme fortfahren.
+
+---
+
+### Historischer Zwischenstand — 2026-08-04 (Diagnose durch Audit vom 2026-09-12 widerlegt)
 
 PersistenceSystem `v0.2.6` ist implementiert, in die gespeicherte DEV-Mission eingebettet und mit echten periodischen `SAVED`- und `SKIPPED`-Ticks getestet. Die synchronen `FAILED`- und Retry-Pfade sind ebenfalls bestanden. Produktiver Startup-Restore bleibt deaktiviert und ungetestet.
 
-Aktueller Blocker:
+Damals vermuteter Blocker (widerlegt, siehe oben):
 
 - MissionGenerator `v0.2.3` startet und erzeugt zunächst zehn state-only Missionen.
-- Spätere Laufzeitprüfungen fanden jedoch alle sechs Status-Collections leer, während `lastMissionId=10` und die Statistik `total=10`, `available=10` stehen blieben.
-- Der Verlust ist bestätigt und in einem zweiten normalen Missionslauf reproduziert.
-- Die genaue Ursache, der genaue Writer und der exakte Zeitpunkt sind nicht identifiziert.
-- Unbekannt ist, ob die Collections ersetzt, geleert oder durch die Diagnoseumgebung falsch beobachtet wurden.
-- Es wurde kein Code-Fix implementiert.
+- Spätere Laufzeitprüfungen fanden alle sechs Status-Collections scheinbar leer, während `lastMissionId=10` und die Statistik `total=10`, `available=10` stehen blieben.
+- Der Verlust wurde damals als bestätigt eingestuft und in einem zweiten normalen Missionslauf reproduziert.
+- Die genaue Ursache, der genaue Writer und der exakte Zeitpunkt waren nicht identifiziert.
+- Unbekannt war, ob die Collections ersetzt, geleert oder durch die Diagnoseumgebung falsch beobachtet wurden.
+- Es wurde zu diesem Zeitpunkt kein Code-Fix implementiert.
 
-Statische Audit-Klassifikation:
+Damalige statische Audit-Klassifikation:
 
 ```text
 PROJECT SOURCE HAS NO MATCHING WRITE SITE
 ```
 
-Priorität 1 ist deshalb ein strikt read-only Offline-Audit der eingebetteten Theater-Command-Ressourcen in:
+Damaliger Auftrag (inzwischen als Priorität 1 durchgeführt und bestanden, siehe oben):
+
+Ein strikt read-only Offline-Audit der eingebetteten Theater-Command-Ressourcen in:
 
 ```text
 C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz
 ```
 
-Das Audit muss Trigger-Zuordnung, Resource Keys, eingebettete Dateinamen, Byte-Längen, SHA-256, exakte Byte-Gleichheit, Versionen, veraltete oder doppelte Ressourcen, unerwartete Skripte und fehlende erwartete Ressourcen berichten. Es darf weder DCS noch DCS-SMS-Runtime-Execution verwenden und die `.miz` nicht verändern.
+Das Audit musste Trigger-Zuordnung, Resource Keys, eingebettete Dateinamen, Byte-Längen, SHA-256, exakte Byte-Gleichheit, Versionen, veraltete oder doppelte Ressourcen, unerwartete Skripte und fehlende erwartete Ressourcen berichten. Es durfte weder DCS noch DCS-SMS-Runtime-Execution verwenden und die `.miz` nicht verändern.
 
-Bis dieses Audit abgeschlossen ist, sind Mission Completion, Mission Failure und Capture Ready Apply Regressionen blockiert.
+Die damalige Blockierung von Mission Completion, Mission Failure und Capture Ready Apply Regressionen bis zum Audit-Abschluss ist mit dem Ergebnis vom 2026-09-12 aufgehoben (siehe oben).
 
 ---
 
@@ -571,7 +647,7 @@ Bestätigte F10-/MissionGenerator-Interaktion:
 
 Bewertung:
 
-- MissionGenerator `v0.2.3` hat historisch bestandene Funktionspfade; der aktuelle Record-Verlust ist ungelöst.
+- MissionGenerator `v0.2.3` hat bestandene Funktionspfade; der am 2026-08-04 vermutete Record-Verlust wurde am 2026-09-12 widerlegt — es ging nie ein Mission Record verloren. Behoben wurde ausschließlich der ursächliche Count-/Diagnosefehler in `src/core/tc_state.lua` -> `State.summary()`, wo die String-keyed Mission-Dictionaries mit `#` statt `pairs()` gezählt wurden.
 - Missionsaktivierung ist stabil.
 - Mission Completion ist state-only praktisch getestet.
 - Mission Failure ist state-only praktisch getestet.
@@ -791,9 +867,9 @@ Bewertung:
 Offen:
 
 - produktiven Startup-Restore weiterhin deaktiviert lassen
-- blockierte Mission-/Capture-Regressionen erst nach Klärung des MissionGenerator-State-Verlusts durchführen
+- Mission-/Capture-Regressionen praktisch erneut bestätigen, nachdem der vermeintliche MissionGenerator-State-Verlust am 2026-09-12 als Diagnosefehler in `tc_state.lua` (`#` statt `pairs()`) aufgeklärt und behoben wurde
 - fachliche Dirty-Abdeckung der aktiven State-Systeme weiter validieren
-- produktiven Restore erst nach den blockierten Regressionen, vollständiger Dirty-Abdeckung und definierter Restore-Reihenfolge separat freigeben
+- produktiven Restore erst nach den in Abschnitt 7 praktisch erneut bestätigten Regressionen, vollständiger Dirty-Abdeckung und definierter Restore-Reihenfolge separat freigeben
 - Save-Dateiformat langfristig versionieren
 - Backup-/Rotationsstrategie für Save-Dateien definieren
 - Schutz gegen veraltete oder inkompatible Save-Dateien ergänzen
@@ -989,7 +1065,7 @@ Ergebnis vom 2026-08-04:
 
 ---
 
-### Priorität 1: Offline Embedded Mission Resource Audit
+### Abgeschlossen: Offline Embedded Mission Resource Audit (vormals Priorität 1) — BESTANDEN am 2026-09-12
 
 Ziel:
 
@@ -1031,7 +1107,17 @@ Akzeptanzkriterien:
 - eingebettete und erwartete Versionen sind verglichen
 - veraltete, doppelte, unerwartete und fehlende Ressourcen sind eindeutig aufgelistet
 - das Ergebnis erklärt keine Ursache ohne Beleg
-- der MissionGenerator-Defekt bleibt bis zu einem Beweis ungelöst
+- der MissionGenerator-Defekt bleibt bis zu einem Beweis ungelöst *(damalige Audit-Vorgabe vom 2026-08-04, keine aktuelle Statusaussage — durch das Ergebnis vom 2026-09-12 historisch überholt: ein MissionGenerator-Defekt hat nie existiert)*
+
+Ergebnis vom 2026-09-12:
+
+- Audit strikt read-only durchgeführt; keine DCS- oder DCS-SMS-Runtime-Execution verwendet, `.miz` nicht verändert.
+- DEV-Mission und MCP_TEST-Kopie byte-identisch (Größe und SHA-256 identisch).
+- Alle 13 für den damaligen Blocker relevanten aktiven Theater-Command-Ressourcen byte-identisch mit dem Repository: `13/13 EXACT_MATCH`, `0` Mismatches, `0` fehlende/mapping-fehlerhafte aktive Ressourcen.
+- Eine verwaiste, nicht referenzierte alte Persistence-Ressource (`ResKey_Action_55`, `tc_persistence_system.lua`) gefunden; sie wird nicht geladen und ist nicht ursächlich (bekannte Cleanup-Aufgabe, siehe Abschnitt 0).
+- Embedded-Runtime-Drift damit als Ursache des vermeintlichen Mission-Record-Verlusts ausgeschlossen.
+- Anschließende Live-Runtime-Diagnose mit DCS-SMS `v0.27.2` zeigte den tatsächlichen Fehler: `#TC.State.Missions.available = 0`, während `pairs()`-Count und Statistik jeweils `10` waren. Ein MissionGenerator-Defekt existierte nicht; der Fehler lag in `State.summary()` in `src/core/tc_state.lua` (`#` statt `pairs()`).
+- Fix in `tc_state.lua` (`countEntries()`) implementiert, committed, gepusht und live per Runtime-Regression bestätigt.
 
 ---
 
@@ -1161,7 +1247,7 @@ Bestandene Systeme:
 | CaptureSystem | `v0.2.2` | bestanden |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
-| MissionGenerator | `v0.2.3` | historische Funktionspfade bestanden; aktueller Record-Verlust ungelöst |
+| MissionGenerator | `v0.2.3` | bestanden; vermeintlicher Record-Verlust am 2026-09-12 widerlegt (kein Datenverlust); behoben wurde der ursächliche Count-/Diagnosefehler in `tc_state.lua` (`#` statt `pairs()`) |
 | AICapManager | `v0.2.0` | bestanden |
 | F10Menu | `v0.2.3` | bestanden |
 | PersistenceSystem | `v0.2.6` | Embedded-Scheduler, Save/Skip und Fehler/Retry bestanden |
@@ -1171,8 +1257,8 @@ Aktuelle bestätigte Fähigkeiten:
 - Syria-Airbase-Scan funktioniert.
 - Kampagnenzonen werden korrekt state-only erzeugt.
 - Capture-System erzeugt Druck und Ready-Status.
-- Mission Generator erzeugt beim Start 10 Missionen mit reservierten Hooks; die sechs Status-Dictionaries sind später reproduzierbar leer.
-- F10Menu-Funktionspfade für Mission Details, Activation, Completion, Failure und Capture Ready Apply sind historisch bestanden; aktuell fehlen auswählbare Mission Records.
+- Mission Generator erzeugt beim Start 10 Missionen mit reservierten Hooks; die sechs Status-Dictionaries bleiben korrekt befüllt. Der frühere Eindruck einer späteren Leerung war ein `#`-vs-`pairs()`-Diagnosefehler in `tc_state.lua`, seit 2026-09-12 behoben.
+- F10Menu-Funktionspfade für Mission Details, Activation, Completion, Failure und Capture Ready Apply sind bestanden; auswählbare Mission Records sind vorhanden und fehlten nie tatsächlich.
 - Mission Completion kann Capture Pressure erzeugen.
 - Mission Failure bleibt ohne Capture Pressure.
 - Capture Ready Apply kann Zone und Airbase state-only auf Blue setzen.
@@ -1185,7 +1271,7 @@ Aktuelle bestätigte Fähigkeiten:
 
 Aktuelle wichtigste offene Fähigkeit:
 
-- Die Ursache des reproduzierbaren Mission-Record-Verlusts muss eingegrenzt werden; erster Schritt ist der Offline-Audit der eingebetteten Mission-Ressourcen.
+- Mission Completion, Mission Failure und Capture Ready Apply Regressionen jetzt mit dem gefixten `tc_state.lua` praktisch erneut bestätigen (siehe Abschnitt 0 und Abschnitt 12).
 
 ---
 
@@ -1210,17 +1296,17 @@ Danach nicht mit F10-Persistence weitermachen.
 
 Nächster technischer Schritt:
 
-- Offline Embedded Mission Resource Audit der gespeicherten DEV-`.miz`.
+- Mission Completion, Mission Failure und Capture Ready Apply Regressionen (Abschnitt 7.1–7.3) mit dem gefixten `tc_state.lua` praktisch erneut durchführen und mit einer frischen `dcs.log` bestätigen. Danach gemäß Priorität 3 (Abschnitt 9) mit der Validierung der Dirty-Abdeckung der aktiven State-Systeme fortfahren.
 
 Nächster erwarteter Test:
 
-1. `.miz` ausschließlich offline und read-only öffnen.
-2. Mission-Trigger und Script-Resource-Mappings inventarisieren.
-3. Eingebettete Bytes, Längen, SHA-256 und Versionen gegen das Repository vergleichen.
-4. Veraltete, doppelte, unerwartete und fehlende Theater-Command-Ressourcen berichten.
-5. Erst danach entscheiden, ob ein Source-Code-Test oder eine Mission-Editor-Korrektur fachlich begründet ist.
+1. Mission über F10 aktivieren, abschließen bzw. fehlschlagen lassen und anschließend Capture Ready Zone 1 anwenden.
+2. Laufenden Runtime-State währenddessen mit DCS-SMS gegen `pairs()`-Counts prüfen.
+3. Ergebnis in Abschnitt 7 mit Datum aktualisieren.
+4. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
+5. Erst danach mit Priorität 3 (Dirty-Abdeckung der aktiven State-Systeme) fortfahren.
 
-Blockiert bis dahin:
+Nicht mehr blockiert (siehe Abschnitt 0, Stand 2026-09-12):
 
 - Mission Completion Regression
 - Mission Failure Regression
