@@ -8,23 +8,32 @@ Erste Kampagne:
 
 - Operation Levant Reclamation
 
-## Verbindlicher Projektstand — 2026-08-04
+## Verbindlicher Projektstand — 2026-09-12
 
-Theater Command DCS besitzt eine state-first Runtime mit dirty-aware Hintergrundpersistenz. PersistenceSystem `v0.2.6` ist in `Operation_Levant_Reclamation_DEV.miz` eingebettet und hat normale periodische `SAVED`- und `SKIPPED`-Ticks bestanden. Produktiver Startup-Restore bleibt deaktiviert und ungetestet.
+Der am 2026-08-04 vermutete Mission-Record-Verlust existierte nicht. Ursache der Fehldiagnose: `State.Missions.available/active/completed/failed/expired/cancelled` sind String-keyed Lua-Dictionaries; der Lua-Längenoperator `#` liefert dafür keinen korrekten Count. Live bestätigt: `statistics.available = 10`, `pairs()`-Count `= 10`, `#TC.State.Missions.available = 0`. Der Source-Bug lag in `src/core/tc_state.lua` -> `State.summary()`, wo `active`/`completed` mit `#` statt `pairs()` gezählt wurden; behoben über die pairs-basierte Hilfsfunktion `countEntries()`. Der Fix wurde committed, gepusht, in die DEV-`.miz` eingebettet und live bestanden. Eine repository-weite Prüfung fand keine weiteren fehlerhaften `#`-Counts auf Mission-State-Dictionaries.
 
-DCS-SMS ist ein Entwicklungs- und Mission-Editor-Werkzeug, kein Theater-Command-Runtime-Framework. Installiert und bestätigt sind Mission-Editor- und Runtime-Bridge, externe Ausführung sowie das Codex-`dcs-sms`-Skill. Die aktuelle Bridge-Umgebung ist `os=true`, `io=true`, `lfs=true`, `require=false`. Persistence selbst benötigt direkt nur `io` und `lfs`.
+Ein strikt READ-ONLY Offline Embedded Mission Resource Audit hat gezeigt: DEV-Mission und MCP_TEST-Kopie waren byte-identisch; alle 13 für den damaligen Blocker relevanten aktiven Theater-Command-Ressourcen waren `13/13` byte-identisch mit dem Repository (`0` Mismatches, `0` fehlende aktive Ressourcen) — keine aktive Embedded-Runtime-Drift. Bekannte Cleanup-Altlast: `ResKey_Action_55` (`tc_persistence_system.lua`) liegt verwaist, nicht von einem Trigger referenziert und ungeladen in der `.miz` und ist nicht ursächlich; sie soll später separat aus der `.miz` bereinigt werden. Aktiv geladen wird weiterhin `tc_persistence_system_v0_2_6.lua`.
 
-Der Spieler-Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` ist `CLIENT`, nicht `PLAYER`. Ein normaler Teststart erfordert Mission starten, den Client-Slot auswählen und bestätigen und anschließend im Briefing `Fly` drücken.
+DCS-SMS wurde auf `v0.27.2` aktualisiert (Hook `me-bridge-0.27.2`). Auto-Routing per `dcs-sms exec --code "..."` erreicht korrekt das Mission Environment; `TC` ist darüber als Table erreichbar. DCS-SMS bleibt ausschließlich Entwicklungs-/Diagnosewerkzeug, kein Theater-Command-Runtime-Framework.
 
-Aktueller Blocker:
+Alle drei zuvor blockierten Regressionen wurden am 2026-09-12 erneut durchgeführt und **bestanden**:
 
-- MissionGenerator `v0.2.3` erzeugt zunächst zehn state-only Missionen.
-- Später sind alle sechs Mission-Status-Dictionaries leer, während `lastMissionId=10` und die Statistiken stale bleiben.
-- Der Verlust ist reproduzierbar; Ursache und Writer sind nicht identifiziert.
-- Statische Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
-- Mission Completion, Mission Failure und Capture Ready Apply Regressionen sind deshalb derzeit blockiert.
+- **Mission Completion**: nach Activation + Completion `available=9`, `active=0`, `completed=1`, `failed=0`, `statistics.available=9`, `statistics.active=0`, `statistics.completed=1`, `total=10`. Persistence: `SAVED`, `dirtyReason=f10_active_mission_1_completed`, `dirtyCleared=true`.
+- **Mission Failure**: danach `available=8`, `active=0`, `completed=1`, `failed=1`, `statistics.available=8`, `statistics.active=0`, `statistics.completed=1`, `statistics.failed=1`, `total=10`. Persistence: `SAVED`, `dirtyReason=f10_active_mission_1_failed`, `dirtyCleared=true`.
+- **Capture Ready Apply**: `ZONE_AIRBASE_ABU_AL_DUHUR` vor Apply `RED -> BLUE`, `100 %`; danach `zoneOwner=BLUE`, `previousOwner=RED`, `baseOwner=BLUE`, `progress=0`, `status=STABLE`, `captureReady=false`. Persistence: `SAVED`, `dirtyReason=f10_capture_ready_zone_1_applied`, `dirtyCleared=true`. Bekannte kosmetische F10-Auffälligkeit: die Anzeige zeigte beim Apply zeitweise „BLUE -> BLUE"; der Runtime-State bestätigte korrekt `RED -> BLUE` — kein CaptureSystem-Fehler.
 
-Nächster Schritt ist kein spekulativer Code-Fix, sondern ein read-only Offline-Byte-/SHA-256-Audit aller eingebetteten Theater-Command-Ressourcen in der gespeicherten DEV-`.miz`. Details stehen in `TASKS.md`, `docs/06_mission_generator.md` und `docs/10_testing.md`.
+Zwei zusätzliche Dirty-Tracking-Bugs in `src/campaign/tc_capture_system.lua` wurden gefunden und behoben:
+
+- **Capture Dirty Tracking** (Commit „Fix capture dirty state tracking"): reine Getter wie `getCaptureReadyZones()` konnten zuvor `dirty=true`, `reason=capture_progress_updated` erzeugen, obwohl fachlich nichts geändert wurde. Nach dem Fix liefern alle sieben geprüften Read-APIs (`getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`) live `ok=true`, `dirty=false`, `reason=nil`; eine echte Capture-Pressure-Mutation setzt weiterhin zuverlässig `dirty=true`, `reason=capture_pressure_set`, Rollback bestätigt `finalDirty=false`.
+- **Ownership-No-Op-Fix** (Commit „Fix ownership no-op state mutations"): `setZoneOwner()`/`setBaseOwner()` führten bei identischem Owner bisher unnötige State-Mutationen aus, wobei `Progress.previousOwner` historische Owner-Information verlieren konnte. Jetzt: `setRecordOwner()` schreibt bei identischem Owner nichts, `setBaseOwner()`/`setZoneOwner()` brechen mit Early Return ab — kein Registry-Reassign, kein World-Sync, keine Progress-Mutation, kein `refreshAllCounters()`, kein Event, kein Dirty. Live-No-Op-Test: `ok=true`, `zoneUpdatedSame=true`, `lastOwnerCheckSame=true`, `progressUpdatedSame=true`, `captureLastUpdateSame=true`, `dirty=false`, `reason=nil`. Eingebettete Datei nach finalem Re-Embed: `l10n/DEFAULT/tc_capture_system.lua`, `91160` Bytes, SHA-256 `06326C028388C6737BDB01C8C29C8F029375D612D72ADC1A02F49BFD9DAE9DCE`, `MATCH=True` gegen das Repository.
+
+`src/ai/tc_ai_cap_manager.lua` `reactToActiveMissions()` wurde READ-ONLY geprüft: die Funktion hat aktuell keine produktive Call-Site (weder `CapManager.start()`, noch Scheduler, `main.lua`, `loader.lua`, F10 noch andere `src/`-Pfade). Klassifikation: latenter Missing-Dirty-Fall in derzeit nicht verdrahtetem Code, aktuell **kein** Runtime-Persistence-Bug. Bewusst kein Fix, bis die Funktion tatsächlich in den AI-Lifecycle verdrahtet wird.
+
+PersistenceSystem `v0.2.6` bleibt unverändert ein dirty-aware Background-System: `SAVED`, `SKIPPED`, kontrollierter `FAILED`-Pfad und Retry sind bestanden; Dirty bleibt bei einem Save-Fehler erhalten und wird erst nach erfolgreichem Write/Read-back/Compile/Evaluate/Validation gelöscht. `productiveRestore=false` bleibt bewusst deaktiviert.
+
+**Priorität 3 (Dirty-Abdeckung) ist NICHT abgeschlossen.** Bereits geklärt: Capture-Getter-/Derived-Dirty-Hauptfund, Ownership-No-Op, `reactToActiveMissions()`-Sonderfall. Noch offen: allgemeine Dirty-Coverage-Prüfung für `src/logistics/tc_logistics_delivery.lua`, `src/logistics/tc_fob_system.lua`, `src/missions/tc_mission_generator.lua` und `src/ai/tc_ai_cap_manager.lua`. Nächster einzelner technischer Arbeitsschritt: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua` — ein System pro Schritt, keine parallele Prüfung.
+
+Details, Rohwerte und Commit-Referenzen stehen in `TASKS.md` (operativer Übergabepunkt), `ROADMAP.md` und `ARCHITECTURE.md`.
 
 ---
 
@@ -129,9 +138,9 @@ Aktuell erreicht:
 - MissionGenerator kann Missionen state-only auf `FAILED` setzen.
 - AICapManager erzeugt Blue-/Red-CAP-State.
 - F10Menu ist sichtbar, navigierbar und logbestätigt.
-- F10Menu erlaubte in historischen Regressionstests direkte Missionsauswahl und -aktivierung für Mission 1 bis Mission 10.
-- F10Menu erlaubte historische Mission Outcome Controls für die erste aktive Mission.
-- Aktuell sind wegen des ungeklärten Record-Verlusts keine Missionen auswählbar.
+- F10Menu erlaubt direkte Missionsauswahl und -aktivierung für Mission 1 bis Mission 10.
+- F10Menu erlaubt Mission Outcome Controls für die erste aktive Mission.
+- Mission Completion, Mission Failure und Capture Ready Apply wurden am 2026-09-12 erneut praktisch bestätigt; der früher vermutete Mission-Record-Verlust ist widerlegt (siehe Verbindlicher Projektstand oben).
 - F10Menu zeigt Capture-/Pressure-Status an.
 - F10Menu zeigt Capture Ready Zones und Pressure Contested Zones an.
 - F10Menu kann Capture Ready Zone 1 bewusst state-only anwenden.
@@ -170,7 +179,7 @@ Noch nicht erreicht:
 | PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Start, `SAVED`, `SKIPPED`, `FAILED` und Retry bestanden |
 | LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
 | FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | state-only Missionen, Activation, Completion, Failure und Effects bestanden; früher vermuteter Record-Verlust widerlegt |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
 
@@ -227,6 +236,13 @@ Aktuell bestätigte Testwerte aus DCS-Logs:
 - duplicatesSkipped: `1`
 - typeLimitSkipped: `68`
 
+Mission-Dictionary-Diagnose (2026-09-12):
+
+- `statistics.available = 10`
+- `pairs()`-Count von `available` = `10`
+- `#available = 0`
+- `#` ist für diese String-keyed Mission-Dictionaries nicht autoritativ; autoritativ ist `pairs()`.
+
 ### F10Menu
 
 - Version: `v0.2.3`
@@ -269,6 +285,8 @@ Bestätigte Save-Datei:
 ---
 
 ## Aktuelle bestätigte Kampagnenkette
+
+Diese Kette wurde am 2026-09-12 nach dem Fix des `#`-vs-`pairs()`-Diagnosefehlers erneut vollständig praktisch bestätigt (siehe `TASKS.md`, Abschnitt 7.1).
 
 Bestätigt ist eine modulübergreifende State-Kette:
 
@@ -321,6 +339,8 @@ Sie löst aktuell nicht aus:
 
 ## Mission Failure Pipeline
 
+Auch dieser Pfad wurde am 2026-09-12 erneut praktisch bestätigt (siehe `TASKS.md`, Abschnitt 7.3).
+
 Bestätigt ist außerdem der Failure-Pfad:
 
 1. F10Menu zeigt Mission Details.
@@ -371,6 +391,8 @@ Aktueller Status:
 - Save/Validate/Load-Funktionen bleiben intern vorhanden.
 - Produktiver Restore beim Missionsstart ist bewusst deaktiviert.
 - `productiveRestore=false`
+
+Produktiver Restore bleibt zusätzlich an die vollständige Dirty-Coverage-Prüfung aus Priorität 3 gebunden (siehe `TASKS.md`); diese ist für `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` noch offen.
 
 Wichtige lokale Voraussetzung:
 
@@ -583,13 +605,13 @@ Wichtige Fehlerindikatoren:
 
 ## Nächster sinnvoller technischer Schritt
 
-Offline Embedded Mission Resource Audit:
+Zum Abschluss der Session vom 2026-09-12 läuft aktuell die Dokumentations-Synchronisierung.
 
-- gespeicherte DEV-`.miz` ausschließlich read-only untersuchen
-- Trigger-zu-Ressource-Mappings prüfen
-- eingebettete und Repository-Dateien per Byte-Länge und SHA-256 vergleichen
-- stale, doppelte, unerwartete oder fehlende Theater-Command-Ressourcen melden
-- keine `.miz`-Änderung, kein DCS-SMS Runtime Exec und kein spekulativer Code-Fix
+Nach vollständigem Dokumentationsabschluss ist der nächste technische Entwicklungsschritt ein READ-ONLY Dirty-Coverage-Audit von:
+
+- `src/logistics/tc_logistics_delivery.lua`
+
+Danach folgt jeweils genau ein weiteres System pro Schritt (`tc_fob_system.lua`, `tc_mission_generator.lua`, `tc_ai_cap_manager.lua`) — keine parallele Prüfung mehrerer Systeme.
 
 ---
 
@@ -614,7 +636,7 @@ Danach dort weitermachen, wo der aktuelle GitHub-Stand endet.
 
 Nächster technischer Startpunkt:
 
-- `TASKS.md` und der dort definierte Offline Embedded Mission Resource Audit
+- `TASKS.md`, Abschnitt 9 „Priorität 3": READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`
 
 ---
 
@@ -632,4 +654,4 @@ Die aktuellen Meilensteine sind:
 
 Der nächste Meilenstein ist:
 
-- Embedded-Runtime-Drift als mögliche Ursache des reproduzierbaren Mission-Record-Verlusts read-only prüfen.
+- Priorität 3 (Dirty-Abdeckung) abschließen, beginnend mit einem READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`.
