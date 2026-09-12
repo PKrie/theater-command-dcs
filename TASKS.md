@@ -116,16 +116,33 @@ Damit ist bestätigt:
 - Ein unveränderter Capture-Read erzeugt keinen Persistence-Dirty-State mehr.
 - Eine echte Capture-State-Mutation markiert weiterhin zuverlässig dirty mit korrektem, spezifischem `dirtyReason`.
 
-Wichtig — Priorität 3 ist damit NICHT insgesamt abgeschlossen. Aus dem ursprünglichen READ-ONLY Audit bleiben als separat zu bewertende kleinere Verdachtsfälle bestehen:
+Beide zunächst offenen kleineren Verdachtsfälle aus dem ursprünglichen READ-ONLY Audit sind inzwischen am selben Tag bewertet bzw. behoben:
 
-- `setZoneOwner()`: Ein No-Op-Aufruf (Owner unverändert) schreibt möglicherweise Progress-/Timestamp-Felder, ohne dafür dirty zu markieren.
-- `src/ai/tc_ai_cap_manager.lua` / `reactToActiveMissions()`: latenter Dirty-Fall; die Funktion ist derzeit nicht verdrahtet.
+**1. `setZoneOwner()`/`setBaseOwner()` No-Op-Fall — BEHOBEN / LIVE BESTANDEN am 2026-09-12**
 
-Details siehe Abschnitt 9, Priorität 3.
+- Ausgangsbefund: Ein redundanter Ownership-Set-Aufruf mit `newOwner == currentOwner` war kein sauberer No-Op. Der alte Pfad konnte bei `setZoneOwner()` `Zone.lastOwnerCheckAt`, `Zone.updatedAt`, `Progress.previousOwner`, `Progress.owner`, `Progress.status="OWNER_CHANGED"`, `Progress.captureReady=false`, `Progress.updatedAt` sowie über `refreshAllCounters()` `state.Campaign.capture.lastUpdateTime` verändern — besonders kritisch konnte `Progress.previousOwner` historische Owner-Information unwiderruflich überschreiben.
+- Der Capture-Dirty-Hauptfund-Fix markierte diesen Pfad zwar indirekt über `capture_progress_recomputed` dirty, das war jedoch nur ein Nebeneffekt; der eigentliche Fehler — die unnötige State-Mutation beim semantischen No-Op — bestand fort.
+- Fix: `src/campaign/tc_capture_system.lua`, Commit „Fix ownership no-op state mutations". `setRecordOwner()` schreibt bei `previousOwner == newOwner` keinerlei persistierten State mehr; `setBaseOwner()` und `setZoneOwner()` beenden `changed==false` sofort — kein Registry-Reassign, kein World-Sync, keine Progress-Mutation, kein `refreshAllCounters()`, kein Event, kein `markDirty`. Echte Ownerwechsel bleiben unverändert.
+- `lastOwnerCheckAt` wurde repo-weit geprüft: ausschließlich im alten No-Op-Zweig geschrieben, nirgends funktional gelesen — keine funktionale Abhängigkeit.
+- Fix wurde committed und gepusht.
+- Offline Embedded-Verifikation nach Re-Embed in die DEV-`.miz`: Repository-SHA-256 `06326C028388C6737BDB01C8C29C8F029375D612D72ADC1A02F49BFD9DAE9DCE`; MIZ-Ressource `l10n/DEFAULT/tc_capture_system.lua`, `91160` Bytes, SHA-256 `06326C028388C6737BDB01C8C29C8F029375D612D72ADC1A02F49BFD9DAE9DCE`; `MATCH=True`.
+- Live No-Op-Regression auf `ZONE_AIRBASE_ABU_AL_DUHUR`: `ok=true`, `owner=RED`, `zonePrevBefore=nil`, `zonePrevAfter=nil`, `progressPrevBefore=UNKNOWN`, `progressPrevAfter=UNKNOWN`, `zoneUpdatedSame=true`, `lastOwnerCheckSame=true`, `progressUpdatedSame=true`, `captureLastUpdateSame=true`, `dirty=false`, `reason=nil`. Ein No-Op verändert damit keinen persistierten Ownership-/Progress-State mehr, Historie bleibt erhalten, keine Timestamp-Mutation, kein `capture.lastUpdateTime`, kein Dirty-State; Rückgabe bleibt `success=true`.
+
+**2. `src/ai/tc_ai_cap_manager.lua` / `reactToActiveMissions()` — BEWERTET am 2026-09-12, Klassifikation B**
+
+- READ-ONLY geprüft: Definition `CapManager.reactToActiveMissions(options)`; direkte Call-Sites: keine. Geprüft wurden `CapManager.start()`, Scheduler-/Timer-Pfade, `main.lua`, `loader.lua`, `tc_f10_menu.lua` und sonstige `src/`-Referenzen — die Funktion ist aktuell produktiv nicht erreichbar.
+- Hypothetischer Call-Flow bei späterer Verdrahtung: `reactToActiveMissions()` -> Mission-State `active` lesen -> `requestCap()` -> `addCapToContainer()` -> `updateReactionState()` -> `updateStatistics()`. Bei echtem neuem CAP-Request markiert `addCapToContainer()` zuverlässig `markDirty("ai_cap_record_changed")`.
+- Latenter Randfall: Wenn `requested==0`, können `updateReactionState()`/`updateStatistics()` persistierte AI-Felder (`state.AI.reactionState`, `state.AI.threatLevel`, `state.AI.capStatistics`, `state.AI.lastUpdate`) verändern, ohne dass dieser Pfad selbst zwingend `markDirty()` auslöst.
+- Da die Funktion aktuell keine einzige Call-Site hat, ist dies **kein aktueller Runtime-Persistence-Bug**. Finale Klassifikation: **B) latenter Missing-Dirty-Bug in derzeit nicht verdrahtetem Code.**
+- Entscheidung: jetzt keine Codeänderung; ein Fix erfolgt erst, wenn `reactToActiveMissions()` tatsächlich in Scheduler/CapManager-Lifecycle bzw. AI-Reaktionslogik verdrahtet wird. Dieser konkrete Sonderfall gilt innerhalb des aktuellen Audits als bewertet/geschlossen.
+
+Details zu beiden Punkten siehe Abschnitt 9, Priorität 3.
+
+Wichtig — Priorität 3 ist damit weiterhin NICHT insgesamt abgeschlossen: Noch nicht vollständig bewertet ist die allgemeine Dirty-Abdeckung von `src/logistics/tc_logistics_delivery.lua`, `src/logistics/tc_fob_system.lua`, `src/missions/tc_mission_generator.lua` und `src/ai/tc_ai_cap_manager.lua` (der konkrete Sonderfall `reactToActiveMissions()` ist bewertet, die allgemeine Dirty-Abdeckung des AI CAP Managers damit aber noch nicht abgeschlossen).
 
 Nächster technischer Schritt:
 
-- Priorität 3 (Abschnitt 9): die verbleibenden Verdachtsfälle aus dem ursprünglichen READ-ONLY Audit bewerten (`setZoneOwner()`-No-Op-Pfad, `tc_ai_cap_manager.lua` `reactToActiveMissions()`) und anschließend die Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` weiter validieren. Der CaptureSystem-Getter-Hauptfund ist am 2026-09-12 behoben und live bestanden und ist NICHT erneut zu testen.
+- Priorität 3 (Abschnitt 9): die allgemeine Dirty-Abdeckung der verbleibenden aktiven State-Systeme systematisch weiter prüfen — jeweils **ein System pro Schritt**, keine parallele Prüfung mehrerer Dateien. Empfohlener nächster Kandidat: `src/logistics/tc_logistics_delivery.lua`. Der CaptureSystem-Getter-Hauptfund und der Ownership-No-Op-Fix sind am 2026-09-12 behoben und live bestanden und sind NICHT erneut zu testen; der `reactToActiveMissions()`-Sonderfall ist bewertet und geschlossen (Klassifikation B).
 
 ---
 
@@ -538,7 +555,8 @@ Bewertung:
 - Capture Ready kann state-only angewendet werden.
 - Zone Ownership und Airbase Ownership können state-only synchronisiert werden.
 - Produktive automatische Capture-Auswertung über reale DCS-Zonen ist noch offen.
-- Capture-Dirty-Tracking-Hauptfund (reine Status-Reads wie `getCaptureReadyZones()` markierten fälschlich `dirty=true`) am 2026-09-12 in `src/campaign/tc_capture_system.lua` behoben und live bestätigt; Details siehe Abschnitt 0 und Abschnitt 9, Priorität 3. Kleinere Verdachtsfälle (`setZoneOwner()` No-Op-Pfad, `tc_ai_cap_manager.lua` `reactToActiveMissions()`) sind damit noch nicht abgedeckt.
+- Capture-Dirty-Tracking-Hauptfund (reine Status-Reads wie `getCaptureReadyZones()` markierten fälschlich `dirty=true`) am 2026-09-12 in `src/campaign/tc_capture_system.lua` behoben und live bestätigt; Details siehe Abschnitt 0 und Abschnitt 9, Priorität 3.
+- Ownership-No-Op-Fund (`setZoneOwner()`/`setBaseOwner()` bei `newOwner == currentOwner` veränderten unnötig Progress-/Timestamp-Felder, insbesondere `Progress.previousOwner`) am 2026-09-12 ebenfalls in `src/campaign/tc_capture_system.lua` behoben, committed, gepusht und live bestätigt (Commit „Fix ownership no-op state mutations"); Details siehe Abschnitt 0 und Abschnitt 9, Priorität 3. Beide CaptureSystem-Verdachtsfälle aus dem ursprünglichen Audit sind damit abgedeckt; `tc_ai_cap_manager.lua` `reactToActiveMissions()` ist separat bewertet (siehe Abschnitt 6.8).
 
 Offen:
 
@@ -742,6 +760,8 @@ Bewertung:
 - AI CAP Manager bereitet Blue- und Red-CAP-Bedarf als State vor.
 - Echter MOOSE-Spawn ist noch nicht aktiv.
 - `spawn=MOOSE_PENDING` ist aktuell erwartetes Verhalten.
+- `reactToActiveMissions()` wurde am 2026-09-12 im Rahmen von Priorität 3 READ-ONLY bewertet: keine einzige Call-Site (weder `CapManager.start()`, noch Scheduler/Timer, `main.lua`, `loader.lua`, `tc_f10_menu.lua` oder sonstige `src/`-Referenzen) — aktuell produktiv nicht erreichbar. Klassifikation B: latenter Missing-Dirty-Bug in derzeit nicht verdrahtetem Code (bei `requested==0` könnten `updateReactionState()`/`updateStatistics()` `state.AI.reactionState`/`.threatLevel`/`.capStatistics`/`.lastUpdate` ohne eigenes `markDirty()` verändern), aber kein aktueller Runtime-Bug. Fix erst bei tatsächlicher Verdrahtung. Details siehe Abschnitt 0 und Abschnitt 9, Priorität 3.
+- Die allgemeine Dirty-Abdeckung des AI CAP Managers (über den `reactToActiveMissions()`-Sonderfall hinaus) ist damit noch nicht abschließend geprüft.
 
 Offen:
 
@@ -751,6 +771,7 @@ Offen:
 - Blue und Red CAP real spawnen lassen
 - CAP-Zustände durch DCS-Events aktualisieren
 - CAP-Verluste und CAP-Erfolge auswerten
+- allgemeine Dirty-Abdeckung von `tc_ai_cap_manager.lua` im Rahmen von Priorität 3 vollständig validieren
 
 ---
 
@@ -1300,7 +1321,7 @@ Noch nicht jetzt aktivieren.
 
 ---
 
-### Priorität 3: Dirty-Abdeckung der aktiven State-Systeme validieren — IN ARBEIT (CaptureSystem-Hauptfund behoben am 2026-09-12)
+### Priorität 3: Dirty-Abdeckung der aktiven State-Systeme validieren — IN ARBEIT (CaptureSystem-Hauptfund und Ownership-No-Op-Fund behoben, `reactToActiveMissions()` bewertet — alle am 2026-09-12)
 
 Dateien später:
 
@@ -1330,13 +1351,26 @@ Zwischenergebnis vom 2026-09-12 — CaptureSystem-Hauptfund: **BEHOBEN / LIVE BE
 - Live Positiv-Regression: temporärer BLUE-Capture-Pressure-Test auf `ZONE_AIRBASE_ABU_AL_DUHUR` — `dirty=true`, `reason=capture_pressure_set`; vollständig zurückgerollt (`rollbackOk=true`, `finalDirty=false`), kein bleibender Testzustand.
 - Vollständige Details siehe Abschnitt 0.
 
-Noch offene, separat zu bewertende Verdachtsfälle aus dem ursprünglichen READ-ONLY Audit (Priorität 3 bleibt deshalb insgesamt offen):
+Zwischenergebnis vom 2026-09-12 — Ownership-No-Op-Fund (`setZoneOwner()`/`setBaseOwner()`): **BEHOBEN / LIVE BESTANDEN**
 
-- `setZoneOwner()`: möglicher No-Op-Pfad, der Progress-/Timestamp-Felder ohne Dirty-Markierung schreibt.
-- `src/ai/tc_ai_cap_manager.lua` / `reactToActiveMissions()`: latenter Dirty-Fall, Funktion derzeit nicht verdrahtet.
-- Allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` (siehe „Dateien später" oben) ist noch nicht bewertet.
+- Ausgangsbefund: Ein redundanter Ownership-Set-Aufruf mit `newOwner == currentOwner` war kein sauberer No-Op und veränderte unnötig `Zone.lastOwnerCheckAt`, `Zone.updatedAt`, `Progress.previousOwner`, `Progress.owner`, `Progress.status="OWNER_CHANGED"`, `Progress.captureReady=false`, `Progress.updatedAt` sowie über `refreshAllCounters()` `state.Campaign.capture.lastUpdateTime`. Besonders kritisch: `Progress.previousOwner` konnte historische Owner-Information unwiderruflich überschreiben. Der Capture-Dirty-Hauptfund-Fix markierte diesen Pfad nur als Nebeneffekt über `capture_progress_recomputed` dirty — der eigentliche Fehler (unnötige State-Mutation) blieb bestehen.
+- Fix in `src/campaign/tc_capture_system.lua`, Commit „Fix ownership no-op state mutations": `setRecordOwner()` schreibt bei `previousOwner == newOwner` keinerlei persistierten State mehr; `setBaseOwner()`/`setZoneOwner()` beenden `changed==false` sofort, ohne Registry-Reassign, World-Sync, Progress-Mutation, `refreshAllCounters()`, Event oder `markDirty`. Echte Ownerwechsel unverändert. `lastOwnerCheckAt` repo-weit geprüft: nirgends funktional gelesen, keine Abhängigkeit.
+- Committed und gepusht. Offline Embedded-Verifikation: `l10n/DEFAULT/tc_capture_system.lua`, `91160` Bytes, SHA-256 `06326C028388C6737BDB01C8C29C8F029375D612D72ADC1A02F49BFD9DAE9DCE`, identisch zum Repository (`MATCH=True`).
+- Live No-Op-Regression auf `ZONE_AIRBASE_ABU_AL_DUHUR`: `ok=true`, `owner=RED`, `zonePrevBefore/After=nil`, `progressPrevBefore/After=UNKNOWN` (Historie erhalten), `zoneUpdatedSame=true`, `lastOwnerCheckSame=true`, `progressUpdatedSame=true`, `captureLastUpdateSame=true`, `dirty=false`, `reason=nil`, `success=true`.
 
-Status: CaptureSystem-Hauptfund behoben und live bestanden; Priorität 3 als Ganzes bleibt **offen**, bis die oben genannten Verdachtsfälle bewertet sind.
+Zwischenergebnis vom 2026-09-12 — `src/ai/tc_ai_cap_manager.lua` / `reactToActiveMissions()`: **BEWERTET, Klassifikation B**
+
+- READ-ONLY vollständig geprüft: Definition `CapManager.reactToActiveMissions(options)`; keine direkten Call-Sites. Geprüft: `CapManager.start()`, Scheduler-/Timer-Pfade, `main.lua`, `loader.lua`, `tc_f10_menu.lua`, sonstige `src/`-Referenzen — aktuell produktiv nicht erreichbar.
+- Hypothetischer Call-Flow bei Verdrahtung: `reactToActiveMissions()` -> Mission-State `active` lesen -> `requestCap()` -> `addCapToContainer()` -> `updateReactionState()` -> `updateStatistics()`. Bei echtem neuem CAP-Request markiert `addCapToContainer()` zuverlässig `markDirty("ai_cap_record_changed")`.
+- Latenter Randfall bei `requested==0`: `updateReactionState()`/`updateStatistics()` könnten `state.AI.reactionState`, `.threatLevel`, `.capStatistics`, `.lastUpdate` ohne eigenes `markDirty()` verändern.
+- Da keine Call-Site existiert, aktuell **kein Runtime-Persistence-Bug**. Finale Klassifikation: **B) latenter Missing-Dirty-Bug in derzeit nicht verdrahtetem Code.**
+- Entscheidung: keine Codeänderung jetzt; Fix erst bei tatsächlicher Verdrahtung in Scheduler/CapManager-Lifecycle bzw. AI-Reaktionslogik. Dieser Sonderfall gilt als bewertet/geschlossen.
+
+Noch offen — Priorität 3 bleibt deshalb insgesamt **offen**:
+
+- Allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` (siehe „Dateien später" oben) ist noch nicht bewertet. Der konkrete Sonderfall `reactToActiveMissions()` ist bewertet, die allgemeine Dirty-Abdeckung des AI CAP Managers damit aber noch nicht abgeschlossen.
+
+Status: CaptureSystem-Hauptfund behoben, Ownership-No-Op-Fund behoben, `reactToActiveMissions()` bewertet (Klassifikation B) — alle drei live bestanden bzw. abgeschlossen bewertet. Priorität 3 als Ganzes bleibt **offen**, bis die allgemeine Dirty-Abdeckung der vier oben genannten Dateien geprüft ist.
 
 ---
 
@@ -1412,7 +1446,7 @@ Bestandene Systeme:
 |---|---:|---|
 | Airbase Scanner | `v0.2.2` | bestanden |
 | ZoneFactory | `v0.2.0` | bestanden |
-| CaptureSystem | `v0.2.2` | bestanden; Capture-Dirty-Tracking-Hauptfund am 2026-09-12 behoben und live bestätigt (siehe Abschnitt 9, Priorität 3) |
+| CaptureSystem | `v0.2.2` | bestanden; Capture-Dirty-Tracking-Hauptfund und Ownership-No-Op-Fund am 2026-09-12 behoben und live bestätigt (siehe Abschnitt 9, Priorität 3) |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
 | MissionGenerator | `v0.2.3` | bestanden; vermeintlicher Record-Verlust am 2026-09-12 widerlegt (kein Datenverlust); behoben wurde der ursächliche Count-/Diagnosefehler in `tc_state.lua` (`#` statt `pairs()`) |
@@ -1432,6 +1466,8 @@ Aktuelle bestätigte Fähigkeiten:
 - Capture Ready Apply kann Zone und Airbase state-only auf Blue setzen.
 - Mission Completion, Mission Failure und Capture Ready Apply sind am 2026-09-12 mit echtem Runtime-State und dirty-aware Autosave-Nachweis erneut bestanden (siehe Abschnitt 7.1–7.3).
 - Capture-Status-Reads (`getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`) erzeugen seit dem Fix vom 2026-09-12 keinen Persistence-Dirty-State mehr, während echte Capture-Mutationen weiterhin zuverlässig dirty markieren (live verifiziert, siehe Abschnitt 9, Priorität 3).
+- Redundante Ownership-Set-Aufrufe (`setZoneOwner()`/`setBaseOwner()` mit `newOwner == currentOwner`) verändern seit dem Fix vom 2026-09-12 keinen persistierten State mehr (kein Registry-/Progress-/Timestamp-Schreiben, kein Dirty); echte Ownerwechsel funktionieren unverändert (live verifiziert, siehe Abschnitt 9, Priorität 3).
+- `tc_ai_cap_manager.lua` `reactToActiveMissions()` ist am 2026-09-12 READ-ONLY bewertet: aktuell ohne Call-Site, damit kein Runtime-Persistence-Bug (Klassifikation B, latent); Fix erst bei künftiger Verdrahtung (siehe Abschnitt 9, Priorität 3).
 - Persistence kann DCS-Dateien schreiben und lesen.
 - Persistence speichert Campaign-State als Lua-Return-Datei.
 - Persistence validiert Save-Dateien.
@@ -1441,7 +1477,7 @@ Aktuelle bestätigte Fähigkeiten:
 
 Aktuelle wichtigste offene Fähigkeit:
 
-- Die verbleibenden Priorität-3-Verdachtsfälle bewerten (`setZoneOwner()` No-Op-Pfad, `tc_ai_cap_manager.lua` `reactToActiveMissions()`) und die allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` validieren (Priorität 3, Abschnitt 9). Der CaptureSystem-Getter-Hauptfund ist am 2026-09-12 bereits behoben und live bestanden (siehe Abschnitt 9, Priorität 3) und ist nicht Teil dieses offenen Punkts.
+- Die allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` systematisch validieren, ein System pro Schritt, beginnend mit `tc_logistics_delivery.lua` (Priorität 3, Abschnitt 9). Der CaptureSystem-Getter-Hauptfund, der Ownership-No-Op-Fund und die Bewertung von `reactToActiveMissions()` sind am 2026-09-12 bereits behoben bzw. abgeschlossen bewertet (siehe Abschnitt 9, Priorität 3) und sind nicht Teil dieses offenen Punkts.
 
 ---
 
@@ -1466,24 +1502,25 @@ Danach nicht mit F10-Persistence weitermachen.
 
 Nächster technischer Schritt:
 
-- Priorität 3 (Abschnitt 9): die verbleibenden Verdachtsfälle aus dem ursprünglichen READ-ONLY Audit bewerten — `setZoneOwner()` No-Op-Pfad (möglicherweise fehlende Dirty-Markierung bei unverändertem Progress-/Timestamp-Schreiben) und `src/ai/tc_ai_cap_manager.lua` `reactToActiveMissions()` (latenter, derzeit nicht verdrahteter Dirty-Fall). Danach die allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` vollständig validieren. Der CaptureSystem-Getter-Hauptfund ist am 2026-09-12 bereits behoben und live bestanden und darf nicht erneut getestet werden.
+- Priorität 3 (Abschnitt 9): die allgemeine Dirty-Abdeckung der verbleibenden aktiven State-Systeme systematisch weiter prüfen. Immer nur **ein System pro Schritt**, keine parallele Prüfung mehrerer Dateien. Empfohlener nächster Kandidat: `src/logistics/tc_logistics_delivery.lua`. Der CaptureSystem-Getter-Hauptfund und der Ownership-No-Op-Fund sind am 2026-09-12 bereits behoben und live bestanden und dürfen nicht erneut getestet werden; `tc_ai_cap_manager.lua` `reactToActiveMissions()` ist bewertet (Klassifikation B) und geschlossen.
 
 Nächster erwarteter Test:
 
-1. `setZoneOwner()` READ-ONLY auf den No-Op-Fall (Owner unverändert) prüfen: wird `dirty` korrekt nicht gesetzt, wenn tatsächlich nichts fachlich Relevantes geschrieben wurde?
-2. `tc_ai_cap_manager.lua` `reactToActiveMissions()` READ-ONLY bewerten, auch wenn die Funktion aktuell nicht verdrahtet ist.
-3. Vorhandene Dirty-Markierungen je verbleibendem State-System gegen fachlich relevante State-Änderungen prüfen.
-4. Fehlende oder zu häufige Dirty-Markierungen gezielt identifizieren und korrigieren.
-5. Dirty Reasons pro Fachsystem eindeutig und stabil halten.
-6. Ergebnis in Abschnitt 9 (Priorität 3) mit Datum dokumentieren.
-7. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
+1. `src/logistics/tc_logistics_delivery.lua` READ-ONLY auf vorhandene Dirty-Markierungen gegen fachlich relevante State-Änderungen prüfen.
+2. Fehlende oder zu häufige Dirty-Markierungen gezielt identifizieren; Fix erst nach eindeutiger Analyse.
+3. Dirty Reasons eindeutig und stabil halten.
+4. Ergebnis in Abschnitt 9 (Priorität 3) mit Datum dokumentieren.
+5. Danach nacheinander `tc_fob_system.lua`, `tc_mission_generator.lua` und die allgemeine Dirty-Abdeckung von `tc_ai_cap_manager.lua` ebenso einzeln prüfen.
+6. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
 
-Bestanden am 2026-09-12 (nicht erneut zu wiederholen):
+Bestanden bzw. abgeschlossen bewertet am 2026-09-12 (nicht erneut zu wiederholen):
 
 - Mission Completion Regression (siehe Abschnitt 7.1)
 - Mission Failure Regression (siehe Abschnitt 7.3)
 - Capture Ready Apply Regression (siehe Abschnitt 7.2)
 - CaptureSystem-Dirty-Tracking-Hauptfund: reine Capture-Status-Reads erzeugen kein Dirty mehr, echte Mutationen weiterhin zuverlässig (siehe Abschnitt 9, Priorität 3)
+- Ownership-No-Op-Fund (`setZoneOwner()`/`setBaseOwner()`): redundante Ownership-Set-Aufrufe verändern keinen persistierten State mehr, echte Ownerwechsel unverändert funktionsfähig (siehe Abschnitt 9, Priorität 3)
+- `tc_ai_cap_manager.lua` `reactToActiveMissions()`: READ-ONLY bewertet, keine Call-Site, Klassifikation B (latent, kein aktueller Bug) — Fix erst bei künftiger Verdrahtung (siehe Abschnitt 9, Priorität 3)
 
 ---
 
