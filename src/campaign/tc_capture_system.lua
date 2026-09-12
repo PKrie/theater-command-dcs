@@ -679,6 +679,103 @@ local function createOwnerSummary()
   }
 end
 
+local function ownerSummaryEquals(previousSummary, newSummary)
+  if type(previousSummary) ~= "table" or type(newSummary) ~= "table" then
+    return false
+  end
+
+  return previousSummary.total == newSummary.total
+    and previousSummary.blue == newSummary.blue
+    and previousSummary.red == newSummary.red
+    and previousSummary.neutral == newSummary.neutral
+    and previousSummary.contested == newSummary.contested
+    and previousSummary.unknown == newSummary.unknown
+end
+
+-- Membership-only comparison: true iff both maps contain exactly the same
+-- set of keys. Values are not compared -- for captureEligibleBases/Zones the
+-- values are direct references into Bases/Zones registries, whose own
+-- content is already dirty-tracked by their respective owning systems.
+local function mapKeysEqual(previousMap, newMap)
+  if type(previousMap) ~= "table" or type(newMap) ~= "table" then
+    return false
+  end
+
+  for key in pairs(previousMap) do
+    if newMap[key] == nil then
+      return false
+    end
+  end
+
+  for key in pairs(newMap) do
+    if previousMap[key] == nil then
+      return false
+    end
+  end
+
+  return true
+end
+
+-- Small, non-recursive string-map comparison (key set + scalar values).
+-- Used for both mission-effect failure-reason tracking and (indirectly)
+-- membership+value checks that only ever hold flat scalar fields.
+local function stringMapEquals(previousMap, newMap)
+  if type(previousMap) ~= "table" or type(newMap) ~= "table" then
+    return false
+  end
+
+  for key, value in pairs(newMap) do
+    if previousMap[key] ~= value then
+      return false
+    end
+  end
+
+  for key in pairs(previousMap) do
+    if newMap[key] == nil then
+      return false
+    end
+  end
+
+  return true
+end
+
+-- Targeted field comparison for one nonCaptureBases/nonCaptureZones entry.
+-- Bases only use "classification"; zones only use "zoneClass" and
+-- "airbaseClassification" -- comparing all fields on both is harmless
+-- (nil == nil for the fields that don't apply to a given record type).
+local function nonCaptureEntryEquals(previousEntry, newEntry)
+  if type(previousEntry) ~= "table" or type(newEntry) ~= "table" then
+    return false
+  end
+
+  return previousEntry.key == newEntry.key
+    and previousEntry.name == newEntry.name
+    and previousEntry.classification == newEntry.classification
+    and previousEntry.zoneClass == newEntry.zoneClass
+    and previousEntry.airbaseClassification == newEntry.airbaseClassification
+    and previousEntry.reason == newEntry.reason
+end
+
+local function nonCaptureMapEquals(previousMap, newMap)
+  if type(previousMap) ~= "table" or type(newMap) ~= "table" then
+    return false
+  end
+
+  for key, newEntry in pairs(newMap) do
+    if nonCaptureEntryEquals(previousMap[key], newEntry) ~= true then
+      return false
+    end
+  end
+
+  for key in pairs(previousMap) do
+    if newMap[key] == nil then
+      return false
+    end
+  end
+
+  return true
+end
+
 local function updateOwnerCounters(container)
   if type(container) ~= "table" then
     return false
@@ -808,6 +905,15 @@ local function setPressureValueForOwner(pressureRecord, owner, value)
   return false
 end
 
+-- Recomputes and, if (and only if) anything fachlich relevant actually
+-- changed, persists pressure/progress values for one zone. Marks the
+-- campaign state dirty itself, in this same call, whenever it writes a real
+-- change (new record, changed derived value, or a missing/stale world-zone
+-- mirror). This makes every caller safe by construction -- including read-
+-- only status getters like getCaptureProgress/getCaptureReadyZones/
+-- getPressureContestedZones/getPressureSummary and evaluateZoneCapture's
+-- "not yet ready" branch -- without requiring each caller to separately
+-- track or forward a "changed" signal. See TASKS.md Priority 3.
 local function updatePressureDerivedValues(zoneKey)
   local state = ensureCampaignTables()
   if state == nil or zoneKey == nil then
@@ -815,12 +921,18 @@ local function updatePressureDerivedValues(zoneKey)
   end
 
   local zoneRecord = state.Zones.registry[zoneKey]
+
+  local pressureRecordExisted = state.Campaign.capture.pressure[zoneKey] ~= nil
+  local progressRecordExisted = state.Campaign.capture.progress[zoneKey] ~= nil
+
   local pressureRecord = ensureZonePressureRecord(zoneKey)
   local progressRecord = ensureZoneProgressRecord(zoneKey)
 
   if pressureRecord == nil or progressRecord == nil then
     return nil
   end
+
+  local recordCreated = pressureRecordExisted ~= true or progressRecordExisted ~= true
 
   local bluePressure = pressureRecord.blue or 0
   local redPressure = pressureRecord.red or 0
@@ -852,34 +964,96 @@ local function updatePressureDerivedValues(zoneKey)
   local contestedThreshold = state.Campaign.capture.thresholds.contested or CaptureSystem.defaultContestedThreshold
   local percent = clamp(math.floor((dominantPressure / threshold) * 100), 0, 100)
 
-  pressureRecord.total = bluePressure + redPressure + neutralPressure + contestedPressure
+  -- Compute the new derived values locally first. Nothing is written into
+  -- pressureRecord/progressRecord/zoneRecord until we know whether this is
+  -- an actual change, so a no-op recompute (e.g. from a pure status getter)
+  -- cannot touch persisted state at all.
+  local newPressureTotal = bluePressure + redPressure + neutralPressure + contestedPressure
+  local newProgressOwner = currentOwner
+  local newProgressPreviousOwner = progressRecord.previousOwner or currentOwner
+  local newProgressDominantOwner = dominantOwner
+  local newProgressPercent = percent
+  local newProgressCaptureReady = dominantPressure >= threshold and dominantOwner ~= currentOwner
+  local newProgressStatus
+
+  if newProgressCaptureReady == true then
+    newProgressStatus = "CAPTURE_READY"
+  elseif dominantOwner ~= getOwnerUnknown()
+    and dominantOwner ~= currentOwner
+    and dominantPressure >= contestedThreshold then
+    newProgressStatus = "CONTESTED"
+  elseif newPressureTotal > 0 then
+    newProgressStatus = "PRESSURED"
+  else
+    newProgressStatus = "STABLE"
+  end
+
+  local mirrorMissing = zoneRecord ~= nil
+    and (zoneRecord.capturePressure == nil or zoneRecord.captureProgress == nil)
+
+  -- A mirror can exist but still be stale, e.g. if some other code path
+  -- refreshed pressureRecord/progressRecord without going through this
+  -- function. Compare the mirror against the freshly computed values (the
+  -- same fachlich-relevant fields used below), not a generic deep-equal.
+  local mirrorStale = zoneRecord ~= nil
+    and zoneRecord.capturePressure ~= nil
+    and zoneRecord.captureProgress ~= nil
+    and (
+      zoneRecord.capturePressure.total ~= newPressureTotal
+      or zoneRecord.capturePressure.dominantOwner ~= dominantOwner
+      or zoneRecord.captureProgress.owner ~= newProgressOwner
+      or zoneRecord.captureProgress.previousOwner ~= newProgressPreviousOwner
+      or zoneRecord.captureProgress.dominantOwner ~= newProgressDominantOwner
+      or zoneRecord.captureProgress.percent ~= newProgressPercent
+      or zoneRecord.captureProgress.bluePressure ~= bluePressure
+      or zoneRecord.captureProgress.redPressure ~= redPressure
+      or zoneRecord.captureProgress.neutralPressure ~= neutralPressure
+      or zoneRecord.captureProgress.contestedPressure ~= contestedPressure
+      or zoneRecord.captureProgress.threshold ~= threshold
+      or zoneRecord.captureProgress.contestedThreshold ~= contestedThreshold
+      or zoneRecord.captureProgress.captureReady ~= newProgressCaptureReady
+      or zoneRecord.captureProgress.status ~= newProgressStatus
+    )
+
+  local valuesChanged = recordCreated == true
+    or mirrorMissing == true
+    or mirrorStale == true
+    or pressureRecord.total ~= newPressureTotal
+    or pressureRecord.dominantOwner ~= dominantOwner
+    or progressRecord.owner ~= newProgressOwner
+    or progressRecord.previousOwner ~= newProgressPreviousOwner
+    or progressRecord.dominantOwner ~= newProgressDominantOwner
+    or progressRecord.percent ~= newProgressPercent
+    or progressRecord.bluePressure ~= bluePressure
+    or progressRecord.redPressure ~= redPressure
+    or progressRecord.neutralPressure ~= neutralPressure
+    or progressRecord.contestedPressure ~= contestedPressure
+    or progressRecord.threshold ~= threshold
+    or progressRecord.contestedThreshold ~= contestedThreshold
+    or progressRecord.captureReady ~= newProgressCaptureReady
+    or progressRecord.status ~= newProgressStatus
+
+  if valuesChanged ~= true then
+    return progressRecord
+  end
+
+  pressureRecord.total = newPressureTotal
   pressureRecord.dominantOwner = dominantOwner
   pressureRecord.updatedAt = getCurrentTime()
 
-  progressRecord.owner = currentOwner
-  progressRecord.previousOwner = progressRecord.previousOwner or currentOwner
-  progressRecord.dominantOwner = dominantOwner
-  progressRecord.percent = percent
+  progressRecord.owner = newProgressOwner
+  progressRecord.previousOwner = newProgressPreviousOwner
+  progressRecord.dominantOwner = newProgressDominantOwner
+  progressRecord.percent = newProgressPercent
   progressRecord.bluePressure = bluePressure
   progressRecord.redPressure = redPressure
   progressRecord.neutralPressure = neutralPressure
   progressRecord.contestedPressure = contestedPressure
   progressRecord.threshold = threshold
   progressRecord.contestedThreshold = contestedThreshold
-  progressRecord.captureReady = dominantPressure >= threshold and dominantOwner ~= currentOwner
+  progressRecord.captureReady = newProgressCaptureReady
+  progressRecord.status = newProgressStatus
   progressRecord.updatedAt = getCurrentTime()
-
-  if progressRecord.captureReady == true then
-    progressRecord.status = "CAPTURE_READY"
-  elseif dominantOwner ~= getOwnerUnknown()
-    and dominantOwner ~= currentOwner
-    and dominantPressure >= contestedThreshold then
-    progressRecord.status = "CONTESTED"
-  elseif pressureRecord.total > 0 then
-    progressRecord.status = "PRESSURED"
-  else
-    progressRecord.status = "STABLE"
-  end
 
   if zoneRecord ~= nil then
     zoneRecord.capturePressure = copyValue(pressureRecord)
@@ -887,6 +1061,8 @@ local function updatePressureDerivedValues(zoneKey)
     zoneRecord.updatedAt = getCurrentTime()
     syncWorldZone(zoneRecord)
   end
+
+  markDirty("capture_progress_recomputed")
 
   return progressRecord
 end
@@ -917,10 +1093,14 @@ local function updateCaptureEligibility()
     return nil
   end
 
-  state.Campaign.capture.captureEligibleBases = {}
-  state.Campaign.capture.captureEligibleZones = {}
-  state.Campaign.capture.nonCaptureBases = {}
-  state.Campaign.capture.nonCaptureZones = {}
+  -- Build the four eligibility/non-capture maps locally first. Nothing is
+  -- written into persisted state until we know whether the composition
+  -- actually differs from what is already stored (same count can still mean
+  -- different membership, e.g. zone A drops out while zone B enters).
+  local newCaptureEligibleBases = {}
+  local newCaptureEligibleZones = {}
+  local newNonCaptureBases = {}
+  local newNonCaptureZones = {}
 
   local baseOwnerSummary = createOwnerSummary()
   local zoneOwnerSummary = createOwnerSummary()
@@ -929,11 +1109,11 @@ local function updateCaptureEligibility()
     local eligible, reason = canCaptureBaseRecord(baseRecord)
 
     if eligible == true then
-      state.Campaign.capture.captureEligibleBases[key] = baseRecord
+      newCaptureEligibleBases[key] = baseRecord
       baseOwnerSummary.total = baseOwnerSummary.total + 1
       addOwnerCount(baseOwnerSummary, getRecordOwner(baseRecord))
     else
-      state.Campaign.capture.nonCaptureBases[key] = {
+      newNonCaptureBases[key] = {
         key = baseRecord.key or key,
         name = baseRecord.name,
         classification = getAirbaseClassification(baseRecord),
@@ -946,14 +1126,18 @@ local function updateCaptureEligibility()
     local eligible, reason = canCaptureZoneRecord(zoneRecord)
 
     if eligible == true then
-      state.Campaign.capture.captureEligibleZones[key] = zoneRecord
+      newCaptureEligibleZones[key] = zoneRecord
       zoneOwnerSummary.total = zoneOwnerSummary.total + 1
       addOwnerCount(zoneOwnerSummary, getRecordOwner(zoneRecord))
-      ensureZonePressureRecord(key)
-      ensureZoneProgressRecord(key)
+
+      -- updatePressureDerivedValues() ensures and, if needed, creates the
+      -- pressure/progress records itself and marks dirty on real change
+      -- (including first-time creation). Do not pre-create them here --
+      -- doing so would hide record creation from that function's own
+      -- change detection.
       updatePressureDerivedValues(key)
     else
-      state.Campaign.capture.nonCaptureZones[key] = {
+      newNonCaptureZones[key] = {
         key = zoneRecord.key or key,
         name = zoneRecord.name,
         zoneClass = getZoneClass(zoneRecord),
@@ -963,23 +1147,81 @@ local function updateCaptureEligibility()
     end
   end
 
+  state.Campaign.capture.captureEligibleBases = state.Campaign.capture.captureEligibleBases or {}
+  state.Campaign.capture.captureEligibleZones = state.Campaign.capture.captureEligibleZones or {}
+  state.Campaign.capture.nonCaptureBases = state.Campaign.capture.nonCaptureBases or {}
+  state.Campaign.capture.nonCaptureZones = state.Campaign.capture.nonCaptureZones or {}
+
+  local eligibleBasesChanged = mapKeysEqual(state.Campaign.capture.captureEligibleBases, newCaptureEligibleBases) ~= true
+  local eligibleZonesChanged = mapKeysEqual(state.Campaign.capture.captureEligibleZones, newCaptureEligibleZones) ~= true
+  local nonCaptureBasesChanged = nonCaptureMapEquals(state.Campaign.capture.nonCaptureBases, newNonCaptureBases) ~= true
+  local nonCaptureZonesChanged = nonCaptureMapEquals(state.Campaign.capture.nonCaptureZones, newNonCaptureZones) ~= true
+
+  if eligibleBasesChanged == true then
+    state.Campaign.capture.captureEligibleBases = newCaptureEligibleBases
+  end
+  if eligibleZonesChanged == true then
+    state.Campaign.capture.captureEligibleZones = newCaptureEligibleZones
+  end
+  if nonCaptureBasesChanged == true then
+    state.Campaign.capture.nonCaptureBases = newNonCaptureBases
+  end
+  if nonCaptureZonesChanged == true then
+    state.Campaign.capture.nonCaptureZones = newNonCaptureZones
+  end
+
   state.Campaign.capture.statistics = state.Campaign.capture.statistics or {}
-  state.Campaign.capture.statistics.bases = baseOwnerSummary
-  state.Campaign.capture.statistics.zones = zoneOwnerSummary
-  state.Campaign.capture.statistics.allBases = countTableKeys(getBaseRegistry())
-  state.Campaign.capture.statistics.allZones = countTableKeys(getZoneRegistry())
-  state.Campaign.capture.statistics.eligibleBases = baseOwnerSummary.total
-  state.Campaign.capture.statistics.eligibleZones = zoneOwnerSummary.total
-  state.Campaign.capture.statistics.nonCaptureBases = countTableKeys(state.Campaign.capture.nonCaptureBases)
-  state.Campaign.capture.statistics.nonCaptureZones = countTableKeys(state.Campaign.capture.nonCaptureZones)
-  state.Campaign.capture.statistics.pressureRecords = countTableKeys(state.Campaign.capture.pressure)
-  state.Campaign.capture.statistics.progressRecords = countTableKeys(state.Campaign.capture.progress)
-  state.Campaign.capture.statistics.appliedMissionEffects = countTableKeys(state.Campaign.capture.appliedMissionEffects)
-  state.Campaign.capture.statistics.updatedAt = getCurrentTime()
 
-  CaptureSystem.lastEligibilitySummary = state.Campaign.capture.statistics
+  local statistics = state.Campaign.capture.statistics
+  local allBases = countTableKeys(getBaseRegistry())
+  local allZones = countTableKeys(getZoneRegistry())
+  local nonCaptureBasesCount = countTableKeys(state.Campaign.capture.nonCaptureBases)
+  local nonCaptureZonesCount = countTableKeys(state.Campaign.capture.nonCaptureZones)
+  local pressureRecordsCount = countTableKeys(state.Campaign.capture.pressure)
+  local progressRecordsCount = countTableKeys(state.Campaign.capture.progress)
+  local appliedMissionEffectsCount = countTableKeys(state.Campaign.capture.appliedMissionEffects)
 
-  return state.Campaign.capture.statistics
+  -- statistics.updatedAt is a diagnostic timestamp only: bumping it on every
+  -- call (even a pure re-derivation from a read-only status getter) would by
+  -- itself constitute an untracked persisted mutation. Only touch it when
+  -- the map composition or one of the eligibility/ownership counts actually
+  -- changed.
+  local eligibilityValuesChanged = eligibleBasesChanged == true
+    or eligibleZonesChanged == true
+    or nonCaptureBasesChanged == true
+    or nonCaptureZonesChanged == true
+    or ownerSummaryEquals(statistics.bases, baseOwnerSummary) ~= true
+    or ownerSummaryEquals(statistics.zones, zoneOwnerSummary) ~= true
+    or statistics.allBases ~= allBases
+    or statistics.allZones ~= allZones
+    or statistics.eligibleBases ~= baseOwnerSummary.total
+    or statistics.eligibleZones ~= zoneOwnerSummary.total
+    or statistics.nonCaptureBases ~= nonCaptureBasesCount
+    or statistics.nonCaptureZones ~= nonCaptureZonesCount
+    or statistics.pressureRecords ~= pressureRecordsCount
+    or statistics.progressRecords ~= progressRecordsCount
+    or statistics.appliedMissionEffects ~= appliedMissionEffectsCount
+
+  statistics.bases = baseOwnerSummary
+  statistics.zones = zoneOwnerSummary
+  statistics.allBases = allBases
+  statistics.allZones = allZones
+  statistics.eligibleBases = baseOwnerSummary.total
+  statistics.eligibleZones = zoneOwnerSummary.total
+  statistics.nonCaptureBases = nonCaptureBasesCount
+  statistics.nonCaptureZones = nonCaptureZonesCount
+  statistics.pressureRecords = pressureRecordsCount
+  statistics.progressRecords = progressRecordsCount
+  statistics.appliedMissionEffects = appliedMissionEffectsCount
+
+  if eligibilityValuesChanged == true then
+    statistics.updatedAt = getCurrentTime()
+    markDirty("capture_eligibility_recomputed")
+  end
+
+  CaptureSystem.lastEligibilitySummary = statistics
+
+  return statistics
 end
 
 local function refreshAllCounters()
@@ -1990,6 +2232,7 @@ function CaptureSystem.applyCompletedMissionEffects(options)
   local skipped = 0
   local failed = 0
   local failedReasons = {}
+  local failedReasonsByKey = {}
 
   local applyOptions = options or {}
   local safeOptions = {
@@ -2013,6 +2256,7 @@ function CaptureSystem.applyCompletedMissionEffects(options)
           missionKey = missionRecord.key,
           reason = resultOrReason
         })
+        failedReasonsByKey[tostring(missionRecord.key)] = tostring(resultOrReason)
       end
     end
   end
@@ -2034,10 +2278,47 @@ function CaptureSystem.applyCompletedMissionEffects(options)
   state.Campaign.capture.statistics.appliedMissionEffects =
     countTableKeys(state.Campaign.capture.appliedMissionEffects)
 
-  state.Campaign.capture.statistics.lastCompletedMissionEffects =
-    copyValue(CaptureSystem.lastCompletedMissionEffectSummary)
+  -- lastCompletedMissionEffects embeds a fresh updatedAt timestamp on every
+  -- copy, so it must not be (re)written on every call -- a pure re-derivation
+  -- (e.g. from a read-only status getter) would otherwise silently rewrite
+  -- persisted state every time. A newly applied effect (applied > 0) always
+  -- persists. The failure diagnosis must not be silently dropped either: it
+  -- is compared against the previously persisted failure state even when
+  -- there are currently no failures at all, so a fixed/vanished failure
+  -- (failed > 0 -> failed == 0) still updates and dirties the persisted
+  -- diagnosis. A mission effect that keeps failing identically on every
+  -- re-evaluation (including pure status reads) must not re-dirty forever --
+  -- so only persist when the failure state actually differs from what is
+  -- already stored.
+  local previousMissionEffectSummary = state.Campaign.capture.statistics.lastCompletedMissionEffects
+  local previousFailedReasonsByKey = {}
+  local previousFailedCount = 0
 
-  if applied > 0 then
+  if type(previousMissionEffectSummary) == "table" then
+    previousFailedCount = previousMissionEffectSummary.failed or 0
+
+    if type(previousMissionEffectSummary.failedReasons) == "table" then
+      for _, entry in ipairs(previousMissionEffectSummary.failedReasons) do
+        if type(entry) == "table" then
+          previousFailedReasonsByKey[tostring(entry.missionKey)] = tostring(entry.reason)
+        end
+      end
+    end
+  end
+
+  local hadPersistedFailureDiagnosis = type(previousMissionEffectSummary) == "table"
+    and previousFailedCount > 0
+
+  local failureDiagnosisChanged = (failed > 0 or hadPersistedFailureDiagnosis == true)
+    and (
+      previousFailedCount ~= failed
+      or stringMapEquals(previousFailedReasonsByKey, failedReasonsByKey) ~= true
+    )
+
+  if applied > 0 or failureDiagnosisChanged == true then
+    state.Campaign.capture.statistics.lastCompletedMissionEffects =
+      copyValue(CaptureSystem.lastCompletedMissionEffectSummary)
+
     markDirty("completed_mission_effects_applied_to_capture")
   end
 
@@ -2117,7 +2398,12 @@ function CaptureSystem.updateCaptureProgress(options)
   state.Campaign.capture.statistics.progressRecords = countTableKeys(state.Campaign.capture.progress)
   state.Campaign.capture.statistics.appliedMissionEffects = countTableKeys(state.Campaign.capture.appliedMissionEffects)
 
-  markDirty("capture_progress_updated")
+  -- No separate markDirty here: updateCaptureEligibility() and
+  -- updatePressureDerivedValues() (called above) already mark the campaign
+  -- state dirty themselves, in the same call, whenever they write a real
+  -- change. The statistics fields written above are pure recomputations of
+  -- already-tracked values and reproduce the same result when nothing
+  -- changed, so they need no additional dirty gating here.
 
   logInfo(
     "Capture progress updated: zones="
