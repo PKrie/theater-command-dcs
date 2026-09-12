@@ -80,9 +80,52 @@ Zusätzlich am 2026-09-12 bestätigt — Mission Completion, Mission Failure und
 - Persistence hat alle drei State-Änderungen als dirty erkannt und per periodischem Autosave `SAVED` gesichert; `dirtyCleared=true` in allen drei Fällen, `productiveRestore=false` weiterhin unverändert.
 - Bekannte kosmetische Auffälligkeit: Die F10-Ausgabe beim Capture Apply zeigte „Owner: BLUE -> BLUE" statt des tatsächlichen Wechsels. Der Runtime-State bestätigt eindeutig `previousOwner=RED` und den neuen Owner `BLUE`. Dies ist eine reine Anzeige-/Logging-Auffälligkeit im F10-Menü, kein CaptureSystem-Fehler. Keine Codeänderung abgeleitet.
 
+Priorität 3 — Dirty-Abdeckung, CaptureSystem-Hauptfund: **BEHOBEN / LIVE BESTANDEN am 2026-09-12**
+
+Live reproduzierter Fehler vor dem Fix:
+
+- `TC.State.clearDirty()` gefolgt von `TC.Campaign.CaptureSystem.getCaptureReadyZones()`.
+- Ergebnis vor dem Fix: `dirty=true`, `dirtyReason=capture_progress_updated`.
+- Ursache: Capture-Status-/Getter-Pfade führten über `updateCaptureProgress()`/Derived-State-Recomputation zu persistierten Schreibvorgängen bzw. pauschaler Dirty-Markierung, obwohl fachlich keine State-Änderung stattgefunden hatte.
+
+Fix:
+
+- Datei: `src/campaign/tc_capture_system.lua`.
+- Commit: „Fix capture dirty state tracking".
+- Fix wurde committed, gepusht und anschließend in die DEV-`.miz` neu eingebettet.
+
+Offline Embedded-Verifikation:
+
+- Repository-SHA-256: `A9E493C5AF0F052AA56862EB38049CF50DE7954BFEDB1080FCD3AB232C74516A`.
+- MIZ-Ressource: `l10n/DEFAULT/tc_capture_system.lua`, `90505` Bytes, SHA-256 `A9E493C5AF0F052AA56862EB38049CF50DE7954BFEDB1080FCD3AB232C74516A`.
+- `MATCH=True`.
+
+Live Negativ-Regression nach dem Fix (unveränderter Read erzeugt kein Dirty mehr):
+
+- `getCaptureReadyZones()` -> `dirty=false`, `reason=nil`.
+- Alle sieben geprüften Read-APIs — `getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress` — liefern übereinstimmend: `ok=true`, `dirty=false`, `reason=nil`.
+
+Live Positiv-Regression nach dem Fix (echte Mutation markiert weiterhin zuverlässig dirty):
+
+- Temporärer BLUE-Capture-Pressure-Test auf `ZONE_AIRBASE_ABU_AL_DUHUR`: `mutationOk=true`, `before=0`, `changed=1`, `dirty=true`, `reason=capture_pressure_set`.
+- Rollback: `rollbackOk=true`, `restored=0`, `finalDirty=false`.
+- Teständerung wurde unmittelbar vollständig zurückgerollt; kein bleibender Testzustand.
+
+Damit ist bestätigt:
+
+- Ein unveränderter Capture-Read erzeugt keinen Persistence-Dirty-State mehr.
+- Eine echte Capture-State-Mutation markiert weiterhin zuverlässig dirty mit korrektem, spezifischem `dirtyReason`.
+
+Wichtig — Priorität 3 ist damit NICHT insgesamt abgeschlossen. Aus dem ursprünglichen READ-ONLY Audit bleiben als separat zu bewertende kleinere Verdachtsfälle bestehen:
+
+- `setZoneOwner()`: Ein No-Op-Aufruf (Owner unverändert) schreibt möglicherweise Progress-/Timestamp-Felder, ohne dafür dirty zu markieren.
+- `src/ai/tc_ai_cap_manager.lua` / `reactToActiveMissions()`: latenter Dirty-Fall; die Funktion ist derzeit nicht verdrahtet.
+
+Details siehe Abschnitt 9, Priorität 3.
+
 Nächster technischer Schritt:
 
-- Priorität 3 (Abschnitt 9): Dirty-Abdeckung der aktiven State-Systeme (`tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua`, `tc_ai_cap_manager.lua`) vollständig validieren. Die Vorbedingung — Mission Completion, Mission Failure und Capture Ready Apply Regressionen bestanden — ist mit dem Ergebnis vom 2026-09-12 erfüllt.
+- Priorität 3 (Abschnitt 9): die verbleibenden Verdachtsfälle aus dem ursprünglichen READ-ONLY Audit bewerten (`setZoneOwner()`-No-Op-Pfad, `tc_ai_cap_manager.lua` `reactToActiveMissions()`) und anschließend die Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` weiter validieren. Der CaptureSystem-Getter-Hauptfund ist am 2026-09-12 behoben und live bestanden und ist NICHT erneut zu testen.
 
 ---
 
@@ -495,6 +538,7 @@ Bewertung:
 - Capture Ready kann state-only angewendet werden.
 - Zone Ownership und Airbase Ownership können state-only synchronisiert werden.
 - Produktive automatische Capture-Auswertung über reale DCS-Zonen ist noch offen.
+- Capture-Dirty-Tracking-Hauptfund (reine Status-Reads wie `getCaptureReadyZones()` markierten fälschlich `dirty=true`) am 2026-09-12 in `src/campaign/tc_capture_system.lua` behoben und live bestätigt; Details siehe Abschnitt 0 und Abschnitt 9, Priorität 3. Kleinere Verdachtsfälle (`setZoneOwner()` No-Op-Pfad, `tc_ai_cap_manager.lua` `reactToActiveMissions()`) sind damit noch nicht abgedeckt.
 
 Offen:
 
@@ -1256,7 +1300,7 @@ Noch nicht jetzt aktivieren.
 
 ---
 
-### Priorität 3: Dirty-Abdeckung der aktiven State-Systeme validieren
+### Priorität 3: Dirty-Abdeckung der aktiven State-Systeme validieren — IN ARBEIT (CaptureSystem-Hauptfund behoben am 2026-09-12)
 
 Dateien später:
 
@@ -1276,6 +1320,23 @@ Voraussetzung:
 
 - dirty-aware Autosave in `tc_persistence_system.lua` bestanden
 - Mission Completion, Mission Failure und Capture Ready Apply Regressionen bestanden — erfüllt am 2026-09-12 (siehe Abschnitt 7.1–7.3)
+
+Zwischenergebnis vom 2026-09-12 — CaptureSystem-Hauptfund: **BEHOBEN / LIVE BESTANDEN**
+
+- Live reproduzierter Fehler: `TC.State.clearDirty()` + `TC.Campaign.CaptureSystem.getCaptureReadyZones()` ergab vor dem Fix `dirty=true`, `dirtyReason=capture_progress_updated` — ein reiner Read markierte den Campaign-State fälschlich dirty.
+- Fix in `src/campaign/tc_capture_system.lua`, Commit „Fix capture dirty state tracking", committed, gepusht und in die DEV-`.miz` neu eingebettet.
+- Offline Embedded-Verifikation: `l10n/DEFAULT/tc_capture_system.lua`, `90505` Bytes, SHA-256 `A9E493C5AF0F052AA56862EB38049CF50DE7954BFEDB1080FCD3AB232C74516A`, identisch zum Repository (`MATCH=True`).
+- Live Negativ-Regression: alle sieben geprüften Read-APIs (`getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`) liefern `ok=true`, `dirty=false`, `reason=nil`.
+- Live Positiv-Regression: temporärer BLUE-Capture-Pressure-Test auf `ZONE_AIRBASE_ABU_AL_DUHUR` — `dirty=true`, `reason=capture_pressure_set`; vollständig zurückgerollt (`rollbackOk=true`, `finalDirty=false`), kein bleibender Testzustand.
+- Vollständige Details siehe Abschnitt 0.
+
+Noch offene, separat zu bewertende Verdachtsfälle aus dem ursprünglichen READ-ONLY Audit (Priorität 3 bleibt deshalb insgesamt offen):
+
+- `setZoneOwner()`: möglicher No-Op-Pfad, der Progress-/Timestamp-Felder ohne Dirty-Markierung schreibt.
+- `src/ai/tc_ai_cap_manager.lua` / `reactToActiveMissions()`: latenter Dirty-Fall, Funktion derzeit nicht verdrahtet.
+- Allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` (siehe „Dateien später" oben) ist noch nicht bewertet.
+
+Status: CaptureSystem-Hauptfund behoben und live bestanden; Priorität 3 als Ganzes bleibt **offen**, bis die oben genannten Verdachtsfälle bewertet sind.
 
 ---
 
@@ -1351,7 +1412,7 @@ Bestandene Systeme:
 |---|---:|---|
 | Airbase Scanner | `v0.2.2` | bestanden |
 | ZoneFactory | `v0.2.0` | bestanden |
-| CaptureSystem | `v0.2.2` | bestanden |
+| CaptureSystem | `v0.2.2` | bestanden; Capture-Dirty-Tracking-Hauptfund am 2026-09-12 behoben und live bestätigt (siehe Abschnitt 9, Priorität 3) |
 | LogisticsDelivery | `v0.2.0` | bestanden |
 | FobSystem | `v0.2.0` | bestanden |
 | MissionGenerator | `v0.2.3` | bestanden; vermeintlicher Record-Verlust am 2026-09-12 widerlegt (kein Datenverlust); behoben wurde der ursächliche Count-/Diagnosefehler in `tc_state.lua` (`#` statt `pairs()`) |
@@ -1370,6 +1431,7 @@ Aktuelle bestätigte Fähigkeiten:
 - Mission Failure bleibt ohne Capture Pressure.
 - Capture Ready Apply kann Zone und Airbase state-only auf Blue setzen.
 - Mission Completion, Mission Failure und Capture Ready Apply sind am 2026-09-12 mit echtem Runtime-State und dirty-aware Autosave-Nachweis erneut bestanden (siehe Abschnitt 7.1–7.3).
+- Capture-Status-Reads (`getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`) erzeugen seit dem Fix vom 2026-09-12 keinen Persistence-Dirty-State mehr, während echte Capture-Mutationen weiterhin zuverlässig dirty markieren (live verifiziert, siehe Abschnitt 9, Priorität 3).
 - Persistence kann DCS-Dateien schreiben und lesen.
 - Persistence speichert Campaign-State als Lua-Return-Datei.
 - Persistence validiert Save-Dateien.
@@ -1379,7 +1441,7 @@ Aktuelle bestätigte Fähigkeiten:
 
 Aktuelle wichtigste offene Fähigkeit:
 
-- Vollständige Dirty-Abdeckung der aktiven State-Systeme validieren (Priorität 3, Abschnitt 9), nachdem Mission Completion, Mission Failure und Capture Ready Apply Regressionen am 2026-09-12 bestanden sind (siehe Abschnitt 7.1–7.3).
+- Die verbleibenden Priorität-3-Verdachtsfälle bewerten (`setZoneOwner()` No-Op-Pfad, `tc_ai_cap_manager.lua` `reactToActiveMissions()`) und die allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` validieren (Priorität 3, Abschnitt 9). Der CaptureSystem-Getter-Hauptfund ist am 2026-09-12 bereits behoben und live bestanden (siehe Abschnitt 9, Priorität 3) und ist nicht Teil dieses offenen Punkts.
 
 ---
 
@@ -1404,21 +1466,24 @@ Danach nicht mit F10-Persistence weitermachen.
 
 Nächster technischer Schritt:
 
-- Priorität 3 (Abschnitt 9): Dirty-Abdeckung der aktiven State-Systeme (`tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua`, `tc_ai_cap_manager.lua`) vollständig validieren.
+- Priorität 3 (Abschnitt 9): die verbleibenden Verdachtsfälle aus dem ursprünglichen READ-ONLY Audit bewerten — `setZoneOwner()` No-Op-Pfad (möglicherweise fehlende Dirty-Markierung bei unverändertem Progress-/Timestamp-Schreiben) und `src/ai/tc_ai_cap_manager.lua` `reactToActiveMissions()` (latenter, derzeit nicht verdrahteter Dirty-Fall). Danach die allgemeine Dirty-Abdeckung von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua` vollständig validieren. Der CaptureSystem-Getter-Hauptfund ist am 2026-09-12 bereits behoben und live bestanden und darf nicht erneut getestet werden.
 
 Nächster erwarteter Test:
 
-1. Vorhandene Dirty-Markierungen je State-System gegen fachlich relevante State-Änderungen prüfen.
-2. Fehlende oder zu häufige Dirty-Markierungen gezielt identifizieren und korrigieren.
-3. Dirty Reasons pro Fachsystem eindeutig und stabil halten.
-4. Ergebnis in Abschnitt 9 (Priorität 3) mit Datum dokumentieren.
-5. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
+1. `setZoneOwner()` READ-ONLY auf den No-Op-Fall (Owner unverändert) prüfen: wird `dirty` korrekt nicht gesetzt, wenn tatsächlich nichts fachlich Relevantes geschrieben wurde?
+2. `tc_ai_cap_manager.lua` `reactToActiveMissions()` READ-ONLY bewerten, auch wenn die Funktion aktuell nicht verdrahtet ist.
+3. Vorhandene Dirty-Markierungen je verbleibendem State-System gegen fachlich relevante State-Änderungen prüfen.
+4. Fehlende oder zu häufige Dirty-Markierungen gezielt identifizieren und korrigieren.
+5. Dirty Reasons pro Fachsystem eindeutig und stabil halten.
+6. Ergebnis in Abschnitt 9 (Priorität 3) mit Datum dokumentieren.
+7. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
 
-Bestanden am 2026-09-12 (nicht erneut zu wiederholen, siehe Abschnitt 7.1–7.3):
+Bestanden am 2026-09-12 (nicht erneut zu wiederholen):
 
-- Mission Completion Regression
-- Mission Failure Regression
-- Capture Ready Apply Regression
+- Mission Completion Regression (siehe Abschnitt 7.1)
+- Mission Failure Regression (siehe Abschnitt 7.3)
+- Capture Ready Apply Regression (siehe Abschnitt 7.2)
+- CaptureSystem-Dirty-Tracking-Hauptfund: reine Capture-Status-Reads erzeugen kein Dirty mehr, echte Mutationen weiterhin zuverlässig (siehe Abschnitt 9, Priorität 3)
 
 ---
 
