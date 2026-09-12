@@ -1252,8 +1252,10 @@ local function setRecordOwner(record, newOwner, reason)
   local previousOwner = getRecordOwner(record)
 
   if previousOwner == newOwner then
-    record.lastOwnerCheckAt = getCurrentTime()
-    record.updatedAt = getCurrentTime()
+    -- Genuine no-op: no persisted field is touched here. setBaseOwner()/
+    -- setZoneOwner() both return immediately on changed == false, before
+    -- registry reassignment, world sync, progress mutation, counter
+    -- refresh, events or markDirty.
     return true, previousOwner, false
   end
 
@@ -1612,27 +1614,31 @@ function CaptureSystem.setBaseOwner(keyOrName, newOwner, reason, options)
     return false, previousOwner
   end
 
+  if changed ~= true then
+    -- Genuine no-op (owner unchanged): no registry reassignment, world
+    -- sync, counter refresh, event or dirty marking. Nothing persisted was
+    -- touched by setRecordOwner() above either.
+    logDebug("Base owner unchanged: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
+    return true, record
+  end
+
   state.Bases.registry[registryKey] = record
   syncWorldBase(record)
   refreshAllCounters()
 
-  if changed == true then
-    addCaptureEvent({
-      type = "BASE_OWNER_CHANGED",
-      targetType = "BASE",
-      key = record.key,
-      name = record.name,
-      previousOwner = previousOwner,
-      newOwner = newOwner,
-      reason = reason or "manual_capture_update",
-      captureEligible = true
-    })
+  addCaptureEvent({
+    type = "BASE_OWNER_CHANGED",
+    targetType = "BASE",
+    key = record.key,
+    name = record.name,
+    previousOwner = previousOwner,
+    newOwner = newOwner,
+    reason = reason or "manual_capture_update",
+    captureEligible = true
+  })
 
-    markDirty("base_owner_changed")
-    logInfo("Base captured: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
-  else
-    logDebug("Base owner unchanged: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
-  end
+  markDirty("base_owner_changed")
+  logInfo("Base captured: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
 
   return true, record
 end
@@ -1661,6 +1667,15 @@ function CaptureSystem.setZoneOwner(keyOrName, newOwner, reason, options)
     return false, previousOwner
   end
 
+  if changed ~= true then
+    -- Genuine no-op (owner unchanged): no registry reassignment, world
+    -- sync, progress mutation, counter refresh, event or dirty marking.
+    -- In particular, progressRecord.previousOwner (capture history) is
+    -- left untouched instead of being overwritten with the current owner.
+    logDebug("Zone owner unchanged: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
+    return true, record
+  end
+
   state.Zones.registry[registryKey] = record
   syncWorldZone(record)
 
@@ -1675,23 +1690,19 @@ function CaptureSystem.setZoneOwner(keyOrName, newOwner, reason, options)
 
   refreshAllCounters()
 
-  if changed == true then
-    addCaptureEvent({
-      type = "ZONE_OWNER_CHANGED",
-      targetType = "ZONE",
-      key = record.key,
-      name = record.name,
-      previousOwner = previousOwner,
-      newOwner = newOwner,
-      reason = reason or "manual_capture_update",
-      captureEligible = true
-    })
+  addCaptureEvent({
+    type = "ZONE_OWNER_CHANGED",
+    targetType = "ZONE",
+    key = record.key,
+    name = record.name,
+    previousOwner = previousOwner,
+    newOwner = newOwner,
+    reason = reason or "manual_capture_update",
+    captureEligible = true
+  })
 
-    markDirty("zone_owner_changed")
-    logInfo("Zone captured: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
-  else
-    logDebug("Zone owner unchanged: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
-  end
+  markDirty("zone_owner_changed")
+  logInfo("Zone captured: " .. tostring(record.name) .. " [" .. tostring(newOwner) .. "]")
 
   return true, record
 end
