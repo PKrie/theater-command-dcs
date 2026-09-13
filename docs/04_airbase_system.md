@@ -1,8 +1,8 @@
 # Airbase System
 
-## Verbindliches Update — 2026-08-04
+## Verbindliches Update — 2026-09-12
 
-AirbaseScanner bleibt `v0.2.2` und state-only bestanden. PersistenceSystem `v0.2.6` speichert Airbase-State als Teil des Snapshots; produktiver Restore bleibt deaktiviert. MissionGenerator-abhängige Aussagen beziehen sich auf frühere erfolgreiche Tests: Der aktuelle reproduzierbare Mission-Record-Verlust ist ungelöst und blockiert neue Mission/Capture-Regressionen. Nächster Schritt ist der Offline Embedded Mission Resource Audit. Ältere Status- und Versionsangaben sind historische Snapshots.
+AirbaseScanner bleibt `v0.2.2`, state-first funktional bestanden. PersistenceSystem `v0.2.6` speichert Airbase-/World-/Bases-State als Teil des Snapshots über dirty-aware Background Autosave; `productiveRestore=false`. MissionGenerator `v0.2.3` erzeugt 10 Mission Records; der frühere Record-Loss-Verdacht ist widerlegt (Ursache war ein `#`-Count-Bug in `State.summary()`, siehe `docs/01_campaign_design.md` und `docs/03_mission_editor_basics.md`). Der Offline Embedded Mission Resource Audit ist abgeschlossen: 13/13 relevante aktive Ressourcen `EXACT_MATCH`, keine aktive Embedded-Runtime-Drift. Mission Completion, Mission Failure und Capture Ready Apply sind bestanden. Priority 3 bleibt offen; nächster technischer Schritt ist der READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Nicht mehr aktuell: ein reproduzierbarer Mission-Record-Loss, blockierte Mission-/Capture-Regressionen und der Embedded Audit als offener nächster Schritt. Ältere Status- und Versionsangaben sind historische Snapshots.
 
 Diese Datei beschreibt das Airbase-System von **Theater Command DCS**.
 
@@ -39,7 +39,9 @@ Es liefert die Datenbasis für:
 - AICapManager
 - spätere IADS-Integration
 - spätere AI-Director-Logik
-- spätere Persistenz
+- Persistence
+
+Airbase-/World-State wird bereits durch PersistenceSystem gespeichert; produktiver Restore folgt später.
 
 ---
 
@@ -73,7 +75,7 @@ Ein blindes Registrieren aller Objekte als Kampagnenzonen würde zu falscher Kam
 
 Stand:
 
-    2026-06-29
+    2026-09-12
 
 Aktive Airbase-Datei:
 
@@ -85,7 +87,7 @@ Getestete Version:
 
 Status:
 
-    bestanden
+    state-first funktional bestanden
 
 Bestätigt durch DCS-Logtests:
 
@@ -96,6 +98,14 @@ Bestätigt durch DCS-Logtests:
     Airbase Scanner liefert Daten an spätere Systeme.
     Es gab keinen Theater-Command-Lua-Fehler.
     Es gab keinen Lua-Stacktrace.
+
+Ergänzend gültig:
+
+    AirbaseScanner bleibt reine Klassifikations-/Datenquelle.
+    Keine direkte Capture-/Mission-/AI-Ausführung im Scanner.
+    Ownership-Verarbeitung erfolgt nachgelagert in CaptureSystem.
+    Persistence speichert den resultierenden State.
+    Keine produktiven Framework-Aktionen (MOOSE/CTLD/Skynet) im Scanner.
 
 ---
 
@@ -143,6 +153,19 @@ Aktuelle Kategorien:
 - Unknown
 
 Diese Klassifizierung ist wichtig, weil jedes Objekt später eine andere Kampagnenrolle haben kann.
+
+Die Klassifikation selbst ist stabil. Nicht jede Klasse ist automatisch ein Capture-/Mission-Ziel: Medical Pads, Helipads, Tactical Pads und Unknown Objects bleiben konservativ behandelt.
+
+Bestätigte Klassenverteilung:
+
+    19 Strategic
+    13 Secondary
+    1 Heliport
+    95 Helipads
+    40 Medical
+    13 Tactical
+    44 Unknown
+    0 FARP
 
 ---
 
@@ -505,6 +528,9 @@ Aktuelle CaptureSystem-Werte:
     nonCaptureZones: 14
     pressureRecords: 32
     progressRecords: 32
+
+Initial-/Baseline-Werte (nicht der heutige Gesamtzustand):
+
     appliedMissionEffects: 0
     ready: 0
     contested: 0
@@ -514,6 +540,41 @@ Bedeutung:
     CaptureSystem arbeitet nur auf geeigneten Kampagnenzielen.
     193 Airbase-like Objects werden bewusst nicht als capture-fähige Basen behandelt.
     32 Pressure-Records und 32 Progress-Records werden erzeugt.
+
+Bestätigter Wirkungspfad:
+
+    Mission Completion -> Capture Pressure -> Capture Progress -> Capture Ready
+    Mission Failure -> applied=0 -> kein Capture Pressure
+
+Capture Ready Apply bewirkt:
+
+- Zone Ownership Update
+- linked Airbase Ownership Sync
+- Progress-Reset
+- Status STABLE
+- captureReady=false
+
+Konkreter bestätigter Regressionstest (`ZONE_AIRBASE_ABU_AL_DUHUR`):
+
+    vorher: RED -> BLUE bei 100%
+    danach: zoneOwner=BLUE, previousOwner=RED, baseOwner=BLUE, progress=0, status=STABLE, captureReady=false
+
+Wichtig für das Airbase-System:
+
+    CaptureSystem kann die Ownership der linked Airbase aktualisieren.
+    AirbaseScanner selbst führt diesen Ownership-Wechsel NICHT aus.
+
+Capture Getter Dirty-Neutralität: bestanden.
+
+Capture Ownership No-Op: bestanden.
+
+Bedeutung für den Airbase-State:
+
+- reine Reads dürfen keinen Dirty-State erzeugen
+- same-owner Ownership-Aufrufe dürfen keine Timestamps/History verändern
+- ein echter Ownership-Wechsel darf persistierten State ändern und Dirty auslösen
+
+Für AirbaseScanner selbst ist daraus keine neue Dirty-Problematik bekannt.
 
 ---
 
@@ -536,6 +597,8 @@ Bedeutung:
     Alle 46 relevanten Kampagnenzonen können eine Logistikrolle erhalten.
     Logistik ist breiter als Capture.
     CTLD ist geladen, aber noch nicht produktiv verbunden.
+
+LogisticsDelivery ist funktional bestätigt. Die allgemeine Logistics-Dirty-Coverage ist noch NICHT systematisch auditiert; das ist der nächste Priority-3-Schritt. Ein konkreter Logistics-Bug wird damit nicht behauptet.
 
 ---
 
@@ -561,6 +624,8 @@ Bedeutung:
     Airbase- und Logistikdaten ermöglichen erste state-only FOB-Planung.
     Es werden noch keine echten CTLD-FOBs erzeugt.
 
+Die allgemeine FobSystem-Dirty-Coverage bleibt offen.
+
 ---
 
 ## 23. Verhältnis Airbase Scanner zu MissionGenerator
@@ -569,12 +634,24 @@ MissionGenerator nutzt Airbase-, Zone-, Capture-, Logistics- und FOB-Daten.
 
 Aktuelle MissionGenerator-Werte:
 
-    mission candidates: 69
+    mission candidates: 78
     fobSupportCandidates: 2
     generated missions: 10
     reservedCreated: 1
     duplicatesSkipped: 1
-    typeLimitSkipped: 30
+    typeLimitSkipped: 68
+
+MissionGenerator `v0.2.3`, 10 Mission Records.
+
+Bestätigt:
+
+- Mission Details
+- Mission Activation
+- Mission Completion
+- Mission Failure
+- Mission Effects
+- Mission Completion -> Capture Pressure
+- Mission Failure -> kein Capture Pressure
 
 Bedeutung:
 
@@ -582,6 +659,9 @@ Bedeutung:
     Er nutzt klassifizierte Kampagnenziele.
     FOB-Support wird berücksichtigt.
     Missionen sind über F10 sichtbar und aktivierbar.
+    MissionGenerator bleibt state-only; es gibt keine echten DCS-/Framework-Spawns.
+
+AirbaseScanner liefert die klassifizierte Zielgrundlage, aber MissionGenerator entscheidet selbst über die Missionsauswahl. MissionGenerator entscheidet NICHT direkt über Airbase Ownership.
 
 ---
 
@@ -602,6 +682,9 @@ Bedeutung:
     CAP-Bedarf wird aus dem Kampagnenraum abgeleitet.
     MOOSE-CAP-Spawns sind noch nicht aktiv.
     CAP ist aktuell State-only.
+    AICapManager `v0.2.0`, state-first, MOOSE_PENDING, keine echten CAP-Flüge.
+
+`reactToActiveMissions()` existiert, ist aber nicht produktiv verdrahtet. Das ergibt einen latenten Missing-Dirty-Randfall bei späterer Verdrahtung; aktuell ist das kein Runtime-Bug. Die allgemeine AICapManager-Dirty-Coverage bleibt offen.
 
 ---
 
@@ -628,8 +711,9 @@ Offen:
 - Unknown Objects später optional analysieren
 - Debug-Report für Airbase-Klassen ergänzen
 - Airbase-Liste optional als Log-/Debug-Tabelle ausgeben
-- Persistenz der Klassifikation vorbereiten
 - manuelle Override-Liste für Sonderfälle vorbereiten
+
+Airbase-/World-State wird bereits durch PersistenceSystem gespeichert. Offen ist der produktive Restore, nicht das reine Speichern.
 
 ---
 
@@ -656,7 +740,7 @@ Vorteile:
 
 ## 27. Persistenz des Airbase-Systems
 
-Später soll der Airbase-Zustand persistent werden.
+Airbase-State wird bereits als Bestandteil des Persistence-Snapshots gespeichert.
 
 Zu speichern:
 
@@ -679,8 +763,38 @@ Aktueller Stand:
 
     Airbase-Daten sind im State vorhanden.
     dirty-aware Background-Persistence ist aktiv.
-    PersistenceSystem v0.2.6 läuft dirty-aware; Embedded-Scheduler bestanden, Restore deaktiviert.
-    Datei-Write und Read-back-Verifikation sind bestanden.
+
+PersistenceSystem `v0.2.6`:
+
+- dirty-aware Background Autosave
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`-Pfad
+- Retry
+- Read-back
+- Compile
+- Evaluate
+- Validation
+- `productiveRestore=false`
+
+Ownership-Regression:
+
+    Capture Ready Apply
+    dirtyReason=f10_capture_ready_zone_1_applied
+    SAVED
+    dirtyCleared=true
+
+Das zeigt: Eine Airbase-Ownership-Änderung kann als Teil des Kampagnen-State gespeichert werden.
+
+Aber: kein produktiver Startup-Restore.
+
+Vor einem produktiven Restore sind zu klären:
+
+- Priority 3 abschließen
+- Restore-/Init-Reihenfolge
+- Save-Kompatibilität/Versionierung
+- kontrollierter Restore-Test
+- Framework-Hooks absichern
 
 ---
 
@@ -739,73 +853,78 @@ Grund:
 
 | System | Datei | Version | Status |
 |---|---|---:|---|
-| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | state-first funktional bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | funktional bestanden; Read-Dirty-/Ownership-No-Op-Regressionen bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded Start, `SAVED`, `SKIPPED`, `FAILED`, Retry und Campaign-Persistence-Regressionen bestanden; `productiveRestore=false` |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage ist nächster Priority-3-Audit |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage offen |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | 10 Mission Records; Activation/Completion/Failure/Effects bestanden; Record-Loss widerlegt; Dirty-Coverage offen |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | state-first bestanden; `reactToActiveMissions()`-Sonderfall bewertet; Dirty-Coverage offen |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden; 33 Commands |
+
+Priority 3 ist **NICHT abgeschlossen**. Bereits geklärt: Capture Getter-/Derived-Dirty, Capture Ownership No-Op, `reactToActiveMissions()`-Sonderfall. Noch systematisch zu prüfen, jeweils einzeln:
+
+1. `src/logistics/tc_logistics_delivery.lua`
+2. `src/logistics/tc_fob_system.lua`
+3. `src/missions/tc_mission_generator.lua`
+4. `src/ai/tc_ai_cap_manager.lua`
+
+AirbaseScanner ist aktuell NICHT der nächste Audit. Keine neue AirbaseScanner-Änderung wird vorgezogen.
 
 ---
 
 ## 31. Nächster sinnvoller Schritt aus Sicht des Airbase-Systems
 
-Der nächste technische Schritt liegt nicht direkt im Airbase Scanner.
+Der nächste technische Schritt liegt weiterhin nicht im Airbase Scanner.
 
-Empfohlene nächste Datei:
+Nicht mehr aktuell: `src/ui/tc_f10_menu.lua` / Capture-/Pressure-Sichtbarkeit als nächster Schritt — das ist abgeschlossen.
 
-    src/ui/tc_f10_menu.lua
+Neuer nächster technischer Schritt:
 
-Ziel:
+    Priority 3
+    READ-ONLY Dirty-Coverage-Audit von src/logistics/tc_logistics_delivery.lua
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+Ziele:
 
-Warum:
+- persistierte Logistics-State-Writes erfassen
+- `markDirty()`-Pfade erfassen
+- Call-Sites erfassen
+- echte Mutationen von Reads/No-Ops unterscheiden
+- Dirty Reasons bewerten
+- runtime-only vs. persistierten State unterscheiden
+- keine Codeänderung ohne belegten Befund
 
-    Airbase Scanner, ZoneFactory und CaptureSystem liefern inzwischen stabile Daten.
-    CaptureSystem erzeugt 32 Pressure-Records und 32 Progress-Records.
-    Diese Daten müssen im Spiel sichtbar werden, bevor Missionseffekte und Capture-Fortschritt sinnvoll getestet werden können.
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
+Das Airbase-System selbst benötigt aktuell keine Codeänderung.
 
 ---
 
 ## 32. Aktueller Status
 
-Das Airbase-System ist für den aktuellen state-first Entwicklungsstand bestanden.
+Das Airbase-System bleibt bestanden und stabil für den state-first Entwicklungsstand.
 
-Wichtigster Fortschritt:
+Bestätigte Grundlage:
 
-    225 DCS-Airbase-like Objects werden erkannt, aber fachlich gefiltert.
-    46 relevante Kampagnenzonen werden erzeugt.
-    32 Capture-/Mission-Ziele werden vorbereitet.
-    46 Logistics-Ziele werden vorbereitet.
+    225 airbase-like Objects erkannt
+    46 relevante Kampagnenzonen
+    32 Capture-/Mission-Airbase-Ziele
+    46 Logistics-Kandidaten
+    19 Strategic
+    13 Secondary
+    1 Blue Start Base
+    18 Red Strategic Candidates
 
-Damit ist die Airbase-Grundlage stabil genug für:
+Zusätzlich heute relevant:
 
-- Capture-Sichtbarkeit
-- Missionseffekt-Tests
-- Logistik-Ausbau
-- FOB-Ausbau
-- spätere AI-Director-Logik
-- spätere IADS-Anbindung
-- spätere Persistenz
+- linked Airbase Ownership Sync praktisch bestätigt
+- Airbase-State wird durch Persistence gespeichert
+- Embedded Resource Audit bestanden
+
+Weiterhin nicht vorhanden:
+
+- automatische Airbase-Spawnlogik
+- autonome AI-Operationsnutzung
+- produktiver Startup-Restore
+- produktive IADS-/CTLD-/MOOSE-Integration aus dem Scanner
+
+Nächster Schritt: nicht AirbaseScanner, sondern LogisticsDelivery Dirty-Coverage READ ONLY.
