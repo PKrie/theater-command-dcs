@@ -139,7 +139,7 @@ Noch systematisch zu prüfen, ein System pro Arbeitsschritt:
 3. `src/missions/tc_mission_generator.lua`
 4. `src/ai/tc_ai_cap_manager.lua`
 
-Nächster technischer Schritt nach Abschluss der Dokumentationssynchronisierung: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`.
+Nächster technischer Schritt: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Priority 3 ist NICHT abgeschlossen; genau ein System pro Schritt, kein Code-Fix vor dem Audit. Danach folgen separat `src/logistics/tc_fob_system.lua`, `src/missions/tc_mission_generator.lua` und `src/ai/tc_ai_cap_manager.lua`.
 
 Audit-Ziele später: persistierte Writes erfassen, `markDirty()`-Pfade erfassen, echte Mutationen vs. Reads/No-Ops prüfen, Dirty Reasons bewerten, erst bei belegtem Befund Code ändern.
 
@@ -160,14 +160,32 @@ Nicht mehr als Voraussetzungen gültig: "MissionGenerator-State-Verlust klären"
 
 ### Projektdokumentation auf den verifizierten Stand synchronisiert
 
-Die Root-Kerndokumentation wird schrittweise auf den 2026-09-12-Stand synchronisiert. Bereits aktualisiert:
+Die Dokumentationssynchronisierung zum verifizierten Stand 2026-09-12 ist abgeschlossen. Der anschließende repo-weite Dokumentations-Konsistenzcheck wurde durchgeführt. Die technische Dokumentation ist bezüglich des aktuellen Projektstandes konsistent.
 
-- `TASKS.md` (unter anderem `8bbca19 Update task status after mission state audit`, `1023d1f Document remaining Priority 3 dirty coverage status`)
-- `README.md` (`20be4ea docs: synchronize README with verified 2026-09-12 state`)
-- `ROADMAP.md` (`bf097cc docs: synchronize roadmap with verified 2026-09-12 state`)
-- `ARCHITECTURE.md` (`952745a docs: synchronize architecture with verified 2026-09-12 state`)
+Synchronisiert wurden die zentralen Root-Dokumente und die Fachdocs, insbesondere:
 
-`CHANGELOG.md` wird mit diesem Eintrag ergänzt. Weitere Fachdocs (z. B. `MISSION_EDITOR_SETUP.md`, `docs/*.md`) folgen einzeln in späteren Schritten; die gesamte Dokumentationssynchronisierung ist damit noch nicht abgeschlossen.
+- `README.md`
+- `ROADMAP.md`
+- `TASKS.md`
+- `ARCHITECTURE.md`
+- `CHANGELOG.md`
+- `MISSION_EDITOR_SETUP.md`
+- `LUA_STYLEGUIDE.md`
+- `docs/00_project_overview.md`
+- `docs/01_campaign_design.md`
+- `docs/02_technical_architecture.md`
+- `docs/03_mission_editor_basics.md`
+- `docs/04_airbase_system.md`
+- `docs/05_logistics_system.md`
+- `docs/06_mission_generator.md`
+- `docs/07_ai_director.md`
+- `docs/08_iads_system.md`
+- `docs/09_persistence.md`
+- `docs/10_testing.md`
+
+Die letzte Konsistenzbereinigung betraf nur noch Meta-Aussagen, die fälschlich eine noch laufende Dokumentationsrunde beschrieben. Es gibt keine noch ausstehende Fachdoc-Liste aus dieser Synchronisierungsrunde. Künftige Dokumentationsänderungen erfolgen wieder aufgrund neuer technischer Änderungen oder neuer verifizierter Tests.
+
+Priority 3 bleibt technisch offen. Nächster technischer Schritt bleibt: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`.
 
 ---
 
