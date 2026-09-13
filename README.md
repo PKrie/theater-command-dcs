@@ -605,13 +605,21 @@ Wichtige Fehlerindikatoren:
 
 ## Nächster sinnvoller technischer Schritt
 
-Zum Abschluss der Session vom 2026-09-12 läuft aktuell die Dokumentations-Synchronisierung.
+Die Dokumentationssynchronisierung zum verifizierten Stand 2026-09-12 ist abgeschlossen. Der repo-weite Abschlusscheck hat den technischen Projektstand bestätigt.
 
-Nach vollständigem Dokumentationsabschluss ist der nächste technische Entwicklungsschritt ein READ-ONLY Dirty-Coverage-Audit von:
+Priority 3 ist weiterhin NICHT abgeschlossen.
+
+Der nächste technische Entwicklungsschritt ist direkt ein READ-ONLY Dirty-Coverage-Audit von:
 
 - `src/logistics/tc_logistics_delivery.lua`
 
-Danach folgt jeweils genau ein weiteres System pro Schritt (`tc_fob_system.lua`, `tc_mission_generator.lua`, `tc_ai_cap_manager.lua`) — keine parallele Prüfung mehrerer Systeme.
+Noch kein Code-Fix vor dem Audit. Genau ein System pro Schritt.
+
+Danach, jeweils separat:
+
+1. `src/logistics/tc_fob_system.lua`
+2. `src/missions/tc_mission_generator.lua`
+3. `src/ai/tc_ai_cap_manager.lua`
 
 ---
 
