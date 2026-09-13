@@ -1,8 +1,8 @@
 # Logistics System
 
-## Verbindliches Update — 2026-08-04
+## Verbindliches Update — 2026-09-12
 
-LogisticsDelivery `v0.2.0` und FobSystem `v0.2.0` bleiben state-only; CTLD ist nicht produktiv angebunden. PersistenceSystem `v0.2.6` nimmt Logistics- und FOB-State in den Snapshot auf, produktiver Restore bleibt deaktiviert. MissionGenerator-abhängige FOB-Support-Ergebnisse sind historische Erfolge; der aktuelle Mission-Record-Verlust ist reproduzierbar und ungelöst. Nächster Schritt ist ein Offline Embedded Mission Resource Audit, kein Logistics-Code-Fix. Ältere Statusangaben sind historische Snapshots.
+LogisticsDelivery `v0.2.0` und FobSystem `v0.2.0` sind state-first funktional bestanden. CTLD ist geladen und erkannt, aber weiterhin nicht produktiv angebunden. PersistenceSystem `v0.2.6` nimmt Logistics- und FOB-State als Teil des Snapshots über dirty-aware Background Autosave auf; `productiveRestore=false`. MissionGenerator `v0.2.3` erzeugt 10 Mission Records; der frühere Record-Loss-Verdacht ist widerlegt. Der Offline Embedded Resource Audit ist abgeschlossen: 13/13 relevante aktive Ressourcen `EXACT_MATCH`, keine aktive Embedded-Runtime-Drift. Priority 3 bleibt offen; nächster technischer Schritt ist der READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Nicht mehr aktuell: ein reproduzierbarer Mission-Record-Loss, der Embedded Audit als offener nächster Schritt, sowie die Annahme, ein Logistics-Code-Fix sei bereits notwendig — das ist erst Ergebnis des Audits. Ältere Statusangaben sind historische Snapshots.
 
 Diese Datei beschreibt das Logistiksystem von **Theater Command DCS**.
 
@@ -37,7 +37,7 @@ Sie soll später Einfluss haben auf:
 - Nachschub
 - Operationsradius
 - AI-Entscheidungen
-- Persistenz
+- Persistence
 - CTLD-Cargo-Flüge
 
 Aktuell ist das System bewusst state-first aufgebaut.
@@ -47,13 +47,29 @@ Das bedeutet:
     Logistikdaten werden im Theater-Command-State erzeugt.
     Es werden noch keine echten CTLD-Aktionen ausgelöst.
 
+Bereits vorhanden:
+
+- Logistics Hubs
+- FOB-State
+- MissionGenerator-Verknüpfung
+- F10 Logistics-/FOB-Status
+- Persistence Snapshot
+
+Noch nicht produktiv:
+
+- CTLD-Cargo
+- echte FOB-Bauten
+- Supply-Verbrauch
+- Logistics-Capture-Wirkung
+- AI-Logistics-Wirkung
+
 ---
 
 ## 2. Aktueller technischer Stand
 
 Stand:
 
-    2026-06-29
+    2026-09-12
 
 Aktive Dateien:
 
@@ -67,7 +83,7 @@ Getestete Versionen:
 
 Status:
 
-    bestanden
+    state-first funktional bestanden
 
 Bestätigt durch DCS-Logtests:
 
@@ -83,6 +99,13 @@ Bestätigt durch DCS-Logtests:
 - F10Menu kann Logistik- und FOB-Status anzeigen.
 - Es gab keinen Theater-Command-Lua-Fehler.
 - Es gab keinen Lua-Stacktrace.
+
+Ergänzend gültig:
+
+- LogisticsDelivery ist der nächste Priority-3-Dirty-Coverage-Audit.
+- FobSystem-Dirty-Coverage folgt danach separat.
+- Ein konkreter Logistics-Bug ist derzeit nicht vorab bewiesen.
+- Keine Codeänderung ohne Audit-Befund.
 
 ---
 
@@ -145,7 +168,13 @@ Aktuell gilt:
 - keine echten CTLD-FOBs
 - keine echten Cargo-Flüge
 - kein echter Supply-Verbrauch
-- keine produktive Persistenz
+
+Richtig statt "keine produktive Persistenz" (pauschal):
+
+- Background Persistence ist aktiv
+- Logistics-/FOB-State wird gespeichert
+- produktiver Startup-Restore ist deaktiviert
+- CTLD-Runtime-State ist noch nicht produktiv integriert
 
 Grund:
 
@@ -350,6 +379,8 @@ Aktuelle Bewertung:
     Das FOB-System ist state-first funktionsfähig.
     FOBs existieren im Theater-Command-State.
     Es werden noch keine echten CTLD-FOBs erzeugt.
+    Es werden keine echten Bau-Crates verwendet.
+    Die allgemeine FobSystem-Dirty-Coverage ist noch offen.
 
 ---
 
@@ -442,11 +473,14 @@ Aktuell bestätigt:
     fobSupportCandidates: 2
     reservedCreated: 1
 
+MissionGenerator `v0.2.3` erzeugt 10 Mission Records.
+
 Bedeutung:
 
     FOB-Support wird im Missionspool berücksichtigt.
     Mindestens eine FOB-Support-Mission wird reserviert.
     FOB-Support wird nicht durch andere Missionstypen verdrängt.
+    Keine echten CTLD-Aktionen.
 
 Mögliche spätere FOB-Support-Missionen:
 
@@ -506,12 +540,19 @@ Aktuelle Einschränkung:
 
 CTLD wird bewusst noch nicht aktiv ausgelöst.
 
-Gründe:
+F10-/Debug-Sichtbarkeit für Logistik und FOBs ist bereits vorhanden und kein offener Blocker mehr.
 
-- zuerst müssen Logistics Hubs stabil sein
-- zuerst muss FOB-State stabil sein
-- zuerst muss F10-/Debug-Sichtbarkeit vorhanden sein
-- zuerst müssen CTLD-Zonen im Mission Editor sauber definiert werden
+Vor produktiver CTLD-Integration müssen insbesondere:
+
+- Priority 3 Dirty-Coverage abgeschlossen werden
+- Logistics-State-Mutationen sauber abgesichert sein
+- CTLD-Zonen konkret geplant werden
+- Theater-Command-State und CTLD-Runtime-State synchronisiert werden
+- Persistenz-/Restore-Verhalten für CTLD geklärt werden
+- kleine isolierte CTLD-Regressionen vorbereitet werden
+
+Zusätzlich gilt weiterhin:
+
 - echte Cargo-Aktionen erzeugen DCS-Nebenwirkungen
 - DCS-Fehlerdiagnose wird mit echten Framework-Aktionen komplexer
 
@@ -599,9 +640,17 @@ Aktueller Stand:
     FobSystem erzeugt FOBs.
     Eine produktive Logistik-Capture-Kopplung ist noch nicht aktiv.
 
-Nächster logischer Zwischenschritt:
+Aktuell bestätigter Capture-Pfad (unabhängig von Logistik):
 
-    Capture-/Pressure-Daten im F10-Menü sichtbar machen.
+    Mission Completion -> Capture Pressure -> Capture Progress -> Capture Ready
+    Mission Failure -> kein Capture Pressure
+    Capture Ready Apply -> Ownership Update -> linked Airbase Sync -> Background Save
+
+Nicht mehr aktuell: "Nächster logischer Zwischenschritt: Capture-/Pressure im F10 sichtbar machen" — das ist abgeschlossen.
+
+Neuer technischer Zwischenschritt:
+
+    READ-ONLY Dirty-Coverage-Audit von LogisticsDelivery.
 
 ---
 
@@ -618,10 +667,23 @@ Aktuelle Nutzung:
 
 Aktuelle Werte:
 
-    mission candidates: 69
+    mission candidates: 78
     fobSupportCandidates: 2
     generated missions: 10
     reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 68
+
+MissionGenerator `v0.2.3`.
+
+Bestätigt:
+
+- Mission Details
+- Mission Activation
+- Mission Completion
+- Mission Failure
+- Mission Effects
+- FOB Support Candidate Integration
 
 Spätere Missionsarten aus Logistik:
 
@@ -658,15 +720,16 @@ Mögliche AI-Entscheidungen:
 
 Aktueller Stand:
 
-    AICapManager erzeugt CAP-State.
+    AICapManager v0.2.0, state-first, erzeugt CAP-State, 12 CAP Requests, keine echten CAP-Flüge.
     AI Director ist noch nicht implementiert.
     Logistik beeinflusst AI noch nicht produktiv.
+    Keine autonome Hub-Verteidigung oder Interdiction ist aktiv.
 
 ---
 
 ## 23. Logistik und Persistenz
 
-Logistik muss später persistent werden.
+Logistics- und FOB-State sind bereits Teil des Persistence-Snapshots.
 
 Zu speichern:
 
@@ -705,16 +768,42 @@ FOB-Persistenz:
 - Active Facilities
 - Damage State
 
-Aktueller Stand:
+PersistenceSystem `v0.2.6`:
 
-    PersistenceSystem v0.2.6 läuft dirty-aware; Embedded-Scheduler bestanden, Restore deaktiviert.
-    Datei-Write und Read-back-Verifikation sind bestanden; produktiver Restore bleibt deaktiviert.
+- dirty-aware Background Autosave
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`-Pfad
+- Retry
+- Read-back
+- Compile
+- Evaluate
+- Validation
+- `productiveRestore=false`
+
+Klarstellung: Das Speichern ist aktiv.
+
+Nicht aktiv:
+
+- produktiver Startup-Restore
+- CTLD-Runtime-State Restore
+- produktive Kampagnenfortsetzung aus Save
+
+Vor Restore zu klären:
+
+- Priority 3 abschließen
+- Restore-/Init-Reihenfolge definieren
+- Save-Kompatibilität/Versionierung
+- kontrollierter Restore-Test
+- Framework-Hooks absichern
+
+Wichtig: Die allgemeine Dirty-Coverage von LogisticsDelivery und FobSystem ist noch offen. Genau deshalb ist produktiver Restore noch nicht freigegeben.
 
 ---
 
 ## 24. F10-Status für Logistik
 
-F10Menu `v0.2.0` kann aktuell Logistikstatus und FOB-Status anzeigen.
+F10Menu `v0.2.3` kann aktuell Logistikstatus und FOB-Status anzeigen.
 
 Aktuelle F10-Funktionen im Bereich Logistik:
 
@@ -728,6 +817,7 @@ Bestätigt:
     F10Menu v0.2.3 erzeugt 33 Commands.
     Missionen können angezeigt und aktiviert werden.
     Logistik- und FOB-Status sind Bestandteil der UI-Struktur.
+    Capture-/Pressure-Sichtbarkeit ist zusätzlich bereits vorhanden.
 
 Spätere F10-Erweiterungen für Logistik:
 
@@ -741,13 +831,9 @@ Spätere F10-Erweiterungen für Logistik:
 - Request FOB Support
 - Request Cargo Mission
 
-Aktuell nächster F10-Schritt:
+Nicht mehr aktuell: "nächster F10-Schritt: Capture-/Pressure-Status sichtbar machen" — das ist abgeschlossen.
 
-    nicht Logistics, sondern Capture-/Pressure-Status sichtbar machen.
-
-Grund:
-
-    CaptureSystem v0.2.1 erzeugt neue Pressure-/Progress-Daten, die vor Missionseffekt-Tests sichtbar sein müssen.
+Logistics-spezifische weitere F10-Ausgaben (siehe Liste oben) bleiben Zukunftsideen.
 
 ---
 
@@ -763,7 +849,11 @@ Aktuell nicht vorgesehen:
 - rote Logistik automatisch bewegen
 - Blue-Logistik automatisch bewegen
 - AI-Director-Entscheidungen aus Logistik ableiten
-- Logistik persistieren
+
+Nicht mehr "komplett fehlend": Logistics-/FOB-State wird bereits gespeichert. Weiterhin nicht vorhanden:
+
+- kein produktiver Startup-Restore
+- kein CTLD-Runtime-State Restore
 
 Grund:
 
@@ -783,6 +873,8 @@ Wichtige Risiken bei späterer Logistikintegration:
 - Multiplayer-Verhalten muss später separat geprüft werden
 - Persistenz muss sauber mit CTLD-Zustand umgehen
 - DCS-Sandbox kann Dateizugriffe einschränken
+
+Aktuelles Risiko: Die Dirty-Coverage muss vor produktiver Logistics-/Restore-Integration vollständig geprüft werden. Kernrisiko ist eine fachliche State-Mutation ohne Dirty oder ein unnötiger Dirty bei Reads/No-Ops. Vor dem Audit wird kein konkreter Bug behauptet.
 
 Gegenmaßnahmen:
 
@@ -812,15 +904,21 @@ Aktuell bestanden:
 - mindestens eine FOB-Support-Mission wird reserviert.
 - keine CTLD-Fehler durch Theater Command.
 - keine Lua-Stacktraces.
+- Logistics-/FOB-State wird vom Persistence Snapshot erfasst.
+- F10 Logistics-/FOB-Status vorhanden.
 
 Noch offen:
 
+- LogisticsDelivery Dirty-Coverage Audit
+- FobSystem Dirty-Coverage Audit
 - CTLD-Zonen definieren
 - CTLD-Cargo produktiv anbinden
-- FOB-Baufortschritt durch Cargo verändern
+- FOB-Baufortschritt durch Cargo verändern (Cargo -> FOB Build Progress)
 - Logistik mit Capture koppeln
 - Logistik mit AI koppeln
-- Logistik persistieren
+- produktiver Restore
+
+Nicht mehr aktuell: "Logistik persistieren" als pauschal offener Punkt.
 
 ---
 
@@ -828,80 +926,84 @@ Noch offen:
 
 | System | Datei | Version | Status |
 |---|---|---:|---|
-| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | state-first funktional bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | funktional bestanden; Read-Dirty-/Ownership-No-Op-Regressionen bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded Start, `SAVED`, `SKIPPED`, `FAILED`, Retry und Campaign-Persistence-Regressionen bestanden; `productiveRestore=false` |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage ist nächster Priority-3-Audit |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage offen |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | 10 Mission Records; Activation/Completion/Failure/Effects bestanden; Record-Loss widerlegt; Dirty-Coverage offen |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | state-first bestanden; `reactToActiveMissions()`-Sonderfall bewertet; Dirty-Coverage offen |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden; 33 Commands |
+
+Priority 3 ist **NICHT abgeschlossen**. Bereits geklärt: Capture Getter-/Derived-Dirty, Capture Ownership No-Op, `reactToActiveMissions()`-Sonderfall. Noch systematisch zu prüfen, jeweils einzeln:
+
+1. `src/logistics/tc_logistics_delivery.lua`
+2. `src/logistics/tc_fob_system.lua`
+3. `src/missions/tc_mission_generator.lua`
+4. `src/ai/tc_ai_cap_manager.lua`
+
+Nächster Schritt ist exakt `src/logistics/tc_logistics_delivery.lua`, READ ONLY. Noch kein Code-Fix vor Audit.
+
+Offline Embedded Resource Audit: abgeschlossen. DEV und MCP_TEST waren beim Audit byte-identisch. 13/13 relevante aktive Theater-Command-Ressourcen waren `EXACT_MATCH`. Keine aktive Embedded-Runtime-Drift. Die aktive LogisticsDelivery-/FobSystem-Runtime entsprach damit zum Auditzeitpunkt dem Repository. Das bedeutet nicht, dass spätere Source-Änderungen automatisch in der `.miz` landen.
 
 ---
 
 ## 29. Nächster sinnvoller Schritt aus Sicht des Logistiksystems
 
-Der nächste technische Schritt liegt nicht direkt in `src/logistics/`.
+Nicht mehr aktuell: `src/ui/tc_f10_menu.lua` / Capture-/Pressure-Sichtbarkeit als nächster Schritt — das ist abgeschlossen.
 
-Empfohlene nächste Datei:
+Neuer nächster technischer Schritt:
 
-    src/ui/tc_f10_menu.lua
+    Priority 3
+    READ-ONLY Dirty-Coverage-Audit von src/logistics/tc_logistics_delivery.lua
 
-Ziel:
+Audit-Ziele:
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+- alle persistierten Logistics-State-Writes erfassen
+- alle `markDirty()`-Pfade erfassen
+- Call-Sites erfassen
+- echte Mutationen identifizieren
+- Reads/No-Ops identifizieren
+- Timestamp-/Table-Rewrites prüfen
+- Dirty Reasons bewerten
+- runtime-only vs. persistierten State unterscheiden
+- Missing Dirty klassifizieren
+- Excessive Dirty klassifizieren
 
-Warum:
+Keine Codeänderung ohne belegten Befund.
 
-    Logistics und FOBs sind state-first stabil.
-    MissionGenerator nutzt FOB-Support bereits.
-    CaptureSystem erzeugt jetzt Pressure- und Progress-Daten.
-    Vor echter Logistik-Capture-Kopplung müssen diese Daten sichtbar werden.
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
+Nur LogisticsDelivery. FobSystem wird NICHT parallel auditiert.
 
 ---
 
 ## 30. Aktueller Status
 
-Das Logistiksystem ist für den aktuellen state-first Entwicklungsstand bestanden.
+Das Logistiksystem bleibt bestanden und stabil für den state-first Entwicklungsstand.
 
 Aktuelle Fähigkeit:
 
-- 46 Logistics Hubs werden erzeugt.
-- 6 FOB-Kandidaten werden erkannt.
-- 2 Blue-FOBs werden geplant.
-- FOBs stehen auf UNDER_CONSTRUCTION.
-- FOB-Support wird im MissionGenerator berücksichtigt.
-- F10Menu kann Logistics- und FOB-Status anzeigen.
-- CTLD ist geladen und vorbereitet.
+- 46 Logistics Hubs (7 Blue, 24 Red, 15 Neutral, 31 Active, 15 Limited, 0 Locked)
+- 6 FOB-Kandidaten
+- 2 Blue-FOBs (FOB Ercan, FOB Gecitkale)
+- FOBs stehen auf UNDER_CONSTRUCTION
+- 2 FOB-Support-Kandidaten
+- reservierte FOB-Support-Mission
+- F10 Logistics Status
+- F10 FOB Status
+- Logistics-/FOB-State im Persistence Snapshot
+- CTLD geladen und vorbereitet
 
-Noch nicht vorhanden:
+Weiterhin nicht produktiv:
 
-- produktive CTLD-Anbindung
 - echte CTLD-Crates
 - echte CTLD-FOBs
 - echter Cargo-Fluss
-- Logistikverbrauch
-- Logistik-Persistenz
+- Supply-Verbrauch
+- Logistics -> Capture
+- Logistics -> AI
+- produktiver Startup-Restore
 
-Nächster sinnvoller Schritt:
+Nächster Schritt:
 
-    Capture-/Pressure-Sichtbarkeit im F10-Menü.
+    LogisticsDelivery Dirty-Coverage READ ONLY.
