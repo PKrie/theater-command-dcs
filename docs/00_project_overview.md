@@ -401,22 +401,11 @@ docs/10_testing.md
 
 Wichtiger aktueller Hinweis:
 
-- Diese Datei wurde auf den Stand **2026-09-12** aktualisiert.
-- Bereits auf 2026-09-12 synchronisiert sind: `README.md`, `ROADMAP.md`, `TASKS.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `MISSION_EDITOR_SETUP.md`, `docs/09_persistence.md`, `docs/10_testing.md`, `docs/06_mission_generator.md`. `docs/00_project_overview.md` wird mit diesem Schritt synchronisiert.
-- Detaildokumente in `docs/` müssen nur dort aktualisiert werden, wo sie veraltete Systemversionen, falsche Prioritäten oder falsche nächste Schritte enthalten.
-
-Noch folgende Fachdocs folgen später einzeln:
-
-```text
-docs/02_technical_architecture.md
-docs/07_ai_director.md
-docs/01_campaign_design.md
-docs/03_mission_editor_basics.md
-docs/04_airbase_system.md
-docs/05_logistics_system.md
-docs/08_iads_system.md
-LUA_STYLEGUIDE.md (punktuell)
-```
+- Die Projektdokumentation wurde auf den verifizierten Stand **2026-09-12** synchronisiert.
+- Synchronisiert sind insbesondere: `README.md`, `ROADMAP.md`, `TASKS.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `MISSION_EDITOR_SETUP.md`, `LUA_STYLEGUIDE.md`, `docs/00_project_overview.md`, `docs/01_campaign_design.md`, `docs/02_technical_architecture.md`, `docs/03_mission_editor_basics.md`, `docs/04_airbase_system.md`, `docs/05_logistics_system.md`, `docs/06_mission_generator.md`, `docs/07_ai_director.md`, `docs/08_iads_system.md`, `docs/09_persistence.md`, `docs/10_testing.md`.
+- Die geplante Dokumentationssynchronisierung ist abgeschlossen. Es gibt keine noch ausstehende Fachdoc-Liste aus dieser Synchronisierungsrunde.
+- Künftige Dokumentationsänderungen erfolgen wieder nur aufgrund neuer technischer Änderungen oder neuer verifizierter Tests.
+- Priority 3 bleibt technisch offen. Der nächste technische Schritt bleibt: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`.
 
 ---
 
