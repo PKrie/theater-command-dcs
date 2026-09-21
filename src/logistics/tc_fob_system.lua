@@ -9,7 +9,7 @@
 --   zones. The FOB system must use those hubs and zones as its state basis.
 --
 -- Version:
---   0.2.0
+--   0.2.1
 --
 -- Responsibilities:
 --   - build FOB candidates from friendly or contested logistics hubs
@@ -34,7 +34,7 @@ local FobSystem = {}
 FobSystem.name = "tc_fob_system"
 FobSystem.displayName = "FOB System"
 FobSystem.path = "src/logistics/tc_fob_system.lua"
-FobSystem.version = "0.2.0"
+FobSystem.version = "0.2.1"
 
 FobSystem.loaded = true
 FobSystem.started = false
@@ -425,6 +425,26 @@ local function ensureLogisticsState()
     return state
 end
 
+local function getLogisticsStateReadOnly()
+    local state = getState()
+
+    if state == nil then
+        return nil
+    end
+
+    return state.Logistics
+end
+
+local function getFobRecordsReadOnly()
+    local logistics = getLogisticsStateReadOnly()
+
+    if type(logistics) ~= "table" or type(logistics.fobs) ~= "table" then
+        return nil
+    end
+
+    return logistics.fobs
+end
+
 local function markDirty(reason)
     local state = getState()
 
@@ -489,10 +509,10 @@ local function getBaseRegistry()
 end
 
 local function getHubRegistry()
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state ~= nil and state.Logistics ~= nil and state.Logistics.hubs ~= nil then
-        return state.Logistics.hubs
+    if type(logistics) == "table" and logistics.hubs ~= nil then
+        return logistics.hubs
     end
 
     return {}
@@ -843,16 +863,23 @@ local function addOwnerCount(statistics, owner)
     end
 end
 
-local function updateStatistics()
-    local state = ensureLogisticsState()
+local function computeStatistics(logistics)
+    local fobs = {}
+    local candidates = {}
 
-    if state == nil then
-        return false
+    if type(logistics) == "table" then
+        if type(logistics.fobs) == "table" then
+            fobs = logistics.fobs
+        end
+
+        if type(logistics.fobCandidates) == "table" then
+            candidates = logistics.fobCandidates
+        end
     end
 
     local statistics = {
         total = 0,
-        candidates = countTableKeys(state.Logistics.fobCandidates),
+        candidates = countTableKeys(candidates),
         planned = 0,
         underConstruction = 0,
         active = 0,
@@ -866,7 +893,7 @@ local function updateStatistics()
         unknown = 0
     }
 
-    for _, fobRecord in pairs(state.Logistics.fobs) do
+    for _, fobRecord in pairs(fobs) do
         statistics.total = statistics.total + 1
         addOwnerCount(statistics, fobRecord.owner)
 
@@ -884,6 +911,18 @@ local function updateStatistics()
             statistics.destroyed = statistics.destroyed + 1
         end
     end
+
+    return statistics
+end
+
+local function updateStatistics()
+    local state = ensureLogisticsState()
+
+    if state == nil then
+        return false
+    end
+
+    local statistics = computeStatistics(state.Logistics)
 
     state.Logistics.fobStatistics = statistics
     state.Logistics.lastFobUpdateTime = getCurrentTime()
@@ -1126,13 +1165,13 @@ local function fobExistsForZone(zoneKey)
         return false
     end
 
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil then
+    if fobs == nil then
         return false
     end
 
-    for _, fobRecord in pairs(state.Logistics.fobs) do
+    for _, fobRecord in pairs(fobs) do
         if fobRecord.linkedZoneKey == zoneKey then
             if fobRecord.status ~= FobSystem.status.DESTROYED then
                 return true
@@ -1493,35 +1532,35 @@ function FobSystem.autoPlanFobs(options)
 end
 
 function FobSystem.get(fobKeyOrName)
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil or fobKeyOrName == nil then
+    if fobs == nil or fobKeyOrName == nil then
         return nil
     end
 
-    local fobRecord = findRecordByKeyOrName(state.Logistics.fobs, fobKeyOrName)
+    local fobRecord = findRecordByKeyOrName(fobs, fobKeyOrName)
 
     return fobRecord
 end
 
 function FobSystem.getAll()
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil then
+    if fobs == nil then
         return {}
     end
 
-    return state.Logistics.fobs
+    return fobs
 end
 
 function FobSystem.getCandidates()
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil then
+    if type(logistics) ~= "table" or type(logistics.fobCandidates) ~= "table" then
         return {}
     end
 
-    return state.Logistics.fobCandidates
+    return logistics.fobCandidates
 end
 
 function FobSystem.setStatus(fobKeyOrName, status, reason)
@@ -1807,13 +1846,13 @@ end
 
 function FobSystem.getByStatus(status)
     local result = {}
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil then
+    if fobs == nil then
         return result
     end
 
-    for key, fobRecord in pairs(state.Logistics.fobs) do
+    for key, fobRecord in pairs(fobs) do
         if fobRecord.status == status then
             result[key] = fobRecord
         end
@@ -1824,13 +1863,13 @@ end
 
 function FobSystem.getByOwner(owner)
     local result = {}
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil then
+    if fobs == nil then
         return result
     end
 
-    for key, fobRecord in pairs(state.Logistics.fobs) do
+    for key, fobRecord in pairs(fobs) do
         if fobRecord.owner == owner then
             result[key] = fobRecord
         end
@@ -1841,13 +1880,13 @@ end
 
 function FobSystem.getByZone(zoneKey)
     local result = {}
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil then
+    if fobs == nil then
         return result
     end
 
-    for key, fobRecord in pairs(state.Logistics.fobs) do
+    for key, fobRecord in pairs(fobs) do
         if fobRecord.linkedZoneKey == zoneKey then
             result[key] = fobRecord
         end
@@ -1858,13 +1897,13 @@ end
 
 function FobSystem.getByBase(baseKey)
     local result = {}
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil then
+    if fobs == nil then
         return result
     end
 
-    for key, fobRecord in pairs(state.Logistics.fobs) do
+    for key, fobRecord in pairs(fobs) do
         if fobRecord.linkedBaseKey == baseKey then
             result[key] = fobRecord
         end
@@ -1875,13 +1914,13 @@ end
 
 function FobSystem.getByHub(hubKey)
     local result = {}
-    local state = ensureLogisticsState()
+    local fobs = getFobRecordsReadOnly()
 
-    if state == nil then
+    if fobs == nil then
         return result
     end
 
-    for key, fobRecord in pairs(state.Logistics.fobs) do
+    for key, fobRecord in pairs(fobs) do
         if fobRecord.linkedHubKey == hubKey then
             result[key] = fobRecord
         end
@@ -1950,15 +1989,13 @@ function FobSystem.delete(fobKeyOrName)
 end
 
 function FobSystem.getStatistics()
-    updateStatistics()
-
-    local state = ensureLogisticsState()
+    local state = getState()
 
     if state == nil then
         return {}
     end
 
-    return state.Logistics.fobStatistics
+    return computeStatistics(state.Logistics)
 end
 
 function FobSystem.start()
@@ -2045,14 +2082,12 @@ function FobSystem.stop()
 end
 
 function FobSystem.summary()
-    local state = getState()
-    local logisticsState = nil
+    local logisticsState = getLogisticsStateReadOnly()
+    local statistics = nil
 
-    if state ~= nil then
-        logisticsState = state.Logistics
+    if logisticsState ~= nil then
+        statistics = computeStatistics(logisticsState)
     end
-
-    updateStatistics()
 
     return {
         name = FobSystem.name,
@@ -2069,7 +2104,7 @@ function FobSystem.summary()
         lastSkippedCount = FobSystem.lastSkippedCount,
         fobCount = logisticsState and countTableKeys(logisticsState.fobs) or 0,
         candidateCount = logisticsState and countTableKeys(logisticsState.fobCandidates) or 0,
-        statistics = logisticsState and logisticsState.fobStatistics or nil,
+        statistics = statistics,
         state = logisticsState
     }
 end
