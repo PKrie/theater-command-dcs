@@ -10,7 +10,7 @@
 --   these campaign zones instead of raw DCS airbase objects.
 --
 -- Version:
---   0.2.0
+--   0.2.1
 --
 -- Responsibilities:
 --   - build logistics hubs from classified campaign zones
@@ -36,7 +36,7 @@ local DeliverySystem = {}
 DeliverySystem.name = "tc_logistics_delivery"
 DeliverySystem.displayName = "Logistics Delivery"
 DeliverySystem.path = "src/logistics/tc_logistics_delivery.lua"
-DeliverySystem.version = "0.2.0"
+DeliverySystem.version = "0.2.1"
 
 DeliverySystem.loaded = true
 DeliverySystem.started = false
@@ -500,6 +500,16 @@ local function ensureLogisticsState()
     }
 
     return state
+end
+
+local function getLogisticsStateReadOnly()
+    local state = getState()
+
+    if state == nil then
+        return nil
+    end
+
+    return state.Logistics
 end
 
 local function markDirty(reason)
@@ -1006,24 +1016,20 @@ local function buildDeliveryKey(deliveryId)
     return "DELIVERY_" .. tostring(deliveryId)
 end
 
-local function findHubByKeyOrName(keyOrName)
-    local state = ensureLogisticsState()
-
-    if state == nil or keyOrName == nil then
+local function findHubByKeyOrName(logistics, keyOrName)
+    if type(logistics) ~= "table" or keyOrName == nil then
         return nil, nil
     end
 
-    return findRecordByKeyOrName(state.Logistics.hubs, keyOrName)
+    return findRecordByKeyOrName(logistics.hubs, keyOrName)
 end
 
-local function findHubByZoneKey(zoneKey)
-    local state = ensureLogisticsState()
-
-    if state == nil or zoneKey == nil then
+local function findHubByZoneKey(logistics, zoneKey)
+    if type(logistics) ~= "table" or zoneKey == nil then
         return nil, nil
     end
 
-    for key, hubRecord in pairs(state.Logistics.hubs) do
+    for key, hubRecord in pairs(logistics.hubs or {}) do
         if hubRecord.zoneKey == zoneKey then
             return hubRecord, key
         end
@@ -1032,16 +1038,14 @@ local function findHubByZoneKey(zoneKey)
     return nil, nil
 end
 
-local function findBestSourceHub(owner)
-    local state = ensureLogisticsState()
-
-    if state == nil then
+local function findBestSourceHub(logistics, owner)
+    if type(logistics) ~= "table" then
         return nil
     end
 
     local bestHub = nil
 
-    for _, hubRecord in pairs(state.Logistics.hubs) do
+    for _, hubRecord in pairs(logistics.hubs or {}) do
         if hubRecord.owner == owner and hubRecord.status == DeliverySystem.hubStatus.ACTIVE then
             local canSource = false
 
@@ -1076,13 +1080,7 @@ local function getDeliveryContainer(status)
     return state.Logistics.deliveries
 end
 
-local function updateStatistics()
-    local state = ensureLogisticsState()
-
-    if state == nil then
-        return false
-    end
-
+local function computeStatistics(logistics)
     local statistics = {
         hubs = 0,
         blueHubs = 0,
@@ -1103,7 +1101,10 @@ local function updateStatistics()
         cancelled = 0
     }
 
-    for _, hubRecord in pairs(state.Logistics.hubs) do
+    local hubs = (type(logistics) == "table" and logistics.hubs) or {}
+    local deliveries = (type(logistics) == "table" and logistics.deliveries) or {}
+
+    for _, hubRecord in pairs(hubs) do
         statistics.hubs = statistics.hubs + 1
 
         if hubRecord.owner == getOwnerBlue() then
@@ -1129,7 +1130,7 @@ local function updateStatistics()
         end
     end
 
-    for _, deliveryRecord in pairs(state.Logistics.deliveries) do
+    for _, deliveryRecord in pairs(deliveries) do
         statistics.deliveries = statistics.deliveries + 1
 
         if deliveryRecord.status == DeliverySystem.status.PLANNED then
@@ -1146,6 +1147,18 @@ local function updateStatistics()
             statistics.cancelled = statistics.cancelled + 1
         end
     end
+
+    return statistics
+end
+
+local function updateStatistics()
+    local state = ensureLogisticsState()
+
+    if state == nil then
+        return false
+    end
+
+    local statistics = computeStatistics(state.Logistics)
 
     state.Logistics.statistics = statistics
     state.Logistics.lastUpdateTime = getCurrentTime()
@@ -1313,17 +1326,18 @@ function DeliverySystem.refreshHubs()
 end
 
 function DeliverySystem.getHubs()
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil then
+    if logistics == nil then
         return {}
     end
 
-    return state.Logistics.hubs
+    return logistics.hubs or {}
 end
 
 function DeliverySystem.getHub(keyOrName)
-    local hubRecord = findHubByKeyOrName(keyOrName)
+    local logistics = getLogisticsStateReadOnly()
+    local hubRecord = findHubByKeyOrName(logistics, keyOrName)
 
     return hubRecord
 end
@@ -1335,20 +1349,21 @@ function DeliverySystem.getHubByZone(zoneKeyOrName)
         return nil
     end
 
-    local hubRecord = findHubByZoneKey(zoneRecord.key)
+    local logistics = getLogisticsStateReadOnly()
+    local hubRecord = findHubByZoneKey(logistics, zoneRecord.key)
 
     return hubRecord
 end
 
 function DeliverySystem.getHubsByOwner(owner)
     local result = {}
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil then
+    if logistics == nil then
         return result
     end
 
-    for key, hubRecord in pairs(state.Logistics.hubs) do
+    for key, hubRecord in pairs(logistics.hubs or {}) do
         if hubRecord.owner == owner then
             result[key] = hubRecord
         end
@@ -1371,13 +1386,13 @@ end
 
 function DeliverySystem.getAvailableSourceHubs(owner)
     local result = {}
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil then
+    if logistics == nil then
         return result
     end
 
-    for key, hubRecord in pairs(state.Logistics.hubs) do
+    for key, hubRecord in pairs(logistics.hubs or {}) do
         if hubRecord.owner == owner and hubRecord.status == DeliverySystem.hubStatus.ACTIVE then
             if owner == getOwnerBlue() and hubRecord.canSourceBlue == true then
                 result[key] = hubRecord
@@ -1391,7 +1406,9 @@ function DeliverySystem.getAvailableSourceHubs(owner)
 end
 
 function DeliverySystem.getBestSourceHub(owner)
-    return findBestSourceHub(owner or getOwnerBlue())
+    local logistics = getLogisticsStateReadOnly()
+
+    return findBestSourceHub(logistics, owner or getOwnerBlue())
 end
 
 function DeliverySystem.createDelivery(options)
@@ -1415,15 +1432,15 @@ function DeliverySystem.createDelivery(options)
     local targetFob = nil
 
     if deliveryOptions.sourceHub ~= nil then
-        sourceHub = findHubByKeyOrName(deliveryOptions.sourceHub)
+        sourceHub = findHubByKeyOrName(state.Logistics, deliveryOptions.sourceHub)
     end
 
     if sourceHub == nil then
-        sourceHub = findBestSourceHub(owner)
+        sourceHub = findBestSourceHub(state.Logistics, owner)
     end
 
     if deliveryOptions.targetHub ~= nil then
-        targetHub = findHubByKeyOrName(deliveryOptions.targetHub)
+        targetHub = findHubByKeyOrName(state.Logistics, deliveryOptions.targetHub)
     end
 
     if deliveryOptions.targetZone ~= nil then
@@ -1435,7 +1452,7 @@ function DeliverySystem.createDelivery(options)
     end
 
     if targetHub == nil and targetZone ~= nil then
-        targetHub = findHubByZoneKey(targetZone.key)
+        targetHub = findHubByZoneKey(state.Logistics, targetZone.key)
     end
 
     if deliveryOptions.targetFob ~= nil then
@@ -1538,36 +1555,36 @@ function DeliverySystem.createFobPackageDelivery(options)
 end
 
 function DeliverySystem.getDelivery(keyOrName)
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil or keyOrName == nil then
+    if logistics == nil or keyOrName == nil then
         return nil
     end
 
-    local deliveryRecord = findRecordByKeyOrName(state.Logistics.deliveries, keyOrName)
+    local deliveryRecord = findRecordByKeyOrName(logistics.deliveries, keyOrName)
 
     return deliveryRecord
 end
 
 function DeliverySystem.getDeliveries()
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil then
+    if logistics == nil then
         return {}
     end
 
-    return state.Logistics.deliveries
+    return logistics.deliveries or {}
 end
 
 function DeliverySystem.getDeliveriesByStatus(status)
     local result = {}
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil then
+    if logistics == nil then
         return result
     end
 
-    for key, deliveryRecord in pairs(state.Logistics.deliveries) do
+    for key, deliveryRecord in pairs(logistics.deliveries or {}) do
         if deliveryRecord.status == status then
             result[key] = deliveryRecord
         end
@@ -1639,7 +1656,7 @@ function DeliverySystem.completeDelivery(keyOrName, reason)
     local applied = false
 
     if deliveryRecord.targetHubKey ~= nil then
-        local hubRecord, hubKey = findHubByKeyOrName(deliveryRecord.targetHubKey)
+        local hubRecord, hubKey = findHubByKeyOrName(state.Logistics, deliveryRecord.targetHubKey)
 
         if hubRecord ~= nil then
             applyPayloadToHub(hubRecord, payload)
@@ -1699,35 +1716,33 @@ function DeliverySystem.cancelDelivery(keyOrName, reason)
 end
 
 function DeliverySystem.getStatistics()
-    updateStatistics()
+    local logistics = getLogisticsStateReadOnly()
 
-    local state = ensureLogisticsState()
-
-    if state == nil then
+    if logistics == nil then
         return {}
     end
 
-    return state.Logistics.statistics
+    return computeStatistics(logistics)
 end
 
 function DeliverySystem.getHubSummary()
-    local state = ensureLogisticsState()
+    local logistics = getLogisticsStateReadOnly()
 
-    if state == nil then
+    if logistics == nil then
         return {}
     end
 
-    updateStatistics()
+    local statistics = computeStatistics(logistics)
 
     return {
-        total = countTableKeys(state.Logistics.hubs),
-        blue = state.Logistics.statistics.blueHubs or 0,
-        red = state.Logistics.statistics.redHubs or 0,
-        neutral = state.Logistics.statistics.neutralHubs or 0,
-        contested = state.Logistics.statistics.contestedHubs or 0,
-        active = state.Logistics.statistics.activeHubs or 0,
-        limited = state.Logistics.statistics.limitedHubs or 0,
-        locked = state.Logistics.statistics.lockedHubs or 0
+        total = countTableKeys(logistics.hubs),
+        blue = statistics.blueHubs or 0,
+        red = statistics.redHubs or 0,
+        neutral = statistics.neutralHubs or 0,
+        contested = statistics.contestedHubs or 0,
+        active = statistics.activeHubs or 0,
+        limited = statistics.limitedHubs or 0,
+        locked = statistics.lockedHubs or 0
     }
 end
 
@@ -1807,14 +1822,12 @@ function DeliverySystem.stop()
 end
 
 function DeliverySystem.summary()
-    local state = ensureLogisticsState()
-    local logistics = nil
+    local logistics = getLogisticsStateReadOnly()
+    local statistics = nil
 
-    if state ~= nil then
-        logistics = state.Logistics
+    if logistics ~= nil then
+        statistics = computeStatistics(logistics)
     end
-
-    updateStatistics()
 
     return {
         name = DeliverySystem.name,
@@ -1829,7 +1842,7 @@ function DeliverySystem.summary()
         lastHubBuildTime = DeliverySystem.lastHubBuildTime,
         lastHubCount = DeliverySystem.lastHubCount,
         lastDeliveryCount = DeliverySystem.lastDeliveryCount,
-        statistics = logistics and logistics.statistics or nil,
+        statistics = statistics,
         logistics = logistics
     }
 end
