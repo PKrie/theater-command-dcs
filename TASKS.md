@@ -6,7 +6,31 @@ Neue Sessions sollen zuerst diese Datei lesen und danach den aktuellen GitHub-St
 
 ---
 
-## 0. Verbindlicher Übergabestand — 2026-09-12
+## 0. Verbindlicher Übergabestand — 2026-09-21
+
+### Aktueller Stand — 2026-09-21
+
+LogisticsDelivery Read-Neutrality-Fix: **BEHOBEN / RUNTIME-REGRESSION BESTANDEN**
+
+- Datei: `src/logistics/tc_logistics_delivery.lua`, Version `v0.2.1`.
+- Commit: `d4c439dfeb243621e7bc0ca8906f6cb2cf82491d` („Fix logistics read neutrality"), gepusht und reviewed.
+- Fix: Statistikberechnung und Read-Zugriffe sind schreibfrei; `updateStatistics()` persistiert weiterhin bei fachlichen Mutationen.
+- Embedded Resource Audit: **bestanden**. Aktiver Trigger `TC_LOAD_TC_LOGISTICS_DELIVERY` -> Resource Key `ResKey_Action_60`; eingebettete Datei ist Version `0.2.1` und byte-identisch mit der lokalen Arbeitsdatei; kein zweiter aktiver LogisticsDelivery-Ladetrigger.
+- Runtime-Regression in der vom Nutzer bestätigten DEV-Mission: **bestanden** (DCS-SMS, Mission Environment, Version `0.2.1`; Claude Code meldet 70/70 bestandene Prüfungen).
+  - Negativtest: `getStatistics()`, `getHubSummary()` und `summary()` verändern weder persistierten State noch Dirty-Status. Statistiken: 46 Hubs (BLUE 7, RED 24, NEUTRAL 15), 0 Deliveries.
+  - Positivtest: isoliertes `createDelivery()` erfolgreich, `dirty=true`, `dirtyReason=logistics_delivery_created`, Statistiken korrekt aktualisiert.
+  - Rollback im selben synchronen Lua-Aufruf erfolgreich. Separater Nachher-Check: `dirty=false`, 46 Hubs, 0 Deliveries, `lastDeliveryId=0`.
+- Offene Beobachtung: `Meta.updatedAt` war unmittelbar nach dem Rollback auf den Originalwert zurückgesetzt, änderte sich aber bei einer späteren, separaten Nachher-Abfrage erneut. Die Ursache ist nicht nachgewiesen; es wird weder als Logistics-Fehler noch als bewiesen harmloser Scheduler-Effekt eingestuft.
+- `productiveRestore=false` bleibt unverändert.
+- Latente Punkte aus dem Audit vom 2026-09-13 (`setDeliveryStatus()` bei identischem Status, `completeDelivery()` ohne Already-Completed-Guard, Hub-Neuaufbau in `start()`/`buildHubsFromZones()` vor produktivem Restore) sind nicht Teil dieses Fixes und unverändert bewertet.
+
+Priorität 3 bleibt insgesamt **offen**: Aktive Read-Neutrality-Fixes stehen noch für `src/logistics/tc_fob_system.lua` und `src/ai/tc_ai_cap_manager.lua` aus (zwei aktive Fixes). Der separate latente `reactToActiveMissions()`-Fall bleibt unverändert bewertet (Klassifikation B).
+
+Nächster technischer Schritt: Read-Neutrality-Fix **ausschließlich** in `src/logistics/tc_fob_system.lua`; ein System pro Schritt, keine parallelen Fixes. Danach separate Regression, danach `src/ai/tc_ai_cap_manager.lua`. LogisticsDelivery ist nicht erneut zu fixen oder zu testen.
+
+---
+
+### Übergabestand — 2026-09-12 (historisch, bleibt erhalten)
 
 Der am 2026-08-04 vermutete Mission-Record-Verlust ist widerlegt. Es gab zu keinem Zeitpunkt einen tatsächlichen Verlust von Mission Records. Ursache der früheren Fehldiagnose war ein Diagnosefehler: der Lua-Längenoperator `#` liefert auf String-keyed Dictionaries keinen korrekten Count.
 
@@ -138,11 +162,11 @@ Beide zunächst offenen kleineren Verdachtsfälle aus dem ursprünglichen READ-O
 
 Details zu beiden Punkten siehe Abschnitt 9, Priorität 3.
 
-Wichtig — Priorität 3 ist damit weiterhin NICHT insgesamt abgeschlossen: Der READ-ONLY Dirty-Coverage-Audit der vier Systeme `src/logistics/tc_logistics_delivery.lua`, `src/logistics/tc_fob_system.lua`, `src/missions/tc_mission_generator.lua` und `src/ai/tc_ai_cap_manager.lua` ist am 2026-09-13 abgeschlossen. Ergebnis: aktive Dirty-/Read-Neutrality-Bugs in `tc_logistics_delivery.lua`, `tc_fob_system.lua` und `tc_ai_cap_manager.lua` (jeweils schreibt `updateStatistics()`, aufgerufen aus reinen Read-Pfaden wie `getStatistics()`, unbedingt persistierten State bzw. Timestamp); für `tc_mission_generator.lua` ist im aktuellen produktiven Call-Flow kein aktiver Missing-Dirty-Bug nachgewiesen. Priorität 3 bleibt offen, bis die drei aktiven Fixes einzeln umgesetzt und regressionsgetestet sind. Details siehe Abschnitt 9, Priorität 3.
+Wichtig — Priorität 3 ist damit weiterhin NICHT insgesamt abgeschlossen: Der READ-ONLY Dirty-Coverage-Audit der vier Systeme `src/logistics/tc_logistics_delivery.lua`, `src/logistics/tc_fob_system.lua`, `src/missions/tc_mission_generator.lua` und `src/ai/tc_ai_cap_manager.lua` ist am 2026-09-13 abgeschlossen. Ergebnis: aktive Dirty-/Read-Neutrality-Bugs in `tc_logistics_delivery.lua`, `tc_fob_system.lua` und `tc_ai_cap_manager.lua` (jeweils schreibt `updateStatistics()`, aufgerufen aus reinen Read-Pfaden wie `getStatistics()`, unbedingt persistierten State bzw. Timestamp); für `tc_mission_generator.lua` ist im aktuellen produktiven Call-Flow kein aktiver Missing-Dirty-Bug nachgewiesen. Priorität 3 bleibt offen, bis die drei aktiven Fixes einzeln umgesetzt und regressionsgetestet sind. Stand 2026-09-21: Der LogisticsDelivery-Fix ist umgesetzt und regressionsgetestet (siehe oben); zwei aktive Fixes (`tc_fob_system.lua`, `tc_ai_cap_manager.lua`) sind noch offen. Details siehe Abschnitt 9, Priorität 3.
 
 Nächster technischer Schritt:
 
-- Priorität 3 (Abschnitt 9): Fix der Read-Neutrality ausschließlich in `src/logistics/tc_logistics_delivery.lua` — jeweils **ein System pro Schritt**, keine parallelen Fixes. Danach separate Regression, danach `src/logistics/tc_fob_system.lua`, danach `src/ai/tc_ai_cap_manager.lua`. Für `src/missions/tc_mission_generator.lua` ist aus dem aktuellen Audit kein aktiver Code-Fix erforderlich. Der CaptureSystem-Getter-Hauptfund und der Ownership-No-Op-Fix sind am 2026-09-12 behoben und live bestanden und sind NICHT erneut zu testen; der `reactToActiveMissions()`-Sonderfall bleibt bewertet und geschlossen (Klassifikation B).
+- Stand 2026-09-12/13 (überholt durch den Stand 2026-09-21 oben; jetzt nur noch `tc_fob_system.lua`, danach `tc_ai_cap_manager.lua`): Priorität 3 (Abschnitt 9): Fix der Read-Neutrality zunächst in `src/logistics/tc_logistics_delivery.lua` (am 2026-09-21 erledigt) — jeweils **ein System pro Schritt**, keine parallelen Fixes. Danach separate Regression, danach `src/logistics/tc_fob_system.lua`, danach `src/ai/tc_ai_cap_manager.lua`. Für `src/missions/tc_mission_generator.lua` ist aus dem aktuellen Audit kein aktiver Code-Fix erforderlich. Der CaptureSystem-Getter-Hauptfund und der Ownership-No-Op-Fix sind am 2026-09-12 behoben und live bestanden und sind NICHT erneut zu testen; der `reactToActiveMissions()`-Sonderfall bleibt bewertet und geschlossen (Klassifikation B).
 
 ---
 
@@ -575,11 +599,12 @@ Datei:
 
 Aktuelle getestete Version:
 
-- `v0.2.0`
+- `v0.2.1`
 
 Status:
 
 - bestanden
+- Read-Neutrality-Fix (2026-09-21): Fix / Runtime-Regression bestanden
 
 Letzte bestätigte Werte:
 
@@ -597,6 +622,16 @@ Bewertung:
 - 46 Logistics Hubs werden erzeugt.
 - CTLD wird noch nicht aktiv angesprochen.
 - Das ist aktuell korrekt, weil noch keine CTLD-Zonen und keine Template-Gruppen in der DEV-Mission definiert sind.
+
+Read-Neutrality-Fix und Runtime-Regression (2026-09-21):
+
+- `v0.2.1`, Commit `d4c439dfeb243621e7bc0ca8906f6cb2cf82491d` („Fix logistics read neutrality"): Statistikberechnung und Read-Zugriffe sind schreibfrei; `updateStatistics()` persistiert weiterhin bei Mutationen.
+- Embedded Resource Audit bestanden (Trigger `TC_LOAD_TC_LOGISTICS_DELIVERY`, `ResKey_Action_60`, byte-identisch mit der lokalen Datei).
+- Runtime-Regression bestanden (DEV-Mission, DCS-SMS Mission Environment, Version `0.2.1`, 70/70 Prüfungen laut Claude Code):
+  - `getStatistics()`, `getHubSummary()` und `summary()` verändern weder persistierten Logistics-State noch Dirty-Status; Counts korrekt (46 Hubs, BLUE 7 / RED 24 / NEUTRAL 15, 0 Deliveries).
+  - Isoliertes `createDelivery()`: erfolgreich, `dirty=true`, `dirtyReason=logistics_delivery_created`, Statistiken korrekt aktualisiert; vollständiger Rollback im selben synchronen Lua-Aufruf, Nachher-Check `dirty=false`, 46 Hubs, 0 Deliveries, `lastDeliveryId=0`.
+- Offene Beobachtung: `Meta.updatedAt` änderte sich bei einer späteren Nachher-Abfrage erneut; Ursache nicht nachgewiesen (weder als Logistics-Fehler noch als bewiesen harmlos eingestuft). Details siehe Abschnitt 0.
+- `productiveRestore=false` unverändert.
 
 Offen:
 
@@ -1321,7 +1356,7 @@ Noch nicht jetzt aktivieren.
 
 ---
 
-### Priorität 3: Dirty-Abdeckung der aktiven State-Systeme validieren — IN ARBEIT (CaptureSystem-Hauptfund, Ownership-No-Op-Fund und `reactToActiveMissions()` abgeschlossen; READ-ONLY Vier-Dateien-Audit am 2026-09-13 abgeschlossen, aktive Fixes für drei Systeme noch offen)
+### Priorität 3: Dirty-Abdeckung der aktiven State-Systeme validieren — IN ARBEIT (CaptureSystem-Hauptfund, Ownership-No-Op-Fund und `reactToActiveMissions()` abgeschlossen; READ-ONLY Vier-Dateien-Audit am 2026-09-13 abgeschlossen; LogisticsDelivery-Fix am 2026-09-21 umgesetzt und Runtime-Regression bestanden, aktive Fixes für zwei Systeme — FobSystem und AICapManager — noch offen)
 
 Dateien später:
 
@@ -1366,12 +1401,24 @@ Zwischenergebnis vom 2026-09-12 — `src/ai/tc_ai_cap_manager.lua` / `reactToAct
 - Da keine Call-Site existiert, aktuell **kein Runtime-Persistence-Bug**. Finale Klassifikation: **B) latenter Missing-Dirty-Bug in derzeit nicht verdrahtetem Code.**
 - Entscheidung: keine Codeänderung jetzt; Fix erst bei tatsächlicher Verdrahtung in Scheduler/CapManager-Lifecycle bzw. AI-Reaktionslogik. Dieser Sonderfall gilt als bewertet/geschlossen.
 
-Zwischenergebnis vom 2026-09-13 — READ-ONLY Dirty-Coverage-Audit `src/logistics/tc_logistics_delivery.lua`: **AKTIVER Dirty-/Read-Neutrality-Bug**
+Zwischenergebnis vom 2026-09-13 — READ-ONLY Dirty-Coverage-Audit `src/logistics/tc_logistics_delivery.lua`: **AKTIVER Dirty-/Read-Neutrality-Bug** — **HISTORISCHER AUSGANGSBEFUND, am 2026-09-21 behoben (siehe unmittelbar folgendes Ergebnis)**
 
 - Befund: `updateStatistics()` schreibt bei jedem Aufruf persistierten State (`state.Logistics.statistics = statistics`, `state.Logistics.lastUpdateTime = getCurrentTime()`) — auch wenn es von reinen Read-Pfaden aufgerufen wird: `getStatistics()`, `getHubSummary()`, `summary()`.
 - Der aktuelle F10-Logistikstatus ruft `getStatistics()` produktiv auf. Folge: Ein reiner Status-Read kann persistierten Logistics-State verändern, ohne dass eine fachliche Mutation stattgefunden hat.
 - Nicht einfach `markDirty()` in den Getter einbauen. Geplanter Fix: Read-/Summary-Pfade persistence-neutral machen; Statistics nur bei tatsächlicher fachlicher Änderung persistieren bzw. Timestamp nicht aufgrund eines Reads verändern.
 - Weitere latente Punkte (aktuell keine belegten produktiven Runtime-Blocker): `setDeliveryStatus()` ist bei identischem Status kein echter No-Op; `completeDelivery()` besitzt keinen expliziten Already-Completed-Guard; `LogisticsDelivery.start()`/`buildHubsFromZones()` baut die Hub-Tabelle vollständig neu — vor produktivem Restore muss die Init-/Restore-Reihenfolge berücksichtigt werden.
+
+Ergebnis vom 2026-09-21 — `src/logistics/tc_logistics_delivery.lua` `v0.2.1`: **BEHOBEN / RUNTIME-REGRESSION BESTANDEN**
+
+- Commit `d4c439dfeb243621e7bc0ca8906f6cb2cf82491d` („Fix logistics read neutrality"), gepusht und reviewed. Fix: schreibfreie Statistikberechnung und Read-Zugriffe; `updateStatistics()` persistiert weiterhin bei Mutationen.
+- Embedded Resource Audit bestanden: aktiver Trigger `TC_LOAD_TC_LOGISTICS_DELIVERY`, Resource Key `ResKey_Action_60`, eingebettete Datei und lokale Arbeitsdatei byte-identisch, Version `0.2.1`.
+- Runtime-Regression in der vom Nutzer bestätigten DEV-Mission (DCS-SMS, Mission Environment, Version `0.2.1`), 70/70 bestandene Prüfungen laut Claude Code:
+  - Negativtest: `getStatistics()`, `getHubSummary()` und `summary()` verändern weder persistierten State noch Dirty-Status. Statistiken: 46 Hubs (BLUE 7, RED 24, NEUTRAL 15), 0 Deliveries.
+  - Positivtest: isoliertes `createDelivery()` erfolgreich, `dirty=true`, `dirtyReason=logistics_delivery_created`, Statistiken korrekt aktualisiert.
+  - Rollback im selben synchronen Lua-Aufruf erfolgreich. Separater Nachher-Check: `dirty=false`, 46 Hubs, 0 Deliveries, `lastDeliveryId=0`.
+- Offene Beobachtung: `Meta.updatedAt` war unmittelbar nach dem Rollback auf den Originalwert zurückgesetzt, änderte sich aber bei einer späteren Nachher-Abfrage erneut. Ursache nicht nachgewiesen; weder als Logistics-Fehler noch als bewiesen harmloser Scheduler-Effekt deklariert.
+- `productiveRestore=false` unverändert. Die oben genannten latenten Logistics-Punkte (`setDeliveryStatus()`, `completeDelivery()`, Hub-Neuaufbau vor Restore) sind nicht Teil dieses Fixes.
+- LogisticsDelivery ist nicht erneut zu fixen oder zu testen.
 
 Zwischenergebnis vom 2026-09-13 — READ-ONLY Dirty-Coverage-Audit `src/logistics/tc_fob_system.lua`: **AKTIVER Dirty-/Read-Neutrality-Bug**
 
@@ -1397,10 +1444,10 @@ Zwischenergebnis vom 2026-09-13 — READ-ONLY Dirty-Coverage-Audit `src/ai/tc_ai
 
 Noch offen — Priorität 3 bleibt deshalb insgesamt **offen**:
 
-- Der READ-ONLY Dirty-Coverage-Audit der vier Systeme ist abgeschlossen. Aktive Fixes sind erforderlich für `src/logistics/tc_logistics_delivery.lua`, `src/logistics/tc_fob_system.lua` und `src/ai/tc_ai_cap_manager.lua` (jeweils Read-Neutrality-Bug in `updateStatistics()`/`getStatistics()`). Für `src/missions/tc_mission_generator.lua` ist kein aktiver Code-Fix erforderlich.
-- Nächster Schritt: Fix ausschließlich in `src/logistics/tc_logistics_delivery.lua`, ein System pro Schritt, keine parallelen Fixes. Danach separate Regression, danach `tc_fob_system.lua`, danach `tc_ai_cap_manager.lua`.
+- Der READ-ONLY Dirty-Coverage-Audit der vier Systeme ist abgeschlossen. Der aktive Fix für `src/logistics/tc_logistics_delivery.lua` ist seit 2026-09-21 umgesetzt und regressionsgetestet (siehe oben). Aktive Fixes sind noch erforderlich für `src/logistics/tc_fob_system.lua` und `src/ai/tc_ai_cap_manager.lua` (jeweils Read-Neutrality-Bug in `updateStatistics()`/`getStatistics()`) — zwei aktive Fixes offen. Für `src/missions/tc_mission_generator.lua` ist kein aktiver Code-Fix erforderlich.
+- Nächster Schritt: Fix ausschließlich in `src/logistics/tc_fob_system.lua`, ein System pro Schritt, keine parallelen Fixes. Danach separate Regression, danach `tc_ai_cap_manager.lua`.
 
-Status: CaptureSystem-Hauptfund behoben, Ownership-No-Op-Fund behoben, `reactToActiveMissions()` bewertet (Klassifikation B) — alle drei live bestanden bzw. abgeschlossen bewertet. Der READ-ONLY Dirty-Coverage-Audit der vier verbleibenden Systeme ist am 2026-09-13 abgeschlossen. Priorität 3 als Ganzes bleibt **offen**, bis die aktiven Fixes in `tc_logistics_delivery.lua`, `tc_fob_system.lua` und `tc_ai_cap_manager.lua` einzeln umgesetzt und regressionsgetestet sind.
+Status: CaptureSystem-Hauptfund behoben, Ownership-No-Op-Fund behoben, `reactToActiveMissions()` bewertet (Klassifikation B) — alle drei live bestanden bzw. abgeschlossen bewertet. Der READ-ONLY Dirty-Coverage-Audit der vier verbleibenden Systeme ist am 2026-09-13 abgeschlossen. Der LogisticsDelivery-Fix (`v0.2.1`) ist seit 2026-09-21 umgesetzt und Runtime-Regression bestanden. Priorität 3 als Ganzes bleibt **offen**, bis die aktiven Fixes in `tc_fob_system.lua` und `tc_ai_cap_manager.lua` einzeln umgesetzt und regressionsgetestet sind. Der separate latente `reactToActiveMissions()`-Fall bleibt unverändert bewertet (Klassifikation B).
 
 ---
 
@@ -1477,7 +1524,7 @@ Bestandene Systeme:
 | Airbase Scanner | `v0.2.2` | bestanden |
 | ZoneFactory | `v0.2.0` | bestanden |
 | CaptureSystem | `v0.2.2` | bestanden; Capture-Dirty-Tracking-Hauptfund und Ownership-No-Op-Fund am 2026-09-12 behoben und live bestätigt (siehe Abschnitt 9, Priorität 3) |
-| LogisticsDelivery | `v0.2.0` | bestanden; aktiver Dirty-/Read-Neutrality-Bug in `updateStatistics()`/`getStatistics()` am 2026-09-13 identifiziert, Fix noch offen (siehe Abschnitt 9, Priorität 3) |
+| LogisticsDelivery | `v0.2.1` | Fix / Runtime-Regression bestanden; Read-Neutrality-Bug in `updateStatistics()`/`getStatistics()` (Befund vom 2026-09-13) am 2026-09-21 behoben, Embedded Resource Audit und Runtime-Regression bestanden (siehe Abschnitt 9, Priorität 3) |
 | FobSystem | `v0.2.0` | bestanden; aktiver Dirty-/Read-Neutrality-Bug in `updateStatistics()`/`getStatistics()` am 2026-09-13 identifiziert, Fix noch offen (siehe Abschnitt 9, Priorität 3) |
 | MissionGenerator | `v0.2.3` | bestanden; vermeintlicher Record-Verlust am 2026-09-12 widerlegt (kein Datenverlust); behoben wurde der ursächliche Count-/Diagnosefehler in `tc_state.lua` (`#` statt `pairs()`); Priorität-3-Audit vom 2026-09-13 fand keinen aktiven Missing-Dirty-Bug |
 | AICapManager | `v0.2.0` | bestanden; aktiver Dirty-/Read-Neutrality-Bug in `updateStatistics()`/`getStatistics()` am 2026-09-13 identifiziert, Fix noch offen; `reactToActiveMissions()` bewertet (Klassifikation B) (siehe Abschnitt 9, Priorität 3) |
@@ -1497,6 +1544,7 @@ Aktuelle bestätigte Fähigkeiten:
 - Mission Completion, Mission Failure und Capture Ready Apply sind am 2026-09-12 mit echtem Runtime-State und dirty-aware Autosave-Nachweis erneut bestanden (siehe Abschnitt 7.1–7.3).
 - Capture-Status-Reads (`getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`) erzeugen seit dem Fix vom 2026-09-12 keinen Persistence-Dirty-State mehr, während echte Capture-Mutationen weiterhin zuverlässig dirty markieren (live verifiziert, siehe Abschnitt 9, Priorität 3).
 - Redundante Ownership-Set-Aufrufe (`setZoneOwner()`/`setBaseOwner()` mit `newOwner == currentOwner`) verändern seit dem Fix vom 2026-09-12 keinen persistierten State mehr (kein Registry-/Progress-/Timestamp-Schreiben, kein Dirty); echte Ownerwechsel funktionieren unverändert (live verifiziert, siehe Abschnitt 9, Priorität 3).
+- LogisticsDelivery-Reads (`getStatistics()`, `getHubSummary()`, `summary()`) verändern seit dem Fix vom 2026-09-21 (`v0.2.1`) weder persistierten Logistics-State noch Dirty-Status; echte Mutationen (`createDelivery()`) markieren weiterhin zuverlässig dirty (`logistics_delivery_created`). Live verifiziert per isolierter Runtime-Regression mit Rollback (siehe Abschnitt 9, Priorität 3).
 - `tc_ai_cap_manager.lua` `reactToActiveMissions()` ist am 2026-09-12 READ-ONLY bewertet: aktuell ohne Call-Site, damit kein Runtime-Persistence-Bug (Klassifikation B, latent); Fix erst bei künftiger Verdrahtung (siehe Abschnitt 9, Priorität 3).
 - Persistence kann DCS-Dateien schreiben und lesen.
 - Persistence speichert Campaign-State als Lua-Return-Datei.
@@ -1507,7 +1555,7 @@ Aktuelle bestätigte Fähigkeiten:
 
 Aktuelle wichtigste offene Fähigkeit:
 
-- Aktive Read-Neutrality-Fixes in `tc_logistics_delivery.lua`, `tc_fob_system.lua` und `tc_ai_cap_manager.lua` umsetzen, ein System pro Schritt, beginnend mit `tc_logistics_delivery.lua` (Priorität 3, Abschnitt 9). Der READ-ONLY Vier-Dateien-Audit ist am 2026-09-13 abgeschlossen; für `tc_mission_generator.lua` ist kein aktiver Code-Fix erforderlich. Der CaptureSystem-Getter-Hauptfund, der Ownership-No-Op-Fund und die Bewertung von `reactToActiveMissions()` sind bereits behoben bzw. abgeschlossen bewertet (siehe Abschnitt 9, Priorität 3) und sind nicht Teil dieses offenen Punkts.
+- Aktive Read-Neutrality-Fixes in `tc_fob_system.lua` und `tc_ai_cap_manager.lua` umsetzen (zwei aktive Fixes offen), ein System pro Schritt, beginnend mit `tc_fob_system.lua` (Priorität 3, Abschnitt 9). Der READ-ONLY Vier-Dateien-Audit ist am 2026-09-13 abgeschlossen; für `tc_mission_generator.lua` ist kein aktiver Code-Fix erforderlich. Der LogisticsDelivery-Fix (`v0.2.1`, 2026-09-21), der CaptureSystem-Getter-Hauptfund, der Ownership-No-Op-Fund und die Bewertung von `reactToActiveMissions()` sind bereits behoben bzw. abgeschlossen bewertet (siehe Abschnitt 9, Priorität 3) und sind nicht Teil dieses offenen Punkts.
 
 ---
 
@@ -1532,15 +1580,15 @@ Danach nicht mit F10-Persistence weitermachen.
 
 Nächster technischer Schritt:
 
-- Priorität 3 (Abschnitt 9): Fix der Read-Neutrality ausschließlich in `src/logistics/tc_logistics_delivery.lua` umsetzen. Immer nur **ein System pro Schritt**, keine parallelen Fixes. Der CaptureSystem-Getter-Hauptfund und der Ownership-No-Op-Fund sind am 2026-09-12 bereits behoben und live bestanden und dürfen nicht erneut getestet werden; `tc_ai_cap_manager.lua` `reactToActiveMissions()` ist bewertet (Klassifikation B) und geschlossen. Der READ-ONLY Vier-Dateien-Audit selbst ist am 2026-09-13 abgeschlossen (siehe unten).
+- Priorität 3 (Abschnitt 9): Fix der Read-Neutrality ausschließlich in `src/logistics/tc_fob_system.lua` umsetzen. Immer nur **ein System pro Schritt**, keine parallelen Fixes. Der LogisticsDelivery-Fix (`v0.2.1`, 2026-09-21) sowie der CaptureSystem-Getter-Hauptfund und der Ownership-No-Op-Fund (2026-09-12) sind bereits behoben und live bestanden und dürfen nicht erneut getestet werden; `tc_ai_cap_manager.lua` `reactToActiveMissions()` ist bewertet (Klassifikation B) und geschlossen. Der READ-ONLY Vier-Dateien-Audit selbst ist am 2026-09-13 abgeschlossen (siehe unten).
 
 Nächster erwarteter Test:
 
-1. Fix der Read-Neutrality in `src/logistics/tc_logistics_delivery.lua` umsetzen: Read-/Summary-Pfade (`getStatistics()`, `getHubSummary()`, `summary()`) persistence-neutral machen, kein Statistics-/Timestamp-Rewrite nur aufgrund eines Reads.
+1. Fix der Read-Neutrality ausschließlich in `src/logistics/tc_fob_system.lua` umsetzen: Read-/Summary-Pfade (`getStatistics()`, `summary()`) persistence-neutral machen, kein `fobStatistics`-/`lastFobUpdateTime`-Rewrite nur aufgrund eines Reads.
 2. Danach separate Regression: echte fachliche Mutationen markieren weiterhin zuverlässig dirty, reine Reads erzeugen keinen Dirty mehr.
 3. Dirty Reasons eindeutig und stabil halten.
 4. Ergebnis in Abschnitt 9 (Priorität 3) mit Datum dokumentieren.
-5. Danach denselben Fix nacheinander für `tc_fob_system.lua` und `tc_ai_cap_manager.lua` einzeln umsetzen und regressionstesten. Für `tc_mission_generator.lua` ist kein aktiver Code-Fix erforderlich.
+5. Danach denselben Fix für `tc_ai_cap_manager.lua` einzeln umsetzen und regressionstesten. Für `tc_mission_generator.lua` ist kein aktiver Code-Fix erforderlich.
 6. Frische `dcs.log` auf Theater-Command- und Lua-Fehler prüfen.
 
 Bestanden bzw. abgeschlossen bewertet am 2026-09-12 (nicht erneut zu wiederholen):
@@ -1554,7 +1602,11 @@ Bestanden bzw. abgeschlossen bewertet am 2026-09-12 (nicht erneut zu wiederholen
 
 Zusätzlich abgeschlossen am 2026-09-13 (nicht erneut zu wiederholen):
 
-- READ-ONLY Dirty-Coverage-Audit von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua`: am 2026-09-13 abgeschlossen; Befunde (drei aktive Read-Neutrality-Bugs, kein aktiver Bug in MissionGenerator) siehe Abschnitt 9, Priorität 3 — nicht erneut zu auditieren, nur noch die daraus resultierenden Fixes stehen aus
+- READ-ONLY Dirty-Coverage-Audit von `tc_logistics_delivery.lua`, `tc_fob_system.lua`, `tc_mission_generator.lua` und `tc_ai_cap_manager.lua`: am 2026-09-13 abgeschlossen; Befunde (drei aktive Read-Neutrality-Bugs, kein aktiver Bug in MissionGenerator) siehe Abschnitt 9, Priorität 3 — nicht erneut zu auditieren; vom Fix-Ergebnis stehen nur noch `tc_fob_system.lua` und `tc_ai_cap_manager.lua` aus (LogisticsDelivery am 2026-09-21 erledigt)
+
+Zusätzlich abgeschlossen am 2026-09-21 (nicht erneut zu wiederholen):
+
+- LogisticsDelivery Read-Neutrality-Fix (`tc_logistics_delivery.lua` `v0.2.1`, Commit `d4c439dfeb243621e7bc0ca8906f6cb2cf82491d`): Embedded Resource Audit (`ResKey_Action_60`, byte-identisch) und Runtime-Regression (Negativtest, isolierter Positivtest, Rollback; 70/70 Prüfungen) bestanden — siehe Abschnitt 0 und Abschnitt 9, Priorität 3
 
 ---
 
