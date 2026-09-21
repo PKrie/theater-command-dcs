@@ -11,7 +11,7 @@
 --   iteration.
 --
 -- Version:
---   0.2.0
+--   0.2.1
 --
 -- Responsibilities:
 --   - register CAP zones from classified campaign zones
@@ -37,7 +37,7 @@ local CapManager = {}
 CapManager.name = "tc_ai_cap_manager"
 CapManager.displayName = "AI CAP Manager"
 CapManager.path = "src/ai/tc_ai_cap_manager.lua"
-CapManager.version = "0.2.0"
+CapManager.version = "0.2.1"
 
 CapManager.loaded = true
 CapManager.started = false
@@ -436,6 +436,26 @@ local function ensureAiState()
     }
 
     return state
+end
+
+local function getAiStateReadOnly()
+    local state = getState()
+
+    if state == nil or type(state.AI) ~= "table" then
+        return nil
+    end
+
+    return state.AI
+end
+
+local function getAiContainerReadOnly(containerName)
+    local aiState = getAiStateReadOnly()
+
+    if aiState == nil or type(aiState[containerName]) ~= "table" then
+        return nil
+    end
+
+    return aiState[containerName]
 end
 
 local function markDirty(reason)
@@ -915,21 +935,22 @@ local function capRequestExists(signature)
         return false
     end
 
-    local state = ensureAiState()
+    local capRequests = getAiContainerReadOnly("capRequests")
+    local activeCaps = getAiContainerReadOnly("activeCaps")
 
-    if state == nil then
-        return false
-    end
-
-    for _, capRecord in pairs(state.AI.capRequests) do
-        if capRecord.signature == signature then
-            return true
+    if capRequests ~= nil then
+        for _, capRecord in pairs(capRequests) do
+            if capRecord.signature == signature then
+                return true
+            end
         end
     end
 
-    for _, capRecord in pairs(state.AI.activeCaps) do
-        if capRecord.signature == signature then
-            return true
+    if activeCaps ~= nil then
+        for _, capRecord in pairs(activeCaps) do
+            if capRecord.signature == signature then
+                return true
+            end
         end
     end
 
@@ -937,26 +958,26 @@ local function capRequestExists(signature)
 end
 
 local function activeCapCountForZone(zoneKey, side)
-    local state = ensureAiState()
-
-    if state == nil then
-        return 0
-    end
-
+    local activeCaps = getAiContainerReadOnly("activeCaps")
+    local capRequests = getAiContainerReadOnly("capRequests")
     local count = 0
 
-    for _, capRecord in pairs(state.AI.activeCaps) do
-        if capRecord.zoneKey == zoneKey then
-            if side == nil or capRecord.side == side then
-                count = count + 1
+    if activeCaps ~= nil then
+        for _, capRecord in pairs(activeCaps) do
+            if capRecord.zoneKey == zoneKey then
+                if side == nil or capRecord.side == side then
+                    count = count + 1
+                end
             end
         end
     end
 
-    for _, capRecord in pairs(state.AI.capRequests) do
-        if capRecord.zoneKey == zoneKey then
-            if side == nil or capRecord.side == side then
-                count = count + 1
+    if capRequests ~= nil then
+        for _, capRecord in pairs(capRequests) do
+            if capRecord.zoneKey == zoneKey then
+                if side == nil or capRecord.side == side then
+                    count = count + 1
+                end
             end
         end
     end
@@ -980,6 +1001,38 @@ local function countCapRecordsBySide(container, side)
     return count
 end
 
+local function computeStatistics(aiState)
+    local function container(containerName)
+        if type(aiState) == "table" and type(aiState[containerName]) == "table" then
+            return aiState[containerName]
+        end
+
+        return {}
+    end
+
+    local capZoneCandidates = container("capZoneCandidates")
+    local capZones = container("capZones")
+    local capRequests = container("capRequests")
+    local activeCaps = container("activeCaps")
+    local completedCaps = container("completedCaps")
+    local failedCaps = container("failedCaps")
+    local cancelledCaps = container("cancelledCaps")
+
+    return {
+        candidates = countTableKeys(capZoneCandidates),
+        zones = countTableKeys(capZones),
+        requested = countTableKeys(capRequests),
+        active = countTableKeys(activeCaps),
+        completed = countTableKeys(completedCaps),
+        failed = countTableKeys(failedCaps),
+        cancelled = countTableKeys(cancelledCaps),
+        blueZones = countCapRecordsBySide(capZones, CapManager.sides.BLUE),
+        redZones = countCapRecordsBySide(capZones, CapManager.sides.RED),
+        blueRequests = countCapRecordsBySide(capRequests, CapManager.sides.BLUE),
+        redRequests = countCapRecordsBySide(capRequests, CapManager.sides.RED)
+    }
+end
+
 local function updateStatistics()
     local state = ensureAiState()
 
@@ -987,19 +1040,7 @@ local function updateStatistics()
         return false
     end
 
-    state.AI.capStatistics = {
-        candidates = countTableKeys(state.AI.capZoneCandidates),
-        zones = countTableKeys(state.AI.capZones),
-        requested = countTableKeys(state.AI.capRequests),
-        active = countTableKeys(state.AI.activeCaps),
-        completed = countTableKeys(state.AI.completedCaps),
-        failed = countTableKeys(state.AI.failedCaps),
-        cancelled = countTableKeys(state.AI.cancelledCaps),
-        blueZones = countCapRecordsBySide(state.AI.capZones, CapManager.sides.BLUE),
-        redZones = countCapRecordsBySide(state.AI.capZones, CapManager.sides.RED),
-        blueRequests = countCapRecordsBySide(state.AI.capRequests, CapManager.sides.BLUE),
-        redRequests = countCapRecordsBySide(state.AI.capRequests, CapManager.sides.RED)
-    }
+    state.AI.capStatistics = computeStatistics(state.AI)
 
     state.AI.lastUpdate = getCurrentTime()
     CapManager.lastUpdateTime = state.AI.lastUpdate
@@ -1246,14 +1287,14 @@ local function registerCapZoneRecord(capZoneRecord)
 end
 
 local function getSortedCapZones()
-    local state = ensureAiState()
+    local capZones = getAiContainerReadOnly("capZones")
     local sorted = {}
 
-    if state == nil then
+    if capZones == nil then
         return sorted
     end
 
-    for _, capZoneRecord in pairs(state.AI.capZones) do
+    for _, capZoneRecord in pairs(capZones) do
         table.insert(sorted, capZoneRecord)
     end
 
@@ -1642,37 +1683,37 @@ function CapManager.reactToActiveMissions(options)
 end
 
 function CapManager.getCap(capKeyOrName)
-    local state = ensureAiState()
+    local aiState = getAiStateReadOnly()
 
-    if state == nil then
+    if aiState == nil then
         return nil
     end
 
-    local capRecord = getCapFromContainer(state.AI.capRequests, capKeyOrName)
+    local capRecord = getCapFromContainer(aiState.capRequests, capKeyOrName)
 
     if capRecord ~= nil then
         return capRecord
     end
 
-    capRecord = getCapFromContainer(state.AI.activeCaps, capKeyOrName)
+    capRecord = getCapFromContainer(aiState.activeCaps, capKeyOrName)
 
     if capRecord ~= nil then
         return capRecord
     end
 
-    capRecord = getCapFromContainer(state.AI.completedCaps, capKeyOrName)
+    capRecord = getCapFromContainer(aiState.completedCaps, capKeyOrName)
 
     if capRecord ~= nil then
         return capRecord
     end
 
-    capRecord = getCapFromContainer(state.AI.failedCaps, capKeyOrName)
+    capRecord = getCapFromContainer(aiState.failedCaps, capKeyOrName)
 
     if capRecord ~= nil then
         return capRecord
     end
 
-    return getCapFromContainer(state.AI.cancelledCaps, capKeyOrName)
+    return getCapFromContainer(aiState.cancelledCaps, capKeyOrName)
 end
 
 function CapManager.setCapStatus(capKeyOrName, status, reason)
@@ -1777,95 +1818,45 @@ function CapManager.clearCapZones()
 end
 
 function CapManager.getCapZones()
-    local state = ensureAiState()
-
-    if state == nil then
-        return {}
-    end
-
-    return state.AI.capZones
+    return getAiContainerReadOnly("capZones") or {}
 end
 
 function CapManager.getCapZoneCandidates()
-    local state = ensureAiState()
-
-    if state == nil then
-        return {}
-    end
-
-    return state.AI.capZoneCandidates
+    return getAiContainerReadOnly("capZoneCandidates") or {}
 end
 
 function CapManager.getRequestedCaps()
-    local state = ensureAiState()
-
-    if state == nil then
-        return {}
-    end
-
-    return state.AI.capRequests
+    return getAiContainerReadOnly("capRequests") or {}
 end
 
 function CapManager.getActiveCaps()
-    local state = ensureAiState()
-
-    if state == nil then
-        return {}
-    end
-
-    return state.AI.activeCaps
+    return getAiContainerReadOnly("activeCaps") or {}
 end
 
 function CapManager.getCompletedCaps()
-    local state = ensureAiState()
-
-    if state == nil then
-        return {}
-    end
-
-    return state.AI.completedCaps
+    return getAiContainerReadOnly("completedCaps") or {}
 end
 
 function CapManager.getFailedCaps()
-    local state = ensureAiState()
-
-    if state == nil then
-        return {}
-    end
-
-    return state.AI.failedCaps
+    return getAiContainerReadOnly("failedCaps") or {}
 end
 
 function CapManager.getCancelledCaps()
-    local state = ensureAiState()
-
-    if state == nil then
-        return {}
-    end
-
-    return state.AI.cancelledCaps
+    return getAiContainerReadOnly("cancelledCaps") or {}
 end
 
 function CapManager.getCapsBySide(side)
     local result = {}
-    local state = ensureAiState()
+    local containerNames = { "capRequests", "activeCaps", "completedCaps", "failedCaps", "cancelledCaps" }
 
-    if state == nil then
-        return result
-    end
+    for _, containerName in ipairs(containerNames) do
+        local container = getAiContainerReadOnly(containerName)
 
-    local containers = {
-        state.AI.capRequests,
-        state.AI.activeCaps,
-        state.AI.completedCaps,
-        state.AI.failedCaps,
-        state.AI.cancelledCaps
-    }
-
-    for _, container in ipairs(containers) do
-        for key, capRecord in pairs(container) do
-            if capRecord.side == side then
-                result[key] = capRecord
+        if container ~= nil then
+            for key, capRecord in pairs(container) do
+                if capRecord.side == side then
+                    result[key] = capRecord
+                end
             end
         end
     end
@@ -1882,15 +1873,13 @@ function CapManager.getRedCaps()
 end
 
 function CapManager.getStatistics()
-    local state = ensureAiState()
+    local state = getState()
 
     if state == nil then
         return {}
     end
 
-    updateStatistics()
-
-    return state.AI.capStatistics
+    return computeStatistics(state.AI)
 end
 
 function CapManager.start()
@@ -1977,9 +1966,14 @@ end
 function CapManager.summary()
     local state = getState()
     local aiState = nil
+    local statistics = nil
 
     if state ~= nil then
         aiState = state.AI
+    end
+
+    if aiState ~= nil then
+        statistics = computeStatistics(aiState)
     end
 
     return {
@@ -1996,7 +1990,7 @@ function CapManager.summary()
         lastRegisteredCount = CapManager.lastRegisteredCount,
         lastRequestedCount = CapManager.lastRequestedCount,
         lastSkippedCount = CapManager.lastSkippedCount,
-        statistics = aiState and aiState.capStatistics or nil,
+        statistics = statistics,
         reactionState = aiState and aiState.reactionState or nil,
         threatLevel = aiState and aiState.threatLevel or nil,
         state = aiState
