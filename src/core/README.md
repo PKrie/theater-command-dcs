@@ -1,46 +1,12 @@
-# src/core/README.md
+# Core – Theater Command DCS
 
-## Autoritativer Stand — 2026-08-04
-
-- `TC.State.Missions.available`, `active`, `completed`, `failed`, `expired` und `cancelled` sind Dictionaries nach Mission Key; fachliche Counts verwenden `pairs()`.
-- `#` und `ipairs()` sind für diese Collections keine verlässliche Zählmethode. Die diagnostische `State.summary()`-Historienmessung `pairs=0` bei gleichzeitig `#=1` bleibt ungeklärt.
-- MissionGenerator `v0.2.3` erzeugte zunächst zehn Records; später waren alle sechs Status-Collections reproduzierbar leer, während `lastMissionId=10` und die Statistik erhalten blieben. Statische Klassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
-- PersistenceSystem `v0.2.6` nutzt die bestehenden Felder `dirty`, `dirtyReason` und `dirtyAt`; der Embedded-Scheduler-Test ist bestanden, Restore bleibt deaktiviert.
-- Nächster Schritt ist ein Offline/read-only Audit der 13 eingebetteten `.miz`-Ressourcen. Ältere Stände unten sind historische Entwicklungsnotizen.
-
----
+## Verbindlicher Stand — 2026-09-29
 
 Diese Datei beschreibt den Core-Bereich von **Theater Command DCS**.
 
-Der Core ist die technische Grundschicht der eigenen Lua-Runtime.
+Projekt:
 
----
-
-## 1. Zweck des Core-Bereichs
-
-`src/core/` enthält die technische Basis von Theater Command DCS.
-
-Der Core stellt keine fachliche Kampagnenlogik im engeren Sinn bereit.
-
-Der Core stellt gemeinsame Grundlagen bereit für:
-
-- Konfiguration
-- Logging
-- globalen State
-- Utility-Funktionen
-- Scheduler-Grundfunktionen
-- defensive Initialisierung
-- Modulstatus
-- Featurestatus
-- spätere Debug-Ausgaben
-
-Alle späteren Theater-Command-Systeme dürfen auf den Core zugreifen.
-
-Der Core soll selbst möglichst unabhängig von späteren Fachsystemen bleiben.
-
----
-
-## 2. Kampagnenkontext
+    Theater Command DCS
 
 Erste Kampagne:
 
@@ -50,26 +16,77 @@ Map:
 
     Syria
 
-Ausgangslage:
+Aktueller Entwicklungsbereich:
 
-    Blue Start: Akrotiri / Zypern
-    Red Start: syrisches Festland vollständig rot kontrolliert
+    Priority 4 – produktive CTLD-Integration vorbereiten
 
-Grundprinzip:
+Priority 3:
 
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis
+    abgeschlossen im dokumentierten Umfang seit 2026-09-21
+
+Verbindlich:
+
+    productiveRestore=false
 
 ---
 
-## 3. Aktueller technischer Stand
+## 1. Zweck des Core-Bereichs
 
-Historischer Stand:
+`src/core/` ist die technische Grundschicht von Theater Command DCS.
 
-    2026-06-29
+Der Core stellt gemeinsame Infrastruktur bereit für:
 
-Aktive Core-Dateien:
+- Konfiguration
+- Logging
+- globalen Theater-Command-State
+- Utility-Funktionen
+- Scheduler-Grundfunktionen
+- Modulstatus
+- Featurestatus
+- Dirty-State
+- defensive Initialisierung
+
+Der Core enthält keine eigentliche strategische Kampagnenentscheidung.
+
+Fachlogik liegt in den jeweiligen Fachbereichen unter:
+
+    src/world/
+    src/campaign/
+    src/logistics/
+    src/missions/
+    src/ai/
+    src/iads/
+    src/ui/
+    src/debug/
+
+---
+
+## 2. Grundarchitektur
+
+Theater Command DCS folgt:
+
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis / Source of Truth
+    DCS Runtime = autoritativer Verhaltensbeweis
+
+Der Core unterstützt diese Architektur technisch.
+
+Er ist nicht:
+
+- MissionGenerator
+- CaptureSystem
+- Logistics-System
+- AI Director
+- IADS-System
+- UI
+- Framework-Wrapper
+
+---
+
+## 3. Aktive Core-Dateien
+
+Aktiv:
 
     src/core/tc_config.lua
     src/core/tc_logger.lua
@@ -77,30 +94,11 @@ Aktive Core-Dateien:
     src/core/tc_utils.lua
     src/core/tc_scheduler.lua
 
-Status:
-
-    aktiv
-    geladen
-    im DCS-Test bestanden
-    Grundlage für alle weiteren Systeme
-
-Bestätigt durch DCS-Logtests:
-
-- Core-Dateien werden geladen.
-- globale Theater-Command-Struktur ist verfügbar.
-- Konfiguration ist verfügbar.
-- Logger ist verfügbar.
-- State ist verfügbar.
-- Utils sind verfügbar.
-- Scheduler-Grundstruktur ist verfügbar.
-- Main kann auf Core zugreifen.
-- Loader kann Frameworks und Runtime prüfen.
-- Es gab keinen Theater-Command-Lua-Fehler.
-- Es gab keinen Lua-Stacktrace.
+Diese Dateien sind Teil der produktiven Theater-Command-Ladekette.
 
 ---
 
-## 4. Architekturregel
+## 4. Architekturregel für Dateinamen
 
 Externe Frameworks liegen unter:
 
@@ -110,72 +108,31 @@ Eigene Theater-Command-Logik liegt unter:
 
     src/
 
-Der Core gehört zur eigenen Theater-Command-Logik.
-
-Frameworks werden nicht verändert.
-
-Dateien in `src/core/` werden nach Theater-Command-Aufgaben benannt, nicht nach Frameworks.
+Der Core wird nach Theater-Command-Aufgaben organisiert.
 
 Nicht gewünscht:
 
     src/core/tc_moose.lua
     src/core/tc_mist.lua
     src/core/tc_ctld.lua
+    src/core/tc_ctld_bridge.lua
     src/core/tc_skynet.lua
-    src/core/tc_all_in_one.lua
     src/core/tc_framework_wrapper.lua
+    src/core/tc_all_in_one.lua
 
-Gewünscht:
+Korrekte Core-Dateien:
 
-    src/core/tc_config.lua
-    src/core/tc_logger.lua
-    src/core/tc_state.lua
-    src/core/tc_utils.lua
-    src/core/tc_scheduler.lua
+    tc_config.lua
+    tc_logger.lua
+    tc_state.lua
+    tc_utils.lua
+    tc_scheduler.lua
 
-Der Core ist kein Wrapper für MOOSE, MIST, CTLD oder Skynet IADS.
-
-Der Core ist die technische Basis von Theater Command DCS.
-
----
-
-## 5. Aktive Dateien
-
-Aktuell aktive Dateien:
-
-    src/core/tc_config.lua
-    src/core/tc_logger.lua
-    src/core/tc_state.lua
-    src/core/tc_utils.lua
-    src/core/tc_scheduler.lua
-
-`tc_config.lua`:
-
-    zentrale Projekt- und Kampagnenkonfiguration
-
-`tc_logger.lua`:
-
-    einheitliches Logging für dcs.log
-
-`tc_state.lua`:
-
-    globale Theater-Command-State-Struktur
-
-`tc_utils.lua`:
-
-    allgemeine Hilfsfunktionen
-
-`tc_scheduler.lua`:
-
-    Scheduler- und Timer-Grundstruktur
-
-Diese Dateien sind nicht mehr nur geplant.
-
-Sie sind Teil der aktiven Ladefolge.
+Framework-spezifische Ausführung wird nicht als generischer Core-Wrapper gebaut.
 
 ---
 
-## 6. tc_config.lua
+## 5. `tc_config.lua`
 
 Datei:
 
@@ -183,40 +140,37 @@ Datei:
 
 Aufgabe:
 
-    zentrale Konfiguration für Theater Command DCS
+    zentrale Theater-Command-Konfiguration
 
-Mögliche Inhalte:
+Typische Verantwortlichkeiten:
 
 - Projektname
 - Kampagnenname
 - Map
-- Startbasis
-- Startkoalition
-- Debug-Schalter
+- Blue-Startbasis
 - Feature-Schalter
-- Standardwerte
-- Versionen
-- Systemkonfiguration
+- Debug-Schalter
+- gemeinsame Standardwerte
 
-Typische Werte:
+Aktueller Kampagnenkontext:
 
-    projectName: Theater Command DCS
-    campaignName: Operation Levant Reclamation
-    map: Syria
-    blueStartBase: Akrotiri
-    initialRedTerritory: Syrian Mainland
-    debugEnabled: true
+    Project: Theater Command DCS
+    Campaign: Operation Levant Reclamation
+    Map: Syria
+    Blue Start: Akrotiri
 
-Abgrenzung:
+Nicht Aufgabe von `tc_config.lua`:
 
-    tc_config.lua enthält keine Airbase-Scan-Logik.
-    tc_config.lua erzeugt keine Zonen.
-    tc_config.lua führt keine Capture-Entscheidungen aus.
-    tc_config.lua erzeugt keine Missionen.
+- Airbases scannen
+- Zonen erzeugen
+- Capture berechnen
+- Missionen erzeugen
+- AI steuern
+- CTLD ausführen
 
 ---
 
-## 7. tc_logger.lua
+## 6. `tc_logger.lua`
 
 Datei:
 
@@ -224,41 +178,29 @@ Datei:
 
 Aufgabe:
 
-    einheitliches Logging für Theater Command DCS
+    einheitliches Logging
 
-Der Logger ist wichtig, weil `dcs.log` aktuell die wichtigste technische Prüfstelle ist.
+Wichtige Funktionen:
 
-Aufgaben:
+- Info
+- Warning
+- Error
+- Debug
+- Modulpräfixe
+- Versionsmarker
+- Runtime-Diagnose
 
-- einheitliche Log-Ausgaben
-- Info-Meldungen
-- Warnungen
-- Fehler
-- Debug-Ausgaben
-- klare Theater-Command-Präfixe
-- Modulnamen in Logs
-- Versionsmarker in Logs
-- Testauswertung erleichtern
-
-Empfohlenes Log-Präfix:
+Projektpräfix:
 
     [TC]
 
-Beispiele:
+Logging ist besonders wichtig, weil DCS-Runtime und `dcs.log` zentrale technische Evidenz liefern.
 
-    [TC] Theater Command loader started
-    [TC] Main start requested
-    [TC] Runtime systems initialized
-    [TC] Theater Command loader finished
-
-Wichtig:
-
-    Jede aktive Lua-Datei soll beim Laden ihre Version loggen.
-    Dadurch kann geprüft werden, ob DCS wirklich die aktuelle Datei aus der .miz geladen hat.
+Aktive Lua-Module sollen beim Laden ihre Version eindeutig sichtbar machen.
 
 ---
 
-## 8. tc_state.lua
+## 7. `tc_state.lua`
 
 Datei:
 
@@ -266,45 +208,216 @@ Datei:
 
 Aufgabe:
 
-    globaler Theater-Command-State
+    zentraler Theater-Command-State
 
-Der State speichert den strategischen und technischen Zustand von Theater Command DCS.
+Zentrale Projekttabelle:
 
-Er speichert nicht jedes kurzlebige DCS-Objekt.
+    TC
 
-Wichtige State-Bereiche:
+State:
 
-    TC.State.Core
-    TC.State.Modules
-    TC.State.Features
-    TC.State.World
-    TC.State.Bases
-    TC.State.Zones
-    TC.State.Campaign
-    TC.State.Capture
-    TC.State.Logistics
-    TC.State.Missions
-    TC.State.AI
-    TC.State.IADS
-    TC.State.UI
-    TC.State.Persistence
-    TC.State.Debug
+    TC.State
 
-Aktuell nutzen mehrere Systeme den State produktiv state-first:
+beziehungsweise kompatibler Alias:
 
-- Airbase Scanner
-- ZoneFactory
-- CaptureSystem
-- LogisticsDelivery
-- FobSystem
-- MissionGenerator
-- AICapManager
-- F10Menu
-- PersistenceSystem `v0.2.6` mit dirty-aware Background-Autosave
+    TC.state
+
+Fachmodule speichern darin ihren Kampagnenzustand.
+
+Der State soll:
+
+- nachvollziehbar
+- modular
+- persistierbar
+- framework-unabhängig
+
+bleiben.
+
+Kurzlebiger Vendor-Runtime-State soll nicht ohne fachliche Abstraktion zum langfristigen Campaign-State werden.
 
 ---
 
-## 9. tc_utils.lua
+## 8. Wichtige State-Bereiche
+
+Aktuell beziehungsweise vorbereitet sind unter anderem:
+
+    State.Core
+    State.Modules
+    State.Features
+    State.World
+    State.Bases
+    State.Zones
+    State.Campaign
+    State.Logistics
+    State.Missions
+    State.AI
+    State.IADS
+    State.UI
+    State.Persistence
+    State.Debug
+
+Nicht jeder Bereich besitzt bereits ein vollständig produktives Fachsystem.
+
+Beispiel:
+
+    State.IADS
+
+ist vorbereitet.
+
+Ein produktives Theater-Command-IADS-System existiert noch nicht.
+
+---
+
+## 9. Mission-State-Dictionaries
+
+Mission-Collections werden nach Mission Key gespeichert.
+
+Relevante Collections:
+
+    State.Missions.available
+    State.Missions.active
+    State.Missions.completed
+    State.Missions.failed
+    State.Missions.expired
+    State.Missions.cancelled
+
+Diese Tabellen sind:
+
+    String-keyed Lua-Dictionaries
+
+Beispiel:
+
+    MISSION_1
+    MISSION_2
+    MISSION_3
+
+Deshalb ist:
+
+    #table
+
+für diese Collections keine verlässliche Zählmethode.
+
+Korrekte fachliche Zählung erfolgt über:
+
+    pairs()
+
+oder entsprechende pairs-basierte Hilfsfunktionen.
+
+---
+
+## 10. Auflösung des früheren Mission-Record-Verdachts
+
+Der frühere Verdacht, MissionGenerator würde seine Mission Records verlieren, wurde am:
+
+    2026-09-12
+
+widerlegt.
+
+Live bestätigt:
+
+    statistics.available = 10
+    pairs()-Count = 10
+    #available = 0
+
+Die Records waren vorhanden.
+
+Der Fehler lag in einer falschen Count-Auswertung in:
+
+    State.summary()
+
+beziehungsweise der Verwendung von:
+
+    #
+
+auf String-keyed Dictionaries.
+
+Ergebnis:
+
+    kein bestätigter Mission-Record-Datenverlust
+
+MissionGenerator benötigte dafür keinen Record-Loss-Fix.
+
+---
+
+## 11. Dirty-State
+
+Persistence-relevanter Dirty-State liegt zentral unter:
+
+    TC.State.Persistence
+
+Relevante Felder:
+
+    dirty
+    dirtyReason
+    dirtyAt
+
+Fachliche persistierbare Mutationen verwenden:
+
+    TC.State.markDirty(reason)
+
+Dirty-State kann über:
+
+    TC.State.clearDirty()
+
+nach erfolgreicher Persistence-Verifikation gelöscht werden.
+
+---
+
+## 12. Dirty-Semantik
+
+Verbindliche Regel:
+
+    echte persistierbare Mutation
+    -> Dirty
+
+    reiner Read
+    -> kein Dirty
+
+    echter No-Op
+    -> kein Dirty
+
+Diese Regel wurde inzwischen praktisch für mehrere Fachsysteme überprüft.
+
+Priority 3 diente genau dieser Dirty-Coverage.
+
+---
+
+## 13. Priority 3
+
+Priority 3 wurde am:
+
+    2026-09-21
+
+im dokumentierten Umfang abgeschlossen.
+
+Geprüft:
+
+    LogisticsDelivery
+    FobSystem
+    MissionGenerator
+    AICapManager
+
+Ergebnis:
+
+    LogisticsDelivery v0.2.1
+    -> Read-Neutrality bestanden
+
+    FobSystem v0.2.1
+    -> Read-Neutrality bestanden
+
+    MissionGenerator v0.2.3
+    -> kein aktiver Missing-Dirty-Bug gefunden
+
+    AICapManager v0.2.1
+    -> Read-Neutrality bestanden
+
+Priority 3 ist nicht mehr der aktuelle Entwicklungsbereich.
+
+Neue Lifecycle-Pfade werden bei ihrer späteren Aktivierung separat geprüft.
+
+---
+
+## 14. `tc_utils.lua`
 
 Datei:
 
@@ -312,40 +425,34 @@ Datei:
 
 Aufgabe:
 
-    allgemeine Hilfsfunktionen
+    allgemeine technische Hilfsfunktionen
 
-Mögliche Utility-Aufgaben:
+Geeignete Aufgaben:
 
 - sichere Tabellenzugriffe
-- String-Hilfsfunktionen
-- Namensnormalisierung
-- einfache Validierungen
+- Count-Hilfen
+- String-Hilfen
+- kleine Validierungen
 - Koalitionsumwandlungen
-- Positions- und Distanzhilfen
-- Standardprüfungen für nil-Werte
+- Positionshilfen
 - defensive Kopierfunktionen
-- kleine wiederverwendbare technische Funktionen
+- nil-sichere Hilfsfunktionen
 
-Nicht in `tc_utils.lua` gehören:
+Nicht in Utils gehören:
 
-- Airbase Scanner
-- ZoneFactory
-- CaptureSystem
+- Capture-Fachlogik
+- MissionGenerator
 - LogisticsDelivery
 - FobSystem
-- MissionGenerator
-- AICapManager
-- IADS-System
-- PersistenceSystem
-- F10Menu
+- AI-Entscheidungslogik
+- CTLD-Orchestrierung
+- IADS-Logik
 
-Utils sollen allgemein bleiben.
-
-Fachlogik gehört in die passenden Fachmodule.
+Utility-Code bleibt allgemein.
 
 ---
 
-## 10. tc_scheduler.lua
+## 15. `tc_scheduler.lua`
 
 Datei:
 
@@ -353,103 +460,87 @@ Datei:
 
 Aufgabe:
 
-    Scheduler- und Timer-Grundstruktur
+    gemeinsame Scheduler-/Timer-Grundlage
 
-Mögliche Scheduler-Aufgaben:
+Mögliche beziehungsweise aktuelle Nutzung:
 
-- verzögerte Funktionsaufrufe
-- wiederholte Prüfungen
-- periodische Debug-Ausgaben
-- spätere AI-Director-Ticks
-- spätere MissionGenerator-Updates
-- spätere Logistics-Prüfungen
-- spätere Persistence-Intervalle
-- sichere Kapselung von DCS-Timer-Funktionen
+- verzögerte Aufrufe
+- periodische Prüfungen
+- spätere AI-Ticks
+- spätere Mission-Updates
+- technische Scheduler-Kapselung
 
-Abgrenzung:
+Der Core-Scheduler trifft keine fachlichen Kampagnenentscheidungen.
 
-    tc_scheduler.lua trifft keine Kampagnenentscheidungen.
-    tc_scheduler.lua erzeugt keine Missionen.
-    tc_scheduler.lua führt keine Capture-Logik aus.
+Er führt nur zeitgesteuerte Funktionen aus.
 
-Der Scheduler führt nur zeitgesteuerte Funktionen aus.
+Persistence besitzt aktuell seinen bestätigten Background-Autosave-Lifecycle.
 
 ---
 
-## 11. Namespace
+## 16. Namespace
 
-Theater Command DCS nutzt eine zentrale globale Projekttabelle:
+Zentrale Projekttabelle:
 
     TC
 
-Nicht verwenden:
+Fachbereiche hängen sich strukturiert darunter ein.
 
-    TheaterCommand
-    theaterCommand
-    tc_global
-    _G_TC
-    TheaterCommandCore
+Beispiele:
 
-Geplante und aktuelle Struktur:
+    TC.Config
+    TC.Logger
+    TC.State
+    TC.Utils
+    TC.Scheduler
+    TC.World
+    TC.Campaign
+    TC.Logistics
+    TC.Missions
+    TC.AI
+    TC.IADS
+    TC.UI
+    TC.Debug
+
+Nicht parallel neue globale Projektnamespaces einführen.
+
+Der zentrale Namespace bleibt:
 
     TC
-    ├── Config
-    ├── Logger
-    ├── State
-    ├── Utils
-    ├── Scheduler
-    ├── Core
-    ├── World
-    ├── Campaign
-    ├── Logistics
-    ├── Missions
-    ├── AI
-    ├── IADS
-    ├── UI
-    └── Debug
-
-Wichtig:
-
-    TC ist die einzige zentrale globale Projektstruktur.
-    Fachmodule hängen sich sauber unter TC ein.
 
 ---
 
-## 12. Aktuelle Ladeposition
+## 17. Ladeposition
 
-Der Core wird nach den Vendor-Frameworks und vor allen eigenen Fachsystemen geladen.
+Vendor-Frameworks werden zuerst geladen.
 
-Aktuelle Ladefolge im Mission Editor:
+Danach Core:
 
-    1. vendor/mist/mist.lua
-    2. vendor/moose/Moose.lua
-    3. vendor/ctld/CTLD-i18n.lua
-    4. vendor/ctld/CTLD.lua
-    5. vendor/skynet-iads/SkynetIADS.lua
-    6. src/core/tc_config.lua
-    7. src/core/tc_logger.lua
-    8. src/core/tc_state.lua
-    9. src/core/tc_utils.lua
-    10. src/core/tc_scheduler.lua
-    11. src/world/tc_airbase_scanner.lua
-    12. src/world/tc_zone_factory.lua
-    13. src/campaign/tc_capture_system.lua
-    14. src/campaign/tc_persistence_system.lua
-    15. src/logistics/tc_logistics_delivery.lua
-    16. src/logistics/tc_fob_system.lua
-    17. src/missions/tc_mission_generator.lua
-    18. src/ai/tc_ai_cap_manager.lua
-    19. src/ui/tc_f10_menu.lua
-    20. src/main.lua
-    21. src/loader.lua
+    1. src/core/tc_config.lua
+    2. src/core/tc_logger.lua
+    3. src/core/tc_state.lua
+    4. src/core/tc_utils.lua
+    5. src/core/tc_scheduler.lua
 
-Wichtig:
+Danach Fachmodule:
 
-    Core-Dateien müssen vor World, Campaign, Logistics, Missions, AI, UI, Main und Loader verfügbar sein.
+    6. src/world/tc_airbase_scanner.lua
+    7. src/world/tc_zone_factory.lua
+    8. src/campaign/tc_capture_system.lua
+    9. src/campaign/tc_persistence_system.lua
+    10. src/logistics/tc_logistics_delivery.lua
+    11. src/logistics/tc_fob_system.lua
+    12. src/missions/tc_mission_generator.lua
+    13. src/ai/tc_ai_cap_manager.lua
+    14. src/ui/tc_f10_menu.lua
+    15. src/main.lua
+    16. src/loader.lua
+
+Core muss vor allen Fachsystemen verfügbar sein.
 
 ---
 
-## 13. Verhältnis zu Vendor-Frameworks
+## 18. Verhältnis zu Vendor-Frameworks
 
 Vendor-Frameworks:
 
@@ -458,395 +549,495 @@ Vendor-Frameworks:
     CTLD
     Skynet IADS
 
-Der Core darf prüfen, ob Frameworks vorhanden sind.
+Der Core kann deren Verfügbarkeit unterstützen beziehungsweise dem Loader technische Grundlage bereitstellen.
 
-Der Core verändert keine Vendor-Dateien.
+Der Core:
 
-Der Core startet keine produktiven Framework-Aktionen.
+- verändert keine Vendor-Dateien
+- besitzt keinen generischen Framework-Wrapper
+- startet keine fachlichen CTLD-Transporte
+- startet keine MOOSE-Missionen
+- baut keine Skynet-Netzwerke
 
-Aktuelle Framework-Rolle:
-
-- MIST ist geladen.
-- MOOSE ist geladen.
-- CTLD ist geladen.
-- Skynet IADS ist geladen.
-- Loader erkennt diese Frameworks.
-- echte Framework-Aktionen bleiben state-first deaktiviert.
+Framework-Ausführung gehört in die entsprechenden fachlichen Integrationspfade.
 
 ---
 
-## 14. Verhältnis zu World
+## 19. Verhältnis zu World
 
-World nutzt den Core.
-
-Aktive World-Dateien:
+World:
 
     src/world/tc_airbase_scanner.lua
     src/world/tc_zone_factory.lua
 
-World nutzt:
+Aktuell bestätigt:
 
-- TC.Config
-- TC.Logger
-- TC.State
-- TC.Utils
-- TC.Scheduler bei Bedarf
-
-Aktuelle World-Werte:
-
-    Syria airbase-like objects: 225
+    Airbase-like Objects: 225
     relevante Kampagnenzonen: 46
-    captureCandidates: 32
-    missionCandidates: 32
-    logisticsCandidates: 46
+    Capture Candidates: 32
+    Mission Candidates: 32
+    Logistics Candidates: 46
 
-Core stellt nur die technische Grundlage bereit.
+Core stellt Infrastruktur bereit.
 
-World liefert die Karten- und Raumdaten.
+World interpretiert die DCS-Kartenwelt.
 
 ---
 
-## 15. Verhältnis zu Campaign
+## 20. Verhältnis zu Campaign
 
-Campaign nutzt den Core.
-
-Aktive Campaign-Dateien:
+Campaign:
 
     src/campaign/tc_capture_system.lua
     src/campaign/tc_persistence_system.lua
 
-Campaign nutzt:
+Aktuelle Versionen:
 
-- TC.Config
-- TC.Logger
-- TC.State
-- TC.Utils
-- TC.Scheduler bei Bedarf
+    CaptureSystem v0.2.2
+    PersistenceSystem v0.2.6
 
-Aktuelle Capture-Werte:
+Capture bestätigt:
 
     eligibleBases: 32
     eligibleZones: 32
     pressureRecords: 32
     progressRecords: 32
-    appliedMissionEffects: 0
 
-Core führt keine Capture-Logik aus.
+Persistence bestätigt:
 
-Campaign verwaltet strategischen Kampagnenzustand.
+- Save
+- Read-back
+- Compile
+- Evaluate
+- Validation
+- kontrollierter Import
+- Background Autosave
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`
+- Retry
+
+Verbindlich:
+
+    productiveRestore=false
 
 ---
 
-## 16. Verhältnis zu Logistics
+## 21. Verhältnis zu Logistics
 
-Logistics nutzt den Core.
-
-Aktive Logistics-Dateien:
+Logistics:
 
     src/logistics/tc_logistics_delivery.lua
     src/logistics/tc_fob_system.lua
 
-Aktuelle Logistics-Werte:
+Versionen:
 
-    logistics hubs: 46
-    blue hubs: 7
-    red hubs: 24
-    neutral hubs: 15
-    active hubs: 31
-    limited hubs: 15
-    locked hubs: 0
+    LogisticsDelivery v0.2.1
+    FobSystem v0.2.1
 
-Aktuelle FOB-Werte:
+Bestätigt:
 
-    FOB candidates: 6
+    Logistics Hubs: 46
+    FOB Candidates: 6
     Blue FOBs: 2
+
+FOBs:
+
     FOB Ercan
     FOB Gecitkale
-    Status: UNDER_CONSTRUCTION
 
-Core führt keine CTLD-Aktionen aus.
-
-Logistics verwaltet Logistics Hubs und FOB-State.
+Core besitzt weder Logistics- noch CTLD-Fachlogik.
 
 ---
 
-## 17. Verhältnis zu Missions
+## 22. Verhältnis zu Missions
 
-Missions nutzt den Core.
-
-Aktive Missions-Datei:
+MissionGenerator:
 
     src/missions/tc_mission_generator.lua
+    v0.2.3
 
-Aktuelle MissionGenerator-Werte:
+Bestätigt:
 
-    mission candidates: 69
-    fobSupportCandidates: 2
-    generated missions: 10
-    reservedCreated: 1
-    duplicatesSkipped: 1
-    typeLimitSkipped: 30
+    Mission Candidates: 78
+    FOB Support Candidates: 2
+    Mission Records: 10
+
+Bestätigte Statuswechsel:
+
+    AVAILABLE -> ACTIVE
+    ACTIVE -> COMPLETED
+    ACTIVE -> FAILED
 
 Core erzeugt keine Missionen.
 
-Missions erzeugt Mission Records und verwaltet Mission Activation state-only.
+Core stellt State- und Utility-Grundlagen bereit.
 
 ---
 
-## 18. Verhältnis zu AI
+## 23. Verhältnis zu AI
 
-AI nutzt den Core.
-
-Aktive AI-Datei:
+AICapManager:
 
     src/ai/tc_ai_cap_manager.lua
+    v0.2.1
 
-Aktuelle AI-Werte:
+Bestätigt:
 
-    cap zone candidates: 31
-    auto-registered CAP zones: 12
-    CAP requests: 12
-    reactionState: AIR_REACTION_REQUESTED
-    threatLevel: HIGH
+    CAP Zone Candidates: 31
+    CAP Zones: 12
+    CAP Requests: 12
+
+Status:
+
+    state-first bestanden
+    Read-Neutrality bestanden
+
+Noch nicht vorhanden:
+
+    reale MOOSE-CAP-Flüge
+    vollständiger AI Director
 
 Core trifft keine AI-Entscheidungen.
 
-AI erzeugt state-only CAP-State.
-
 ---
 
-## 19. Verhältnis zu UI
+## 24. Verhältnis zu UI
 
-UI nutzt den Core.
-
-Aktive UI-Datei:
+F10Menu:
 
     src/ui/tc_f10_menu.lua
+    v0.2.3
 
-Aktuelle UI-Werte:
+Bestätigt:
 
-    F10Menu v0.2.0
-    commands: 26
+    33 Commands
 
-Aktuelle UI-Funktionen:
+Aktuell bestätigt:
 
-- Missionen anzeigen
-- Mission Details anzeigen
-- Missionen aktivieren
-- Campaign Status anzeigen
-- Logistics Status anzeigen
-- FOB Status anzeigen
-- AI CAP Status anzeigen
+- Mission Visibility
+- Mission Details
+- Mission Activation
+- Mission Completion
+- Mission Failure
+- Campaign Status
+- Capture Status
+- Capture Ready
+- Pressure Contested
+- Capture Ready Apply
+- Logistics Status
+- FOB Status
+- AI CAP Status
 
 Core erzeugt keine F10-Menüs.
 
-UI stellt den State über F10 dar.
+UI nutzt Core und Fachsysteme.
 
 ---
 
-## 20. Verhältnis zu IADS
+## 25. Verhältnis zu IADS
 
-IADS ist als eigener Bereich vorbereitet.
+Vendor:
 
-Aktueller Stand:
+    Skynet IADS 3.3.0
 
-    Skynet IADS wird geladen.
-    src/iads/ ist vorbereitet.
-    eigenes Theater-Command-IADS-Modul ist noch nicht aktiv.
+Aktuell:
 
-Core stellt später die technische Grundlage für IADS bereit.
+    geladen
 
-Core initialisiert aber keine Skynet-Netzwerke.
+Eigener Bereich:
 
----
+    src/iads/
 
-## 21. Verhältnis zu Debug
+Produktives eigenes Theater-Command-IADS-Modul:
 
-Debug ist als eigener Bereich vorbereitet.
+    noch nicht implementiert
 
-Aktueller Stand:
+Core stellt dafür später technische Grundlage bereit.
 
-    src/debug/ ist vorbereitet.
-    eigenes Debug-System ist noch nicht aktiv.
-
-Core stellt Logger, State und Config für spätere Debug-Funktionen bereit.
-
-Debug soll später State-Dumps und Reports erzeugen.
+Core initialisiert selbst keine Skynet-IADS-Netzwerke.
 
 ---
 
-## 22. State-first-Regel
+## 26. Verhältnis zu Debug
 
-Auch der Core unterstützt die state-first-Architektur.
+Bereich:
 
-Das bedeutet:
+    src/debug/
 
-- Core stellt State bereit.
-- Fachmodule schreiben in State.
-- UI zeigt State.
-- Framework-Hooks bleiben vorbereitet.
-- echte Framework-Aktionen folgen erst später.
+Aktuell:
 
-Nicht Aufgabe des Core:
+    vorbereitet
+    noch kein produktives eigenes Debug-Modul
 
-- echte MOOSE-Spawns
-- echte CTLD-Aktionen
-- echte Skynet-Aktionen
-- Missionen erzeugen
-- Zonen erobern
-- FOBs bauen
-- IADS-Netzwerke aktivieren
+Core stellt Logger, State und Utilities für spätere Debug-Funktionen bereit.
+
+Debug soll State sichtbar machen und nicht versteckt verändern.
 
 ---
 
-## 23. Testziele
+## 27. CTLD im aktuellen Projektstand
 
-Der Core gilt aktuell als bestanden, wenn:
+CTLD:
 
-- TC-Tabelle verfügbar ist.
-- TC.Config verfügbar ist.
-- TC.Logger verfügbar ist.
-- TC.State verfügbar ist.
-- TC.Utils verfügbar ist.
-- TC.Scheduler verfügbar ist.
-- Core-Dateien ohne Fehler laden.
-- nachfolgende Module auf Core zugreifen können.
+    1.6.1
+
+Am 2026-09-29 wurde für einen isolierten getesteten Aufbau ein KI-Truppentransport praktisch vollständig bestätigt.
+
+Bestätigter Pfad:
+
+    Runtime-Zonenregistrierung
+    -> Transporterregistrierung
+    -> Pickup
+    -> Flug
+    -> Off-Airfield-Landung
+    -> Dropoff
+    -> reale Blue-Bodengruppe
+
+Dieser PoC verändert die Core-Verantwortung nicht.
+
+Core wird nicht zum:
+
+    CTLD-Wrapper
+
+Die produktive CTLD-Integration wird fachlich unter geeigneten `src/`-Modulen aufgebaut.
+
+---
+
+## 28. `RepackCommandsPath`
+
+Beim erfolgreichen CTLD-Test wurde genau einmal beim Touchdown beobachtet:
+
+    CTLD.lua:6150:
+    attempt to get length of local 'RepackCommandsPath' (a nil value)
+
+Dieser Fehler liegt im Vendor-Runtime-Kontext.
+
+Verbindlich:
+
+    vendor/ctld/CTLD.lua wird nicht gepatcht.
+
+Eine mögliche Lösung gehört nicht als generischer Fix in:
+
+    src/core/
+
+Die Behandlung beziehungsweise Isolation muss an der fachlich richtigen Integrationsgrenze erfolgen.
+
+---
+
+## 29. State-first-Regel
+
+Der Core unterstützt die state-first-Architektur.
+
+Grundfluss:
+
+    State
+    -> Intent
+    -> Execution
+    -> Result Validation
+    -> State Mutation
+    -> Dirty
+    -> Persistence
+
+Der Core stellt dafür:
+
+- State
+- Logging
+- Utilities
+- Scheduler
+- Konfiguration
+
+bereit.
+
+Die Fachsysteme besitzen die fachlichen Entscheidungen.
+
+---
+
+## 30. Aktueller Systemstand
+
+    AirbaseScanner      v0.2.2
+    ZoneFactory         v0.2.0
+    CaptureSystem       v0.2.2
+    PersistenceSystem   v0.2.6
+    LogisticsDelivery   v0.2.1
+    FobSystem           v0.2.1
+    MissionGenerator    v0.2.3
+    AICapManager        v0.2.1
+    F10Menu             v0.2.3
+
+F10 Commands:
+
+    33
+
+Priority 3:
+
+    abgeschlossen
+
+Produktiver Restore:
+
+    deaktiviert
+
+---
+
+## 31. Core-Testkriterien
+
+Der Core gilt aktuell als bestanden, weil:
+
+- `TC` verfügbar ist.
+- `TC.Config` verfügbar ist.
+- `TC.Logger` verfügbar ist.
+- `TC.State` verfügbar ist.
+- `TC.Utils` verfügbar ist.
+- `TC.Scheduler` verfügbar ist.
+- nachfolgende Fachmodule auf den Core zugreifen können.
 - Main startet.
 - Loader beendet sauber.
-- keine Theater-Command-Lua-Fehler auftreten.
-- keine Lua-Stacktraces auftreten.
+- aktuelle Runtime-Systeme arbeiten auf der Core-Grundlage.
+- zentrale Dirty-Semantik funktioniert.
+
+Bei späteren Core-Änderungen müssen die betroffenen abhängigen Systeme erneut geprüft werden.
 
 ---
 
-## 24. Erwartete Logmarker
+## 32. Entwicklungsregel
 
-Erwartete Core- und Startmarker:
-
-    [TC] Theater Command loader started
-    [TC] Main start requested
-    [TC] Core check passed
-    [TC] Runtime systems initialized
-    [TC] Main initialized
-    [TC] Main started
-    [TC] Theater Command loader finished
-
-Je nach Implementierung können einzelne Core-Dateien eigene Lade- oder Initialisierungsmarker ausgeben.
-
-Wichtig ist:
-
-    Core verfügbar.
-    Main startet.
-    Loader beendet sauber.
-    keine Fehler.
-
----
-
-## 25. Abgrenzung
-
-Nicht Aufgabe von `src/core/`:
-
-- Airbases scannen
-- Zonen erzeugen
-- Basen erobern
-- Capture-Pressure berechnen
-- Logistics Hubs erzeugen
-- FOBs planen
-- Missionen generieren
-- Missionen aktivieren
-- CAP steuern
-- IADS-Sektoren verwalten
-- Spielstände produktiv speichern
-- F10-Menüs erzeugen
-- Debug-Menüs erzeugen
-
-Diese Systeme bekommen eigene Dateien in den passenden Unterordnern.
-
-Der Core bleibt technische Basis.
-
----
-
-## 26. Entwicklungsregel
-
-Der Core ist bereits angelegt und aktiv.
-
-Weitere Änderungen am Core nur dann, wenn sie wirklich nötig sind.
+Core-Änderungen werden konservativ behandelt.
 
 Grund:
 
-    Viele Systeme hängen vom Core ab.
-    Core-Änderungen können breite Auswirkungen haben.
+    viele Fachsysteme hängen vom Core ab
 
-Bei Core-Änderungen besonders prüfen:
+Deshalb:
 
-- startet Main noch?
-- beendet Loader sauber?
-- laden alle Fachmodule noch?
-- sind TC.Config, TC.Logger, TC.State, TC.Utils und TC.Scheduler weiterhin verfügbar?
-- bleibt F10Menu funktionsfähig?
-- treten nil-Fehler auf?
-
----
-
-## 27. Nächster sinnvoller Schritt
-
-Der nächste sinnvolle Schritt liegt nicht im Core.
-
-Empfohlene nächste Datei:
-
-    src/ui/tc_f10_menu.lua
-
-Ziel:
-
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
-
-Geplante neue F10-Funktionen:
-
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
+1. nur konkreten Bedarf ändern,
+2. Auswirkungen auf abhängige Systeme prüfen,
+3. State-Struktur nicht beiläufig verändern,
+4. Dirty-Semantik erhalten,
+5. keine Framework-spezifische Fachlogik in Core verschieben,
+6. Regressionen gezielt durchführen.
 
 ---
 
-## 28. Zielbild
+## 33. Kein aktueller Core-Code-Schritt
 
-`src/core/` ist die technische Grundlage von Theater Command DCS.
+Der Core benötigt aktuell keinen neuen allgemeinen Entwicklungsschritt.
 
-Der Core sorgt dafür, dass spätere Systeme nicht jeweils ihre eigene Konfiguration, ihre eigenen Logger, eigene State-Strukturen oder eigene Timer-Logik bauen müssen.
+Der aktuelle Projektbereich ist:
 
-Aktueller Status:
+    Priority 4 – produktive CTLD-Integration vorbereiten
 
-    Core ist aktiv.
-    Core-Dateien werden geladen.
-    Core trägt die state-first Runtime.
-    Main und Loader starten sauber.
+Vor produktivem CTLD-Code muss die fachliche Integrationsgrenze festgelegt werden.
 
-Damit bleibt das Projekt:
+Der Core wird nur geändert, wenn diese Architektur tatsächlich eine neue allgemeine Infrastruktur benötigt.
 
-- modular
-- lesbar
-- testbar
-- erweiterbar
-- wartbar
+Keine vorsorgliche Core-Erweiterung.
 
-Der Core ist stabil genug für den nächsten UI-/Debug-Schritt.
+---
+
+## 34. Entwicklungswerkzeuge
+
+Aktuelle Rollen:
+
+### ChatGPT
+
+    Projektkoordination
+    Architektur
+    GitHub-Audit
+    Testplanung
+    Bewertung
+    Dokumentation
+
+### Claude + dcs-mcp
+
+Version:
+
+    dcs-mcp 0.9.11
+
+Rolle:
+
+    .miz
+    Mission Editor
+    Gruppen
+    Zonen
+    Wegpunkte
+    Tasks
+    gespeicherte Missionsstruktur
+
+### Claude Code + DCS-SMS
+
+Version:
+
+    DCS-SMS 0.27.2
+
+Hook:
+
+    me-bridge-0.27.2
+
+Verifiziertes Installationsverzeichnis:
+
+    C:\Tools\dcs-sms
+
+Rolle:
+
+    lokale Runtime
+    Runtime-Lua
+    Theater-Command-State
+    Logs
+    Runtime-Regressionen
+
+Aus dem bestätigten Stand wird kein exakter DCS-SMS-Executable-Pfad abgeleitet.
+
+### GitHub
+
+    Source of Truth
+
+### DCS
+
+    autoritativer Runtime-Verhaltensbeweis
+
+---
+
+## 35. Aktueller Abschlussstand
+
+Stand:
+
+    2026-09-29
+
+Core:
+
+    aktiv
+    stabil
+    Grundlage aller aktuellen Fachsysteme
+
+Mission-Record-Loss:
+
+    widerlegt
+
+Dirty-State:
+
+    zentral
+    produktiv verwendet
+    Priority-3-Regressionen abgeschlossen
+
+Persistence:
+
+    v0.2.6
+    productiveRestore=false
+
+Aktueller Projektbereich:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Der Core benötigt aktuell keinen parallelen Ausbau.
+
+Aktueller Übergang:
+
+    stabiler Core
+    +
+    stabiler state-first Kampagnenstate
+    +
+    abgeschlossene Dirty-Coverage
+    +
+    bestandener CTLD-KI-Truppentransport-PoC
+    ->
+    kontrollierte produktive CTLD-Integration
