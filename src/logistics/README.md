@@ -32,6 +32,14 @@ Vendor-Frameworks liegen unter:
 
 Vendor-Dateien werden nicht verändert.
 
+Aktueller Entwicklungsbereich:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Verbindlich:
+
+    productiveRestore=false
+
 ---
 
 ## 1. Aktive Dateien
@@ -70,7 +78,7 @@ Langfristig soll Logistik unter anderem beeinflussen:
 - IADS-Reparatur
 - Persistence
 
-Aktuell liegt der Schwerpunkt noch auf:
+Aktuell liegt der Schwerpunkt auf:
 
 - Logistics State
 - FOB State
@@ -507,7 +515,11 @@ AI Director ist noch nicht produktiv implementiert.
 
 ## 17. Beziehung zu IADS
 
-Skynet IADS ist als Vendor-Framework geladen.
+Skynet IADS:
+
+    3.3.0
+
+ist als Vendor-Framework geladen.
 
 Eine produktive Theater-Command-IADS-Schicht existiert noch nicht.
 
@@ -548,10 +560,9 @@ Zusätzlich sind unter anderem vorhanden:
 - Campaign Status
 - Capture Status
 - Capture Ready
+- Capture Ready Apply
 - Pressure Contested
 - AI CAP Status
-
-Die alte Dokumentation mit einem noch ausstehenden Capture-/Pressure-F10-Ausbau ist nicht mehr gültig.
 
 F10 ist aktuell vor allem:
 
@@ -591,13 +602,6 @@ Verbindlich:
     productiveRestore=false
 
 Logistics- und FOB-State sind Bestandteil des persistierbaren Theater-Command-State.
-
-Die alte Aussage:
-
-    keine produktive Logistics-Persistenz
-    kein DCS-Dateischreibtest
-
-ist nicht mehr korrekt.
 
 Richtig ist:
 
@@ -641,21 +645,17 @@ Perspektivisch:
 
 ## 21. CTLD-Status seit 2026-09-29
 
-Die frühere Aussage:
-
-    CTLD ist nur geladen und praktisch noch ungetestet
-
-ist nicht mehr gültig.
-
-Am 2026-09-29 wurde ein vollständiger isolierter KI-Truppentransport praktisch bestätigt.
+Am 2026-09-29 wurde für einen isolierten getesteten Aufbau ein vollständiger KI-Truppentransport praktisch bestätigt.
 
 Status:
 
-    Framework-Proof-of-Concept bestanden
+    Framework-Proof-of-Concept für den getesteten Aufbau bestanden
 
 Noch nicht:
 
     produktive Theater-Command-CTLD-Integration
+
+Der bestandene PoC darf nicht auf nicht getestete Cargo-, Crate-, FOB- oder Multiplayer-Pfade verallgemeinert werden.
 
 ---
 
@@ -707,9 +707,9 @@ Der technische Test-Dropoff westlich Akrotiri ist kein produktiver FOB-Dropoff.
 
 ## 24. CTLD Runtime-Zonenregistrierung
 
-Bestätigt:
+Für den getesteten Runtime-Pfad bestätigt:
 
-Nach der CTLD-Initialisierung können normalisierte Einträge ergänzt werden in:
+Nach bestehender CTLD-Initialisierung konnten normalisierte Einträge ergänzt werden in:
 
     ctld.pickupZones
     ctld.dropOffZones
@@ -727,6 +727,8 @@ Eine erneute Ausführung von:
     ctld.initialize()
 
 war für den getesteten Pfad nicht erforderlich.
+
+Daraus wird nicht abgeleitet, dass ein erneuter Aufruf grundsätzlich verboten wäre.
 
 ---
 
@@ -760,6 +762,8 @@ Eine produktive Theater-Command-Integration muss diese Registrierung später aut
 
 ## 26. Bestätigter CTLD-Pickup
 
+Für den getesteten Aufbau bestätigt:
+
 Nach nativer Aktivierung der Gruppe:
 
     16 Soldaten automatisch aufgenommen
@@ -774,6 +778,7 @@ Nicht verwendet:
 - direkte Manipulation des Onboard-State
 - Teleport
 - Runtime-Routenänderung
+- Runtime-Taskänderung
 
 Der Pickup wurde durch CTLD ausgeführt.
 
@@ -781,7 +786,7 @@ Der Pickup wurde durch CTLD ausgeführt.
 
 ## 27. Bestätigter Transportflug
 
-Der Mi-8 führte selbständig aus:
+Für den getesteten Aufbau bestätigte DCS-AI selbständig:
 
 - Taxi
 - Takeoff
@@ -797,7 +802,7 @@ Es war keine Runtime-Routen- oder Taskmanipulation erforderlich.
 
 ## 28. Off-Airfield-Landung
 
-Erfolgreicher Aufbau:
+Für den getesteten Mi-8-Aufbau erfolgreicher Aufbau:
 
     normaler Turning Point
     +
@@ -822,7 +827,24 @@ Bestätigte minimale Entfernung zum Dropoff-Zentrum:
 
     ungefähr 1.06 m
 
-Für diesen getesteten Truppentransport war kein FARP erforderlich.
+Der Mi-8 blieb nach dem Touchdown mindestens ungefähr:
+
+    220 Sekunden
+
+am Boden.
+
+Der volle konfigurierte Zeitraum von 300 Sekunden musste für den Dropoff-Nachweis nicht abgewartet werden, da der automatische CTLD-Dropoff vorher bereits eindeutig erfolgt war.
+
+Für diesen getesteten KI-Truppentransport war kein Invisible FARP erforderlich.
+
+Daraus wird nicht abgeleitet, dass ein FARP für:
+
+- andere Luftfahrzeuge
+- Cargo-/Crate-Pfade
+- reale FOB-Infrastruktur
+- andere CTLD-Funktionen
+
+grundsätzlich unnötig wäre.
 
 Der zuvor verwendete ungebundene `Land / Landing`-Waypoint hatte keinen vollständigen erfolgreichen Transportzyklus geliefert.
 
@@ -832,12 +854,12 @@ Die genaue Ursache des früheren Turnbacks ist dadurch nicht abschließend bewie
 
 ## 29. Bestätigter CTLD-Dropoff
 
-Nach der Landung führte CTLD den Dropoff automatisch aus.
+Für den getesteten Aufbau führte CTLD nach der Landung den Dropoff automatisch aus.
 
 Bestätigt:
 
 - transportierte Truppen wurden aus dem In-Transit-State der Unit entfernt
-- `ctld.droppedTroopsBLUE` erhielt einen neuen Eintrag
+- `ctld.droppedTroopsBLUE` erhielt genau einen neuen Eintrag
 - reale Blue-Bodengruppe wurde erzeugt
 
 Gruppe:
@@ -864,7 +886,7 @@ Damit ist für den getesteten Aufbau bestätigt:
 
 ## 30. Grenze des CTLD-Proof-of-Concept
 
-Der Test bestätigt die technische Framework-Fähigkeit.
+Der Test bestätigt die technische Framework-Fähigkeit für den dokumentierten Aufbau.
 
 Er bestätigt noch nicht:
 
@@ -885,6 +907,7 @@ Er bestätigt noch nicht:
 - AI-Director-Verknüpfung
 - CTLD-Restore
 - Multiplayer
+- Verhalten beliebiger anderer Transporter oder Landezonen
 
 Der bestandene Test war:
 
@@ -898,7 +921,7 @@ und kein:
 
 ## 31. Bekannter CTLD-Integrationspunkt
 
-Beim Grounded-Übergang trat genau einmal auf:
+Beim **Touchdown** des registrierten KI-Transporters wurde genau einmal beobachtet:
 
     CTLD.lua:6150:
     attempt to get length of local 'RepackCommandsPath' (a nil value)
@@ -907,6 +930,8 @@ Kontext:
 
     updateRepackMenu
     updateRepackMenuOnlanding
+
+Während der anschließenden ungefähr 220 Sekunden Bodenbeobachtung wurde der Fehler nicht erneut beobachtet.
 
 Source-Analyse legt nahe:
 
@@ -919,13 +944,23 @@ Pickup und Dropoff wurden dennoch erfolgreich abgeschlossen.
 Nicht bewiesen:
 
 - dass der Fehler harmlos ist
+- dass spätere Repack-Menü-Aktualisierungen funktionieren
 - dass der betroffene Scheduler danach vollständig weiterläuft
+- dass der betroffene Scheduler danach beendet wurde
+
+Ein möglicher Scheduler-Abbruch bleibt:
+
+    source-basierte technische Inferenz
+
+und ist kein:
+
+    direkter Runtime-Beweis
 
 Verbindlich:
 
     vendor/ctld/CTLD.lua wird nicht gepatcht.
 
-Der Fall muss vor produktiver Integration source-backed gelöst beziehungsweise sauber umgangen werden.
+Der Fall muss vor produktiver Integration source-backed behandelt beziehungsweise sauber isoliert werden.
 
 ---
 
@@ -1052,7 +1087,7 @@ Backup vor dem Test:
 
 Der produktive Save wurde während des isolierten Tests geschützt.
 
-Nach dem Test bestätigt:
+Nach vollständig beendetem DCS bestätigt:
 
 - Größe unverändert
 - Änderungszeit unverändert
@@ -1073,7 +1108,7 @@ Aktuell bewiesen:
     FOB State
     MissionGenerator FOB-Support
     Persistence Dirty-Semantik
-    CTLD Framework-Truppentransport
+    CTLD Framework-Truppentransport für den getesteten Aufbau
 
 Noch nicht produktiv verbunden:
 
@@ -1109,7 +1144,7 @@ Zuerst muss source-backed geklärt werden:
 - welche Komponente Transporter registriert
 - wie die Registrierung idempotent bleibt
 - wie Transporter-Lifecycle behandelt wird
-- wie der `RepackCommandsPath`-Fall behandelt wird
+- wie der `RepackCommandsPath`-Fall behandelt oder isoliert wird
 - wie Erfolg und Fehler erkannt werden
 - welche Ergebnisse in `TC.State` geschrieben werden
 - welche Änderungen Dirty setzen
@@ -1159,8 +1194,10 @@ Persistence:
 CTLD:
 
     1.6.1
-    KI-Truppentransport-PoC bestanden
+    KI-Truppentransport-PoC für den getesteten Aufbau bestanden
     produktive Theater-Command-Integration offen
+    Cargo-/Crate-Pfad separat ungetestet
+    RepackCommandsPath-Fehler genau einmal beim Touchdown beobachtet
 
 Aktueller Übergang:
 
@@ -1168,6 +1205,6 @@ Aktueller Übergang:
     +
     abgeschlossene Priority-3-Dirty-Coverage
     +
-    bestandener CTLD-KI-Transport-PoC
+    bestandener CTLD-KI-Transport-PoC für den getesteten Aufbau
     ->
     kontrollierte produktive CTLD-Integration
