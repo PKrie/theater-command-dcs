@@ -23,6 +23,13 @@ Ausgangslage:
     Blue Start: Akrotiri / Zypern
     Red Start: syrisches Festland rot kontrolliert
 
+Grundprinzip:
+
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis / Source of Truth
+    DCS Runtime = autoritativer Verhaltensbeweis
+
 ---
 
 ## 1. Zweck dieser Datei
@@ -36,17 +43,9 @@ Sie beschreibt insbesondere:
 - Triggernamen
 - Triggerzeiten
 - eingebettete Lua-Ressourcen
-- aktuelle technische Startstrategie
-- bekannte Mission-Editor-Besonderheiten
+- technische Startstrategie
+- aktuelle Runtime-Voraussetzungen
 - Prüfworkflow nach Änderungen
-
-Der Mission Editor ist dabei nur die Bühne.
-
-Grundprinzip:
-
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis / Source of Truth
 
 Die Trigger starten die Lua-Komponenten.
 
@@ -54,11 +53,10 @@ Sie bilden nicht selbst die Kampagnenlogik ab.
 
 ---
 
-## 2. Aktueller Trigger-Status
+## 2. Aktuelle Trigger-Strategie
 
-Aktuelle Strategie:
+Aktuelle Variante:
 
-    Starttest-Variante A
     sichere Einzeldatei-Ladung über DO SCRIPT FILE
 
 Status:
@@ -66,9 +64,7 @@ Status:
     BESTANDEN
     weiterhin aktueller Standard
 
-Die Triggerkette wurde über zahlreiche Runtime-Tests hinweg bestätigt.
-
-Aktuell werden geladen:
+Geladen werden:
 
 - MIST
 - MOOSE
@@ -86,13 +82,13 @@ Aktuell werden geladen:
 - Main
 - Loader
 
-Der ursprüngliche reine Starttest ist inzwischen zu einer stabilen technischen Runtime-Ladekette geworden.
+Die ursprüngliche Starttest-Struktur ist inzwischen die bestätigte technische Runtime-Ladekette der DEV-Mission.
 
 ---
 
 ## 3. Warum weiterhin Einzeldatei-Ladung?
 
-Aktuell werden die aktiven Lua-Dateien einzeln über:
+Aktive Lua-Dateien werden einzeln über:
 
     DO SCRIPT FILE
 
@@ -101,31 +97,29 @@ geladen.
 Vorteile:
 
 - eindeutige Ladefolge
-- einzelne Ressourcen separat prüfbar
+- separate Ressourcenprüfung
 - klare Fehlereingrenzung
 - gute `dcs.log`-Diagnose
 - keine zusätzliche `dofile`-Abhängigkeit
-- Embedded-Ressourcen können separat geprüft werden
-- im realen DCS-Betrieb bestätigt
+- kontrollierbare Embedded-Ressourcen
+- in DCS praktisch bestätigt
 
-Eine spätere Loader-only- oder Build-Variante ist möglich.
+Eine spätere Loader-only- oder Build-Variante bleibt möglich.
 
-Sie ist aktuell kein Entwicklungsblocker und kein nächster Schritt.
+Sie ist aktuell kein Entwicklungsblocker und kein nächster Arbeitsschritt.
 
 ---
 
-## 4. Grundregel für aktive Trigger
+## 4. Grundregel für aktive Lade-Trigger
 
-Die aktuelle Startkette verwendet grundsätzlich:
+Die technische Startkette verwendet grundsätzlich:
 
     Typ: EINMALIG / ONCE
     Ereignis: KEIN EVENT / NO EVENT
     Bedingung: MEHR ZEIT / TIME MORE
     Aktion: SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
-Die Trigger werden zeitversetzt ausgelöst.
-
-Dadurch bleibt die Abhängigkeitenreihenfolge eindeutig.
+Die zeitliche Staffelung stellt die gewünschte Abhängigkeitsreihenfolge her.
 
 ---
 
@@ -228,10 +222,14 @@ Datei:
 
     vendor/mist/mist.lua
 
-Funktion:
+Stand:
+
+    4.5.128-DYNSLOTS-02
+
+Aufgabe:
 
 - MIST Runtime bereitstellen
-- Voraussetzung für aktuelle CTLD-Ladekette
+- Voraussetzung für die aktuelle CTLD-Ladekette
 
 ---
 
@@ -241,27 +239,19 @@ Name:
 
     TC_LOAD_MOOSE
 
-Typ:
-
-    EINMALIG / ONCE
-
-Ereignis:
-
-    KEIN EVENT / NO EVENT
-
 Bedingung:
 
     MEHR ZEIT 2
-
-Aktion:
-
-    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
     vendor/moose/Moose.lua
 
-Aktueller Stand:
+Stand:
+
+    2.9.17
+
+Aktuell:
 
 - Framework geladen
 - Framework erkannt
@@ -275,21 +265,9 @@ Name:
 
     TC_LOAD_CTLD_I18N
 
-Typ:
-
-    EINMALIG / ONCE
-
-Ereignis:
-
-    KEIN EVENT / NO EVENT
-
 Bedingung:
 
     MEHR ZEIT 3
-
-Aktion:
-
-    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
@@ -297,7 +275,7 @@ Datei:
 
 Wichtig:
 
-    CTLD-i18n muss vor CTLD.lua geladen werden.
+    CTLD-i18n vor CTLD.lua
 
 ---
 
@@ -307,21 +285,9 @@ Name:
 
     TC_LOAD_CTLD
 
-Typ:
-
-    EINMALIG / ONCE
-
-Ereignis:
-
-    KEIN EVENT / NO EVENT
-
 Bedingung:
 
     MEHR ZEIT 4
-
-Aktion:
-
-    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
 
 Datei:
 
@@ -336,15 +302,21 @@ Status:
 - geladen
 - initialisiert
 - Vendor unverändert
-- KI-Truppentransport-Proof-of-Concept bestanden
+- KI-Truppentransport-PoC für den getesteten Aufbau bestanden
 
 Wichtig:
 
+Für den am 2026-09-29 getesteten Runtime-Pfad konnten normalisierte Pickup-/Dropoff-Zonen nach der bestehenden CTLD-Initialisierung ergänzt werden.
+
+Eine erneute Ausführung von:
+
     ctld.initialize()
 
-wird nach dem normalen CTLD-Start nicht erneut ausgeführt.
+war für diese getestete Runtime-Ergänzung nicht erforderlich.
 
-Theater-Command-seitige CTLD-Runtime-Konfiguration erfolgt später außerhalb des Vendor-Codes.
+Daraus wird nicht abgeleitet, dass ein erneuter Aufruf von `ctld.initialize()` grundsätzlich verboten wäre.
+
+Produktive Theater-Command-CTLD-Konfiguration erfolgt später außerhalb des Vendor-Codes.
 
 ---
 
@@ -354,25 +326,17 @@ Name:
 
     TC_LOAD_SKYNET_IADS
 
-Typ:
-
-    EINMALIG / ONCE
-
-Ereignis:
-
-    KEIN EVENT / NO EVENT
-
 Bedingung:
 
     MEHR ZEIT 5
 
-Aktion:
-
-    SKRIPTDATEI AUSFÜHREN / DO SCRIPT FILE
-
 Datei:
 
     vendor/skynet-iads/SkynetIADS.lua
+
+Stand:
+
+    3.3.0
 
 Status:
 
@@ -397,7 +361,7 @@ Datei:
 
 Aufgabe:
 
-- zentrale Theater-Command-Konfiguration bereitstellen
+- zentrale Theater-Command-Konfiguration
 
 ---
 
@@ -417,7 +381,7 @@ Datei:
 
 Aufgabe:
 
-- Theater-Command-Logging bereitstellen
+- Theater-Command-Logging
 
 ---
 
@@ -435,7 +399,7 @@ Datei:
 
     src/core/tc_state.lua
 
-Aufgabe:
+Aufgaben:
 
 - zentralen `TC.State` bereitstellen
 - Kampagnenstate halten
@@ -451,7 +415,7 @@ Für deren Anzahl ist:
 
 nicht autoritativ.
 
-Es wird pairs-basiert gezählt.
+Gezählt wird pairs-basiert.
 
 ---
 
@@ -513,9 +477,11 @@ Version:
 
     v0.2.2
 
-Bestätigter Stand:
+Bestätigt:
 
     Airbase-like Objects: 225
+    Capture Candidates: 32
+    Logistics Candidates: 46
 
 Unter anderem:
 
@@ -527,15 +493,7 @@ Unter anderem:
     tactical: 13
     unknown: 44
 
-Capture Candidates:
-
-    32
-
-Logistics Candidates:
-
-    46
-
-Die frühere Annahme, alle 225 Objekte müssten direkt Kampagnenzonen sein, ist veraltet.
+Nicht alle 225 Airbase-like Objects sind Kampagnenzonen.
 
 ---
 
@@ -557,12 +515,9 @@ Version:
 
     v0.2.0
 
-Bestätigter Stand:
+Bestätigt:
 
     relevante Kampagnenzonen: 46
-
-Davon:
-
     captureZones: 32
     missionZones: 32
     logisticsZones: 46
@@ -570,13 +525,7 @@ Davon:
 
 Übersprungen:
 
-    179 nicht geeignete Airbase-like Objects
-
-Die alte Dokumentation mit:
-
-    225 zones registered
-
-ist historisch und nicht mehr der aktuelle Fachstand.
+    179 Airbase-like Objects
 
 ---
 
@@ -630,19 +579,18 @@ Version:
 
     v0.2.6
 
-Aktuelle aktive Embedded-Ressource:
+Aktive Embedded-Ressource:
 
     tc_persistence_system_v0_2_6.lua
 
 Bestätigt:
 
-- Sandbox-Prüfung
 - Save
 - Read-back
 - Compile
 - Evaluate
 - Validation
-- Dirty-aware Background Autosave
+- dirty-aware Background Autosave
 - `SAVED`
 - `SKIPPED`
 - kontrollierter `FAILED`
@@ -657,7 +605,7 @@ Historische verwaiste Ressource:
     ResKey_Action_55
     tc_persistence_system.lua
 
-Stand des letzten Audits:
+Letzter bestätigter Stand:
 
 - kein aktiver Trigger referenziert sie
 - sie wird nicht geladen
@@ -690,6 +638,8 @@ Bestätigt:
     Blue: 7
     Red: 24
     Neutral: 15
+    Active: 31
+    Limited: 15
 
 Read-Neutrality:
 
@@ -720,7 +670,7 @@ Bestätigt:
     FOB Candidates: 6
     Blue FOBs: 2
 
-Aktuelle state-only FOBs:
+State-only FOBs:
 
     FOB Ercan
     FOB Gecitkale
@@ -729,7 +679,7 @@ Read-Neutrality:
 
     bestanden
 
-Diese FOBs sind noch keine realen CTLD-FOBs.
+Diese FOBs sind noch keine real durch CTLD aufgebauten FOBs.
 
 ---
 
@@ -755,7 +705,7 @@ Bestätigt:
 
     Mission Records: 10
 
-Funktional bestanden:
+Funktional bestätigt:
 
 - Generation
 - Activation
@@ -765,7 +715,7 @@ Funktional bestanden:
 
 Noch nicht produktiv:
 
-- reale DCS-Execution
+- reale Framework-Missionsausführung
 - automatische DCS-Outcome-Erkennung
 
 ---
@@ -798,13 +748,13 @@ Aktuell:
 
     state-first
 
-Noch nicht produktiv:
-
-    reale MOOSE-CAP-Flüge
-
 Read-Neutrality:
 
     bestanden
+
+Noch nicht produktiv:
+
+    reale MOOSE-CAP-Flüge
 
 ---
 
@@ -844,11 +794,13 @@ Unter anderem:
 - FOB Status
 - AI CAP Status
 
-Wichtig:
+F10Menu wird vor Main geladen.
 
-    F10Menu muss vor Main geladen sein.
+F10 bleibt überwiegend:
 
-Die alte Trigger-Dokumentation ohne F10Menu ist nicht mehr gültig.
+- Statuszugang
+- Debugzugang
+- kontrollierter Testzugang
 
 ---
 
@@ -866,14 +818,12 @@ Datei:
 
     src/main.lua
 
-Aufgabe:
+Aufgaben:
 
 - Runtime-Systeme starten
 - zentrale Theater-Command-Initialisierung durchführen
 
-Wichtig:
-
-    Main wird nach allen aktiven Fachmodulen geladen.
+Main wird nach den aktiven Fachmodulen geladen.
 
 ---
 
@@ -891,20 +841,18 @@ Datei:
 
     src/loader.lua
 
-Aufgabe:
+Aufgaben:
 
 - Frameworks prüfen
 - Module prüfen
-- Main-/Runtime-Start validieren
+- Runtime-Start validieren
 - Startkette abschließen
 
 Loader bleibt aktuell die letzte eigene Datei der Triggerkette.
 
 ---
 
-## 27. Kompakte Referenzliste
-
-Aktuelle verbindliche Triggerfolge:
+## 27. Kompakte Triggerreferenz
 
     01  TIME MORE 1   TC_LOAD_MIST
         vendor/mist/mist.lua
@@ -981,30 +929,28 @@ Nach vollständiger Startkette wird erwartet:
 - Campaign-Systeme initialisiert
 - Persistence aktiv
 - Logistics initialisiert
-- FOB-System initialisiert
+- FobSystem initialisiert
 - MissionGenerator initialisiert
 - AICapManager initialisiert
 - F10Menu initialisiert
 - Main gestartet
 - Loader abgeschlossen
 
-Keine erwarteten Fehler:
+Keine erwarteten Theater-Command-/Scripting-Fehler:
 
-- `[TC][ERROR]`
-- `SCRIPTING ERROR`
-- `Mission script error`
-- `stack traceback`
-- `attempt to index`
-- `attempt to call`
-- unerwarteter `nil value`
+    [TC][ERROR]
+    SCRIPTING ERROR
+    Mission script error
+    stack traceback
+    attempt to index
+    attempt to call
+    unerwarteter nil value
 
 ---
 
 ## 29. Bestätigter state-first Runtime-Stand
 
-Bestätigt ist inzwischen weit mehr als der ursprüngliche Starttest.
-
-Kampagnenpfad:
+Bestätigter Kampagnenpfad:
 
     Mission Details
     -> Mission Activation
@@ -1018,11 +964,13 @@ Kampagnenpfad:
     -> Linked Airbase Ownership
     -> Background Autosave
 
-Mission Failure:
+Bestätigter Failure-Pfad:
 
-    Mission Failure
+    Mission Activation
+    -> Mission Failure
     -> Failure Effects
     -> kein Capture Pressure
+    -> Background Autosave
 
 Persistence:
 
@@ -1034,31 +982,29 @@ Persistence:
 
 Priority 3:
 
-    abgeschlossen im dokumentierten Umfang
+    abgeschlossen im dokumentierten Umfang seit 2026-09-21
 
 ---
 
-## 30. CTLD und Triggerkette
+## 30. CTLD und Haupt-Triggerkette
 
-CTLD wird weiterhin als Vendor-Ressource bei:
+CTLD wird als Vendor-Ressource bei:
 
     TIME MORE 4
 
 geladen.
 
-Der erfolgreiche CTLD-KI-Truppentransport vom 2026-09-29 benötigte keine Änderung der Vendor-Triggerkette.
+Der erfolgreiche KI-Truppentransport-PoC vom 2026-09-29 erforderte keine Änderung der bestehenden Vendor-Triggerkette.
 
-Wichtig:
-
-Die temporäre CTLD-Runtime-Konfiguration des Proof-of-Concepts war noch keine produktive Theater-Command-Ladekomponente.
+Die temporäre CTLD-Konfiguration des Tests war noch keine produktive Theater-Command-Ladekomponente.
 
 Dazu gehörten:
 
-- Registrierung der Pickup-Zone
-- Registrierung der Dropoff-Zone
+- normalisierte Pickup-Zonenregistrierung
+- normalisierte Dropoff-Zonenregistrierung
 - Registrierung des KI-Transporters in `ctld.transportPilotNames`
 
-Diese Schritte müssen später durch eigene Theater-Command-Logik automatisiert werden.
+Diese Aufgaben müssen später kontrolliert durch Theater-Command-eigene Logik übernommen werden.
 
 Sie werden nicht in:
 
@@ -1070,11 +1016,11 @@ eingebaut.
 
 ## 31. CTLD-Testzonen
 
-Praktisch verwendeter Pickup:
+Verwendeter Pickup:
 
     CTLD_PICKUP_BLUE_AKROTIRI_01
 
-Praktisch verwendeter technischer Dropoff:
+Verwendeter technischer Dropoff:
 
     CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01
 
@@ -1082,25 +1028,99 @@ Reservierter späterer Ercan-Dropoff:
 
     CTLD_DROPOFF_BLUE_ERCAN_FOB_01
 
+Der Ercan-Name ist für eine mögliche spätere FOB-/Logistiknutzung reserviert.
+
+Der erfolgreiche Test fand nicht dort statt.
+
 Details:
 
     mission_editor/ctld_start_zones.md
 
 ---
 
-## 32. CTLD-KI-Transport-PoC
+## 32. CTLD-Zonenregistrierung
+
+Für den getesteten Runtime-Pfad bestätigt:
+
+Nach bestehender CTLD-Initialisierung konnten normalisierte Einträge ergänzt werden in:
+
+    ctld.pickupZones
+    ctld.dropOffZones
+
+Pickup:
+
+    { "CTLD_PICKUP_BLUE_AKROTIRI_01", -1, 10000, 1, 2 }
+
+Dropoff:
+
+    { "CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01", -1, 2, 1 }
+
+CTLD verwendete beide Einträge anschließend tatsächlich.
+
+Eine erneute Ausführung von:
+
+    ctld.initialize()
+
+war für diese getestete Runtime-Ergänzung nicht erforderlich.
+
+Eine produktive Theater-Command-Lösung muss die Registrierung später:
+
+- automatisch
+- idempotent
+- duplikatfrei
+- lifecycle-sicher
+
+durchführen.
+
+---
+
+## 33. CTLD-KI-Transporter
+
+Getestete Gruppe:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01
+
+Getestete Unit:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
+
+Luftfahrzeug:
+
+    Mi-8
+
+Der exakte Unit-Name musste im getesteten CTLD-AI-Pfad in:
+
+    ctld.transportPilotNames
+
+registriert sein.
+
+Vor temporärer Registrierung:
+
+    108 Einträge
+
+Danach:
+
+    109 Einträge
+
+Die Testunit war genau einmal vorhanden.
+
+Der spätere Theater-Command-Pfad muss diese Registrierung automatisieren.
+
+---
+
+## 34. CTLD-KI-Truppentransport-PoC
 
 Testdatum:
 
     2026-09-29
 
-Testgruppe:
+Testmission:
 
-    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz
 
-Testunit:
+SHA-256 vor Runtime-Test:
 
-    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
+    5F0D89DF744A7083401E36713B148BD21813FF187CC36EC1F088507163458C57
 
 Bestätigter Ablauf:
 
@@ -1116,6 +1136,7 @@ Bestätigter Ablauf:
 Pickup:
 
     16 Soldaten
+    Pickup-Counter 10000 -> 9999
 
 Dropoff-Gruppe:
 
@@ -1129,15 +1150,19 @@ Stärke:
 
     16 x Soldier M249
 
+Dieser Befund gilt für den getesteten Aufbau.
+
+Er ist noch keine produktive Theater-Command-CTLD-Orchestrierung.
+
 ---
 
-## 33. Off-Airfield-Landung
+## 35. Off-Airfield-Landung
 
-Erfolgreiche Mission-Editor-Konfiguration:
+Erfolgreiche gespeicherte Mission-Editor-Konfiguration:
 
     normaler Turning Point
     +
-    Perform Task Land
+    Perform Task -> Land
 
 Ziel:
 
@@ -1157,17 +1182,32 @@ Land-Task:
     duration=300
     durationFlag=true
 
-Touchdown:
+Runtime:
 
-    ungefähr 1.06 m vom Dropoff-Zentrum entfernt
+    Touchdown ungefähr t=1405.9 bis 1426.0 s
+    minimale Entfernung zum Dropoff-Zentrum ungefähr 1.06 m
+    Bodengeschwindigkeit anschließend ungefähr 0.01 m/s
+    mindestens ungefähr 220 s Bodenbeobachtung
 
-Ein Invisible FARP war dafür nicht erforderlich.
+Der volle 300-Sekunden-Wert musste für den Dropoff-Nachweis nicht abgewartet werden.
+
+Für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
+
+Der zuvor verwendete ungebundene:
+
+    Land / Landing
+
+Waypoint hatte keinen vollständigen erfolgreichen Transportzyklus ergeben.
+
+Der erfolgreiche neue Aufbau zeigt einen relevanten Unterschied in der Landemethode.
+
+Die genaue Ursache des früheren Turnbacks ist nicht abschließend bewiesen.
 
 ---
 
-## 34. Bekannter CTLD-Runtime-Fehler
+## 36. Bekannter CTLD-Runtime-Fehler
 
-Beim Grounded-Übergang wurde reproduziert:
+Beim Touchdown des registrierten KI-Transporters wurde genau einmal beobachtet:
 
     CTLD.lua:6150:
     attempt to get length of local 'RepackCommandsPath' (a nil value)
@@ -1177,22 +1217,61 @@ Kontext:
     updateRepackMenu
     updateRepackMenuOnlanding
 
-Der automatische Pickup-/Dropoff-Pfad wurde trotzdem abgeschlossen.
+Während der anschließenden ungefähr 220 Sekunden Bodenbeobachtung wurde der Fehler nicht erneut beobachtet.
+
+Source-basierte Einordnung:
+
+- der KI-Transporter war in `ctld.transportPilotNames` registriert
+- damit konnte er einen CTLD-Landing-/Menüpfad erreichen
+- `ctld.vehicleCommandsPath[_unitName]` ist für reine KI-Units nicht zwangsläufig vorhanden
+- daraus kann ein `RepackCommandsPath` von `nil` entstehen
+
+Der automatische Pickup-/Dropoff-Pfad wurde trotzdem erfolgreich abgeschlossen.
 
 Nicht bewiesen:
 
-- dass der Fehler dauerhaft harmlos ist
-- dass der betroffene Scheduler danach weiterläuft
+- dass der Fehler harmlos ist
+- dass spätere Repack-Menü-Aktualisierungen funktionieren
+- dass der betreffende Scheduler definitiv weiterlief
+- dass der betreffende Scheduler definitiv beendet wurde
+
+Ein mögliches Ende des Scheduler-Pfads bleibt eine technische Inferenz.
 
 Verbindlich:
 
-    kein Vendor-Patch
-
-Dieser Punkt gehört in die Architektur der späteren produktiven CTLD-Integration.
+    vendor/ctld/CTLD.lua wird nicht gepatcht.
 
 ---
 
-## 35. `.miz`-Einbettung
+## 37. CTLD-Truppentransport ist nicht gleich Cargo
+
+Der bestandene Test betrifft:
+
+    KI-Truppentransport
+
+Noch nicht praktisch bestätigt:
+
+- Crate Spawn
+- Crate Loading
+- Sling Load
+- Crate Drop
+- Supply Cargo
+- Engineering Cargo
+- Repair Cargo
+- Fuel Cargo
+- Ammo Cargo
+- FOB Core
+- produktiver FOB-Bau
+- LogisticsDelivery-Rückkopplung
+- FobSystem-Rückkopplung
+- CTLD-Restore
+- Multiplayer
+
+Diese Funktionen benötigen eigene Tests.
+
+---
+
+## 38. `.miz`-Einbettung
 
 Bei:
 
@@ -1206,15 +1285,15 @@ Deshalb gilt:
     !=
     Embedded-Ressource automatisch geändert
 
-Nach einer Source-Änderung muss die Mission gezielt aktualisiert und gespeichert werden.
+Nach einer Source-Änderung muss die betroffene Missionsressource aktualisiert und die Mission gespeichert werden.
 
-Vor kritischen Runtime-Tests sollte überprüft werden, ob die erwartete Version tatsächlich in der `.miz` liegt.
+Vor kritischen Runtime-Tests soll geprüft werden, ob die erwartete Version tatsächlich in der `.miz` liegt.
 
 ---
 
-## 36. Embedded Resource Audit
+## 39. Embedded Resource Audit
 
-Am 2026-09-12 wurde ein vollständiger relevanter Embedded Resource Audit durchgeführt.
+Am 2026-09-12 wurde ein relevanter Embedded Resource Audit durchgeführt.
 
 Ergebnis:
 
@@ -1226,81 +1305,79 @@ Zusätzlich:
 - keine aktive Source Drift
 - keine fehlenden aktiven Ressourcen im geprüften Bereich
 
-Dieser Audit widerlegte den damaligen Verdacht auf eine veraltete Embedded-Runtime.
+Dieser Befund gilt für den damaligen Auditzeitpunkt.
 
-Embedded Audits bleiben ein geeignetes Kontrollinstrument.
+Spätere Source-Änderungen müssen bei Bedarf erneut geprüft werden.
 
 ---
 
-## 37. Lokaler Projektpfad
+## 40. Lokaler Projektpfad
 
 Lokale Repository-Kopie:
 
     C:\Users\Paul\Documents\GitHub\theater-command-dcs\
 
-GitHub ist Source of Truth.
+GitHub bleibt Source of Truth.
 
-Die lokale Repository-Kopie muss vor Re-Embed beziehungsweise Mission-Editor-Arbeit aktuell sein.
-
----
-
-## 38. Entwicklungswerkzeuge
-
-Für Mission-Editor-Arbeit gilt seit 2026-09-29 eine klare Werkzeugtrennung.
-
-Diese Werkzeuge sind Entwicklungswerkzeuge.
-
-Sie sind keine Kampagnen-Runtime-Abhängigkeit.
+Vor Re-Embed- oder Mission-Editor-Arbeit muss die lokale Repository-Kopie dem gewünschten GitHub-Stand entsprechen.
 
 ---
 
-## 39. ChatGPT
+## 41. Entwicklungswerkzeuge
 
-ChatGPT übernimmt:
+Die Entwicklungswerkzeuge sind keine Runtime-Abhängigkeit der Kampagne.
 
-- Projektkoordination
-- Architektur
-- GitHub-Audit
-- Testplanung
-- Ergebnisbewertung
-- Dokumentationspflege
-- Definition der nächsten konkreten Aufgabe
-- Erstellung präziser Claude-Prompts
+Rollen:
+
+    ChatGPT
+    -> Projektkoordination / Architektur / Dokumentation
+
+    Claude + dcs-mcp
+    -> .miz / Mission Editor
+
+    Claude Code + DCS-SMS
+    -> lokale Runtime-Diagnose
+
+    DCS
+    -> autoritativer Runtime-Beweis
+
+    GitHub
+    -> Source of Truth
 
 ---
 
-## 40. Claude + dcs-mcp
+## 42. Claude + dcs-mcp
 
-Bevorzugtes Werkzeug für:
-
-- `.miz`-Analyse
-- Triggerprüfung
-- Gruppenprüfung
-- Unit-Prüfung
-- Trigger-Zonen
-- Wegpunkte
-- Tasks
-- eingebettete Ressourcen
-- gezielte Mission-Editor-Änderungen
-- gespeicherten Missionsaudit
-
-Aktuelle Version:
+Version:
 
     dcs-mcp 0.9.11
 
-Terrain:
+Terrain Store:
 
-    Syria installiert
+    C:\Users\Paul\AppData\Local\dcs-mcp\terrain
 
-Vor Änderungen wird immer zuerst die aktuelle Mission gelesen.
+Syria:
 
-Keine blinde Neuanlage der Mission.
+    installiert
+
+Bevorzugte Aufgaben:
+
+- `.miz` analysieren
+- Trigger prüfen
+- Gruppen prüfen
+- Units prüfen
+- Trigger-Zonen prüfen
+- Wegpunkte prüfen
+- Tasks prüfen
+- eingebettete Ressourcen prüfen
+- gezielte Mission-Editor-Änderungen
+- gespeicherte Mission auditieren
+
+Vor Änderungen wird die aktuelle Mission zuerst gelesen.
 
 ---
 
-## 41. Claude Code + DCS-SMS
-
-Bevorzugtes Werkzeug für lokale Runtime-Diagnose.
+## 43. Claude Code + DCS-SMS
 
 Version:
 
@@ -1310,9 +1387,9 @@ Hook:
 
     me-bridge-0.27.2
 
-Lokaler Pfad:
+Verifiziertes Installationsverzeichnis:
 
-    C:\Tools\dcs-sms\dcs-sms.exe
+    C:\Tools\dcs-sms
 
 Claude-Code-Skill:
 
@@ -1324,33 +1401,34 @@ Verwendung:
 - Runtime-Lua
 - Theater-Command-State
 - CTLD-State
-- Unit-State
-- Gruppe
+- Unit-/Group-State
 - Position
 - Geschwindigkeit
 - Grounded/Airborne
-- native Aktivierung
+- kontrollierte Aktivierung
 - Logs
 - Runtime-Regressionen
 
+Aus dem aktuellen bestätigten Stand wird kein exakter Executable-Pfad abgeleitet.
+
 ---
 
-## 42. Verbindlicher Arbeitsablauf
+## 44. Verbindlicher Arbeitsablauf
 
 Bei Mission-Editor-/`.miz`-Arbeit:
 
-    1. GitHub aktuellen Stand prüfen
-    2. konkrete Aufgabe definieren
-    3. aktuelle .miz mit Claude + dcs-mcp öffnen
-    4. betroffenen Bereich auditieren
-    5. nur die konkrete Änderung durchführen
-    6. Mission speichern
-    7. gespeicherte Mission erneut prüfen
-    8. Runtime-Test vorbereiten
-    9. Claude Code + DCS-SMS für lokale Diagnose verwenden
-    10. Verhalten in DCS praktisch prüfen
-    11. Ergebnis auswerten
-    12. bestätigten Stand in GitHub dokumentieren
+    GitHub prüfen
+    -> konkrete Aufgabe definieren
+    -> aktuelle .miz mit Claude + dcs-mcp öffnen
+    -> betroffenen Bereich auditieren
+    -> nur konkrete Änderung durchführen
+    -> Mission speichern
+    -> gespeicherte Mission erneut prüfen
+    -> Runtime-Test vorbereiten
+    -> Claude Code + DCS-SMS verwenden
+    -> Verhalten in DCS praktisch prüfen
+    -> Ergebnis auswerten
+    -> bestätigten Stand in GitHub dokumentieren
 
 Pro Schritt:
 
@@ -1358,103 +1436,60 @@ Pro Schritt:
 
 ---
 
-## 43. Persistence-Schutz bei Tests
+## 45. Persistence-Schutz bei Tests
 
 Produktive Save-Datei:
 
     C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua
 
-Aktuell bestätigter SHA-256:
+Bestätigter SHA-256:
 
     C679B4FFE61A7AB601D50E159A057DCDF540B55C620086402883CA2DA27F2596
+
+Bestätigte Größe:
+
+    3094967 Bytes
 
 Wenn ein isolierter Test den produktiven Kampagnenstate beeinflussen könnte:
 
     Hash prüfen
-    -> Backup
-    -> Backup prüfen
-    -> Save ReadOnly
-    -> ReadOnly prüfen
+    -> Backup erzeugen
+    -> Backup verifizieren
+    -> Save ReadOnly setzen
+    -> ReadOnly bestätigen
     -> Test
-    -> DCS beenden
-    -> Hash prüfen
+    -> DCS vollständig beenden
+    -> Hash erneut prüfen
     -> nur bei Match ReadOnly entfernen
+    -> final erneut prüfen
 
 Der CTLD-Test vom 2026-09-29 hat den produktiven Save nicht verändert.
 
----
+Verbindlich:
 
-## 44. DCS-Log
-
-Typische Pfade:
-
-    C:\Users\Paul\Saved Games\DCS\Logs\dcs.log
-
-oder:
-
-    C:\Users\Paul\Saved Games\DCS.openbeta\Logs\dcs.log
-
-Relevante Suchbegriffe:
-
-    [TC]
-    [TC][ERROR]
-    SCRIPTING ERROR
-    Mission script error
-    stack traceback
-    attempt to index
-    attempt to call
-    nil value
-    MIST
-    MOOSE
-    CTLD
-    Skynet
-
-Nicht jede DCS-Warnung ist ein Theater-Command-Fehler.
+    productiveRestore=false
 
 ---
 
-## 45. MissionScripting.lua
+## 46. MissionScripting.lua
 
-Die lokale Entwicklungsumgebung für Persistence und DCS-SMS benötigt angepasste Sandbox-Freigaben.
+Persistence und DCS-SMS benötigen eine geeignete lokale Mission-Scripting-Umgebung.
 
-Aktuell bestätigte DCS-SMS-Umgebung:
-
-    os=true
-    io=true
-    lfs=true
-    require=false
-
-DCS-Updates können:
+DCS-Updates können lokale Änderungen an:
 
     MissionScripting.lua
 
 überschreiben.
 
-Nach DCS-Updates muss die lokale Entwicklungsumgebung erneut geprüft werden.
+Nach DCS-Updates müssen die für Persistence und DCS-SMS benötigten lokalen Voraussetzungen erneut geprüft werden.
 
----
-
-## 46. Loader-only-Variante
-
-Eine alternative Loader-only-Variante mit:
-
-    dofile
-
-wurde bisher nicht als neuer Standard eingeführt.
-
-Sie ist kein aktueller Projektblocker.
-
-Aktuell bleibt:
-
-    sichere Einzeldatei-Ladung
-
-die verbindliche Startstrategie.
+Konkrete Sandbox-Werte werden nur dann als aktueller Stand behandelt, wenn sie für die betreffende lokale Umgebung erneut verifiziert wurden.
 
 ---
 
 ## 47. Was nicht über Trigger gebaut wird
 
-Die Triggerkette soll nicht erweitert werden, um Kampagnenlogik in den Mission Editor zu verlagern.
+Die Triggerkette wird nicht verwendet, um Kampagnenlogik in den Mission Editor zu verlagern.
 
 Nicht gewünscht:
 
@@ -1466,7 +1501,7 @@ Nicht gewünscht:
 - CTLD-Orchestrierung als große Triggerkette
 - Framework-Patches über Mission-Editor-Skripte
 
-Die Trigger dienen:
+Trigger dienen primär:
 
 - Initialisierung
 - technischen Ladeabhängigkeiten
@@ -1474,65 +1509,55 @@ Die Trigger dienen:
 
 ---
 
-## 48. Nächster Trigger-bezogener Schritt
+## 48. Aktueller nächster Trigger-bezogener Schritt
 
 Aktuell ist keine Änderung an der bestehenden Haupt-Ladekette freigegeben.
 
-Die Ladefolge:
-
-    MIST
-    -> MOOSE
-    -> CTLD-i18n
-    -> CTLD
-    -> Skynet
-    -> Core
-    -> World
-    -> Campaign
-    -> Persistence
-    -> Logistics
-    -> Missions
-    -> AI
-    -> UI
-    -> Main
-    -> Loader
-
-funktioniert.
+Die aktuelle Ladefolge ist funktional.
 
 Der nächste Entwicklungsbereich ist:
 
-    produktive Theater-Command-CTLD-Integration
+    Priority 4 – produktive Theater-Command-CTLD-Integration vorbereiten
 
 Erst nach Architekturentscheidung wird festgelegt, ob dafür:
 
-- ein neues fachliches Modul
-- eine Erweiterung eines bestehenden Moduls
+- ein neues fachlich benanntes Modul
+- die Erweiterung eines bestehenden Moduls
 - und gegebenenfalls ein zusätzlicher Lade-Trigger
 
-notwendig ist.
+erforderlich ist.
 
 Keine neue Trigger-Ressource wird vor dieser Entscheidung erfunden.
 
+Keine generische Datei wie:
+
+    tc_ctld.lua
+    tc_ctld_bridge.lua
+
+wird angelegt.
+
 ---
 
-## 49. Aktueller nächster Projektstand
+## 49. Aktueller Projektstand
 
 Priority 3:
 
-    abgeschlossen
+    abgeschlossen im dokumentierten Umfang seit 2026-09-21
 
 CTLD-KI-Truppentransport-PoC:
 
-    bestanden
+    bestanden für den getesteten Aufbau
 
 Produktiver Restore:
 
-    weiterhin deaktiviert
+    deaktiviert
+    productiveRestore=false
 
 Aktueller Entwicklungsbereich:
 
     Priority 4 – produktive CTLD-Integration vorbereiten
 
-Dabei zu klären:
+Zu klären:
 
 - fachliche Zuständigkeit unter `src/`
 - idempotente CTLD-Zonenregistrierung
@@ -1540,10 +1565,13 @@ Dabei zu klären:
 - Transporter-Lifecycle
 - `RepackCommandsPath`
 - Transportauftrag
+- Erfolgs-/Fehlererkennung
 - Ergebnisvalidierung
 - Rückkopplung in Theater-Command-State
 - Dirty-Semantik
 - Persistence-Grenze
+- runtime-only CTLD-Daten
+- spätere Restore-Rekonstruktion
 
 ---
 
@@ -1555,23 +1583,34 @@ Stand:
 
 Bestätigt:
 
-- Triggerkette ist funktional.
-- Vendor-Ladefolge ist funktional.
-- Theater-Command-Ladefolge ist funktional.
-- F10Menu ist Bestandteil der aktiven Ladekette.
-- Airbase Scanner klassifiziert 225 Airbase-like Objects.
-- ZoneFactory erzeugt 46 relevante Kampagnenzonen.
-- Background Persistence funktioniert.
-- Priority 3 ist abgeschlossen.
-- CTLD 1.6.1 ist geladen und praktisch getestet.
-- CTLD-KI-Truppentransport-PoC ist bestanden.
-- kein neuer CTLD-Vendor-Trigger erforderlich.
-- Vendor-Dateien bleiben unverändert.
-- Claude + dcs-mcp ist der bevorzugte `.miz`-/Mission-Editor-Pfad.
-- Claude Code + DCS-SMS ist der bevorzugte lokale Runtime-Pfad.
-- DCS bleibt autoritativer Runtime-Beweis.
-- GitHub bleibt Source of Truth.
+    Triggerkette ist funktional.
+    Vendor-Ladefolge ist funktional.
+    Theater-Command-Ladefolge ist funktional.
+    F10Menu ist Teil der aktiven Ladekette.
+    Airbase Scanner klassifiziert 225 Airbase-like Objects.
+    ZoneFactory erzeugt 46 relevante Kampagnenzonen.
+    Background Persistence funktioniert.
+    Priority 3 ist im dokumentierten Umfang abgeschlossen.
+    CTLD 1.6.1 ist geladen.
+    CTLD-KI-Truppentransport-PoC ist für den getesteten Aufbau bestanden.
+    kein zusätzlicher CTLD-Vendor-Trigger war für den PoC erforderlich.
+    Vendor-Dateien bleiben unverändert.
+    Crate-/Cargo-Pfad ist separat ungetestet.
+    Claude + dcs-mcp ist der bevorzugte .miz-/Mission-Editor-Pfad.
+    Claude Code + DCS-SMS ist der bevorzugte lokale Runtime-Diagnosepfad.
+    DCS bleibt autoritativer Runtime-Beweis.
+    GitHub bleibt Source of Truth.
 
 Die Triggerstruktur ist aktuell kein Blocker.
 
-Der nächste Projektfortschritt liegt in der kontrollierten fachlichen Integration von CTLD in Theater Command.
+Aktueller Übergang:
+
+    state-first Kampagnenkern
+    +
+    dirty-aware Persistence
+    +
+    abgeschlossene Priority-3-Dirty-Coverage
+    +
+    bestandener CTLD-KI-Truppentransport-PoC
+    ->
+    kontrollierte produktive CTLD-Integration
