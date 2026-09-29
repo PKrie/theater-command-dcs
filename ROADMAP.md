@@ -50,8 +50,8 @@ Bestätigt sind:
 - Mission Completion
 - Mission Failure
 - Capture Ready Apply
-- projektweite Priority-3-Dirty-Coverage im dokumentierten Umfang
-- CTLD-KI-Truppentransport als isolierter Framework-Proof-of-Concept für den getesteten Aufbau
+- Priority-3-Dirty-Coverage im dokumentierten Umfang
+- isolierter CTLD-KI-Truppentransport-PoC für den getesteten Aufbau
 
 Priority 3 wurde am:
 
@@ -59,7 +59,7 @@ Priority 3 wurde am:
 
 im dokumentierten Umfang abgeschlossen.
 
-Dabei wurden die aktiven Read-Neutrality-Probleme in:
+Dabei wurden aktive Read-Neutrality-Probleme in:
 
 - LogisticsDelivery
 - FobSystem
@@ -67,7 +67,7 @@ Dabei wurden die aktiven Read-Neutrality-Probleme in:
 
 behoben und regressionsgetestet.
 
-MissionGenerator benötigte aus diesem Audit keinen aktiven Code-Fix.
+MissionGenerator benötigte im Priority-3-Audit keinen aktiven Code-Fix.
 
 Aktuelle Versionen:
 
@@ -88,9 +88,9 @@ Der aktuelle Entwicklungsbereich ist:
 
 - Priority 4 – produktive CTLD-Integration vorbereiten
 
-Am 2026-09-29 wurde für den getesteten Aufbau ein vollständiger automatischer CTLD-KI-Truppentransport praktisch bestätigt:
+Am 2026-09-29 wurde für den getesteten Aufbau folgender vollständiger CTLD-KI-Truppentransportzyklus praktisch bestätigt:
 
-- Pickup
+- automatischer Pickup
 - Taxi
 - Takeoff
 - Transit
@@ -180,12 +180,14 @@ Die technische Reihenfolge bleibt:
 1. State aufbauen.
 2. State sichtbar machen.
 3. State testen.
-4. Persistence absichern.
+4. Dirty-/Persistence-Semantik absichern.
 5. Framework-Funktion isoliert testen.
 6. Framework kontrolliert integrieren.
-7. Framework-Ergebnis zurück in Theater-Command-State führen.
-8. Ergebnis persistieren.
-9. erst danach Automatisierung erweitern.
+7. Framework-Ergebnis validieren.
+8. Ergebnis zurück in Theater-Command-State führen.
+9. relevante Mutation Dirty markieren.
+10. Ergebnis persistieren.
+11. erst danach Automatisierung erweitern.
 
 Frameworks dienen als:
 
@@ -295,8 +297,6 @@ Aktive Dateien:
 - `src/world/tc_airbase_scanner.lua`
 - `src/world/tc_zone_factory.lua`
 
----
-
 ## 7.1 Airbase Scanner
 
 Version:
@@ -329,8 +329,6 @@ Ergebnis:
 - Syria-Airbase-like Objects werden klassifiziert.
 - Akrotiri wird als Blue-Startbasis erkannt.
 - Medical Pads und einfache Helipads werden nicht als strategische Kampagnenziele behandelt.
-
----
 
 ## 7.2 ZoneFactory
 
@@ -407,10 +405,6 @@ Mission Failure:
 
 - erzeugt aktuell bewusst keinen Capture Pressure
 
-Priority-3-relevante Capture-Probleme:
-
-- behoben und regressionsgetestet
-
 Noch offen für spätere Phasen:
 
 - reale Unit-Auswertung in Capture-Zonen
@@ -432,8 +426,6 @@ Aktive Dateien:
 - `src/logistics/tc_logistics_delivery.lua`
 - `src/logistics/tc_fob_system.lua`
 
----
-
 ## 9.1 LogisticsDelivery
 
 Version:
@@ -443,7 +435,7 @@ Version:
 Status:
 
 - bestanden
-- Read-Neutrality-Fix bestanden
+- Read-Neutrality bestanden
 
 Bestätigte Werte:
 
@@ -471,8 +463,6 @@ Noch offen:
 - Logistics -> AI
 - reale Transportaufträge
 
----
-
 ## 9.2 FobSystem
 
 Version:
@@ -482,7 +472,7 @@ Version:
 Status:
 
 - bestanden
-- Read-Neutrality-Fix bestanden
+- Read-Neutrality bestanden
 
 Bestätigte Werte:
 
@@ -558,9 +548,9 @@ Bestätigt:
 
 Der frühere Mission-Record-Loss-Verdacht wurde widerlegt.
 
-Ursache:
+Ursache der Fehldiagnose:
 
-- String-keyed Lua-Dictionaries wurden fälschlich über `#` bewertet.
+- String-keyed Lua-Dictionaries wurden über `#` beurteilt.
 
 Korrekte Zählung:
 
@@ -625,7 +615,7 @@ Noch offen:
 
 - CAP Templates
 - MOOSE Spawn
-- AI_A2A_DISPATCHER beziehungsweise geeignete MOOSE-Ausführung
+- geeignete MOOSE-Ausführung
 - CAP Lifecycle
 - Losses
 - Success
@@ -668,12 +658,7 @@ Architekturentscheidung:
 - F10 ist nicht die Hauptsteuerung der Kampagne.
 - Persistence bekommt kein normales Spieler-Save-/Load-Menü.
 
-Langfristig:
-
-- Spieler-UI
-- Debug-/Admin-UI
-
-klarer voneinander trennen.
+Langfristig sollen Spieler-UI und Debug-/Admin-UI klarer voneinander getrennt werden.
 
 ---
 
@@ -729,8 +714,6 @@ Der produktive Restore bleibt dennoch deaktiviert, weil zusätzlich noch geklär
 - Modul-Lifecycle
 - Framework-Nebenwirkungen
 - kontrollierter Restore-Test
-
----
 
 ## 13.1 Produktive Save-Datei
 
@@ -820,8 +803,6 @@ CTLD:
 
 - `1.6.1`
 
----
-
 ## 15.1 Zonenregistrierung
 
 Für den getesteten Runtime-Pfad bestätigt:
@@ -835,7 +816,7 @@ Getesteter Pickup:
 
 - `CTLD_PICKUP_BLUE_AKROTIRI_01`
 
-Getesteter Dropoff:
+Getesteter technischer Dropoff:
 
 - `CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01`
 
@@ -852,8 +833,6 @@ Für diese getestete Runtime-Ergänzung war keine erneute Ausführung von:
 erforderlich.
 
 Daraus wird nicht abgeleitet, dass `ctld.initialize()` generell niemals erneut aufgerufen werden dürfte.
-
----
 
 ## 15.2 KI-Transporterregistrierung
 
@@ -882,8 +861,6 @@ Unit:
 - genau einmal vorhanden
 
 Produktive TC-Integration muss dies später automatisch, idempotent und lifecycle-sicher durchführen.
-
----
 
 ## 15.3 Erfolgreicher Transport
 
@@ -944,8 +921,6 @@ Der Test bestätigt diesen isolierten Framework-Pfad.
 
 Er bestätigt noch keine produktive Theater-Command-Orchestrierung.
 
----
-
 ## 15.4 Off-Airfield-Landung
 
 Für den getesteten Aufbau bestätigter Ansatz:
@@ -977,8 +952,6 @@ Für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 Der ältere ungebundene `Land / Landing`-Waypoint-Ansatz führte nicht zu einem vollständigen erfolgreichen Transportzyklus.
 
 Die genaue Ursache des früheren Turnback-Verhaltens ist dadurch nicht abschließend bewiesen.
-
----
 
 ## 15.5 Bekannter CTLD-Fehler
 
@@ -1316,7 +1289,7 @@ Ziel:
 - Ground Operations verändern Gelände.
 - IADS reagiert dynamisch.
 - Air Operations reagieren auf Lage und Verluste.
-- Fortschritt bleibt über Missionstarts hinweg erhalten.
+- Fortschritt bleibt nach späterer Freigabe des produktiven Restore über Missionsstarts hinweg erhalten.
 
 Benötigt:
 
@@ -1338,8 +1311,6 @@ Die Werkzeugtrennung ist seit 2026-09-29 verbindlich.
 
 Diese Werkzeuge sind Entwicklungswerkzeuge und keine Runtime-Abhängigkeiten der fertigen Kampagne.
 
----
-
 ## 26.1 ChatGPT
 
 Rolle:
@@ -1352,8 +1323,6 @@ Rolle:
 - Dokumentationspflege
 - Definition des nächsten Arbeitsschritts
 - Vorbereitung präziser Claude-Aufträge
-
----
 
 ## 26.2 Claude + dcs-mcp
 
@@ -1384,8 +1353,6 @@ Verwendung:
 - gespeicherte Missionsänderungen
 
 Für `.miz`-/Mission-Editor-Arbeit ist dieser Pfad aktuell bevorzugt.
-
----
 
 ## 26.3 Claude Code + DCS-SMS
 
@@ -1422,8 +1389,6 @@ Verwendung:
 DCS-SMS ist kein Theater-Command-Runtime-Framework.
 
 Aus dem bestätigten Stand wird kein exakter Executable-Pfad abgeleitet.
-
----
 
 ## 26.4 DCS
 
@@ -1496,8 +1461,6 @@ Dabei:
 - reale Bodengruppe nach Dropoff bestätigt
 - Persistence während isoliertem CTLD-Test unverändert bestätigt
 
----
-
 ## Aktueller Meilenstein
 
 **Priority 4 – produktive CTLD-Integration vorbereiten**
@@ -1505,8 +1468,6 @@ Dabei:
 Der technische Transport-PoC für den getesteten Aufbau ist abgeschlossen.
 
 Jetzt muss aus dem isolierten Test eine saubere Theater-Command-Architektur entstehen.
-
----
 
 ## Nächster technischer Meilenstein
 
@@ -1550,7 +1511,7 @@ Zu klären:
 - wie Transporter-Lifecycle verwaltet wird
 - wie ein Auftrag repräsentiert wird
 - wie Erfolg erkannt wird
-- wie Fehler erkannt werden
+- wie Fehler erkannt wird
 - wie `RepackCommandsPath` ohne Vendor-Patch behandelt wird
 - wie Resultate in `TC.State` zurückgeführt werden
 - welche Resultate Dirty setzen
@@ -1603,9 +1564,7 @@ Maßnahme:
 
 - Source-backed prüfen.
 - keinen Vendor-Patch vornehmen.
-- TC-seitige beziehungsweise konfigurationsbasierte Isolation oder Lösung bewerten.
-
----
+- Theater-Command-seitige beziehungsweise konfigurationsbasierte Isolation oder Lösung bewerten.
 
 ## CTLD State vs. TC State
 
@@ -1620,8 +1579,6 @@ Maßnahme:
 - idempotente Operationen
 - definierte Dirty-/Persistence-Grenze
 
----
-
 ## MissionScripting.lua
 
 Für Persistence und DCS-SMS sind lokale Sandbox-Anpassungen relevant.
@@ -1631,8 +1588,6 @@ Risiko:
 - DCS-Updates können `MissionScripting.lua` überschreiben.
 
 Danach müssen die lokalen Freigaben erneut geprüft werden.
-
----
 
 ## Save-Kompatibilität
 
@@ -1647,8 +1602,6 @@ Später notwendig:
 - Backup
 - Rotation
 - Fallback
-
----
 
 ## Framework-Integration
 
@@ -1751,4 +1704,4 @@ Aktueller Leitsatz:
 
 Aktueller Übergang:
 
-**state-first Kampagnenkern + dirty-aware Persistence + abgeschlossene Priority-3-Dirty-Coverage + bestandener CTLD-KI-Truppentransport-PoC -> kontrollierte produktive CTLD-Integration**
+**state-first Kampagnenkern + dirty-aware Persistence + abgeschlossene Priority-3-Dirty-Coverage + bestandener CTLD-KI-Truppentransport-PoC für den getesteten Aufbau -> kontrollierte produktive CTLD-Integration**
