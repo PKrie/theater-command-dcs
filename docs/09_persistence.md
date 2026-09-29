@@ -21,6 +21,7 @@ Grundprinzip:
 - Mission Editor = Bühne
 - Lua = Kampagnensystem
 - GitHub = Projektgedächtnis / Source of Truth
+- DCS Runtime = autoritativer Verhaltensbeweis
 - Persistence = internes Hintergrundsystem
 
 Aktive Datei:
@@ -34,6 +35,10 @@ Aktuelle Version:
 Verbindlich:
 
     productiveRestore=false
+
+Aktueller Entwicklungsbereich:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
 
 ---
 
@@ -97,7 +102,7 @@ Produktiver Startup-Restore:
 
 Bestätigt:
 
-- DCS-Dateisystemzugriff
+- DCS-Dateisystemzugriff in der getesteten Entwicklungsumgebung
 - Save-Datei schreiben
 - Save-Datei lesen
 - Lua-Inhalt kompilieren
@@ -243,7 +248,9 @@ Beispiel:
 
 besitzt aktuell keine produktive Call-Site.
 
-Ein dort dokumentierter latenter Dirty-Randfall wird erst bei tatsächlicher Verdrahtung erneut geprüft.
+Der dort dokumentierte latente Lifecycle-/Dirty-Prüfpunkt wird erst bei tatsächlicher Verdrahtung erneut geprüft.
+
+Er ist aktuell kein nachgewiesener Runtime-Persistence-Bug.
 
 Das rechtfertigt keinen erneuten vollständigen Priority-3-Audit.
 
@@ -284,42 +291,43 @@ Lokale DCS-Datei:
 
     ...\DCS World\Scripts\MissionScripting.lua
 
-PersistenceSystem benötigt direkt insbesondere:
+PersistenceSystem benötigt für seinen bestätigten Dateipfad insbesondere Zugriff auf:
 
     io
     lfs
 
-Aktuell dokumentierte Entwicklungsumgebung:
+Die erfolgreiche Persistence-Runtime bestätigt, dass die dafür benötigten Dateisystemfunktionen in der getesteten Entwicklungsumgebung verfügbar waren.
 
-    os=true
-    io=true
-    lfs=true
-    require=false
+Konkrete aktuelle Freigabewerte für:
 
-PersistenceSystem selbst benötigt:
+    os
+    io
+    lfs
+    require
 
-- `io`
-- `lfs`
+werden nicht als dauerhafte globale Systemeigenschaft festgeschrieben.
 
-nicht direkt erforderlich:
+Diese Werte hängen von der lokalen DCS-Konfiguration ab und müssen insbesondere nach DCS-Updates erneut geprüft werden.
 
-- `os`
-- `require`
+Für DCS-SMS gilt ebenfalls:
 
-Die aktuell verwendete DCS-SMS-Entwicklungsbridge benötigt zusätzlich eine entsprechend unsanitized Umgebung für ihre Runtime-Funktionen.
+- lokale MissionScripting-Voraussetzungen separat prüfen
+- keine veralteten Sandbox-Werte aus älteren Tests ungeprüft übernehmen
 
-DCS-SMS-Installationspfad:
+Verifiziertes DCS-SMS-Installationsverzeichnis:
 
     C:\Tools\dcs-sms
 
+Aus dem bestätigten Stand wird kein exakter Executable-Pfad abgeleitet.
+
 DCS-Updates können `MissionScripting.lua` überschreiben.
 
-Wenn Persistence oder DCS-SMS nach einem DCS-Update nicht mehr funktionieren:
+Wenn Persistence nach einem DCS-Update nicht mehr funktioniert:
 
 1. `MissionScripting.lua` prüfen.
 2. `io` prüfen.
 3. `lfs` prüfen.
-4. für DCS-SMS zusätzlich `os` prüfen.
+4. lokalen Sandbox-Zustand gegen die benötigten Entwicklungswerkzeuge prüfen.
 5. erst danach Theater-Command-Code verdächtigen.
 
 Typische Persistence-Problemmarker:
@@ -374,6 +382,8 @@ SHA-256:
     C679B4FFE61A7AB601D50E159A057DCDF540B55C620086402883CA2DA27F2596
 
 Dieser Hash wurde während des isolierten CTLD-Tests als Referenz verwendet.
+
+Der CTLD-Test veränderte diese Datei nicht.
 
 ---
 
@@ -432,7 +442,7 @@ Historisches Ziel:
 - `os`, `io`, `lfs`, `require` prüfen
 - Dateisystemverfügbarkeit feststellen
 
-Erster Zustand:
+Erster historisch dokumentierter Zustand:
 
     os=false
     io=false
@@ -444,6 +454,8 @@ Ergebnis:
 - Modul startete.
 - Dateisystem war zunächst blockiert.
 - lokale Sandbox-Anpassung war notwendig.
+
+Diese Werte sind ein historischer Teststand und keine Aussage über die heutige lokale Sandbox-Konfiguration.
 
 ---
 
@@ -467,6 +479,8 @@ Sandbox-Testdatei konnte:
 - validiert
 
 werden.
+
+Auch diese Werte beschreiben den damals geprüften Persistence-Testpfad.
 
 ---
 
@@ -797,6 +811,8 @@ Keine aktive Embedded-Runtime-Drift.
 
 Damit wurde ein veralteter Embedded-Persistence-Code als Ursache damaliger Probleme ausgeschlossen.
 
+Der Befund gilt für den damals auditierten Missionsstand.
+
 ---
 
 ## 25. Mission Completion Persistence
@@ -1121,13 +1137,13 @@ Dirty Reason:
 
 Noch keine realen MOOSE-CAP-Spawns.
 
-Latenter Sonderfall:
+Latenter Lifecycle-Punkt:
 
     reactToActiveMissions()
 
 besitzt aktuell keine produktive Call-Site.
 
-Bei späterer Verdrahtung muss dieser Lifecycle separat erneut geprüft werden.
+Bei späterer Verdrahtung muss dieser Pfad separat erneut geprüft werden.
 
 ---
 
@@ -1135,31 +1151,31 @@ Bei späterer Verdrahtung muss dieser Lifecycle separat erneut geprüft werden.
 
 Aktuell:
 
-- Skynet IADS als Vendor vorhanden
+- Skynet IADS `3.3.0` als Vendor vorhanden
+- `State.IADS` Core-Platzhalter vorhanden
 - noch keine produktive Theater-Command-IADS-Integration
 
-Später persistierbar:
+Später persistierbar können unter anderem sein:
 
 - IADS-Netzwerke
-- SAM-Knoten
-- EWR-Knoten
+- Sites
+- Sektoren
 - Radarstatus
 - Launcherstatus
 - Munition
 - Beschädigung
 - Reparatur
 - Unterdrückung
-- zerstörte Systeme
 
-Aktuell keine produktiven IADS-Dirty-Hooks.
+Aktuell existieren keine produktiven IADS-Dirty-Hooks.
 
 ---
 
 ## 35. CTLD und Persistence
 
-CTLD wurde am 2026-09-29 erstmals in einem vollständigen KI-Truppentransport praktisch getestet.
+CTLD `1.6.1` wurde am 2026-09-29 in einem vollständigen KI-Truppentransport für den getesteten Aufbau praktisch getestet.
 
-Bestätigt:
+Bestätigt für diesen Aufbau:
 
     Pickup
     -> Flug
@@ -1173,7 +1189,7 @@ Er war noch keine produktive Theater-Command-CTLD-Integration.
 
 Wichtig für Persistence:
 
-Aktuell werden CTLD-interne Runtime-Tabellen nicht als autoritativer langfristiger Kampagnenstate behandelt.
+CTLD-interne Runtime-Tabellen werden aktuell nicht als autoritativer langfristiger Kampagnenstate behandelt.
 
 Langfristiges Ziel:
 
@@ -1209,15 +1225,24 @@ Referenz-SHA-256:
 
     C679B4FFE61A7AB601D50E159A057DCDF540B55C620086402883CA2DA27F2596
 
+Größe:
+
+    3094967 Bytes
+
+Änderungszeit:
+
+    2026-09-21 15:00:00.5926451
+
 Vor Test:
 
 - Backup erstellt
 - Hash verglichen
 - produktiver Save ReadOnly gesetzt
+- ReadOnly bestätigt
 
 Nach Test:
 
-- DCS beendet
+- DCS vollständig beendet
 - Save erneut geprüft
 - Größe unverändert
 - Änderungszeit unverändert
@@ -1295,7 +1320,44 @@ Nicht zwangsläufig:
 
 ---
 
-## 39. Produktiver Restore
+## 39. Bekannter CTLD-Runtime-Caveat
+
+Beim erfolgreichen CTLD-Test wurde beim Touchdown des registrierten KI-Transporters genau einmal beobachtet:
+
+    CTLD.lua:6150:
+    attempt to get length of local 'RepackCommandsPath' (a nil value)
+
+Kontext:
+
+    updateRepackMenu
+    updateRepackMenuOnlanding
+
+Während der anschließenden ungefähr 220 Sekunden Bodenbeobachtung wurde der Fehler nicht erneut beobachtet.
+
+Der automatische Pickup-/Dropoff-Pfad wurde trotzdem erfolgreich abgeschlossen.
+
+Dieser Fehler ist kein PersistenceSystem-Fehler.
+
+Er ist für Persistence und Restore trotzdem relevant, weil ein Framework-Runtime-Pfad durch Fehler vom persistierten Theater-Command-State abweichen könnte.
+
+Nicht direkt bewiesen ist:
+
+- dass der Fehler harmlos ist
+- dass spätere Repack-Menü-Aktualisierungen funktionieren
+- dass der betreffende Scheduler-Pfad weiterlief
+- dass der betreffende Scheduler-Pfad beendet wurde
+
+Dass ein unbehandelter Lua-Fehler den betreffenden Scheduler-Pfad beendet haben könnte, bleibt eine source-basierte technische Inferenz und kein direkter Runtime-Beweis.
+
+Vendor-Regel:
+
+    vendor/ctld/CTLD.lua wird nicht gepatcht.
+
+Vor produktiver CTLD-Integration muss dieser Lifecycle-Punkt sauber behandelt oder isoliert werden.
+
+---
+
+## 40. Produktiver Restore
 
 Produktiver Restore bedeutet langfristig:
 
@@ -1322,7 +1384,7 @@ Verbindlich:
 
 ---
 
-## 40. Warum produktiver Restore weiterhin deaktiviert ist
+## 41. Warum produktiver Restore weiterhin deaktiviert ist
 
 Priority 3 ist inzwischen abgeschlossen.
 
@@ -1342,7 +1404,7 @@ Es muss eindeutig definiert werden:
 
 ### Save-Versionierung
 
-Aktuell muss noch eine belastbare Strategie entstehen für:
+Es muss noch eine belastbare Strategie entstehen für:
 
 - Save-Version
 - Schema-Version
@@ -1365,7 +1427,7 @@ Es braucht einen eigenen kontrollierten End-to-End-Restore-Test.
 
 ---
 
-## 41. Voraussetzungen vor `productiveRestore=true`
+## 42. Voraussetzungen vor `productiveRestore=true`
 
 Bereits erfüllt:
 
@@ -1386,7 +1448,7 @@ Bereits erfüllt:
 - Capture Ready Apply Regression
 - Capture Getter Read-Neutrality
 - Capture Ownership No-Op
-- Priority 3 Dirty-Coverage
+- Priority 3 Dirty-Coverage im dokumentierten Umfang
 
 Noch offen:
 
@@ -1405,7 +1467,7 @@ entschieden werden.
 
 ---
 
-## 42. Save/Load-Sicherheitsregeln
+## 43. Save/Load-Sicherheitsregeln
 
 Persistence bleibt defensiv.
 
@@ -1427,7 +1489,7 @@ Regeln:
 
 ---
 
-## 43. Spätere Save-Versionierung
+## 44. Spätere Save-Versionierung
 
 Noch zu entwickeln:
 
@@ -1453,7 +1515,7 @@ Diese Felder sind Zukunftsarchitektur und nicht als bereits implementiert zu ver
 
 ---
 
-## 44. Backup und Rotation
+## 45. Backup und Rotation
 
 Aktuell existiert kein vollständig produktiver automatischer Save-Rotationsmechanismus.
 
@@ -1477,7 +1539,7 @@ Er ersetzt noch keine spätere automatische Save-Rotation.
 
 ---
 
-## 45. Persistence und F10
+## 46. Persistence und F10
 
 Aktuelle Entscheidung:
 
@@ -1510,7 +1572,7 @@ Ein späteres separates Admin-/Debug-Menü wäre nur als neue, bewusst freigegeb
 
 ---
 
-## 46. Integration mit CaptureSystem
+## 47. Integration mit CaptureSystem
 
 Status:
 
@@ -1533,7 +1595,7 @@ Noch offen:
 
 ---
 
-## 47. Integration mit LogisticsDelivery
+## 48. Integration mit LogisticsDelivery
 
 Status:
 
@@ -1557,7 +1619,7 @@ Noch offen:
 
 ---
 
-## 48. Integration mit FobSystem
+## 49. Integration mit FobSystem
 
 Status:
 
@@ -1581,7 +1643,7 @@ Noch offen:
 
 ---
 
-## 49. Integration mit MissionGenerator
+## 50. Integration mit MissionGenerator
 
 Status:
 
@@ -1607,7 +1669,7 @@ Noch offen:
 
 ---
 
-## 50. Integration mit AICapManager
+## 51. Integration mit AICapManager
 
 Status:
 
@@ -1631,64 +1693,34 @@ Noch offen:
 
 ---
 
-## 51. Integration mit CTLD
+## 52. Integration mit CTLD
 
 Status:
 
-    Framework-PoC bestanden
+    Framework-PoC für den getesteten Aufbau bestanden
     produktive Persistence-Integration offen
 
-Bestätigt:
+Für den getesteten Aufbau bestätigt:
 
 - Runtime-Zonenregistrierung
 - Transporterregistrierung
-- Pickup
+- automatischer Pickup
 - Flug
-- Landung
-- Dropoff
-- Bodengruppe
+- Off-Airfield-Landung
+- automatischer Dropoff
+- reale Bodengruppe
 
 Noch nicht definiert:
 
-- welche CTLD-Ergebnisse in TC.State geschrieben werden
+- welche CTLD-Ergebnisse in `TC.State` geschrieben werden
 - welche Dirty Reasons verwendet werden
 - wann ein Transportauftrag als erfolgreich gilt
 - wie Fehlschläge abgebildet werden
 - wie laufende Aufträge beim Missionsende behandelt werden
 - was nach Restore neu erzeugt werden muss
+- welche CTLD-Runtime-Daten ausdrücklich nicht persistiert werden
 
 Diese Punkte gehören in die kommende produktive CTLD-Integrationsarchitektur.
-
----
-
-## 52. Bekannter CTLD-Integrationspunkt
-
-Beim CTLD-Test wurde beobachtet:
-
-    CTLD.lua:6150:
-    attempt to get length of local 'RepackCommandsPath' (a nil value)
-
-Dieser Fehler ist kein PersistenceSystem-Fehler.
-
-Er ist aber für den späteren Runtime-Lifecycle relevant.
-
-Warum:
-
-Wenn ein Vendor-Scheduler oder Menüpfad durch einen Fehler endet, kann daraus später ein Unterschied zwischen:
-
-    Theater-Command-State
-
-und:
-
-    tatsächlicher Framework-Runtime
-
-entstehen.
-
-Deshalb muss dieser Punkt vor produktiver Integration geklärt werden.
-
-Vendor-Regel:
-
-    vendor/ctld/CTLD.lua wird nicht gepatcht.
 
 ---
 
@@ -1698,13 +1730,22 @@ Persistence-Arbeit nutzt dieselbe Werkzeugtrennung wie das Gesamtprojekt.
 
 ### ChatGPT
 
+Rolle:
+
 - Architektur
 - Testplanung
 - Bewertung
 - Dokumentation
 - GitHub-Audit
+- Definition des nächsten Einzelschritts
 
 ### Claude + dcs-mcp
+
+Version:
+
+    dcs-mcp 0.9.11
+
+Verwendung:
 
 - `.miz`-Struktur
 - Embedded-Ressourcen
@@ -1714,6 +1755,20 @@ Persistence-Arbeit nutzt dieselbe Werkzeugtrennung wie das Gesamtprojekt.
 
 ### Claude Code + DCS-SMS
 
+DCS-SMS:
+
+    0.27.2
+
+Hook:
+
+    me-bridge-0.27.2
+
+Verifiziertes Installationsverzeichnis:
+
+    C:\Tools\dcs-sms
+
+Verwendung:
+
 - lokale Runtime
 - `TC.State`
 - Persistence Runtime-State
@@ -1721,7 +1776,9 @@ Persistence-Arbeit nutzt dieselbe Werkzeugtrennung wie das Gesamtprojekt.
 - Logs
 - kontrollierte Regressionen
 
-DCS selbst bleibt der Verhaltensbeweis.
+Aus dem bestätigten Stand wird kein exakter Executable-Pfad abgeleitet.
+
+DCS selbst bleibt der autoritative Runtime-Verhaltensbeweis.
 
 ---
 
@@ -1766,7 +1823,7 @@ Persistence-spezifisch zusätzlich:
     file_system_unavailable
     Periodic autosave decision: FAILED
 
-Ein `FAILED` ist im kontrollierten Fehlerpfad nicht automatisch ein Softwarefehler.
+Ein `FAILED` ist im kontrollierten Fehlerpfad nicht automatisch ein neuer Softwarefehler.
 
 Entscheidend ist, ob:
 
@@ -1812,6 +1869,8 @@ AI:
     CAP Zones: 12
     CAP Requests: 12
 
+Diese Werte beziehen sich auf die jeweils dokumentierten bestätigten Tests und sind keine pauschale Garantie für einen beliebigen späteren Missionsstand.
+
 ---
 
 ## 57. Aktuelle Persistence-Grenzen
@@ -1823,9 +1882,9 @@ Noch nicht produktiv:
 - Schema-Migration
 - automatische Save-Rotation
 - Recovery-System
-- Restore von realen CTLD-Operationen
+- Restore realer CTLD-Operationen
 - Restore realer MOOSE-Gruppen
-- Restore realer Skynet-Zustände
+- Restore realer Skynet-Strukturen
 - Restore laufender Ground Operations
 - Multiplayer-Persistence
 
@@ -1841,14 +1900,16 @@ Priority 3 ist abgeschlossen.
 
 Der nächste Projektbereich ist:
 
-    Priority 4 – produktive CTLD-Integration
+    Priority 4 – produktive CTLD-Integration vorbereiten
 
 Für Persistence bedeutet das zunächst:
 
 - definieren, welche CTLD-Ergebnisse Theater-Command-State werden
 - definieren, wann diese Ergebnisse Dirty setzen
+- definieren, welche Dirty Reasons verwendet werden
 - definieren, welche CTLD-Runtime-Daten nicht persistiert werden
 - laufende Transportaufträge von abgeschlossenen Ergebnissen trennen
+- definieren, was bei Missionsende mit laufenden Aufträgen geschieht
 - Restore-Grenze für spätere CTLD-Integration vorbereiten
 
 Produktiver Restore wird dadurch noch nicht aktiviert.
@@ -1873,6 +1934,8 @@ Für CTLD-/Persistence-Grenzen zusätzlich:
 
     docs/05_logistics_system.md
     mission_editor/ctld_start_zones.md
+    mission_editor/trigger_setup.md
+    src/logistics/README.md
     src/logistics/tc_logistics_delivery.lua
     src/logistics/tc_fob_system.lua
     src/missions/tc_mission_generator.lua
@@ -1927,6 +1990,15 @@ Verbindlich:
 
     productiveRestore=false
 
+CTLD-PoC:
+
+    KI-Truppentransport für den getesteten Aufbau bestanden
+    produktive Theater-Command-Integration weiterhin offen
+
+Bekannter CTLD-Caveat:
+
+    RepackCommandsPath-Fehler genau einmal beim Touchdown beobachtet
+
 Produktive Save-Datei nach dem CTLD-Test vom 2026-09-29:
 
     unverändert
@@ -1936,8 +2008,8 @@ Aktueller Übergang:
 
     stabile dirty-aware Persistence
     +
-    abgeschlossene Dirty-Coverage
+    abgeschlossene Priority-3-Dirty-Coverage
     +
-    bestandener CTLD-Framework-PoC
+    bestandener CTLD-Framework-PoC für den getesteten Aufbau
     ->
     klare Persistence-Grenze für die produktive CTLD-Integration
