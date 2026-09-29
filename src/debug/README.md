@@ -1,54 +1,12 @@
-# src/debug/README.md
+# Debug – Theater Command DCS
 
-## Autoritativer Debug-/Werkzeugstand — 2026-08-04
-
-- Es gibt weiterhin kein eigenes Debug-Lua-Modul. DCS-SMS ist ausschließlich ein Entwicklungswerkzeug und kein Runtime-Framework.
-- Bewährte DCS-SMS-Fähigkeiten sind Status, Mission-/GUI-Exec, Trigger-Inspektion und -Aktionsbearbeitung, Ressourcenregistrierung mit Read-back, native Mission-Editor-Speicherung und Log-Lesen.
-- Aktuelle Runtime-Versionen umfassen PersistenceSystem `v0.2.6`, MissionGenerator `v0.2.3` und F10Menu `v0.2.3` mit 33 Befehlen.
-- Der reproduzierbare Verlust aller sechs Mission-Status-Dictionaries nach initial zehn Records bleibt ohne bekannten Writer (`PROJECT SOURCE HAS NO MATCHING WRITE SITE`). Nächster Schritt ist deshalb ein Offline/read-only `.miz`-Ressourcen-Audit ohne DCS-/DCS-SMS-Runtime.
-- Abweichende Versions-, Befehls- und Persistence-Grundstrukturaussagen unten sind historische Entwicklungsstände.
-
----
+## Verbindlicher Stand — 2026-09-29
 
 Diese Datei beschreibt den Debug-Bereich von **Theater Command DCS**.
 
-Der Debug-Bereich enthält spätere eigene Lua-Logik für Testhilfen, State-Reports, Diagnosefunktionen und kontrollierte Entwicklungswerkzeuge.
+Projekt:
 
----
-
-## 1. Zweck des Debug-Bereichs
-
-`src/debug/` ist für technische Kontrolle, Testausgaben und Entwicklungswerkzeuge zuständig.
-
-Debug ist kein eigenes Kampagnen-Hauptsystem.
-
-Debug soll helfen, den Zustand anderer Systeme sichtbar und nachvollziehbar zu machen.
-
-Langfristig soll Debug anzeigen können:
-
-- Core-Status
-- Airbase-Status
-- Zone-Status
-- Capture-Status
-- Capture-Pressure
-- Capture-Progress
-- Logistics-Status
-- FOB-Status
-- Mission-Status
-- AI-Status
-- IADS-Status
-- Persistence-Status
-- State-Dumps
-- Testausgaben
-- spätere Admin- oder Entwicklerfunktionen
-
-Aktuell ist noch kein eigenes Debug-Lua-Modul implementiert.
-
-Die wichtigste aktuelle Sichtbarkeitsfläche ist `src/ui/tc_f10_menu.lua`.
-
----
-
-## 2. Kampagnenkontext
+    Theater Command DCS
 
 Erste Kampagne:
 
@@ -58,91 +16,75 @@ Map:
 
     Syria
 
-Ausgangslage:
+Aktueller Debug-Stand:
 
-    Blue Start: Akrotiri / Zypern
-    Red Start: syrisches Festland vollständig rot kontrolliert
+    kein eigenes produktives Debug-Lua-Modul
 
-Grundprinzip:
+Aktuelle Hauptwerkzeuge für Diagnose:
 
-    Mission Editor = Bühne
-    Lua = Kampagnensystem
-    GitHub = Projektgedächtnis
+    F10Menu
+    dcs.log
+    Claude + dcs-mcp
+    Claude Code + DCS-SMS
+
+Aktueller Entwicklungsbereich:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Priority 3:
+
+    abgeschlossen im dokumentierten Umfang seit 2026-09-21
+
+Verbindlich:
+
+    productiveRestore=false
 
 ---
 
-## 3. Aktueller technischer Stand
+## 1. Zweck des Debug-Bereichs
 
-Historischer Stand:
+`src/debug/` ist für spätere eigene Diagnose-, Reporting- und Entwicklungsfunktionen vorgesehen.
 
-    2026-06-29
+Debug ist kein Kampagnen-Hauptsystem.
 
-Aktueller Debug-Ordner:
+Debug soll insbesondere helfen:
 
-    src/debug/
+- State sichtbar zu machen
+- Systemzustände zusammenzufassen
+- Fehler einzugrenzen
+- Testpfade kontrolliert auszulösen
+- Runtime-Ergebnisse nachvollziehbar zu machen
+- Kampagnensysteme voneinander zu unterscheiden
+
+Debug soll fachliche Systeme nicht ersetzen.
+
+---
+
+## 2. Aktueller Stand
 
 Aktuell vorhanden:
 
     src/debug/README.md
 
-Noch nicht vorhanden:
+Aktuell nicht vorhanden:
 
-    src/debug/tc_debug_console.lua
-    src/debug/tc_debug_state_dump.lua
-    src/debug/tc_debug_airbase_report.lua
-    src/debug/tc_debug_zone_report.lua
-    src/debug/tc_debug_capture_report.lua
-    src/debug/tc_debug_mission_report.lua
-    src/debug/tc_debug_logistics_report.lua
-    src/debug/tc_debug_ai_report.lua
-    src/debug/tc_debug_iads_report.lua
+    produktives Debug-Lua-Modul
 
-Aktuelle Entscheidung:
+Das ist bewusst.
 
-    Kein eigenes Debug-Lua-Modul, solange F10Menu die unmittelbar nötige Sichtbarkeit noch erweitern kann.
+Die momentan benötigte Sichtbarkeit wird bereits bereitgestellt durch:
 
-Nächster Sichtbarkeitsschritt:
+- F10Menu
+- DCS-Logs
+- Runtime-Diagnose
+- Mission-Editor-Audits
+- GitHub-Source-Audits
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+Ein zusätzliches Debug-Modul wird erst gebaut, wenn dafür ein konkreter Bedarf entsteht.
 
 ---
 
-## 4. Aktueller getesteter Gesamtstand
-
-Der aktuelle state-first Runtime-Stand ist bestanden.
-
-Bestätigte Systeme:
-
-| System | Datei | Version | Status |
-|---|---|---:|---|
-| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
-| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.1` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden; Restore deaktiviert |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.0` | bestanden |
-
-Aktuelle bestätigte Werte:
-
-    Syria airbase-like objects: 225
-    relevante Kampagnenzonen: 46
-    capture-fähige Ziele: 32
-    Capture-Pressure-Records: 32
-    Capture-Progress-Records: 32
-    Logistics Hubs: 46
-    FOB-Kandidaten: 6
-    Blue FOBs: 2
-    Mission candidates: 69
-    verfügbare Missionen: 10
-    F10 Commands: 26
-    CAP Requests: 12
-
----
-
-## 5. Architekturregel
+## 3. Architekturregel
 
 Externe Frameworks liegen unter:
 
@@ -152,149 +94,250 @@ Eigene Theater-Command-Logik liegt unter:
 
     src/
 
-Der Debug-Bereich gehört zur eigenen Theater-Command-Logik.
-
-Frameworks werden nicht verändert.
-
-Dateien in `src/debug/` werden nach Debug-Aufgaben benannt, nicht nach Frameworks.
+Debug-Dateien werden nach Debug-Aufgabe benannt.
 
 Nicht gewünscht:
 
-    src/debug/tc_mist_debug.lua
-    src/debug/tc_moose_debug.lua
-    src/debug/tc_ctld_debug.lua
-    src/debug/tc_skynet_debug.lua
-    src/debug/tc_debug_all_in_one.lua
-    src/debug/tc_everything_debug.lua
+    tc_mist_debug.lua
+    tc_moose_debug.lua
+    tc_ctld_debug.lua
+    tc_skynet_debug.lua
+    tc_debug_all_in_one.lua
+    tc_everything_debug.lua
 
-Mögliche spätere Dateien:
+Mögliche spätere fachliche Debug-Dateien:
 
-    src/debug/tc_debug_console.lua
-    src/debug/tc_debug_state_dump.lua
-    src/debug/tc_debug_airbase_report.lua
-    src/debug/tc_debug_zone_report.lua
-    src/debug/tc_debug_capture_report.lua
-    src/debug/tc_debug_mission_report.lua
-    src/debug/tc_debug_logistics_report.lua
-    src/debug/tc_debug_ai_report.lua
-    src/debug/tc_debug_iads_report.lua
+    tc_debug_state_dump.lua
+    tc_debug_airbase_report.lua
+    tc_debug_zone_report.lua
+    tc_debug_capture_report.lua
+    tc_debug_mission_report.lua
+    tc_debug_logistics_report.lua
+    tc_debug_ai_report.lua
+    tc_debug_iads_report.lua
 
-Diese Dateien werden erst angelegt, wenn sie wirklich benötigt werden.
+Diese Dateien werden nicht vorsorglich angelegt.
 
 ---
 
-## 6. Verhältnis zu F10Menu
+## 4. Aktueller Systemstand
 
-Aktuell übernimmt F10Menu einen Teil der Debug- und Sichtbarkeitsfunktion.
+Aktuelle relevante Versionen:
 
-Aktive UI-Datei:
+    AirbaseScanner      v0.2.2
+    ZoneFactory         v0.2.0
+    CaptureSystem       v0.2.2
+    PersistenceSystem   v0.2.6
+    LogisticsDelivery   v0.2.1
+    FobSystem           v0.2.1
+    MissionGenerator    v0.2.3
+    AICapManager        v0.2.1
+    F10Menu             v0.2.3
 
-    src/ui/tc_f10_menu.lua
+F10 Commands:
 
-Getestete Version:
+    33
 
-    v0.2.0
+CTLD:
 
-Aktuelle F10-Funktionen:
+    1.6.1
 
-- verfügbare Missionen anzeigen
-- aktive Missionen anzeigen
-- Mission Details anzeigen
-- Missionen aktivieren
-- Kampagnenstatus anzeigen
-- Logistics Status anzeigen
-- FOB Status anzeigen
-- AI CAP Status anzeigen
+Priority 3:
 
-Aktuelle F10-Werte:
+    abgeschlossen
 
-    commands: 26
+Produktiver Restore:
+
+    deaktiviert
+
+---
+
+## 5. Aktuell bestätigte Kernwerte
+
+World:
+
+    Airbase-like Objects: 225
+    relevante Kampagnenzonen: 46
+
+Capture:
+
+    Capture Candidates: 32
+    Pressure Records: 32
+    Progress Records: 32
+
+Logistics:
+
+    Logistics Hubs: 46
+
+FOB:
+
+    FOB Candidates: 6
+    Blue FOBs: 2
+
+MissionGenerator:
+
+    Mission Candidates: 78
+    Mission Records: 10
+
+AI:
+
+    CAP Zone Candidates: 31
+    CAP Zones: 12
+    CAP Requests: 12
+
+F10:
+
+    Commands: 33
+
+---
+
+## 6. Auflösung des früheren Mission-Record-Verdachts
+
+Der frühere Verdacht, dass MissionGenerator seine sechs Mission-Status-Dictionaries verliert, wurde am:
+
+    2026-09-12
+
+widerlegt.
+
+Die Mission Collections sind:
+
+    String-keyed Lua-Dictionaries
+
+Deshalb ist:
+
+    #table
+
+für deren Anzahl nicht autoritativ.
+
+Live bestätigt:
+
+    statistics.available = 10
+    pairs()-Count = 10
+    #available = 0
+
+Die Mission Records waren vorhanden.
+
+Der damalige Diagnosefehler lag in einer falschen Count-Auswertung in:
+
+    src/core/tc_state.lua
+
+Es existiert aktuell kein bestätigter Mission-Record-Datenverlust.
+
+Der frühere Status:
+
+    PROJECT SOURCE HAS NO MATCHING WRITE SITE
+
+ist deshalb keine aktuelle offene Fehlerklassifikation mehr.
+
+---
+
+## 7. Embedded Resource Audit
+
+Der damals als nächster Schritt geplante Embedded Resource Audit wurde inzwischen durchgeführt.
+
+Auditdatum:
+
+    2026-09-12
+
+Ergebnis:
+
+    13/13 relevante aktive Theater-Command-Ressourcen EXACT_MATCH
 
 Bestätigt:
 
-    F10-Menü ist sichtbar.
-    F10-Menü ist navigierbar.
-    Mission Details funktionieren.
-    Mission Activation funktioniert.
-    Mission Activation bleibt state-only.
+- keine relevante aktive Embedded-Source-Drift
+- keine fehlende aktive Theater-Command-Ressource
+- damalige DEV- und Testmission waren im geprüften Stand byte-identisch
 
-Nächster UI-/Debug-Schritt:
+Dieser Arbeitsschritt ist abgeschlossen.
 
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
+Er ist kein aktueller nächster Debug-Schritt.
 
 ---
 
-## 7. Warum noch kein eigenes Debug-Modul existiert
+## 8. Verhältnis zu F10Menu
 
-Ein eigenes Debug-Modul ist sinnvoll, aber noch nicht der unmittelbare nächste Schritt.
+F10Menu:
 
-Gründe:
+    src/ui/tc_f10_menu.lua
+    v0.2.3
 
-- F10Menu ist bereits aktiv und kann die nächste Sichtbarkeit direkt bereitstellen.
-- CaptureSystem erzeugt neue Daten, die zuerst über F10 sichtbar werden sollen.
-- Ein separates Debug-Menü würde aktuell zusätzliche Struktur erzeugen.
-- Die nächsten Tests benötigen nur Capture-/Pressure-Zusammenfassungen.
-- Produktive Debug-Funktionen sollen später klar vom Spieler-UI getrennt werden.
+Bestätigt:
 
-Aktuelle Entscheidung:
+    33 Commands
 
-    Erst F10Menu v0.2.1 mit Capture-/Pressure-Sichtbarkeit.
-    Danach bei Bedarf eigener Debug-Bereich.
+F10 übernimmt aktuell einen erheblichen Teil der benötigten State-Sichtbarkeit.
+
+Unter anderem verfügbar:
+
+- Available Missions
+- Active Missions
+- Mission Details
+- Mission Activation
+- Mission Completion
+- Mission Failure
+- Campaign Status
+- Capture Status
+- Capture Ready
+- Pressure Contested
+- Capture Ready Apply
+- Logistics Status
+- FOB Status
+- AI CAP Status
+
+Der frühere geplante UI-Schritt:
+
+    Capture-/Pressure-Status sichtbar machen
+
+ist abgeschlossen.
+
+Auch:
+
+    Apply Capture Ready Zone 1
+
+ist inzwischen implementiert und getestet.
 
 ---
 
-## 8. Verhältnis zum Core
+## 9. Verhältnis zum Core
 
-`src/debug/` nutzt später den Core.
+Debug darf später auf Core-Infrastruktur zugreifen.
 
-Erlaubte Core-Abhängigkeiten:
+Relevante Bereiche:
 
-- `TC.Config`
-- `TC.Logger`
-- `TC.State`
-- `TC.Utils`
-- `TC.Scheduler`
+    TC.Config
+    TC.Logger
+    TC.State
+    TC.Utils
+    TC.Scheduler
 
-Der Debug-Bereich darf davon ausgehen, dass der Core geladen ist.
+Debug soll:
 
-Aktuelle Core-Dateien:
+- State lesen
+- State darstellen
+- technische Reports erzeugen
 
-    src/core/tc_config.lua
-    src/core/tc_logger.lua
-    src/core/tc_state.lua
-    src/core/tc_utils.lua
-    src/core/tc_scheduler.lua
+Debug soll nicht:
 
-Debug soll Core-Daten anzeigen können, aber keine Core-Hauptlogik ersetzen.
+- Core-Logik ersetzen
+- Dirty-State beiläufig verändern
+- neue globale Projektstrukturen erzeugen
 
 ---
 
-## 9. Verhältnis zum World-Bereich
+## 10. Verhältnis zu World
 
-Debug soll später Daten aus `src/world/` anzeigen.
-
-Aktive World-Dateien:
+World-Dateien:
 
     src/world/tc_airbase_scanner.lua
     src/world/tc_zone_factory.lua
 
-Aktuelle World-Werte:
-
-    Syria airbase-like objects: 225
-    strategic: 19
-    secondary: 13
-    captureCandidates: 32
-    missionCandidates: 32
-    logisticsCandidates: 46
-    relevante Kampagnenzonen: 46
-    skipped airbase-like objects: 179
-
-Mögliche spätere Debug-Ausgaben:
+Mögliche spätere Debug-Reports:
 
 - Airbase Summary
-- Airbase Classification Report
+- Airbase Classification
 - Strategic Airbases
-- Secondary Airbases
+- Secondary Airfields
 - Unknown Objects
 - Zone Summary
 - Capture Zones
@@ -302,525 +345,568 @@ Mögliche spätere Debug-Ausgaben:
 - Logistics Zones
 - Startbase Zones
 
-Debug soll nicht selbst Airbases scannen.
+Debug führt selbst keinen Airbase-Scan durch.
 
-Debug soll nicht selbst Kampagnenzonen erzeugen.
+Debug erzeugt selbst keine Kampagnenzonen.
 
 ---
 
-## 10. Verhältnis zum Campaign-Bereich
+## 11. Verhältnis zu CaptureSystem
 
-Debug soll später Daten aus `src/campaign/` anzeigen.
-
-Aktive Campaign-Dateien:
+CaptureSystem:
 
     src/campaign/tc_capture_system.lua
-    src/campaign/tc_persistence_system.lua
+    v0.2.2
 
-Aktuelle Capture-Werte:
+Bestätigt:
 
-    eligibleBases: 32
-    eligibleZones: 32
-    nonCaptureBases: 193
-    nonCaptureZones: 14
-    pressureRecords: 32
-    progressRecords: 32
-    appliedMissionEffects: 0
-    ready: 0
-    contested: 0
+- Capture Eligibility
+- Capture Pressure
+- Capture Progress
+- Capture Ready
+- Mission Effects
+- Capture Apply
+- linked Airbase Ownership
+- Getter Read-Neutrality
+- same-owner No-Op
 
 Mögliche spätere Debug-Ausgaben:
 
 - Capture Summary
-- Capture-Eligibility Report
 - Pressure Records
 - Progress Records
 - Ready Zones
 - Contested Zones
-- Mission Effects
 - Ownership Changes
-- Persistence Status
+- Mission Effects
 
-Aktuell nächster Schritt:
-
-    Capture-/Pressure-Daten über F10 sichtbar machen.
+Ein großer Teil dieser Informationen ist aktuell bereits über F10 sichtbar.
 
 ---
 
-## 11. Verhältnis zum Logistics-Bereich
+## 12. Verhältnis zu Persistence
 
-Debug soll später Daten aus `src/logistics/` anzeigen.
+PersistenceSystem:
 
-Aktive Logistics-Dateien:
+    src/campaign/tc_persistence_system.lua
+    v0.2.6
 
-    src/logistics/tc_logistics_delivery.lua
-    src/logistics/tc_fob_system.lua
+Bestätigt:
 
-Aktuelle Logistics-Werte:
+- Background Autosave
+- Dirty Awareness
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`
+- Retry
+- Save-Verifikation
+- kontrollierter Import
 
-    logistics hubs: 46
-    blue hubs: 7
-    red hubs: 24
-    neutral hubs: 15
-    active hubs: 31
-    limited hubs: 15
-    locked hubs: 0
+Verbindlich:
 
-Aktuelle FOB-Werte:
-
-    FOB candidates: 6
-    stored candidates: 6
-    auto-planned FOBs: 2
-    skipped candidates: 4
-    Blue FOBs: 2
-    FOB Ercan
-    FOB Gecitkale
-    Status: UNDER_CONSTRUCTION
+    productiveRestore=false
 
 Mögliche spätere Debug-Ausgaben:
+
+- Persistence Status
+- Dirty State
+- Dirty Reason
+- Save Path
+- Last Save
+- Autosave Status
+- Restore Status
+
+Aktuell existiert bewusst kein normales Spieler-Persistence-F10-Menü.
+
+---
+
+## 13. Verhältnis zu Logistics
+
+LogisticsDelivery:
+
+    v0.2.1
+
+FobSystem:
+
+    v0.2.1
+
+Bestätigt:
+
+    Logistics Hubs: 46
+    FOB Candidates: 6
+    Blue FOBs: 2
+
+Priority-3-Ergebnis:
+
+    Read-Neutrality bestanden
+
+Mögliche spätere Debug-Reports:
 
 - Logistics Hub Summary
-- Blue Hubs
-- Red Hubs
-- Neutral Hubs
+- Hub State
+- Delivery State
 - FOB Candidates
-- FOB Status
-- FOB Build Progress
-- Cargo Requests
-- CTLD Hook Status
+- FOB State
+- Build Progress
+- spätere CTLD-Auftragsdaten
 
-Debug soll keine CTLD-Logik direkt ausführen.
+Debug führt selbst keine produktiven CTLD-Lieferungen aus.
 
 ---
 
-## 12. Verhältnis zum Missionsbereich
+## 14. Verhältnis zu MissionGenerator
 
-Debug soll später Daten aus `src/missions/` anzeigen.
-
-Aktive Missions-Datei:
+MissionGenerator:
 
     src/missions/tc_mission_generator.lua
+    v0.2.3
 
-Getestete Version:
+Bestätigt:
 
-    v0.2.2
+    Mission Candidates: 78
+    Mission Records: 10
 
-Aktuelle MissionGenerator-Werte:
+Bestätigte Lifecycle-Pfade:
 
-    mission candidates: 69
-    fobSupportCandidates: 2
-    generated missions: 10
-    reservedCreated: 1
-    duplicatesSkipped: 1
-    typeLimitSkipped: 30
+    AVAILABLE -> ACTIVE
+    ACTIVE -> COMPLETED
+    ACTIVE -> FAILED
 
-Mögliche spätere Debug-Ausgaben:
+Mögliche spätere Debug-Reports:
 
 - verfügbare Missionen
 - aktive Missionen
 - abgeschlossene Missionen
 - fehlgeschlagene Missionen
-- Missionstypen
-- Missionsziele
-- Missionsprioritäten
 - Mission Effects
 - Activation Metadata
-- reserved MOOSE Hooks
-- reserved CTLD Hooks
-- reserved Skynet Hooks
+- Framework Hooks
 
-Mögliche spätere Debug-Funktionen:
-
-- Mission neu generieren
-- Mission manuell aktivieren
-- Mission als completed markieren
-- Mission als failed markieren
-- Mission Effects testweise anwenden
-
-Diese Funktionen müssen klar als Debug markiert sein.
+Aktuell werden die wichtigsten Mission-Funktionen bereits über F10 sichtbar gemacht.
 
 ---
 
-## 13. Verhältnis zum AI-Bereich
+## 15. Verhältnis zu AI
 
-Debug soll später Daten aus `src/ai/` anzeigen.
-
-Aktive AI-Datei:
+AICapManager:
 
     src/ai/tc_ai_cap_manager.lua
+    v0.2.1
 
-Getestete Version:
+Bestätigt:
 
-    v0.2.0
+    CAP Zone Candidates: 31
+    CAP Zones: 12
+    CAP Requests: 12
 
-Aktuelle AI-Werte:
+Priority-3-Ergebnis:
 
-    cap zone candidates: 31
-    auto-registered CAP zones: 12
-    CAP requests: 12
-    reactionState: AIR_REACTION_REQUESTED
-    threatLevel: HIGH
+    Read-Neutrality bestanden
 
 Mögliche spätere Debug-Ausgaben:
 
 - CAP Zones
 - CAP Requests
-- CAP State
-- Threat Level
+- Active CAP State
+- Threat State
 - Reaction State
-- AI Director Status
-- Blue Intent
-- Red Intent
-- AI Priority Zones
-- AI Operation Queue
+- AI Director State
 
-Debug soll keine dauerhafte AI-Logik enthalten.
+Ein vollständiger AI Director existiert noch nicht.
 
 ---
 
-## 14. Verhältnis zum IADS-Bereich
+## 16. Verhältnis zu IADS
 
-Debug soll später Daten aus `src/iads/` anzeigen.
+Skynet IADS:
 
-Aktueller IADS-Stand:
-
-    Skynet IADS wird geladen.
-    Loader erkennt Skynet IADS.
-    MissionGenerator reserviert Skynet-Hooks.
-    eigenes Theater-Command-IADS-Modul ist noch nicht implementiert.
-
-Mögliche spätere Debug-Ausgaben:
-
-- IADS Status
-- IADS Networks
-- IADS Sectors
-- SAM Sites
-- EWR Sites
-- Command Centers
-- Suppressed Sites
-- Damaged Sites
-- Destroyed Sites
-- SEAD Targets
-- DEAD Targets
-- Skynet Hook Status
-
-Debug soll keine Skynet-IADS-Dateien verändern.
-
-Debug soll IADS-Zustand anzeigen und später gezielte Testfunktionen bereitstellen.
-
----
-
-## 15. Verhältnis zu Persistence
-
-Debug soll später Persistence-Status anzeigen.
-
-Aktive Persistence-Datei:
-
-    src/campaign/tc_persistence_system.lua
+    3.3.0
 
 Status:
 
-    PersistenceSystem v0.2.6 lädt/startet dirty-aware
-    Datei-Write und Read-back-Verifikation bestanden; produktiver Restore deaktiviert
+    geladen
+
+Eigenes produktives Theater-Command-IADS-System:
+
+    noch nicht implementiert
 
 Mögliche spätere Debug-Ausgaben:
 
-- Persistence Status
-- Save Path
-- Last Save
-- Last Load
-- Save Version
-- Schema Version
-- Dirty State
-- Save Test Result
-- Load Test Result
-- Sandbox Write Test
+- IADS Networks
+- IADS Sectors
+- Sites
+- EWR
+- SAMs
+- Suppression State
+- Damage State
+- Mission Effects
 
-Mögliche spätere Debug-Funktionen:
-
-- Debug Save Test
-- Debug Load Test
-- Debug Show Save Status
-- Debug Print Persistence State
-
-Aktuell:
-
-    Persistence v0.2.6 speichert dirty-aware im Hintergrund.
-    Produktiver Restore bleibt deaktiviert.
-    Kein Save-/Load-Debug und keine Persistence-F10-Steuerung aktiv oder für diese Stufe geplant.
+Debug wird keine Vendor-IADS-Dateien verändern.
 
 ---
 
-## 16. Geplanter Namespace
+## 17. Verhältnis zu CTLD
 
-Der Debug-Bereich soll später unter der zentralen Projekttabelle liegen.
+CTLD:
 
-Geplante Struktur:
+    1.6.1
+
+Am 2026-09-29 wurde für einen isolierten getesteten Aufbau ein vollständiger KI-Truppentransport praktisch bestätigt.
+
+Bestätigter Pfad:
+
+    Runtime-Zonenregistrierung
+    -> KI-Transporterregistrierung
+    -> automatischer Pickup
+    -> Flug
+    -> Off-Airfield-Landung
+    -> automatischer Dropoff
+    -> reale Blue-Bodengruppe
+
+Dieser Test ist:
+
+    Framework-PoC für den getesteten Aufbau
+
+Noch nicht vorhanden:
+
+    produktive Theater-Command-CTLD-Orchestrierung
+
+Spätere Debug-Funktionen können CTLD-Integrationsstate sichtbar machen.
+
+Sie sollen CTLD jedoch nicht zum Eigentümer des Campaign-State machen.
+
+---
+
+## 18. CTLD `RepackCommandsPath`
+
+Beim erfolgreichen CTLD-Test wurde genau einmal beim Touchdown beobachtet:
+
+    CTLD.lua:6150:
+    attempt to get length of local 'RepackCommandsPath' (a nil value)
+
+Pickup und Dropoff wurden trotzdem abgeschlossen.
+
+Nicht direkt bewiesen ist:
+
+- ob spätere Repack-Menü-Aktualisierungen funktionieren
+- ob der betreffende Scheduler-Pfad weiterlief
+- ob der betreffende Scheduler-Pfad beendet wurde
+
+Ein möglicher Scheduler-Abbruch bleibt technische Inferenz.
+
+Verbindlich:
+
+    vendor/ctld/CTLD.lua wird nicht gepatcht.
+
+Ein späteres Debug-System kann helfen, diesen Lifecycle sichtbar zu machen.
+
+Die eigentliche Behandlung gehört jedoch an die fachliche CTLD-Integrationsgrenze.
+
+---
+
+## 19. DCS-Log als Debug-Werkzeug
+
+`dcs.log` bleibt eine zentrale technische Evidenzquelle.
+
+Typische Pfade:
+
+    C:\Users\Paul\Saved Games\DCS.openbeta\Logs\dcs.log
+
+oder:
+
+    C:\Users\Paul\Saved Games\DCS\Logs\dcs.log
+
+Wichtige Marker:
+
+    [TC]
+    [TC][ERROR]
+    SCRIPTING ERROR
+    Mission script error
+    stack traceback
+    nil value
+    PersistenceSystem
+    CaptureSystem
+    MissionGenerator
+    AICapManager
+    F10Menu
+    CTLD
+
+Debug-Auswertung muss zwischen:
+
+- Theater-Command-Fehler
+- Vendor-Fehler
+- DCS-interner Warnung
+- erwarteter Testmeldung
+
+unterscheiden.
+
+---
+
+## 20. Entwicklungswerkzeuge
+
+Die aktuelle Werkzeugtrennung ist selbst Teil der Debug-Strategie.
+
+### ChatGPT
+
+Rolle:
+
+    Projektkoordination
+    Architektur
+    Testplanung
+    Ergebnisbewertung
+    GitHub-Audit
+    Dokumentation
+
+### Claude + dcs-mcp
+
+Version:
+
+    dcs-mcp 0.9.11
+
+Rolle:
+
+- `.miz`-Analyse
+- Mission-Editor-Struktur
+- Gruppen
+- Units
+- Trigger-Zonen
+- Wegpunkte
+- Tasks
+- Embedded Resources
+- gespeicherter Missionsaudit
+
+Terrain Store:
+
+    C:\Users\Paul\AppData\Local\dcs-mcp\terrain
+
+Syria:
+
+    installiert
+
+### Claude Code + DCS-SMS
+
+DCS-SMS:
+
+    0.27.2
+
+Hook:
+
+    me-bridge-0.27.2
+
+Verifiziertes Installationsverzeichnis:
+
+    C:\Tools\dcs-sms
+
+Claude-Code-Skill:
+
+    C:\Users\Paul\.claude\skills\dcs-sms\SKILL.md
+
+Rolle:
+
+- lokale DCS-Runtime
+- Runtime-Lua
+- Theater-Command-State
+- CTLD-Live-State
+- Unit-/Group-State
+- Logs
+- Runtime-Regressionen
+
+Aus dem bestätigten Stand wird kein exakter DCS-SMS-Executable-Pfad abgeleitet.
+
+Diese Werkzeuge sind Entwicklungs- und Diagnosewerkzeuge.
+
+Sie sind keine Runtime-Abhängigkeit der fertigen Kampagne.
+
+---
+
+## 21. State-first-Regel für Debug
+
+Debug folgt derselben Architektur wie das Gesamtprojekt.
+
+Grundregel:
+
+    Debug liest State.
+    Debug macht State sichtbar.
+
+Debug darf nicht beiläufig:
+
+- Campaign-State mutieren
+- Dirty erzeugen
+- Framework-Aktionen auslösen
+- Vendor-Dateien verändern
+
+Wenn später eine Debug-Funktion bewusst State mutiert, muss sie:
+
+- eindeutig als Debug gekennzeichnet sein
+- gezielt getestet werden
+- klare Logmarker besitzen
+- Dirty-Semantik respektieren
+- von normaler Spielerlogik getrennt bleiben
+
+---
+
+## 22. Geplanter Namespace
+
+Wenn später ein eigenes Debug-Modul entsteht:
 
     TC.Debug
-    ├── Console
-    ├── StateDump
-    ├── AirbaseReport
-    ├── ZoneReport
-    ├── CaptureReport
-    ├── MissionReport
-    ├── LogisticsReport
-    ├── AIReport
-    ├── IADSReport
-    └── PersistenceReport
 
-State-Bereich:
+Möglicher State:
 
     TC.State.Debug
+
+Keine zusätzlichen globalen Projektnamespaces einführen.
 
 Nicht verwenden:
 
     TheaterCommandDebug
     DebugTC
-    tc_debug_global
     _G_TC_DEBUG
 
 ---
 
-## 17. Geplanter Debug-State
+## 23. Mögliche spätere Debug-Funktionen
 
-Mögliche spätere Daten in `TC.State.Debug`:
+Mögliche Reports:
 
-- enabled
-- verbose
-- showZones
-- showAirbases
-- showCapture
-- showLogistics
-- showMissions
-- showAI
-- showIADS
-- showPersistence
-- lastReportTime
-- lastCommand
-- lastResult
-- lastError
-- reportCounter
+- State Summary
+- Airbase Report
+- Zone Report
+- Capture Report
+- Logistics Report
+- FOB Report
+- Mission Report
+- AI Report
+- IADS Report
+- Persistence Report
+- CTLD Integration Report
+
+Mögliche spätere separate Entwicklerfunktionen:
+
+- State Dump
+- gezielte Regressionstrigger
+- definierte Lifecycle-Tests
+
+Diese Funktionen sind Zukunftsdesign.
+
+Sie sind aktuell nicht implementiert.
+
+---
+
+## 24. Sicherheitsregeln
+
+Für spätere Debug-Module gilt:
+
+- klar als Debug kennzeichnen
+- abschaltbar halten
+- keine Vendor-Dateien verändern
+- keine All-in-one-Datei
+- keine versteckten Campaign-Mutationen
+- keine echte Framework-Execution ohne ausdrücklichen Testzweck
+- keine Save-Manipulation ohne Schutzmaßnahmen
+- klare Logmarker
+- UI und Debug möglichst getrennt halten
+- normale Kampagnenlogik nicht duplizieren
+
+---
+
+## 25. Warum aktuell kein Debug-Modul gebaut wird
+
+Der aktuelle Projektbereich ist:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Für den nächsten Schritt werden zuerst benötigt:
+
+- Source-Audit
+- klare fachliche Integrationsgrenze
+- CTLD-Lifecycle-Entscheidung
+- Result Validation
+- Dirty-/Persistence-Grenze
+
+Ein neues Debug-Modul würde diesen Architekturpunkt aktuell nicht lösen.
+
+Deshalb:
+
+    kein paralleler Debug-Ausbau
+
+---
+
+## 26. Aktueller nächster Projektschritt
+
+Der nächste Schritt liegt nicht in:
+
+    src/debug/
 
 Aktuell:
 
-    Debug-State ist noch nicht produktiv implementiert.
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Zu klären sind insbesondere:
+
+- Besitzer des Transportauftrags
+- Zonenregistrierung
+- Transporterregistrierung
+- Transporter-Lifecycle
+- `RepackCommandsPath`
+- Result Validation
+- LogisticsDelivery-Rückkopplung
+- FobSystem-Rückkopplung
+- Dirty-Semantik
+- Persistence-Grenze
+
+Erst wenn daraus ein konkreter Diagnosebedarf entsteht, wird entschieden, ob ein eigenes Debug-Modul erforderlich ist.
 
 ---
 
-## 18. State-first-Regel
+## 27. Aktueller Abschlussstand
 
-Auch Debug folgt der state-first-Architektur.
+Stand:
 
-Das bedeutet:
+    2026-09-29
 
-- Debug liest Theater-Command-State.
-- Debug zeigt Theater-Command-State.
-- Debug löst keine echten Framework-Aktionen aus, außer es ist später ausdrücklich als Debug-Testfunktion markiert.
-- Debug verändert keine Vendor-Dateien.
-- Debug ersetzt keine Kampagnenlogik.
-- Debug bleibt abschaltbar.
+Debug-Bereich:
 
-Nicht aktiv:
+    vorbereitet
+    kein eigenes produktives Lua-Modul
 
-- produktives Debug-Menü
-- Debug-State-Dump
-- Debug-Save-Test
-- Debug-Capture-Test
-- Debug-Mission-Completion
-- Debug-IADS-Test
+Aktuelle Sichtbarkeit:
 
----
+    F10Menu v0.2.3
+    33 Commands
+    dcs.log
+    dcs-mcp
+    DCS-SMS
 
-## 19. Sicherheitsregel
+Mission-Record-Loss:
 
-Debug-Funktionen können später starken Einfluss auf die Kampagne haben.
+    widerlegt
 
-Deshalb gilt:
+Embedded Resource Audit:
 
-- Debug-Funktionen müssen klar gekennzeichnet sein.
-- Debug-Funktionen müssen abschaltbar sein.
-- Debug-Funktionen dürfen normale Kampagnenlogik nicht ersetzen.
-- Debug-Funktionen dürfen keine Vendor-Dateien verändern.
-- Debug-Funktionen dürfen keine All-in-one-Logik enthalten.
-- Debug-Funktionen dürfen keine echten Spawns auslösen, wenn sie nicht ausdrücklich dafür gebaut und getestet wurden.
-- Debug-Funktionen müssen klare Logmarker erzeugen.
+    abgeschlossen
+    13/13 relevante aktive Ressourcen EXACT_MATCH
 
-Später kann über `TC.Config` gesteuert werden, ob Debug aktiv ist.
+Priority 3:
 
----
+    abgeschlossen
 
-## 20. Mögliche spätere Debug-Menüs
+CTLD:
 
-Später kann Debug über F10 sichtbar werden.
+    KI-Truppentransport-PoC für den getesteten Aufbau bestanden
 
-Mögliche Menüstruktur:
+Verbindlich:
 
-    F10
-    └── Theater Command Debug
-        ├── State
-        │   ├── Show State Summary
-        │   └── Dump State
-        ├── World
-        │   ├── Show Airbase Report
-        │   └── Show Zone Report
-        ├── Campaign
-        │   ├── Show Capture Report
-        │   └── Show Pressure Report
-        ├── Missions
-        │   ├── Show Mission Report
-        │   ├── Complete Active Mission
-        │   └── Fail Active Mission
-        ├── Logistics
-        │   └── Show Logistics Report
-        ├── AI
-        │   └── Show AI Report
-        ├── IADS
-        │   └── Show IADS Report
-        └── Persistence
-            └── Test Save File
+    productiveRestore=false
 
-Diese Struktur ist noch nicht final.
+Aktueller Übergang:
 
-Normale Spieler-UI und Debug-UI sollen getrennt bleiben.
-
----
-
-## 21. Testziele für spätere erste Debug-Datei
-
-Eine spätere erste Debug-Datei gilt als bestanden, wenn:
-
-- Datei lädt.
-- Version wird im Log angezeigt.
-- `TC.Debug` wird initialisiert.
-- `TC.State.Debug` wird initialisiert.
-- mindestens ein State-Report kann erzeugt werden.
-- keine echten Framework-Aktionen ausgelöst werden.
-- keine Vendor-Dateien verändert werden.
-- keine Theater-Command-Lua-Fehler auftreten.
-- keine Lua-Stacktraces auftreten.
-- Main und Loader bleiben sauber.
-
-Mögliche erste Datei:
-
-    src/debug/tc_debug_state_dump.lua
-
-Oder:
-
-    src/debug/tc_debug_console.lua
-
-Diese Entscheidung ist noch offen.
-
----
-
-## 22. Erwartete spätere Logmarker
-
-Mögliche spätere Logmarker:
-
-    [TC] [Debug] Loaded src/debug/tc_debug_state_dump.lua v0.1.0
-    [TC] [Debug] Debug state initialized
-    [TC] [Debug] State summary requested
-    [TC] [Debug] Airbase report generated
-    [TC] [Debug] Zone report generated
-    [TC] [Debug] Capture report generated
-    [TC] System started: Debug
-
-Diese Marker sind noch nicht aktiv.
-
-Sie beschreiben nur den erwarteten Umfang einer späteren Debug-Datei.
-
----
-
-## 23. Abgrenzung
-
-Nicht Aufgabe von `src/debug/`:
-
-- Airbases aus DCS auslesen
-- Zonen geometrisch erzeugen
-- Basenbesitz regulär festlegen
-- Zonenbesitz regulär festlegen
-- Capture-Pressure regulär berechnen
-- Logistics Hubs regulär erzeugen
-- CTLD-Lieferungen regulär auswerten
-- FOBs regulär bauen
-- Missionen regulär generieren
-- Missionen regulär aktivieren
-- CAPs dauerhaft verwalten
-- IADS-Netzwerke regulär aufbauen
-- Save-Dateien produktiv schreiben
-- normale Spieler-UI ersetzen
-- Framework-Dateien verändern
-
-Diese Aufgaben gehören in andere Bereiche.
-
-Debug prüft, zeigt an und testet gezielt.
-
----
-
-## 24. Nächster sinnvoller Schritt
-
-Der nächste sinnvolle Schritt liegt nicht direkt im Debug-Bereich.
-
-Empfohlene nächste Datei:
-
-    src/ui/tc_f10_menu.lua
-
-Ziel:
-
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
-
-Geplante neue F10-Funktionen:
-
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
-
----
-
-## 25. Zielbild
-
-`src/debug/` wird später die Test- und Diagnoseschicht von Theater Command DCS.
-
-Der Debug-Bereich verbindet später:
-
-- Core
-- World
-- Campaign
-- Logistics
-- Missions
-- AI
-- IADS
-- UI
-- Persistence
-
-Aktueller Status:
-
-    Noch kein eigenes Debug-Lua-Modul aktiv.
-    F10Menu übernimmt aktuell die wichtigste Sichtbarkeit.
-    DCS-Logauswertung bleibt die wichtigste technische Prüfstelle.
-    Debug-Ordner ist vorbereitet.
-
-Nächster notwendiger Zwischenschritt im Gesamtprojekt:
-
-    F10Menu v0.2.1 mit Capture-/Pressure-Sichtbarkeit.
+    stabiler state-first Kampagnenkern
+    +
+    belastbare Runtime-/Debug-Werkzeuge
+    +
+    abgeschlossene Dirty-Coverage
+    +
+    bestandener CTLD-Transport-PoC
+    ->
+    kontrollierte produktive CTLD-Integration
