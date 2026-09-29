@@ -100,7 +100,7 @@ Bestätigter CTLD-Stand:
 
     CTLD 1.6.1
 
-Framework-Proof-of-Concept bestanden für:
+Framework-Proof-of-Concept bestanden für den getesteten Aufbau:
 
     KI-Truppentransport
     -> automatischer Pickup
@@ -571,7 +571,7 @@ CTLD:
 
     Version 1.6.1
 
-Am 2026-09-29 praktisch bestätigt:
+Am 2026-09-29 praktisch bestätigt für den getesteten Aufbau:
 
     Runtime-Zonenregistrierung
     KI-Transporterregistrierung
@@ -609,7 +609,7 @@ Reservierter späterer produktiver FOB-Dropoff:
 
     CTLD_DROPOFF_BLUE_ERCAN_FOB_01
 
-Normalisierte Runtime-Einträge können nach der initialen CTLD-Initialisierung ergänzt werden.
+Normalisierte Runtime-Einträge konnten im getesteten Runtime-Pfad nach der bestehenden CTLD-Initialisierung ergänzt werden.
 
 Eine erneute Ausführung von:
 
@@ -644,18 +644,36 @@ Keine direkte Manipulation des CTLD-Onboard-State als Ersatz für einen echten T
 
 # 24. CTLD Landing
 
-Erfolgreich getestet:
+Erfolgreich getestet für den dokumentierten Mi-8-Aufbau:
 
     normaler Turning Point
     +
     Perform Task -> Land
+
+Wegpunkt:
+
+    100 m BARO
+    30 m/s
 
 Land Task:
 
     duration=300
     durationFlag=true
 
-Für den getesteten Truppentransport war kein FARP erforderlich.
+Bestätigte minimale Entfernung zum Dropoff-Zentrum:
+
+    ungefähr 1.06 m
+
+Für diesen getesteten KI-Truppentransport war kein Invisible FARP erforderlich.
+
+Daraus nicht ableiten, dass ein FARP für:
+
+- Cargo-/Crate-Pfade
+- andere Luftfahrzeuge
+- reale FOB-Infrastruktur
+- andere CTLD-Funktionen
+
+grundsätzlich unnötig wäre.
 
 Der vorherige ungebundene:
 
@@ -671,7 +689,7 @@ Keine stärkere Kausalbehauptung daraus ableiten.
 
 # 25. CTLD RepackCommandsPath
 
-Beim Grounded-Übergang trat genau einmal auf:
+Beim **Touchdown** des registrierten KI-Transporters wurde genau einmal beobachtet:
 
     CTLD.lua:6150:
     attempt to get length of local 'RepackCommandsPath' (a nil value)
@@ -681,15 +699,18 @@ Kontext:
     updateRepackMenu
     updateRepackMenuOnlanding
 
+Während der anschließenden ungefähr 220 Sekunden Bodenbeobachtung wurde der Fehler nicht erneut beobachtet.
+
 Pickup und Dropoff wurden trotzdem erfolgreich abgeschlossen.
 
 Nicht als bewiesen behandeln:
 
 - dass der Fehler harmlos ist
+- dass spätere Repack-Menü-Aktualisierungen funktionieren
 - dass der betreffende Scheduler danach normal weiterläuft
 - dass der Scheduler definitiv beendet wurde
 
-Letzteres ist nur eine mögliche Source-basierte Folgerung und kein direkter Runtime-Beweis.
+Ein möglicher Scheduler-Abbruch ist nur eine Source-basierte technische Inferenz und kein direkter Runtime-Beweis.
 
 Vendor-Code wird nicht gepatcht.
 
@@ -718,6 +739,8 @@ Nicht damit bewiesen:
 - FobSystem-Rückkopplung
 - CTLD-Restore
 - Multiplayer
+- Verhalten beliebiger anderer Transporter
+- Verhalten beliebiger anderer Landezonen
 
 Framework-PoC und produktive Integration müssen sprachlich klar getrennt bleiben.
 
@@ -739,7 +762,7 @@ Vor neuem produktiven Code klären:
 6. Wie wird der Transporter-Lifecycle behandelt?
 7. Wie wird Erfolg erkannt?
 8. Wie wird Fehler erkannt?
-9. Wie wird `RepackCommandsPath` behandelt?
+9. Wie wird `RepackCommandsPath` behandelt beziehungsweise isoliert?
 10. Welche Ergebnisse werden in `TC.State` geschrieben?
 11. Welche Mutationen setzen Dirty?
 12. Welche Daten bleiben runtime-only?
@@ -757,6 +780,7 @@ Nicht eigenmächtig anlegen:
 
     tc_ctld.lua
     tc_ctld_bridge.lua
+    tc_ctld_all_in_one.lua
 
 oder ähnliche generische Framework-Dateien.
 
@@ -1030,6 +1054,12 @@ Nicht schreiben:
 
 wenn nur ein isolierter Framework-PoC bestanden ist.
 
+Nicht schreiben:
+
+    kein FARP erforderlich
+
+ohne den getesteten Truppentransport-Scope ausdrücklich zu nennen.
+
 ---
 
 # 40. Naming
@@ -1144,7 +1174,7 @@ Aktueller bestätigter Stand:
     +
     abgeschlossene Priority-3-Dirty-Coverage
     +
-    bestandener CTLD-KI-Truppentransport-PoC
+    bestandener CTLD-KI-Truppentransport-PoC für den getesteten Aufbau
 
 Nächster Übergang:
 
