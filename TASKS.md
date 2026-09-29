@@ -47,6 +47,7 @@ Nicht gewünscht:
     tc_mist.lua
     tc_ctld.lua
     tc_ctld_all_in_one.lua
+    tc_ctld_bridge.lua
     tc_all_in_one.lua
 
 ---
@@ -81,7 +82,7 @@ Bestätigt sind insbesondere:
 Noch nicht produktiv umgesetzt sind insbesondere:
 
 - produktiver Persistence-Restore
-- produktive Theater-Command-CTLD-Bridge
+- produktive Theater-Command-CTLD-Integration
 - CTLD-Crate-/Cargo-Wirtschaft
 - reale CTLD-FOBs
 - reale MOOSE-CAP-Flüge
@@ -385,7 +386,7 @@ Bestätigt:
 - normalisierte Pickup-Zonen können nach CTLD-Initialisierung in `ctld.pickupZones` ergänzt werden
 - normalisierte Dropoff-Zonen können nach CTLD-Initialisierung in `ctld.dropOffZones` ergänzt werden
 - CTLD verwendet diese Einträge tatsächlich
-- `ctld.initialize()` muss und darf dafür nicht erneut ausgeführt werden
+- für die getestete Runtime-Ergänzung war keine erneute Ausführung von `ctld.initialize()` erforderlich
 
 Details:
 
@@ -450,13 +451,13 @@ Testunit:
 
 Typ:
 
-    Mi-8MT
+    Mi-8
 
 Ergebnis:
 
-    BESTANDEN
+    BESTANDEN FÜR DEN GETESTETEN AUFBAU
 
-Vollständiger bestätigter Ablauf:
+Bestätigter Ablauf:
 
     CTLD-Zonen registrieren
     -> Transporter registrieren
@@ -505,6 +506,11 @@ Dropoff-Zentrum:
     x = -29249.110954281
     z = -271836.070539260
 
+Wegpunkt:
+
+    100 m BARO
+    30 m/s
+
 Land-Task:
 
     duration = 300
@@ -516,7 +522,7 @@ Touchdown:
 
 Die Mi-8 blieb nach der Landung am Boden.
 
-Ein Invisible FARP war nicht erforderlich.
+Ein Invisible FARP war für diesen getesteten Truppentransport nicht erforderlich.
 
 Damit ist dieser Ansatz für den getesteten Mi-8-Pfad praktisch bestätigt.
 
@@ -524,7 +530,9 @@ Der vorherige ungebundene:
 
     Land / Landing
 
-Wegpunkt wird nicht als bestätigter Off-Airfield-Ansatz verwendet.
+Wegpunkt führte nicht zu einem vollständigen erfolgreichen Transportzyklus.
+
+Die genaue Ursache des früheren Verhaltens ist dadurch nicht abschließend bewiesen.
 
 ---
 
@@ -532,12 +540,12 @@ Wegpunkt wird nicht als bestätigter Off-Airfield-Ansatz verwendet.
 
 Ergebnis:
 
-    BESTANDEN
+    BESTANDEN FÜR DEN GETESTETEN AUFBAU
 
 Nach der Landung:
 
 - 16 Soldaten wurden automatisch aus dem CTLD-Bordzustand entfernt
-- `ctld.droppedTroopsBLUE` erhielt einen neuen Eintrag
+- `ctld.droppedTroopsBLUE` erhielt genau einen neuen Eintrag
 - reale Blue-Bodengruppe wurde erzeugt
 
 Gruppe:
@@ -552,13 +560,19 @@ Einheiten:
 
     16 x Soldier M249
 
-Damit ist der vollständige technische CTLD-KI-Truppentransport bewiesen.
+Damit ist für den getesteten Aufbau der technische CTLD-KI-Truppentransport bestätigt:
+
+    Pickup
+    -> Flug
+    -> Off-Airfield-Landung
+    -> Dropoff
+    -> Bodengruppe
 
 ---
 
 ## 6.6 CTLD `RepackCommandsPath`-Fehler
 
-Reproduzierter Fehler:
+Im erfolgreichen Test genau einmal beobachteter Fehler:
 
     CTLD.lua:6150:
     attempt to get length of local 'RepackCommandsPath' (a nil value)
@@ -568,7 +582,7 @@ Kontext:
     updateRepackMenu
     updateRepackMenuOnlanding
 
-Der Fehler tritt beim Grounded-Übergang des KI-Transporters auf.
+Der Fehler trat beim Grounded-Übergang des KI-Transporters genau einmal auf.
 
 Aktuelle technische Einordnung:
 
@@ -582,7 +596,11 @@ Nicht bewiesen:
 
     dass der Fehler langfristig harmlos ist
 
-Insbesondere muss geprüft werden, ob der unbehandelte Fehler den betreffenden Scheduler beendet.
+Ebenfalls nicht direkt bewiesen:
+
+    dass der betreffende Scheduler danach beendet ist
+
+Dass ein unbehandelter Fehler den betreffenden Scheduler-Pfad beendet haben könnte, ist eine source-basierte technische Inferenz und kein direkter Runtime-Beweis.
 
 Verbindlich:
 
@@ -594,7 +612,7 @@ Die Lösung muss TC-seitig beziehungsweise über eine saubere Integrationsstrate
 
 ## 6.7 Was Priority 4 bereits beweist
 
-Bestanden:
+Für den getesteten Aufbau bestätigt:
 
 - CTLD geladen
 - CTLD initialisiert
@@ -612,7 +630,7 @@ Bestanden:
 
 Noch nicht produktiv:
 
-- Theater-Command-CTLD-Bridge
+- Theater-Command-CTLD-Integration
 - automatische TC-Zonenregistrierung
 - automatische TC-Transporterregistrierung
 - Transportauftrag aus MissionGenerator
@@ -711,6 +729,10 @@ Verwendung:
 - gespeicherte Missionsänderungen durchführen
 - Missionsdatei vor Runtime-Test auditieren
 
+Terrain Store:
+
+    C:\Users\Paul\AppData\Local\dcs-mcp\terrain
+
 Aktuelle Terrain-Daten umfassen:
 
     Syria
@@ -731,9 +753,9 @@ Hook:
 
     me-bridge-0.27.2
 
-Lokaler Pfad:
+Verifiziertes Installationsverzeichnis:
 
-    C:\Tools\dcs-sms\dcs-sms.exe
+    C:\Tools\dcs-sms
 
 Claude-Code-Skill:
 
@@ -861,7 +883,7 @@ Perspektivisch sollen Blue und Red möglichst autonom:
 - FOBs aufbauen
 - Nachschub transportieren
 - CAS anfordern
-- Bedrohungen reagieren
+- auf Bedrohungen reagieren
 - IADS betreiben
 - Carrier Operations durchführen
 - Gebiete erobern und verlieren
@@ -964,9 +986,12 @@ Zu entscheiden beziehungsweise zu untersuchen:
 
 Die konkrete Datei wird erst nach Architekturprüfung festgelegt.
 
-Keine generische Framework-Datei nur mit dem Namen:
+Keine generische Framework-Datei wie:
 
     tc_ctld.lua
+    tc_ctld_bridge.lua
+
+anlegen.
 
 ---
 
@@ -1036,16 +1061,17 @@ Nicht erneut ohne neuen Anlass testen:
 
 Nicht vergessen:
 
-1. `ctld.initialize()` nicht erneut ausführen.
+1. Für das getestete Anhängen normalisierter CTLD-Zonen war keine erneute Ausführung von `ctld.initialize()` erforderlich.
 2. Pickup-/Dropoff-Zonen können nach Init in die normalisierten Live-Tabellen ergänzt werden.
-3. KI-Transporter benötigen Registrierung in `ctld.transportPilotNames`.
+3. KI-Transporter benötigen für den getesteten AI-Pfad Registrierung in `ctld.transportPilotNames`.
 4. `Turning Point + Perform Task Land` ist für den getesteten Mi-8-Off-Airfield-Pfad bestätigt.
-5. Invisible FARP war dafür nicht erforderlich.
-6. `RepackCommandsPath` ist ein realer reproduzierter Fehler.
-7. Vendor-CTLD wird nicht gepatcht.
-8. Truppentransport-PoC ist nicht gleich Crate-/Cargo-PoC.
-9. CTLD-PoC ist nicht gleich produktive Theater-Command-Integration.
-10. Persistence bei isolierten Tests weiterhin schützen.
+5. Ein Invisible FARP war für diesen getesteten Truppentransport nicht erforderlich.
+6. `RepackCommandsPath` trat beim getesteten Grounded-Übergang genau einmal als Fehler auf.
+7. Ob der betreffende Scheduler dadurch dauerhaft beendet wurde, ist nicht direkt bewiesen.
+8. Vendor-CTLD wird nicht gepatcht.
+9. Truppentransport-PoC ist nicht gleich Crate-/Cargo-PoC.
+10. CTLD-PoC ist nicht gleich produktive Theater-Command-Integration.
+11. Persistence bei isolierten Tests weiterhin schützen.
 
 ---
 
@@ -1124,15 +1150,16 @@ Noch nicht freigegeben:
 
 Noch nicht implementiert:
 
-    produktive TC-CTLD-Bridge
+    produktive Theater-Command-CTLD-Integration
 
 Wichtigster neuer technischer Befund:
 
-    Ein registrierter CTLD-KI-Transporter kann mit einem
-    DCS-native Perform Task Land einen vollständigen automatischen
-    Pickup -> Flug -> Off-Airfield-Landung -> Dropoff-Zyklus durchführen.
+    Ein in ctld.transportPilotNames registrierter KI-Transporter konnte
+    im getesteten Aufbau mit einem DCS-native Perform Task Land einen
+    automatischen Pickup -> Flug -> Off-Airfield-Landung -> Dropoff-Zyklus
+    durchführen.
 
-Bekannter Blocker beziehungsweise Integrationspunkt:
+Bekannter Integrationspunkt:
 
     CTLD RepackCommandsPath bei AI-Grounded-Transition
 
