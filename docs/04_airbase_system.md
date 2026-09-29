@@ -1,8 +1,6 @@
 # Airbase System
 
-## Verbindliches Update — 2026-09-12
-
-AirbaseScanner bleibt `v0.2.2`, state-first funktional bestanden. PersistenceSystem `v0.2.6` speichert Airbase-/World-/Bases-State als Teil des Snapshots über dirty-aware Background Autosave; `productiveRestore=false`. MissionGenerator `v0.2.3` erzeugt 10 Mission Records; der frühere Record-Loss-Verdacht ist widerlegt (Ursache war ein `#`-Count-Bug in `State.summary()`, siehe `docs/01_campaign_design.md` und `docs/03_mission_editor_basics.md`). Der Offline Embedded Mission Resource Audit ist abgeschlossen: 13/13 relevante aktive Ressourcen `EXACT_MATCH`, keine aktive Embedded-Runtime-Drift. Mission Completion, Mission Failure und Capture Ready Apply sind bestanden. Priority 3 bleibt offen; nächster technischer Schritt ist der READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Nicht mehr aktuell: ein reproduzierbarer Mission-Record-Loss, blockierte Mission-/Capture-Regressionen und der Embedded Audit als offener nächster Schritt. Ältere Status- und Versionsangaben sind historische Snapshots.
+## Verbindlicher Stand — 2026-09-29
 
 Diese Datei beschreibt das Airbase-System von **Theater Command DCS**.
 
@@ -16,20 +14,41 @@ Map:
 
 Ausgangslage:
 
-    Blue Start: Akrotiri / Zypern
-    Red Start: syrisches Festland vollständig rot kontrolliert
+    Blue startet auf Akrotiri / Zypern.
+    Das syrische Festland ist zu Kampagnenbeginn rot kontrolliert.
+
+Aktueller Entwicklungsbereich:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Priority 3:
+
+    abgeschlossen im dokumentierten Umfang seit 2026-09-21
+
+Verbindlich:
+
+    productiveRestore=false
 
 ---
 
 ## 1. Zweck des Airbase-Systems
 
-Das Airbase-System bildet die Grundlage für die gesamte Kampagne.
+Das Airbase-System bildet eine zentrale Grundlage für die Kampagne.
 
-Es erkennt, klassifiziert und bewertet DCS-Airbase-Objekte und bereitet daraus Kampagnendaten für andere Systeme vor.
+Es erkennt, klassifiziert und bewertet DCS-Airbase-like Objects und stellt daraus strukturierte Daten für nachgelagerte Theater-Command-Systeme bereit.
 
-Das Airbase-System entscheidet nicht allein über den Kampagnenverlauf.
+Der Airbase Scanner entscheidet nicht selbst über:
 
-Es liefert die Datenbasis für:
+- Capture
+- Mission Outcomes
+- Logistics Deliveries
+- FOB-Bau
+- AI-Operationen
+- CTLD-Ausführung
+- MOOSE-Spawns
+- IADS-Aktionen
+
+Er liefert die Datenbasis für:
 
 - ZoneFactory
 - CaptureSystem
@@ -41,105 +60,101 @@ Es liefert die Datenbasis für:
 - spätere AI-Director-Logik
 - Persistence
 
-Airbase-/World-State wird bereits durch PersistenceSystem gespeichert; produktiver Restore folgt später.
+---
+
+## 2. Architekturrolle
+
+Das Airbase-System folgt dem allgemeinen Theater-Command-Prinzip:
+
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis / Source of Truth
+    DCS Runtime = autoritativer Verhaltensbeweis
+
+AirbaseScanner ist:
+
+    Discovery / Classification Layer
+
+Er ist nicht:
+
+    Decision Layer
+    Execution Layer
+
+Nachgelagerte Systeme verwenden die klassifizierten Daten.
+
+Framework-Aktionen bleiben außerhalb des Airbase Scanners.
 
 ---
 
-## 2. Grundproblem auf der Syria Map
+## 3. Aktive Datei
+
+Datei:
+
+    src/world/tc_airbase_scanner.lua
+
+Version:
+
+    v0.2.2
+
+Status:
+
+    bestanden
+    state-first stabil
+
+Bestätigt:
+
+- Airbase Scanner lädt.
+- Airbase Scanner startet.
+- Syria-Airbase-like Objects werden erkannt.
+- erkannte Objekte werden klassifiziert.
+- Kampagnenkandidaten werden erzeugt.
+- nachgelagerte Systeme können die Daten verwenden.
+- keine produktive Framework-Ausführung erfolgt direkt im Scanner.
+
+Aktuell besteht kein Grund für eine AirbaseScanner-Codeänderung.
+
+---
+
+## 4. Grundproblem auf der Syria Map
 
 DCS liefert auf der Syria Map nicht nur klassische Flugplätze.
 
-Die Airbase-API liefert viele unterschiedliche airbase-like objects.
+Die Airbase-API liefert eine große Zahl unterschiedlicher Airbase-like Objects.
 
 Dazu gehören unter anderem:
 
 - große Flugplätze
 - kleinere Airfields
 - Heliports
-- einfache Helipads
+- Helipads
 - Medical Pads
 - Tactical Pads
-- unbekannte Sonderobjekte
+- Sonderobjekte
+
+Bestätigt erkannt:
+
+    225 Airbase-like Objects
 
 Wichtig:
 
-    Nicht jedes DCS-Airbase-Objekt ist ein strategisches Kampagnenziel.
+    225 erkannte Objekte
+    !=
+    225 strategische Kampagnenziele
 
-Deshalb darf Theater Command diese Objekte nicht ungefiltert behandeln.
+Ein ungefiltertes Übernehmen aller DCS-Airbase-like Objects würde zu fachlich falschen:
 
-Ein blindes Registrieren aller Objekte als Kampagnenzonen würde zu falscher Kampagnenlogik führen.
+- Capture-Zielen
+- Missionen
+- Logistics Hubs
+- AI-Reaktionen
 
----
-
-## 3. Aktueller technischer Stand
-
-Stand:
-
-    2026-09-12
-
-Aktive Airbase-Datei:
-
-    src/world/tc_airbase_scanner.lua
-
-Getestete Version:
-
-    v0.2.2
-
-Status:
-
-    state-first funktional bestanden
-
-Bestätigt durch DCS-Logtests:
-
-    Airbase Scanner lädt.
-    Airbase Scanner startet.
-    Airbase Scanner klassifiziert Syria-Airbase-Objekte.
-    Airbase Scanner erzeugt Kampagnendaten.
-    Airbase Scanner liefert Daten an spätere Systeme.
-    Es gab keinen Theater-Command-Lua-Fehler.
-    Es gab keinen Lua-Stacktrace.
-
-Ergänzend gültig:
-
-    AirbaseScanner bleibt reine Klassifikations-/Datenquelle.
-    Keine direkte Capture-/Mission-/AI-Ausführung im Scanner.
-    Ownership-Verarbeitung erfolgt nachgelagert in CaptureSystem.
-    Persistence speichert den resultierenden State.
-    Keine produktiven Framework-Aktionen (MOOSE/CTLD/Skynet) im Scanner.
-
----
-
-## 4. Bestätigte Werte
-
-Aktuell bestätigte Airbase-Werte:
-
-    total: 225
-    strategic: 19
-    secondary: 13
-    heliports: 1
-    helipads: 95
-    medical: 40
-    farps: 0
-    tactical: 13
-    unknown: 44
-    captureCandidates: 32
-    missionCandidates: 32
-    logisticsCandidates: 46
-    blueStartBases: 1
-    redStrategicCandidates: 18
-
-Bewertung:
-
-    225 erkannte Airbase-like Objects sind auf der Syria Map erwartbar.
-    Die hohe Zahl ist kein Fehler.
-    Entscheidend ist die fachliche Klassifizierung.
-    Nur ein Teil dieser Objekte ist für Capture, Missionen und Logistik relevant.
+führen.
 
 ---
 
 ## 5. Klassifikationsziel
 
-Der Airbase Scanner klassifiziert DCS-Airbase-Objekte in fachliche Kategorien.
+Der Airbase Scanner klassifiziert die DCS-Airbase-like Objects in fachliche Kategorien.
 
 Aktuelle Kategorien:
 
@@ -152,321 +167,339 @@ Aktuelle Kategorien:
 - FARP
 - Unknown
 
-Diese Klassifizierung ist wichtig, weil jedes Objekt später eine andere Kampagnenrolle haben kann.
+Bestätigte Verteilung:
 
-Die Klassifikation selbst ist stabil. Nicht jede Klasse ist automatisch ein Capture-/Mission-Ziel: Medical Pads, Helipads, Tactical Pads und Unknown Objects bleiben konservativ behandelt.
+    total: 225
+    strategic: 19
+    secondary: 13
+    heliports: 1
+    helipads: 95
+    medical: 40
+    farps: 0
+    tactical: 13
+    unknown: 44
 
-Bestätigte Klassenverteilung:
+Die Klassifikation ist bewusst konservativ.
 
-    19 Strategic
-    13 Secondary
-    1 Heliport
-    95 Helipads
-    40 Medical
-    13 Tactical
-    44 Unknown
-    0 FARP
+Nicht jede erkannte Klasse wird automatisch:
+
+- Capture-Ziel
+- Missionsziel
+- Logistics Hub
+- AI-Basis
 
 ---
 
 ## 6. Strategic Airfields
 
-Strategic Airfields sind zentrale Kampagnenziele.
-
-Sie können später:
-
-- Besitzstatus haben
-- Capture-Ziel sein
-- Missionsziel sein
-- Logistikhub sein
-- Startpunkt für AI-Flüge sein
-- Ziel von Strike-, SEAD-, DEAD- oder Airbase-Attack-Missionen sein
-- Teil der Persistenz sein
-- Einfluss auf AI-Director-Entscheidungen haben
-- Einfluss auf IADS- und CAP-Logik haben
-
-Aktuell bestätigt:
+Bestätigt:
 
     strategic: 19
 
-Akrotiri wird als strategischer Flugplatz erkannt.
+Strategic Airfields sind zentrale Kampagnenobjekte.
 
-Akrotiri ist zugleich die bestätigte blaue Startbasis.
+Mögliche beziehungsweise teilweise bereits state-first genutzte Rollen:
+
+- Ownership
+- Capture
+- Mission Target
+- Logistics Hub
+- AI-Basis
+- Spawn-/Startpunkt
+- IADS-Bezug
+- Persistence
+
+Akrotiri wird als Strategic Airfield erkannt.
+
+Akrotiri ist zugleich die bestätigte Blue Start Base.
 
 ---
 
 ## 7. Secondary Airfields
 
-Secondary Airfields sind kleinere oder weniger zentrale Flugplätze.
-
-Sie sind dennoch kampagnenrelevant.
-
-Mögliche Rollen:
-
-- begrenztes Capture-Ziel
-- Forward Operating Location
-- logistischer Zwischenpunkt
-- Missionsziel
-- regionaler Stützpunkt
-- späterer Ausgangspunkt für kleinere AI-Operationen
-
-Aktuell bestätigt:
+Bestätigt:
 
     secondary: 13
 
-Secondary Airfields sind aktuell Teil der 32 capture- und mission-fähigen Ziele.
+Secondary Airfields sind kleinere beziehungsweise weniger zentrale Flugplätze.
+
+Sie können dennoch kampagnenrelevant sein.
+
+Mögliche Rollen:
+
+- Capture-Ziel
+- Missionsziel
+- Forward Operating Location
+- logistischer Zwischenpunkt
+- regionaler Stützpunkt
+- Helikopterstützpunkt
+
+Strategic und Secondary Airfields bilden aktuell gemeinsam die zentrale capture-/mission-fähige Airbase-Zielmenge.
 
 ---
 
 ## 8. Heliports
 
-Heliports sind wichtiger als einfache Helipads, aber nicht automatisch strategische Hauptbasen.
+Bestätigt:
 
-Mögliche Rollen:
+    heliports: 1
+
+Heliports sind nicht automatisch strategische Hauptbasen.
+
+Mögliche spätere Rollen:
 
 - Helikopterstützpunkt
 - CTLD-Unterstützung
-- CSAR-/Transportlogik
-- späterer Sonderlogistikpunkt
-- optionaler FOB- oder Support-Knoten
+- Transport
+- CSAR
+- Sonderlogistik
+- Forward Support
 
-Aktuell bestätigt:
-
-    heliports: 1
+Eine automatische Gleichstellung mit Strategic Airfields erfolgt nicht.
 
 ---
 
 ## 9. Helipads
 
-Helipads sind auf der Syria Map zahlreich vorhanden.
-
-Aktuell bestätigt:
+Bestätigt:
 
     helipads: 95
 
-Helipads sind nicht automatisch strategische Kampagnenziele.
+Helipads sind auf der Syria Map zahlreich vorhanden.
 
-Sie können später Spezialrollen erhalten:
+Sie sind nicht automatisch strategische Kampagnenziele.
 
-- Landezone
-- CSAR-Ort
-- Medevac-Ort
+Mögliche spätere Rollen:
+
+- taktische Landezone
+- CSAR
+- MEDEVAC
 - CTLD-Ziel
-- FOB-Unterstützungspunkt
-- taktischer Außenpunkt
+- FOB-Unterstützung
+- Forward Logistics
 
-Aktuell sollen sie nicht als Standard-Capture-Ziele behandelt werden.
+Aktuell:
+
+    keine Standard-Capture-Ziele
 
 ---
 
 ## 10. Medical Pads
 
-Medical Pads sind medizinische oder technische Landeplätze.
-
-Aktuell bestätigt:
+Bestätigt:
 
     medical: 40
 
-Sie sind nicht als strategische Kampagnenziele geeignet.
+Medical Pads werden nicht als reguläre strategische Airfields behandelt.
+
+Sie sind aktuell nicht:
+
+- Standard-Capture-Ziele
+- Standard-Airbase-Attack-Ziele
+- strategische Hauptbasen
 
 Mögliche spätere Rollen:
 
-- MEDEVAC-Szenario
-- CSAR-Ziel
-- humanitäre Aufgabe
-- medizinischer Evakuierungspunkt
-- Sondermission
-
-Aktuelle Entscheidung:
-
-    Medical Pads werden nicht als reguläre Capture-Ziele verwendet.
-    Medical Pads werden nicht als strategische Airfields behandelt.
-    Medical Pads werden nicht als Standard-Missionsziele des MissionGenerator genutzt.
+- MEDEVAC
+- CSAR
+- medizinische Evakuierung
+- Sondermissionen
 
 ---
 
 ## 11. Tactical Pads
 
-Tactical Pads sind kleine taktische oder technische Airbase-like Objects.
-
-Aktuell bestätigt:
+Bestätigt:
 
     tactical: 13
 
+Tactical Pads sind kleinere taktische beziehungsweise technische Airbase-like Objects.
+
 Mögliche spätere Rollen:
 
-- taktische Landezone
-- Helikopteroperation
-- CTLD-Außenpunkt
-- Spezialziel
-- Forward Support Area
+- taktische Landezonen
+- Helikopteroperationen
+- CTLD-Außenpunkte
+- Forward Support
+- Spezialmissionen
 
-Aktuelle Entscheidung:
-
-    Tactical Pads sind nicht automatisch strategische Kampagnenziele.
-    Sie werden nicht als Standard-Capture-Ziele verwendet.
+Sie sind aktuell nicht automatisch strategische Capture-Ziele.
 
 ---
 
 ## 12. FARPs
 
-Aktuell bestätigt:
+Bestätigt:
 
     farps: 0
 
-DCS kann FARPs je nach Mission und Karte anders bereitstellen.
+Im aktuellen AirbaseScanner-Teststand wurden keine FARPs als Airbase-Klasse erkannt.
 
-Im aktuellen Teststand wurden keine FARPs als Airbase-Klasse erkannt.
+Das bedeutet nicht, dass FARPs für Theater Command grundsätzlich irrelevant sind.
 
-FARPs bleiben aber fachlich wichtig für spätere Kampagnenlogik.
+Perspektivisch können sie wichtig sein für:
 
-Mögliche spätere Rollen:
-
-- AH-64D-Operationen
-- Transporthubschrauber
+- AH-64D
+- Transporthelikopter
 - CTLD
-- Forward Refuel/Rearm
-- FOB-Unterstützung
-- temporäre Frontpräsenz
+- Rearm
+- Refuel
+- FOBs
+- Forward Operations
+
+Der erfolgreiche CTLD-KI-Truppentransport vom 2026-09-29 benötigte für den getesteten Transportpfad keinen Invisible FARP.
+
+Daraus wird nicht abgeleitet, dass spätere reale FOB-Infrastruktur ohne FARP auskommen muss.
 
 ---
 
 ## 13. Unknown Objects
 
-Aktuell bestätigt:
+Bestätigt:
 
     unknown: 44
 
-Unknown Objects sind DCS-Airbase-like Objects, die vom Scanner nicht sicher einer bekannten Kampagnenklasse zugeordnet werden.
+Unknown Objects werden konservativ behandelt.
 
-Aktuelle Entscheidung:
+Sie werden nicht automatisch:
 
-    Unknown Objects werden konservativ behandelt.
-    Sie werden nicht automatisch zu strategischen Capture-Zielen.
-    Sie werden nicht automatisch zu Standard-Missionszielen.
-    Sie können später manuell geprüft und nachklassifiziert werden.
+- strategisch
+- capture-fähig
+- Mission Target
+- Logistics Hub
 
-Diese konservative Behandlung verhindert, dass technische oder irrelevante DCS-Objekte die Kampagne verfälschen.
+Optional später:
+
+- manuelle Prüfung
+- Nachklassifikation
+- Override-System
+
+Designregel:
+
+    lieber einen Sonderfall zunächst nicht strategisch verwenden,
+    als ein ungeeignetes DCS-Objekt fälschlich zum Kampagnenziel zu machen.
 
 ---
 
 ## 14. Blue Start Base
 
-Aktuell bestätigt:
+Bestätigt:
 
     blueStartBases: 1
 
-Bestätigte Blue Start Base:
+Blue Start Base:
 
     Akrotiri
 
-Rolle von Akrotiri:
+Fachliche Rolle:
 
 - Blue Main Operating Base
-- sicherer Startpunkt
-- erster Logistikhub
-- Ausgangspunkt für Luftoperationen
-- Ausgangspunkt für spätere See-/Luftbrücke
 - Spielerstartpunkt
-- kein initiales rotes Missionsziel
+- erster Blue Logistics Hub
+- Ausgangspunkt für Luftoperationen
+- Ausgangspunkt für spätere Transportoperationen
+- späterer Knoten einer See-/Luftbrücke
 
-Akrotiri wird als Strategic Airfield klassifiziert.
+Akrotiri wird als:
+
+    STRATEGIC_AIRFIELD
+
+klassifiziert.
 
 ---
 
 ## 15. Red Strategic Candidates
 
-Aktuell bestätigt:
+Bestätigt:
 
     redStrategicCandidates: 18
 
-Diese Objekte bilden die erste strategische Grundlage für rote Festlandziele.
+Diese Objekte bilden die erste strategische Grundlage für Red auf dem Festland.
 
 Mögliche Rollen:
 
-- rote Hauptbasen
-- rote Missionsziele
-- spätere Capture-Ziele
-- Logistikzentren
+- Red Main Bases
+- Missionsziele
+- Capture-Ziele
+- Logistics Hubs
 - AI-Ausgangspunkte
-- IADS-nahe strategische Knoten
+- IADS-nahe Knoten
 
-Aktuelle Einschränkung:
+Noch nicht produktiv:
 
-    Es existiert noch keine produktive rote Frontlinie.
-    Es existieren noch keine echten roten MOOSE-Spawns.
-    Es existiert noch keine produktive rote AI-Director-Logik.
-    Die roten Kandidaten sind aktuell State-Grundlage.
+- komplette Red Front
+- Red AI Director
+- reale MOOSE-Flüge
+- Ground Campaign
+- produktive IADS-Struktur
 
 ---
 
 ## 16. Capture Candidates
 
-Aktuell bestätigt:
+Bestätigt:
 
     captureCandidates: 32
 
-Capture Candidates sind Airbase-Objekte, die grundsätzlich als strategische oder sekundäre Capture-Ziele geeignet sind.
+Capture Candidates sind Airbase-Objekte, die grundsätzlich als Capture-Ziele geeignet sind.
 
-Aktuell capture-fähig:
+Aktuell relevant:
 
 - Strategic Airfields
 - Secondary Airfields
-- später eventuell explizit freigegebene Mission-Editor-Zonen
 
 Nicht automatisch capture-fähig:
 
-- einfache Helipads
+- Helipads
 - Medical Pads
 - Tactical Pads
 - Unknown Objects
 - rein technische Sonderobjekte
 
-Diese Entscheidung ist zentral.
-
-Ohne diese Filterung würde die Kampagne 225 potenzielle Capture-Objekte erzeugen, was fachlich falsch wäre.
+Diese Filterung verhindert, dass alle 225 Airbase-like Objects zu Capture-Zielen werden.
 
 ---
 
 ## 17. Mission Candidates
 
-Aktuell bestätigt:
+Bestätigt:
 
     missionCandidates: 32
 
-Mission Candidates sind Airbase-Objekte, die grundsätzlich als Missionsziele geeignet sind.
+Mission Candidates bilden eine Airbase-basierte Zielmenge für den MissionGenerator.
 
-Mögliche Missionstypen gegen Airbase-Ziele:
+Mögliche Missionstypen:
 
 - Recon
 - Strike
+- Airbase Attack
 - SEAD
 - DEAD
-- Airbase Attack
 - Interdiction
 - CAP im Umfeld
 - Logistics Support
-- später IADS Suppression
 
-Nicht jedes Mission Candidate wird automatisch in jeder Mission genutzt.
+Der Airbase Scanner entscheidet nicht, welche konkrete Mission erzeugt wird.
 
-Der MissionGenerator priorisiert und filtert später nach Kampagnenlage.
+Diese Entscheidung liegt beim MissionGenerator.
 
 ---
 
 ## 18. Logistics Candidates
 
-Aktuell bestätigt:
+Bestätigt:
 
     logisticsCandidates: 46
 
 Logistics Candidates bilden die Grundlage für LogisticsDelivery.
 
-Sie umfassen mehr Objekte als die reinen Capture Candidates.
+Logistik ist breiter als Capture.
 
-Grund:
+Deshalb:
 
-    Logistik kann auch an nicht vollständig capture-fähigen Orten relevant sein.
+    46 Logistics Candidates
+    >
+    32 Capture Candidates
 
 Mögliche Rollen:
 
@@ -474,9 +507,9 @@ Mögliche Rollen:
 - Fuel Hub
 - Ammo Hub
 - Engineering Hub
-- FOB-Kandidat
-- Supportpunkt
 - Transportziel
+- Forward Support
+- FOB-Bezug
 
 LogisticsDelivery erzeugt daraus aktuell:
 
@@ -484,11 +517,15 @@ LogisticsDelivery erzeugt daraus aktuell:
 
 ---
 
-## 19. Verhältnis Airbase Scanner zu ZoneFactory
+## 19. Verhältnis zu ZoneFactory
 
-Der Airbase Scanner erzeugt klassifizierte Airbase-Daten.
+Airbase Scanner:
 
-ZoneFactory erzeugt daraus Kampagnenzonen.
+    erkennt und klassifiziert DCS-Airbase-like Objects
+
+ZoneFactory:
+
+    erzeugt daraus Kampagnenzonen
 
 Aktuelle ZoneFactory-Werte:
 
@@ -508,19 +545,23 @@ Aktuelle ZoneFactory-Werte:
 
 Wichtig:
 
-    Der Airbase Scanner erkennt 225 Airbase-like Objects.
-    ZoneFactory erzeugt daraus 46 relevante Kampagnenzonen.
-    Das ist korrekt und gewollt.
+    225 erkannte Airbase-like Objects
+    -> 46 relevante Kampagnenzonen
 
-Die alte Annahme, dass ZoneFactory alle 225 Objekte als Zonen registriert, ist veraltet.
+Das ist korrekt und gewollt.
 
 ---
 
-## 20. Verhältnis Airbase Scanner zu CaptureSystem
+## 20. Verhältnis zu CaptureSystem
 
-CaptureSystem nutzt die vom Airbase Scanner und der ZoneFactory gelieferten Daten.
+CaptureSystem:
 
-Aktuelle CaptureSystem-Werte:
+    src/campaign/tc_capture_system.lua
+    v0.2.2
+
+nutzt Airbase- und Zonendaten.
+
+Bestätigt:
 
     eligibleBases: 32
     eligibleZones: 32
@@ -529,60 +570,64 @@ Aktuelle CaptureSystem-Werte:
     pressureRecords: 32
     progressRecords: 32
 
-Initial-/Baseline-Werte (nicht der heutige Gesamtzustand):
-
-    appliedMissionEffects: 0
-    ready: 0
-    contested: 0
-
-Bedeutung:
-
-    CaptureSystem arbeitet nur auf geeigneten Kampagnenzielen.
-    193 Airbase-like Objects werden bewusst nicht als capture-fähige Basen behandelt.
-    32 Pressure-Records und 32 Progress-Records werden erzeugt.
-
 Bestätigter Wirkungspfad:
 
-    Mission Completion -> Capture Pressure -> Capture Progress -> Capture Ready
-    Mission Failure -> applied=0 -> kein Capture Pressure
+    Mission Completion
+    -> Capture Pressure
+    -> Capture Progress
+    -> Capture Ready
 
-Capture Ready Apply bewirkt:
+Mission Failure:
 
-- Zone Ownership Update
-- linked Airbase Ownership Sync
-- Progress-Reset
-- Status STABLE
-- captureReady=false
+    kein Capture Pressure
 
-Konkreter bestätigter Regressionstest (`ZONE_AIRBASE_ABU_AL_DUHUR`):
+Capture Ready Apply kann:
 
-    vorher: RED -> BLUE bei 100%
-    danach: zoneOwner=BLUE, previousOwner=RED, baseOwner=BLUE, progress=0, status=STABLE, captureReady=false
+- Zone Ownership ändern
+- linked Airbase Ownership synchronisieren
+- Progress zurücksetzen
+- Capture Ready beenden
+- Persistence Dirty setzen
 
-Wichtig für das Airbase-System:
+Bestätigter Regressionstest:
 
-    CaptureSystem kann die Ownership der linked Airbase aktualisieren.
-    AirbaseScanner selbst führt diesen Ownership-Wechsel NICHT aus.
+    ZONE_AIRBASE_ABU_AL_DUHUR
+    RED -> BLUE
+    linked Airbase -> BLUE
+    progress -> 0
+    status -> STABLE
+    captureReady -> false
 
-Capture Getter Dirty-Neutralität: bestanden.
-
-Capture Ownership No-Op: bestanden.
-
-Bedeutung für den Airbase-State:
-
-- reine Reads dürfen keinen Dirty-State erzeugen
-- same-owner Ownership-Aufrufe dürfen keine Timestamps/History verändern
-- ein echter Ownership-Wechsel darf persistierten State ändern und Dirty auslösen
-
-Für AirbaseScanner selbst ist daraus keine neue Dirty-Problematik bekannt.
+AirbaseScanner selbst führt keinen Ownership-Wechsel aus.
 
 ---
 
-## 21. Verhältnis Airbase Scanner zu LogisticsDelivery
+## 21. Capture Read-Neutrality
 
-LogisticsDelivery nutzt Airbase-/Zone-Daten für Logistics Hubs.
+CaptureSystem wurde hinsichtlich Read-Neutrality geprüft.
 
-Aktuelle LogisticsDelivery-Werte:
+Bestätigt:
+
+- Capture Getter erzeugen bei unverändertem State keinen unnötigen Dirty-State.
+- same-owner Ownership-Aufrufe sind No-Ops.
+- echte Ownership-Mutationen können Dirty markieren.
+
+AirbaseScanner benötigt daraus aktuell keinen eigenen Fix.
+
+Priority 3 ist im dokumentierten Umfang abgeschlossen.
+
+---
+
+## 22. Verhältnis zu LogisticsDelivery
+
+LogisticsDelivery:
+
+    src/logistics/tc_logistics_delivery.lua
+    v0.2.1
+
+nutzt die aus Airbase-/Zone-Daten erzeugten Logistics Hubs.
+
+Bestätigt:
 
     logistics hubs: 46
     blue hubs: 7
@@ -592,21 +637,33 @@ Aktuelle LogisticsDelivery-Werte:
     limited hubs: 15
     locked hubs: 0
 
-Bedeutung:
+Priority-3-Ergebnis:
 
-    Alle 46 relevanten Kampagnenzonen können eine Logistikrolle erhalten.
-    Logistik ist breiter als Capture.
-    CTLD ist geladen, aber noch nicht produktiv verbunden.
+    Read-Neutrality bestanden
 
-LogisticsDelivery ist funktional bestätigt. Die allgemeine Logistics-Dirty-Coverage ist noch NICHT systematisch auditiert; das ist der nächste Priority-3-Schritt. Ein konkreter Logistics-Bug wird damit nicht behauptet.
+CTLD ist inzwischen für einen isolierten KI-Truppentransport praktisch getestet.
+
+Noch nicht produktiv verbunden ist jedoch:
+
+    Airbase / Logistics State
+    -> Theater-Command-Transportauftrag
+    -> CTLD-Ausführung
+    -> LogisticsDelivery-Ergebnis
+
+Diese produktive Kopplung gehört zu Priority 4.
 
 ---
 
-## 22. Verhältnis Airbase Scanner zu FobSystem
+## 23. Verhältnis zu FobSystem
 
-FobSystem nutzt Logistics Hubs und Zonen, die ursprünglich aus Airbase-Daten abgeleitet wurden.
+FobSystem:
 
-Aktuelle FobSystem-Werte:
+    src/logistics/tc_fob_system.lua
+    v0.2.1
+
+nutzt Logistics-/Zone-Daten, die auf der Airbase-Klassifikation aufbauen.
+
+Bestätigt:
 
     FOB candidates: 6
     stored candidates: 6
@@ -614,34 +671,43 @@ Aktuelle FobSystem-Werte:
     skipped candidates: 4
     Blue FOBs: 2
 
-Erzeugte FOBs:
+State-only FOBs:
 
     FOB Ercan
     FOB Gecitkale
 
-Bedeutung:
+Status:
 
-    Airbase- und Logistikdaten ermöglichen erste state-only FOB-Planung.
-    Es werden noch keine echten CTLD-FOBs erzeugt.
+    UNDER_CONSTRUCTION
 
-Die allgemeine FobSystem-Dirty-Coverage bleibt offen.
+Priority-3-Ergebnis:
+
+    Read-Neutrality bestanden
+
+Die FOBs sind noch keine real durch CTLD aufgebauten DCS-FOBs.
 
 ---
 
-## 23. Verhältnis Airbase Scanner zu MissionGenerator
+## 24. Verhältnis zu MissionGenerator
 
-MissionGenerator nutzt Airbase-, Zone-, Capture-, Logistics- und FOB-Daten.
+MissionGenerator:
 
-Aktuelle MissionGenerator-Werte:
+    src/missions/tc_mission_generator.lua
+    v0.2.3
+
+nutzt unter anderem:
+
+- Airbase-Daten
+- Zonen
+- Capture-State
+- Logistics
+- FOBs
+
+Aktuelle Werte:
 
     mission candidates: 78
     fobSupportCandidates: 2
     generated missions: 10
-    reservedCreated: 1
-    duplicatesSkipped: 1
-    typeLimitSkipped: 68
-
-MissionGenerator `v0.2.3`, 10 Mission Records.
 
 Bestätigt:
 
@@ -650,159 +716,229 @@ Bestätigt:
 - Mission Completion
 - Mission Failure
 - Mission Effects
-- Mission Completion -> Capture Pressure
-- Mission Failure -> kein Capture Pressure
+- Completion -> Capture Pressure
+- Failure -> kein Capture Pressure
 
-Bedeutung:
+MissionGenerator entscheidet nicht direkt über Airbase Ownership.
 
-    Der MissionGenerator erzeugt Missionen nicht mehr aus beliebigen DCS-Objekten.
-    Er nutzt klassifizierte Kampagnenziele.
-    FOB-Support wird berücksichtigt.
-    Missionen sind über F10 sichtbar und aktivierbar.
-    MissionGenerator bleibt state-only; es gibt keine echten DCS-/Framework-Spawns.
+AirbaseScanner liefert lediglich einen Teil der Zielgrundlage.
 
-AirbaseScanner liefert die klassifizierte Zielgrundlage, aber MissionGenerator entscheidet selbst über die Missionsauswahl. MissionGenerator entscheidet NICHT direkt über Airbase Ownership.
+Der frühere Mission-Record-Loss-Verdacht wurde widerlegt.
 
 ---
 
-## 24. Verhältnis Airbase Scanner zu AICapManager
+## 25. Verhältnis zu AICapManager
 
-AICapManager nutzt Airbase- und Zonendaten zur Vorbereitung von CAP-State.
+AICapManager:
 
-Aktuelle AICapManager-Werte:
+    src/ai/tc_ai_cap_manager.lua
+    v0.2.1
+
+nutzt Airbase- und Zonendaten für CAP-State.
+
+Bestätigt:
 
     cap zone candidates: 31
     auto-registered CAP zones: 12
     CAP requests: 12
-    reactionState: AIR_REACTION_REQUESTED
-    threatLevel: HIGH
 
-Bedeutung:
+Aktuell:
 
-    CAP-Bedarf wird aus dem Kampagnenraum abgeleitet.
-    MOOSE-CAP-Spawns sind noch nicht aktiv.
-    CAP ist aktuell State-only.
-    AICapManager `v0.2.0`, state-first, MOOSE_PENDING, keine echten CAP-Flüge.
+    state-first
+    keine realen MOOSE-CAP-Flüge
 
-`reactToActiveMissions()` existiert, ist aber nicht produktiv verdrahtet. Das ergibt einen latenten Missing-Dirty-Randfall bei späterer Verdrahtung; aktuell ist das kein Runtime-Bug. Die allgemeine AICapManager-Dirty-Coverage bleibt offen.
+Priority-3-Ergebnis:
+
+    Read-Neutrality bestanden
+
+Bekannter latenter Punkt:
+
+    reactToActiveMissions()
+
+besitzt aktuell keine produktive Call-Site.
+
+Er wird bei späterer Verdrahtung erneut geprüft.
 
 ---
 
-## 25. Aktuelle Datenqualität
+## 26. Verhältnis zu CTLD
 
-Die aktuelle Datenqualität ist für die nächste Entwicklungsphase ausreichend.
+CTLD:
+
+    1.6.1
+
+ist für Theater Command ein Execution Layer für spätere reale Transport- und Logistics-Aktionen.
+
+Am 2026-09-29 wurde für den getesteten Aufbau ein isolierter KI-Truppentransport bestätigt:
+
+    Pickup
+    -> Mi-8 Transport
+    -> Off-Airfield-Landung
+    -> automatischer Dropoff
+    -> reale Blue-Bodengruppe
+
+Dieser Test beweist:
+
+    CTLD kann diesen getesteten Transportpfad technisch ausführen.
+
+Er beweist nicht:
+
+    AirbaseScanner steuert CTLD.
+    LogisticsDelivery steuert CTLD bereits produktiv.
+    FOBs werden bereits real gebaut.
+
+AirbaseScanner bleibt reine World-/Klassifikationslogik.
+
+---
+
+## 27. CTLD-Bezug zu Akrotiri
+
+Praktisch verwendete CTLD-Pickup-Zone:
+
+    CTLD_PICKUP_BLUE_AKROTIRI_01
+
+Sie liegt im Bereich Akrotiri.
+
+Der erfolgreiche Testtransport nahm dort automatisch:
+
+    16 Soldaten
+
+auf.
+
+Der technische Test-Dropoff war:
+
+    CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01
+
+Dieser Test bestätigt einen möglichen realen Transportpfad aus dem Blue-Ausgangsraum.
+
+Er ist noch keine produktive Kampagnenoperation.
+
+---
+
+## 28. Airbase-State und Persistence
+
+PersistenceSystem:
+
+    src/campaign/tc_persistence_system.lua
+    v0.2.6
+
+speichert Campaign-State dirty-aware.
 
 Bestätigt:
 
-- Akrotiri wird korrekt erkannt.
-- strategische Basen werden von einfachen Pads getrennt.
-- sekundäre Basen werden erkannt.
-- Medical Pads werden nicht strategisch fehlinterpretiert.
-- Unknown Objects werden konservativ behandelt.
-- Capture Candidates sind sinnvoll reduziert.
-- Mission Candidates sind sinnvoll reduziert.
-- Logistics Candidates bilden eine breitere, aber kontrollierte Basis.
-- ZoneFactory erzeugt 46 relevante Kampagnenzonen.
-- nachfolgende Systeme nutzen diese Daten erfolgreich.
-
-Offen:
-
-- einzelne Syria-Namen später manuell prüfen
-- Unknown Objects später optional analysieren
-- Debug-Report für Airbase-Klassen ergänzen
-- Airbase-Liste optional als Log-/Debug-Tabelle ausgeben
-- manuelle Override-Liste für Sonderfälle vorbereiten
-
-Airbase-/World-State wird bereits durch PersistenceSystem gespeichert. Offen ist der produktive Restore, nicht das reine Speichern.
-
----
-
-## 26. Konservative Klassifikation
-
-Theater Command nutzt eine konservative Klassifikation.
-
-Grund:
-
-    Falsch positive strategische Ziele sind gefährlicher als vorerst ignorierte Sonderobjekte.
-
-Ein Objekt soll nur dann strategisch wirken, wenn es dafür geeignet ist.
-
-Vorteile:
-
-- weniger fehlerhafte Missionen
-- weniger unsinnige Capture-Ziele
-- stabilerer MissionGenerator
-- klarere Logistikstruktur
-- bessere spätere Persistenz
-- weniger DCS-Sonderfallfehler
-
----
-
-## 27. Persistenz des Airbase-Systems
-
-Airbase-State wird bereits als Bestandteil des Persistence-Snapshots gespeichert.
-
-Zu speichern:
-
-- Airbase-Key
-- Name
-- Kategorie
-- Koalition
-- Besitzstatus
-- Position
-- strategische Relevanz
-- Capture-Fähigkeit
-- Mission-Fähigkeit
-- Logistics-Fähigkeit
-- verknüpfte Zone
-- Capture-Progress
-- eventuelle Schäden
-- spätere Nutzbarkeit als Startpunkt
-
-Aktueller Stand:
-
-    Airbase-Daten sind im State vorhanden.
-    dirty-aware Background-Persistence ist aktiv.
-
-PersistenceSystem `v0.2.6`:
-
-- dirty-aware Background Autosave
-- `SAVED`
-- `SKIPPED`
-- kontrollierter `FAILED`-Pfad
-- Retry
+- Snapshot
+- Save
 - Read-back
 - Compile
 - Evaluate
 - Validation
-- `productiveRestore=false`
+- kontrollierter Import
+- Background Autosave
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`
+- Retry
 
-Ownership-Regression:
+Airbase-/World-/Ownership-Daten sind Teil des Kampagnenstates.
+
+Bestätigter Ownership-Persistence-Pfad:
 
     Capture Ready Apply
-    dirtyReason=f10_capture_ready_zone_1_applied
-    SAVED
-    dirtyCleared=true
+    -> Ownership Update
+    -> Dirty
+    -> Background Autosave
+    -> SAVED
 
-Das zeigt: Eine Airbase-Ownership-Änderung kann als Teil des Kampagnen-State gespeichert werden.
+Verbindlich:
 
-Aber: kein produktiver Startup-Restore.
+    productiveRestore=false
 
-Vor einem produktiven Restore sind zu klären:
+Speichern ist technisch bestätigt.
 
-- Priority 3 abschließen
-- Restore-/Init-Reihenfolge
-- Save-Kompatibilität/Versionierung
-- kontrollierter Restore-Test
-- Framework-Hooks absichern
+Produktive Kampagnenfortsetzung aus dem Save beim Missionsstart ist noch nicht freigegeben.
 
 ---
 
-## 28. Debug des Airbase-Systems
+## 29. Produktiver Restore
 
-Aktuell erfolgt Debug über `dcs.log`.
+Priority 3 ist inzwischen abgeschlossen und damit nicht mehr der offene Restore-Blocker.
 
-Wichtige Suchbegriffe:
+Vor produktivem Restore bleiben unter anderem zu klären:
+
+- Restore-/Initialisierungsreihenfolge
+- Save-Versionierung
+- Save-Kompatibilität
+- Modul-Lifecycle
+- Framework-Rekonstruktion
+- Schutz vor doppelten Nebenwirkungen
+- kontrollierter Restore-End-to-End-Test
+
+AirbaseScanner darf beim späteren Restore nicht unkontrolliert einen bereits importierten Kampagnenzustand überschreiben.
+
+Die genaue Restore-Architektur bleibt separat zu definieren.
+
+---
+
+## 30. Datenqualität
+
+Die aktuelle Airbase-Datenqualität ist für den bestehenden state-first Stand ausreichend.
+
+Bestätigt:
+
+- Akrotiri korrekt erkannt
+- Strategic und Secondary Airfields getrennt
+- Helipads getrennt
+- Medical Pads getrennt
+- Tactical Pads getrennt
+- Unknown Objects konservativ behandelt
+- Capture Candidates sinnvoll reduziert
+- Mission Candidates sinnvoll reduziert
+- Logistics Candidates breiter, aber kontrolliert
+- ZoneFactory nutzt diese Daten
+- CaptureSystem nutzt diese Daten
+- LogisticsDelivery nutzt diese Daten
+- FobSystem nutzt diese Daten
+- MissionGenerator nutzt diese Daten
+- AICapManager nutzt diese Daten
+
+Später optional:
+
+- einzelne Syria-Namen manuell prüfen
+- Unknown Objects analysieren
+- Override-Liste einführen
+- erweiterten Debug-Report erzeugen
+
+Diese Punkte sind aktuell keine Blocker.
+
+---
+
+## 31. Konservative Klassifikation
+
+Theater Command verwendet bewusst konservative Klassifikationsregeln.
+
+Grundsatz:
+
+    Falsch positive strategische Ziele sind problematischer
+    als zunächst nicht verwendete Sonderobjekte.
+
+Vorteile:
+
+- weniger fehlerhafte Missionen
+- sinnvollere Capture-Ziele
+- stabilere Logistics-Struktur
+- klarere AI-Grundlage
+- weniger Sonderfallfehler
+- besser kontrollierbarer Persistence-State
+
+---
+
+## 32. Debug
+
+Aktueller technischer Debug-Pfad:
+
+    dcs.log
+
+Relevante Suchbegriffe:
 
     AirbaseScanner
     Airbase scan completed
@@ -815,116 +951,146 @@ Wichtige Suchbegriffe:
     blueStartBases
     redStrategicCandidates
 
-Spätere Debug-Funktionen:
+Perspektivisch möglich:
 
-- Airbase Summary Report
+- Airbase Summary
 - Airbase Detail Report
-- Kategorie-Ausgabe
-- Liste strategischer Basen
-- Liste sekundärer Basen
+- Liste Strategic
+- Liste Secondary
+- Liste Unknown
 - Liste ausgeschlossener Objekte
-- Liste unbekannter Objekte
-- F10-Debug-Anzeige
-- optionaler CSV-/Text-Dump
+- F10-Debug
+- Text-/CSV-Dump
+
+Keine dieser Komfortfunktionen ist aktuell für den nächsten Projektfortschritt erforderlich.
 
 ---
 
-## 29. Nicht-Ziele des aktuellen Airbase-Systems
+## 33. Nicht-Ziele des Airbase Scanners
 
-Aktuell nicht vorgesehen:
+Der Airbase Scanner soll nicht:
 
-- alle 225 DCS-Airbase-Objekte als Capture-Ziele behandeln
-- alle 225 DCS-Airbase-Objekte als Mission-Ziele behandeln
-- Medical Pads als Airbase Attack Ziele verwenden
-- einfache Helipads als strategische Flugplätze verwenden
-- Unknown Objects automatisch strategisch machen
-- MOOSE-Spawns direkt aus dem Airbase Scanner starten
-- CTLD-Logik direkt im Airbase Scanner ausführen
-- IADS direkt im Airbase Scanner initialisieren
+- alle 225 Objekte zu Capture-Zielen machen
+- alle 225 Objekte zu Mission Targets machen
+- Medical Pads zu Strategic Airfields machen
+- Helipads pauschal strategisch behandeln
+- Unknown Objects automatisch aufwerten
+- MOOSE-Spawns ausführen
+- CTLD-Operationen ausführen
+- IADS initialisieren
+- Missionsentscheidungen treffen
+- Logistics Deliveries auslösen
+- FOBs bauen
 
-Grund:
-
-    Der Airbase Scanner erkennt und klassifiziert.
-    Fachliche Aktionen gehören in die jeweiligen Systeme.
+Diese Verantwortlichkeiten gehören in andere fachliche Systeme.
 
 ---
 
-## 30. Aktueller getesteter Systemstand
+## 34. Aktueller getesteter Systemstand
 
 | System | Datei | Version | Status |
 |---|---|---:|---|
-| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | state-first funktional bestanden |
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
 | ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | funktional bestanden; Read-Dirty-/Ownership-No-Op-Regressionen bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded Start, `SAVED`, `SKIPPED`, `FAILED`, Retry und Campaign-Persistence-Regressionen bestanden; `productiveRestore=false` |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage ist nächster Priority-3-Audit |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage offen |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | 10 Mission Records; Activation/Completion/Failure/Effects bestanden; Record-Loss widerlegt; Dirty-Coverage offen |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | state-first bestanden; `reactToActiveMissions()`-Sonderfall bewertet; Dirty-Coverage offen |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden; 33 Commands |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Background Persistence bestanden |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.1` | Read-Neutrality bestanden |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.1` | Read-Neutrality bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.1` | Read-Neutrality bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` | KI-Truppentransport-PoC für getesteten Aufbau bestanden |
 
-Priority 3 ist **NICHT abgeschlossen**. Bereits geklärt: Capture Getter-/Derived-Dirty, Capture Ownership No-Op, `reactToActiveMissions()`-Sonderfall. Noch systematisch zu prüfen, jeweils einzeln:
+Priority 3:
 
-1. `src/logistics/tc_logistics_delivery.lua`
-2. `src/logistics/tc_fob_system.lua`
-3. `src/missions/tc_mission_generator.lua`
-4. `src/ai/tc_ai_cap_manager.lua`
-
-AirbaseScanner ist aktuell NICHT der nächste Audit. Keine neue AirbaseScanner-Änderung wird vorgezogen.
+    abgeschlossen im dokumentierten Umfang seit 2026-09-21
 
 ---
 
-## 31. Nächster sinnvoller Schritt aus Sicht des Airbase-Systems
+## 35. Aktueller Entwicklungsbereich
 
-Der nächste technische Schritt liegt weiterhin nicht im Airbase Scanner.
+Der nächste technische Schritt liegt nicht im Airbase Scanner.
 
-Nicht mehr aktuell: `src/ui/tc_f10_menu.lua` / Capture-/Pressure-Sichtbarkeit als nächster Schritt — das ist abgeschlossen.
+AirbaseScanner bleibt:
 
-Neuer nächster technischer Schritt:
+    v0.2.2
+    bestanden
+    aktuell ohne notwendigen Code-Fix
 
-    Priority 3
-    READ-ONLY Dirty-Coverage-Audit von src/logistics/tc_logistics_delivery.lua
+Aktueller Entwicklungsbereich:
 
-Ziele:
+    Priority 4 – produktive CTLD-Integration vorbereiten
 
-- persistierte Logistics-State-Writes erfassen
-- `markDirty()`-Pfade erfassen
-- Call-Sites erfassen
-- echte Mutationen von Reads/No-Ops unterscheiden
-- Dirty Reasons bewerten
-- runtime-only vs. persistierten State unterscheiden
-- keine Codeänderung ohne belegten Befund
+Dabei muss unter anderem geklärt werden:
 
-Das Airbase-System selbst benötigt aktuell keine Codeänderung.
+- wie Logistics Needs zu Transportaufträgen werden
+- wie CTLD-Zonen idempotent registriert werden
+- wie KI-Transporter registriert werden
+- wie Transporter-Lifecycle verwaltet wird
+- wie CTLD-Ergebnisse validiert werden
+- wie Ergebnisse in LogisticsDelivery beziehungsweise FobSystem zurückgeführt werden
+- welche Änderungen Dirty markieren
+- welche Daten persistiert werden
+- welche Framework-Daten runtime-only bleiben
+
+Das Airbase-System liefert dafür weiterhin die stabile World-Grundlage.
 
 ---
 
-## 32. Aktueller Status
+## 36. Aktueller Status
 
-Das Airbase-System bleibt bestanden und stabil für den state-first Entwicklungsstand.
+Stand:
+
+    2026-09-29
+
+Das Airbase-System ist für den aktuellen state-first Entwicklungsstand bestanden.
 
 Bestätigte Grundlage:
 
-    225 airbase-like Objects erkannt
-    46 relevante Kampagnenzonen
-    32 Capture-/Mission-Airbase-Ziele
-    46 Logistics-Kandidaten
-    19 Strategic
-    13 Secondary
+    225 Airbase-like Objects erkannt
+    19 Strategic Airfields
+    13 Secondary Airfields
+    1 Heliport
+    95 Helipads
+    40 Medical Pads
+    13 Tactical Pads
+    44 Unknown Objects
+    0 FARPs
+    32 Capture Candidates
+    32 Mission Candidates
+    46 Logistics Candidates
     1 Blue Start Base
     18 Red Strategic Candidates
+    46 relevante Kampagnenzonen
 
-Zusätzlich heute relevant:
+Nachgelagerte Systeme nutzen diese Grundlage erfolgreich.
 
-- linked Airbase Ownership Sync praktisch bestätigt
-- Airbase-State wird durch Persistence gespeichert
-- Embedded Resource Audit bestanden
+Zusätzlich bestätigt:
 
-Weiterhin nicht vorhanden:
+- linked Airbase Ownership Sync
+- dirty-aware Persistence
+- Priority 3 abgeschlossen
+- CTLD-KI-Truppentransport-PoC für den getesteten Aufbau bestanden
 
-- automatische Airbase-Spawnlogik
-- autonome AI-Operationsnutzung
-- produktiver Startup-Restore
-- produktive IADS-/CTLD-/MOOSE-Integration aus dem Scanner
+Weiterhin offen:
 
-Nächster Schritt: nicht AirbaseScanner, sondern LogisticsDelivery Dirty-Coverage READ ONLY.
+- produktive CTLD-Orchestrierung
+- reale CTLD-FOBs
+- reale MOOSE-Flüge
+- AI Director
+- IADS-Integration
+- Ground Campaign
+- produktiver Restore
+- Multiplayer
+
+Aktueller Übergang:
+
+    stabiler Airbase-/World-State
+    +
+    stabiler state-first Kampagnenkern
+    +
+    abgeschlossene Dirty-Coverage
+    +
+    bestandener isolierter CTLD-Transport-PoC
+    ->
+    kontrollierte produktive CTLD-Integration
