@@ -71,7 +71,7 @@ Current focus:
 Current confirmed CTLD status:
 
     CTLD 1.6.1
-    isolated AI troop transport proof-of-concept passed
+    isolated AI troop transport proof-of-concept passed for the tested setup
 
 Confirmed tested path:
 
@@ -85,7 +85,7 @@ Confirmed tested path:
 
 This is:
 
-    framework capability proof
+    framework capability proof for the tested setup
 
 It is not yet:
 
@@ -215,6 +215,8 @@ Especially:
     vendor/ctld/CTLD.lua
 
 must remain unchanged.
+
+The known CTLD `RepackCommandsPath` case must not be fixed by modifying Vendor CTLD.
 
 ---
 
@@ -545,7 +547,7 @@ Current role:
 
 Current proven capability:
 
-    isolated AI troop transport
+    isolated AI troop transport for the tested setup
 
 Not yet productive:
 
@@ -586,11 +588,13 @@ Tested dropoff entry:
 
     { "CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01", -1, 2, 1 }
 
+For the tested runtime append path, normalized entries were added after the existing CTLD initialization.
+
 A new call to:
 
     ctld.initialize()
 
-was not required for the tested runtime append path.
+was not required for that tested path.
 
 Do not rewrite this as:
 
@@ -637,13 +641,17 @@ Do not manipulate onboard troop state directly as a substitute for the real fram
 
 # 23. CTLD Pickup Proof
 
-Confirmed:
+Confirmed for the tested setup:
 
     16 soldiers automatically loaded
 
 Pickup count:
 
     10000 -> 9999
+
+Approximate distance from pickup centre:
+
+    87 m
 
 The pickup was performed by CTLD.
 
@@ -653,12 +661,13 @@ Not used:
     direct inTransitTroops mutation
     teleport
     runtime route manipulation
+    runtime task manipulation
 
 ---
 
 # 24. CTLD Landing Proof
 
-Successful stored DCS route:
+Successful stored DCS route for the tested Mi-8 setup:
 
     normal Turning Point
     +
@@ -680,7 +689,21 @@ The tested Mi-8 reached the intended dropoff area and landed approximately:
 
 from the dropoff centre.
 
-No FARP was required for this tested troop transport path.
+The aircraft then remained on the ground for at least approximately:
+
+    220 seconds
+
+The complete configured 300-second duration did not need to be observed because the CTLD dropoff had already succeeded.
+
+No Invisible FARP was required for this tested AI troop transport path.
+
+Do not generalize this to:
+
+    cargo paths
+    crate paths
+    other aircraft
+    real FOB infrastructure
+    other CTLD functions
 
 A previous unbound:
 
@@ -694,10 +717,10 @@ Do not claim the exact previous failure cause is proven.
 
 # 25. CTLD Dropoff Proof
 
-Confirmed after landing:
+Confirmed after landing for the tested setup:
 
     transported troops removed from onboard CTLD state
-    new ctld.droppedTroopsBLUE entry
+    exactly one new ctld.droppedTroopsBLUE entry
     real Blue ground group created
 
 Created group:
@@ -724,7 +747,7 @@ Confirmed tested path:
 
 # 26. CTLD RepackCommandsPath
 
-At the grounded transition, exactly one error was observed:
+Exactly once at **touchdown** of the registered AI transport, the following Vendor runtime error was observed:
 
     CTLD.lua:6150:
     attempt to get length of local 'RepackCommandsPath' (a nil value)
@@ -734,7 +757,15 @@ Context:
     updateRepackMenu
     updateRepackMenuOnlanding
 
+The error was not observed again during approximately:
+
+    220 seconds
+
+of subsequent ground observation.
+
 Source analysis suggests the registered AI unit reaches a CTLD landing/menu path where a player-oriented command path may not exist.
+
+Pickup and dropoff still completed successfully.
 
 Do not state as proven:
 
@@ -742,9 +773,17 @@ Do not state as proven:
 
 Do not state as proven:
 
-    the scheduler definitely dies
+    later repack-menu updates still work
 
-The latter is only an inference from the uncaught error path.
+Do not state as proven:
+
+    the scheduler definitely continued
+
+Do not state as proven:
+
+    the scheduler definitely died
+
+A scheduler-path termination is only a source-based technical inference from the uncaught error and is not direct runtime proof.
 
 Vendor CTLD must not be patched.
 
@@ -775,6 +814,8 @@ It did not test:
     productive FobSystem integration
     CTLD restore
     multiplayer
+    arbitrary other transport aircraft
+    arbitrary other landing zones
 
 Never extrapolate from troop transport to cargo functionality without testing.
 
@@ -793,7 +834,7 @@ Before productive CTLD code is created, determine:
     pickup detection
     success detection
     failure detection
-    RepackCommandsPath handling
+    RepackCommandsPath handling or isolation
     Theater Command state updates
     dirty reasons
     runtime-only CTLD data
@@ -811,6 +852,7 @@ Do not create:
 
     tc_ctld.lua
     tc_ctld_bridge.lua
+    tc_ctld_all_in_one.lua
 
 or equivalent framework-named wrappers.
 
@@ -1020,6 +1062,10 @@ Confirmed reference SHA-256 after the isolated CTLD test:
 
 The CTLD proof-of-concept did not modify this productive save.
 
+Mandatory current setting:
+
+    productiveRestore=false
+
 ---
 
 # 39. Git Workflow
@@ -1183,7 +1229,7 @@ Current confirmed base:
     +
     Priority 3 completed
     +
-    CTLD AI troop transport proof-of-concept passed
+    CTLD AI troop transport proof-of-concept passed for the tested setup
 
 Current transition:
 
