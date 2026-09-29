@@ -1,46 +1,8 @@
-# src/logistics/README.md
+# Logistics
 
-## Autoritativer Logistics-Stand — 2026-08-04
+## Verbindlicher Stand — 2026-09-29
 
-- LogisticsDelivery `v0.2.0` und FobSystem `v0.2.0` bleiben state-first implementiert und getestet.
-- PersistenceSystem `v0.2.6` speichert relevante dirty markierte State-Änderungen automatisch; unveränderte Ticks werden ohne Dateischreiben übersprungen, produktiver Restore bleibt deaktiviert.
-- Die historische MissionGenerator-FOB-Integration ist als Funktionspfad belegt. Aktuell gehen jedoch nach initial zehn generierten Missionen reproduzierbar alle sechs Status-Dictionaries verloren; Ursache und Writer sind unbekannt (`PROJECT SOURCE HAS NO MATCHING WRITE SITE`).
-- Mission-/Capture-Regressionen sind blockiert. Nächster Schritt ist der Offline/read-only Audit der eingebetteten `.miz`-Ressourcen. Abweichende ältere Angaben unten sind historische Stände.
-
----
-
-Diese Datei beschreibt den Logistics-Bereich von **Theater Command DCS**.
-
-Der Logistics-Bereich enthält eigene Lua-Logik für Versorgung, Logistics Hubs, FOB-Kandidaten, FOB-Aufbau und spätere CTLD-Anbindung.
-
----
-
-## 1. Zweck des Logistics-Bereichs
-
-`src/logistics/` ist für die logistische Kampagnenebene zuständig.
-
-Langfristig soll dieser Bereich ermöglichen, dass Versorgung, FOB-Aufbau und Transportmissionen echte strategische Bedeutung haben.
-
-Logistik soll später Einfluss haben auf:
-
-- Capture-Pressure
-- Capture-Progress
-- FOB-Aufbau
-- FOB-Versorgung
-- Missionsverfügbarkeit
-- Operationsradius
-- AI-Entscheidungen
-- IADS-Reparatur
-- Ressourcenlage
-- Persistenz
-
-Aktuell ist der Logistics-Bereich nicht mehr nur geplant.
-
-LogisticsDelivery und FobSystem sind aktiv und getestet.
-
----
-
-## 2. Kampagnenkontext
+Dieser Ordner enthält die eigene logistische Kampagnenlogik von **Theater Command DCS**.
 
 Erste Kampagne:
 
@@ -52,55 +14,139 @@ Map:
 
 Ausgangslage:
 
-    Blue Start: Akrotiri / Zypern
-    Red Start: syrisches Festland vollständig rot kontrolliert
+    Blue startet auf Akrotiri / Zypern.
+    Das syrische Festland ist zu Kampagnenbeginn rot kontrolliert.
 
-Grundannahme:
+Grundprinzip:
 
-    Akrotiri ist initial der wichtigste blaue Logistikhub.
-    Zypern ist initial sicherer blauer Ausgangsraum.
-    Syrische Festlandzonen sind initial rot oder neutral.
-    Blue muss Logistik und FOBs nutzen, um dauerhaft auf das Festland zu wirken.
+    Theater Command = Campaign Logic / State Owner
+    CTLD = Execution Layer
+
+Eigene Logik liegt unter:
+
+    src/
+
+Vendor-Frameworks liegen unter:
+
+    vendor/
+
+Vendor-Dateien werden nicht verändert.
 
 ---
 
-## 3. Aktueller technischer Stand
+## 1. Aktive Dateien
 
-Historischer Stand:
-
-    2026-06-29
-
-Aktive Dateien:
+Aktuell aktiv:
 
     src/logistics/tc_logistics_delivery.lua
     src/logistics/tc_fob_system.lua
 
-Getesteter Stand:
+Aktuelle Versionen:
 
-    LogisticsDelivery: v0.2.0 bestanden
-    FobSystem: v0.2.0 bestanden
+    LogisticsDelivery v0.2.1
+    FobSystem v0.2.1
 
-Bestätigt durch DCS-Logtests:
-
-- LogisticsDelivery lädt.
-- LogisticsDelivery startet.
-- LogisticsDelivery erzeugt Logistics Hubs.
-- LogisticsDelivery erzeugt Hub-Status.
-- FobSystem lädt.
-- FobSystem startet.
-- FobSystem erkennt FOB-Kandidaten.
-- FobSystem plant Blue-FOBs state-only.
-- MissionGenerator erkennt FOB-Support-Kandidaten.
-- F10Menu zeigt Logistics Status.
-- F10Menu zeigt FOB Status.
-- Es gab keinen Theater-Command-Lua-Fehler.
-- Es gab keinen Lua-Stacktrace.
+Beide Systeme sind für den aktuellen state-first Stand funktional und bezüglich der dokumentierten Read-Neutrality-Regressionen bestanden.
 
 ---
 
-## 4. Aktuelle bestätigte Logistics-Werte
+## 2. Aufgabe des Logistics-Bereichs
 
-LogisticsDelivery v0.2.0:
+`src/logistics/` verwaltet die logistische Kampagnenebene.
+
+Langfristig soll Logistik unter anderem beeinflussen:
+
+- Versorgung
+- FOB-Aufbau
+- FOB-Versorgung
+- Operationsradius
+- Missionsverfügbarkeit
+- Engineering
+- Repair
+- Fuel
+- Ammo
+- Capture
+- AI-Entscheidungen
+- IADS-Reparatur
+- Persistence
+
+Aktuell liegt der Schwerpunkt noch auf:
+
+- Logistics State
+- FOB State
+- MissionGenerator-Verknüpfung
+- Persistence-Semantik
+- Vorbereitung der produktiven CTLD-Integration
+
+---
+
+## 3. Architekturregel
+
+Dateien werden nach fachlicher Aufgabe benannt.
+
+Nicht nach Framework.
+
+Verbindlich nicht gewünscht:
+
+    tc_moose.lua
+    tc_mist.lua
+    tc_ctld.lua
+    tc_ctld_all_in_one.lua
+    tc_ctld_bridge.lua
+    tc_all_in_one.lua
+    tc_logistics_all_in_one.lua
+
+Aktuell korrekt:
+
+    tc_logistics_delivery.lua
+    tc_fob_system.lua
+
+Falls später eine weitere Datei erforderlich wird, muss ihr Name die konkrete Theater-Command-Aufgabe beschreiben.
+
+Eine Datei wird nicht vorsorglich angelegt, nur weil CTLD verwendet wird.
+
+---
+
+## 4. LogisticsDelivery
+
+Datei:
+
+    src/logistics/tc_logistics_delivery.lua
+
+Version:
+
+    v0.2.1
+
+Status:
+
+    state-first bestanden
+    Read-Neutrality bestanden
+
+Aktuelle Aufgaben:
+
+- Logistics Hubs aus relevanten Kampagnenzonen ableiten
+- Hub Owner verwalten
+- Hub Status verwalten
+- Logistics State bereitstellen
+- Delivery State vorbereiten
+- FobSystem mit logistischen Daten versorgen
+- MissionGenerator mit logistischen Daten versorgen
+- F10-Status bereitstellen
+- Persistence-relevante Mutationen markieren
+
+Noch nicht Aufgabe des Moduls:
+
+- Airbases selbst scannen
+- Kampagnenzonen selbst erzeugen
+- Ownership direkt erzwingen
+- reale CTLD-Flüge unmittelbar ohne Orchestrierung starten
+- Vendor-Code verändern
+
+---
+
+## 5. Aktuelle Logistics-Werte
+
+Bestätigt:
 
     logistics hubs: 46
     blue hubs: 7
@@ -110,184 +156,17 @@ LogisticsDelivery v0.2.0:
     limited hubs: 15
     locked hubs: 0
 
-Bewertung:
+Die 46 Logistics Hubs stammen aus den durch ZoneFactory gefilterten relevanten Kampagnenzonen.
 
-    LogisticsDelivery arbeitet auf den 46 relevanten Kampagnenzonen.
-    LogisticsDelivery arbeitet nicht auf allen 225 DCS-Airbase-like Objects.
-    CTLD ist geladen, aber noch nicht produktiv angebunden.
-    Logistics Hubs sind aktuell state-only.
+Sie stammen nicht direkt aus allen:
 
----
+    225
 
-## 5. Aktuelle bestätigte FOB-Werte
-
-FobSystem v0.2.0:
-
-    FOB candidates: 6
-    stored candidates: 6
-    auto-planned FOBs: 2
-    skipped candidates: 4
-    Blue FOBs: 2
-
-Erzeugte Blue-FOBs:
-
-    FOB Ercan
-    FOB Gecitkale
-
-Aktueller Status:
-
-    UNDER_CONSTRUCTION
-
-Bewertung:
-
-    FobSystem ist state-first bestanden.
-    FOBs existieren im Theater-Command-State.
-    Es werden noch keine echten CTLD-FOBs erzeugt.
-    MissionGenerator erkennt die FOBs bereits als FOB-Support-Kandidaten.
+DCS-Airbase-like Objects.
 
 ---
 
-## 6. Architekturregel
-
-Externe Frameworks liegen unter:
-
-    vendor/
-
-Eigene Theater-Command-Logik liegt unter:
-
-    src/
-
-Der Logistics-Bereich gehört zur eigenen Theater-Command-Logik.
-
-Frameworks werden nicht verändert.
-
-Dateien in `src/logistics/` werden nach Theater-Command-Aufgaben benannt, nicht nach Frameworks.
-
-Nicht gewünscht:
-
-    src/logistics/tc_ctld.lua
-    src/logistics/tc_moose_logistics.lua
-    src/logistics/tc_logistics_all_in_one.lua
-    src/logistics/tc_ctld_all_in_one.lua
-
-Gewünscht:
-
-    src/logistics/tc_logistics_delivery.lua
-    src/logistics/tc_fob_system.lua
-
-Eine Logistics-Datei darf später intern CTLD, MIST, MOOSE oder DCS-API nutzen.
-
-Der Dateiname richtet sich aber immer nach der Theater-Command-Aufgabe.
-
----
-
-## 7. Aktive Dateien
-
-Aktuell aktive Dateien:
-
-    src/logistics/tc_logistics_delivery.lua
-    src/logistics/tc_fob_system.lua
-
-`tc_logistics_delivery.lua`:
-
-    aktives Logistics-Hub-Modul
-    Version v0.2.0
-    bestanden
-
-`tc_fob_system.lua`:
-
-    aktives FOB-State-Modul
-    Version v0.2.0
-    bestanden
-
-Mögliche spätere Dateien:
-
-    src/logistics/tc_logistics_hub.lua
-    src/logistics/tc_supply_network.lua
-    src/logistics/tc_convoy_delivery.lua
-    src/logistics/tc_ctld_bridge.lua
-
-Diese Zusatzdateien werden erst angelegt, wenn sie wirklich benötigt werden.
-
----
-
-## 8. LogisticsDelivery
-
-Datei:
-
-    src/logistics/tc_logistics_delivery.lua
-
-Getestete Version:
-
-    v0.2.0
-
-Status:
-
-    bestanden
-
-Aktuelle Aufgaben:
-
-- Logistics Hubs aus Kampagnenzonen ableiten
-- Hub-Besitzer bestimmen
-- Hub-Status bestimmen
-- Blue Hubs zählen
-- Red Hubs zählen
-- Neutral Hubs zählen
-- Active Hubs zählen
-- Limited Hubs zählen
-- Locked Hubs zählen
-- State für F10 und spätere Missionen bereitstellen
-- CTLD-Anbindung vorbereiten
-
-Wichtig:
-
-    LogisticsDelivery führt aktuell keine echten CTLD-Aktionen aus.
-    LogisticsDelivery erzeugt state-only Logistics Hubs.
-    LogisticsDelivery verändert keinen Besitzstatus direkt.
-    LogisticsDelivery erzeugt keine Zonen selbst.
-
----
-
-## 9. Logistics Hubs
-
-Logistics Hubs sind die logistischen Knoten der Kampagne.
-
-Ein Logistics Hub kann später enthalten:
-
-- Besitzer
-- Status
-- Supply
-- Fuel
-- Ammo
-- Engineering
-- Repair Capacity
-- Cargo Demand
-- Cargo Delivered
-- Linked Zone
-- Linked Base
-- CTLD Pickup Capability
-- CTLD Dropoff Capability
-- FOB Support Capability
-
-Aktuell bestätigt:
-
-    46 Logistics Hubs
-
-Hub-Verteilung:
-
-    blue hubs: 7
-    red hubs: 24
-    neutral hubs: 15
-
-Hub-Status:
-
-    active hubs: 31
-    limited hubs: 15
-    locked hubs: 0
-
----
-
-## 10. Hub-Status
+## 6. Logistics-Hub-State
 
 Aktuelle Statuswerte:
 
@@ -295,100 +174,98 @@ Aktuelle Statuswerte:
     LIMITED
     LOCKED
 
-Bedeutung:
+Aktuell sind diese Werte primär Campaign State.
 
-`ACTIVE`:
+Später können daraus unter anderem abgeleitet werden:
 
-    Hub ist grundsätzlich nutzbar.
+- Supply-Verfügbarkeit
+- Transportbedarf
+- FOB-Support
+- Reparaturfähigkeit
+- Missionspriorität
+- AI-Reaktion
 
-`LIMITED`:
-
-    Hub ist eingeschränkt oder noch nicht voll nutzbar.
-
-`LOCKED`:
-
-    Hub ist nicht nutzbar.
-
-Aktueller Stand:
-
-    Statuswerte sind state-only.
-    Sie haben noch keine produktive CTLD- oder Capture-Wirkung.
-
-Spätere Wirkung:
-
-- nur aktive Hubs können Supply senden
-- limited Hubs haben reduzierte Wirkung
-- locked Hubs erzeugen keine Logistikmissionen
-- Hub-Status beeinflusst FOB-Aufbau
-- Hub-Status beeinflusst MissionGenerator
-- Hub-Status beeinflusst AI Director
-- Hub-Status beeinflusst Persistenz
+Diese späteren Wirkungen sind noch nicht vollständig produktiv implementiert.
 
 ---
 
-## 11. FobSystem
+## 7. LogisticsDelivery Read-Neutrality
+
+Priority-3-Audit:
+
+    abgeschlossen
+
+Fix-Version:
+
+    v0.2.1
+
+Bestätigte read-neutrale Pfade:
+
+    getStatistics()
+    getHubSummary()
+    summary()
+
+Diese Reads verändern keinen persistierten Logistics-State mehr.
+
+Positive Gegenprobe:
+
+    createDelivery()
+
+setzt bei echter Mutation weiterhin:
+
+    dirtyReason=logistics_delivery_created
+
+Damit gilt:
+
+    Read
+    -> kein Dirty
+
+und:
+
+    echte Delivery-Mutation
+    -> Dirty
+
+---
+
+## 8. FobSystem
 
 Datei:
 
     src/logistics/tc_fob_system.lua
 
-Getestete Version:
+Version:
 
-    v0.2.0
+    v0.2.1
 
 Status:
 
-    bestanden
+    state-first bestanden
+    Read-Neutrality bestanden
 
-Aktuelle Aufgaben:
+Aufgaben:
 
-- FOB-Kandidaten aus Logistics Hubs ableiten
-- geeignete Blue-FOBs state-only planen
-- FOB-State erzeugen
-- FOB-Status setzen
-- FOB-Support-Daten für MissionGenerator bereitstellen
-- spätere CTLD-FOB-Anbindung vorbereiten
+- FOB-Kandidaten aus Logistics State ableiten
+- geeignete Blue-FOBs planen
+- FOB-State verwalten
+- FOB-Status verwalten
+- MissionGenerator mit FOB-Support-Daten versorgen
+- spätere reale CTLD-/DCS-Ausführung vorbereiten
 
-Wichtig:
-
-    FobSystem erzeugt aktuell keine echten CTLD-FOBs.
-    FobSystem spawnt keine DCS-Objekte.
-    FobSystem arbeitet state-only.
+Aktuell erzeugt FobSystem keine realen CTLD-FOBs.
 
 ---
 
-## 12. FOB Candidates
+## 9. Aktuelle FOB-Werte
 
-Aktuell bestätigt:
+Bestätigt:
 
     FOB candidates: 6
     stored candidates: 6
+    auto-planned FOBs: 2
     skipped candidates: 4
-
-Mögliche Kriterien:
-
-- geeigneter Logistics Hub
-- geeignete Zone
-- geeigneter Besitzerstatus
-- sinnvolle Position für Blue
-- operative Nähe zum Festland
-- möglicher Nutzen für Capture oder Missionen
-- später CTLD-/Landeplatz-Eignung
-
-Aktuell:
-
-    FOB Candidates werden state-only erzeugt.
-    Mission Editor-Zonen sind noch nicht produktiv angebunden.
-
----
-
-## 13. Blue FOBs
-
-Aktuell bestätigt:
-
     Blue FOBs: 2
 
-Erzeugte FOBs:
+Aktuelle Blue-FOBs:
 
     FOB Ercan
     FOB Gecitkale
@@ -397,581 +274,900 @@ Status:
 
     UNDER_CONSTRUCTION
 
-Bedeutung:
+Diese FOBs existieren aktuell als Theater-Command-State.
 
-    Blue besitzt zwei state-only FOB-Projekte.
-    Diese FOBs sind noch nicht aktiv.
-    Diese FOBs benötigen später Versorgung, Engineering oder Missionserfolge.
-    MissionGenerator erkennt sie bereits als FOB-Support-Ziele.
+Sie sind noch keine real gebauten DCS-/CTLD-FOBs.
 
 ---
 
-## 14. FOB-Status
+## 10. FobSystem Read-Neutrality
 
-Aktueller Status:
+Priority-3-Audit:
 
-    UNDER_CONSTRUCTION
+    abgeschlossen
 
-Mögliche spätere Statuswerte:
+Fix-Version:
 
-- PLANNED
-- UNDER_CONSTRUCTION
-- ACTIVE
-- DAMAGED
-- SUPPLY_LOW
-- OUT_OF_SUPPLY
-- ABANDONED
-- DESTROYED
+    v0.2.1
 
-Aktuelle Bedeutung:
+Bestätigte read-neutrale Pfade umfassen unter anderem:
 
-    FOB existiert als Kampagnen-State.
-    FOB ist noch nicht produktiv einsatzbereit.
-    FOB ist noch kein echtes CTLD-FOB.
+    getStatistics()
+    summary()
+    get()
+    getAll()
+    getCandidates()
+    getByStatus()
+    getByOwner()
+    getBlueFobs()
 
----
+Positive Gegenprobe:
 
-## 15. Beziehung zu CTLD
+    FobSystem.create()
 
-CTLD liegt extern unter:
+setzt bei echter Mutation weiterhin:
 
-    vendor/ctld/
+    dirtyReason=fob_created
 
-CTLD wird nicht verändert.
+Damit gilt auch hier:
 
-Theater Command nutzt CTLD später als Transport- und Logistikframework.
+    Read
+    -> kein Dirty
 
-Geplante CTLD-Rollen:
+und:
 
-- Cargo aufnehmen
-- Cargo transportieren
-- Cargo absetzen
-- Crates erzeugen
-- FOBs bauen
-- FOBs versorgen
-- Engineering liefern
-- Repair liefern
-- Supply liefern
-- Fuel/Ammo später abbilden
-
-Aktueller Stand:
-
-    CTLD wird geladen.
-    LogisticsDelivery ruft CTLD noch nicht produktiv auf.
-    FobSystem ruft CTLD noch nicht produktiv auf.
-    Es gibt noch keine echten CTLD-Cargo-Operationen.
+    echte FOB-Mutation
+    -> Dirty
 
 ---
 
-## 16. Warum CTLD noch nicht produktiv ist
+## 11. Priority 3
 
-CTLD wird bewusst noch nicht produktiv ausgelöst.
+Priority 3 wurde am:
 
-Gründe:
+    2026-09-21
 
-- Logistics Hubs mussten zuerst stabil erzeugt werden.
-- FOB-State musste zuerst stabil erzeugt werden.
-- MissionGenerator musste FOB-Support erkennen.
-- F10Menu musste Logistics und FOB Status anzeigen.
-- CTLD-Zonen im Mission Editor sind noch nicht produktiv definiert.
-- echte CTLD-Aktionen erzeugen DCS-Nebenwirkungen.
-- Fehlerdiagnose mit echten Cargo-Objekten ist komplexer.
+im dokumentierten Umfang abgeschlossen.
 
-Aktuelle Entscheidung:
+Für den Logistics-Bereich relevant:
 
-    CTLD bleibt geladen und vorbereitet.
-    Produktive CTLD-Integration folgt später.
+    LogisticsDelivery v0.2.1
+    FobSystem v0.2.1
 
----
+Beide aktiven Read-Neutrality-Probleme wurden behoben und regressionsgetestet.
 
-## 17. Verhältnis zum Core
+Priority 3 ist nicht mehr der aktuelle Arbeitsbereich.
 
-`src/logistics/` nutzt den Core.
-
-Erlaubte Core-Abhängigkeiten:
-
-- `TC.Config`
-- `TC.Logger`
-- `TC.State`
-- `TC.Utils`
-- `TC.Scheduler`
-
-Der Logistics-Bereich darf davon ausgehen, dass der Core bereits geladen ist.
-
-Aktuelle Ladeposition:
-
-    nach Core, World und Campaign
-    vor Missions, AI, UI, Main und Loader
+Ein erneuter vollständiger Audit erfolgt nur bei neuem technischem Anlass.
 
 ---
 
-## 18. Verhältnis zum World-Bereich
+## 12. Beziehung zu World
 
-Der Logistics-Bereich nutzt Daten aus:
+Vorgelagerte Systeme:
 
-    src/world/
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_zone_factory.lua
 
-Besonders wichtig:
-
-- `TC.World.AirbaseScanner`
-- `TC.World.ZoneFactory`
-- `TC.State.Bases`
-- `TC.State.Zones`
-
-Aktuelle World-Werte:
+Bestätigte World-Werte:
 
     Syria airbase-like objects: 225
     relevante Kampagnenzonen: 46
     logisticsCandidates: 46
+    logisticsZones: 46
 
-Logistics nutzt diese Daten für:
+Logistics verwendet diese Daten für:
 
 - Logistics Hubs
 - Hub Owner
 - Hub Status
 - FOB Candidates
-- spätere Cargo-Zielräume
+- spätere Transportquellen
+- spätere Transportziele
 
-Logistics soll nicht selbst Airbases scannen.
+Logistics scannt Airbases nicht selbst.
 
-Logistics soll nicht selbst Kampagnenzonen erzeugen.
+Logistics erzeugt die grundlegenden Kampagnenzonen nicht selbst.
 
 ---
 
-## 19. Verhältnis zum Campaign-Bereich
+## 13. Beziehung zu CaptureSystem
 
-Der Logistics-Bereich soll später Campaign-Daten beeinflussen.
+CaptureSystem:
 
-Aktuelle Capture-Werte:
+    v0.2.2
+
+Bestätigt:
 
     eligibleBases: 32
     eligibleZones: 32
     pressureRecords: 32
     progressRecords: 32
-    appliedMissionEffects: 0
-    ready: 0
-    contested: 0
 
-Mögliche spätere Kopplung:
+Aktuell produktiv bestätigt ist:
 
-- FOB-Support erhöht Capture-Pressure.
-- Logistics Support erhöht Capture-Progress.
-- Supply-Mangel senkt Verteidigungsfähigkeit.
-- Engineering ermöglicht FOB-Aktivierung.
-- Logistics Hubs können Capture-Bedingung sein.
-- zerstörte Hubs können Fortschritt bremsen.
+    Mission Completion
+    -> Capture Pressure
+    -> Capture Progress
+    -> Capture Ready
+    -> Ownership
 
-Aktuell:
+Eine direkte produktive:
 
-    Logistics und Capture sind noch nicht produktiv gekoppelt.
-    Mission Effects auf Capture sind noch nicht aktiv.
-    Capture-/Pressure-Sichtbarkeit im F10 ist der nächste Zwischenschritt.
+    Logistics
+    -> Capture
+
+Kopplung existiert noch nicht.
+
+Perspektivisch kann Logistik beispielsweise Einfluss haben auf:
+
+- Capture-Fähigkeit
+- Verteidigungsfähigkeit
+- Operationsradius
+- FOB-Unterstützung
+- Verstärkung
+
+Diese Wirkungen sind noch Zukunftsarchitektur.
 
 ---
 
-## 20. Verhältnis zum Missionsbereich
+## 14. Beziehung zu MissionGenerator
 
-MissionGenerator nutzt Logistics- und FOB-Daten bereits.
-
-Aktuelle MissionGenerator-Datei:
+MissionGenerator:
 
     src/missions/tc_mission_generator.lua
+    v0.2.3
 
-Getestete Version:
+Bestätigte Werte:
 
-    v0.2.2
-
-Aktuelle MissionGenerator-Werte:
-
-    mission candidates: 69
+    mission candidates: 78
     fobSupportCandidates: 2
     generated missions: 10
     reservedCreated: 1
     duplicatesSkipped: 1
-    typeLimitSkipped: 30
+    typeLimitSkipped: 68
 
-Aktuelle Kopplung:
+MissionGenerator erkennt die beiden state-first FOB-Projekte bereits als Support-Kandidaten.
 
-    MissionGenerator erkennt 2 FOB-Support-Kandidaten.
-    MissionGenerator reserviert mindestens eine FOB-Support-Mission.
+Damit besteht bereits die State-Verbindung:
 
-Spätere Missionstypen aus Logistik:
+    Logistics / FOB
+    -> MissionGenerator Candidate State
 
-- LOGISTICS
-- FOB_SUPPORT
-- CARGO_DELIVERY
-- ENGINEERING_SUPPORT
-- REPAIR_SUPPORT
-- FUEL_DELIVERY
-- AMMO_DELIVERY
-- CONVOY_ESCORT
-- SUPPLY_INTERDICTION
+Noch nicht vorhanden ist:
 
-Aktuell:
+    MissionGenerator
+    -> realer CTLD-Transport
 
-    Missionen bleiben state-only.
-    Es werden keine echten CTLD-Cargo-Aktionen ausgelöst.
+Missionen bleiben für diesen Bereich noch state-first.
 
 ---
 
-## 21. Verhältnis zum AI-Bereich
+## 15. Mission-Record-Diagnose
 
-AI soll später Logistics-Daten nutzen.
+Der frühere Verdacht, dass Mission Records verloren gehen, ist widerlegt.
 
-Aktuelle AI-Datei:
+MissionGenerator erzeugt:
+
+    10 Mission Records
+
+Die Mission-Status-Collections sind String-keyed Lua-Dictionaries.
+
+Deshalb ist:
+
+    #table
+
+für deren Anzahl nicht autoritativ.
+
+Korrekt ist eine pairs-basierte Zählung.
+
+Es gibt keinen bestätigten Mission-Record-Datenverlust.
+
+Die alte Klassifikation:
+
+    PROJECT SOURCE HAS NO MATCHING WRITE SITE
+
+ist nur historischer, inzwischen widerlegter Diagnosekontext und kein aktueller Logistics-Blocker.
+
+---
+
+## 16. Beziehung zu AI
+
+AICapManager:
 
     src/ai/tc_ai_cap_manager.lua
+    v0.2.1
 
-Getestete Version:
-
-    v0.2.0
-
-Aktuelle AI-Werte:
+Bestätigt:
 
     cap zone candidates: 31
-    auto-registered CAP zones: 12
+    CAP zones: 12
     CAP requests: 12
-    reactionState: AIR_REACTION_REQUESTED
-    threatLevel: HIGH
 
-Spätere AI-Nutzung:
+Read-Neutrality:
 
-- FOBs schützen
-- FOBs angreifen
-- Supply Push priorisieren
-- Logistics Hubs verteidigen
-- Red Logistics Interdiction planen
-- CAP über Logistikkorridoren anfordern
-- Blue-/Red-Operationsfähigkeit aus Versorgung ableiten
+    bestanden
 
-Aktuell:
+Noch keine:
 
-    AI Director ist noch nicht implementiert.
-    Logistics beeinflusst AI noch nicht produktiv.
+    realen MOOSE-CAP-Flüge
 
----
+Perspektivisch kann Logistics AI beeinflussen durch:
 
-## 22. Verhältnis zum IADS-Bereich
+- Schutz von Logistics Hubs
+- Schutz von Transporten
+- FOB-Verteidigung
+- Interdiction
+- Supply-Priorisierung
+- CAP über Logistikkorridoren
 
-IADS soll später Logistics-Daten nutzen.
-
-Aktueller IADS-Stand:
-
-    Skynet IADS wird geladen.
-    eigenes Theater-Command-IADS-Modul ist noch nicht implementiert.
-    MissionGenerator reserviert Skynet-Hooks.
-
-Spätere IADS-Nutzung:
-
-- SAM-Sites benötigen Supply oder Repair.
-- beschädigte IADS-Sites brauchen Engineering.
-- Red Logistics beeinflusst IADS-Reparaturfähigkeit.
-- Blue Logistics ermöglicht SEAD-/DEAD-Operationsdruck.
-- FOBs erweitern Reichweite gegen IADS-Ziele.
-
-Aktuell:
-
-    IADS ist noch nicht mit Logistics gekoppelt.
+AI Director ist noch nicht produktiv implementiert.
 
 ---
 
-## 23. Verhältnis zum UI-Bereich
+## 17. Beziehung zu IADS
 
-F10Menu zeigt Logistics- und FOB-Status bereits an.
+Skynet IADS ist als Vendor-Framework geladen.
 
-Aktive UI-Datei:
+Eine produktive Theater-Command-IADS-Schicht existiert noch nicht.
 
-    src/ui/tc_f10_menu.lua
+Perspektivisch kann Logistik relevant sein für:
 
-Getestete Version:
+- Reparatur beschädigter SAM-Systeme
+- Nachschub
+- Engineering
+- Ersatz
+- Missionspriorisierung
+- Interdiction
 
-    v0.2.0
+Aktuell besteht keine produktive Logistics-IADS-Kopplung.
 
-Aktuelle F10-Funktionen:
+---
+
+## 18. Beziehung zu F10
+
+F10Menu:
+
+    v0.2.3
+
+Bestätigt:
+
+    33 Commands
+
+Im Logistics-Bereich verfügbar:
 
     Show Logistics Status
     Show FOB Status
 
-F10Menu zeigt außerdem:
+Zusätzlich sind unter anderem vorhanden:
 
-- verfügbare Missionen
-- aktive Missionen
-- Missionsdetails
+- Mission Details
 - Mission Activation
+- Mission Completion
+- Mission Failure
 - Campaign Status
+- Capture Status
+- Capture Ready
+- Pressure Contested
 - AI CAP Status
 
-Bewertung:
+Die alte Dokumentation mit einem noch ausstehenden Capture-/Pressure-F10-Ausbau ist nicht mehr gültig.
 
-    Logistics und FOBs sind bereits über F10 sichtbar.
-    Die Darstellung kann später erweitert werden.
-    Nächster F10-Ausbau ist Capture-/Pressure-Sichtbarkeit.
+F10 ist aktuell vor allem:
+
+- Statuszugang
+- Debugzugang
+- kontrollierter Testzugang
+
+Es ist nicht der langfristige Motor der Logistik.
 
 ---
 
-## 24. Verhältnis zu Persistence
+## 19. Beziehung zu Persistence
 
-PersistenceSystem `v0.2.6` nimmt Logistics- und FOB-State in den verifizierten Campaign-Snapshot auf; produktiver Restore bleibt deaktiviert.
+PersistenceSystem:
 
-Aktuelle Persistence-Datei:
-
-    src/campaign/tc_persistence_system.lua
+    v0.2.6
 
 Status:
 
-    PersistenceSystem v0.2.6 lädt/startet dirty-aware
-    Datei-Write und Read-back-Verifikation bestanden
+    dirty-aware Background Persistence bestanden
 
-Zu speichernde Logistics-Daten:
+Bestätigt:
 
-- Hub-ID
-- Hub-Name
-- Besitzer
-- Status
-- Supply
-- Fuel
-- Ammo
-- Engineering
-- Repair Capacity
-- Linked Zone
-- Linked Base
-- Delivery History
-- Cargo Required
-- Cargo Delivered
+- Save
+- Read-back
+- Compile
+- Evaluate
+- Validation
+- kontrollierter Import
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`
+- Retry
 
-Zu speichernde FOB-Daten:
+Verbindlich:
 
-- FOB-ID
-- FOB-Name
-- Besitzer
-- Status
-- Build Progress
-- Linked Hub
-- Linked Zone
-- Supply
-- Fuel
-- Ammo
-- Engineering
-- Cargo Delivered
-- Cargo Required
-- Damage State
+    productiveRestore=false
 
-Aktuell:
+Logistics- und FOB-State sind Bestandteil des persistierbaren Theater-Command-State.
+
+Die alte Aussage:
 
     keine produktive Logistics-Persistenz
-    keine produktive FOB-Persistenz
     kein DCS-Dateischreibtest
 
----
+ist nicht mehr korrekt.
 
-## 25. State-first-Regel
+Richtig ist:
 
-Der Logistics-Bereich folgt aktuell strikt der state-first-Architektur.
-
-Das bedeutet:
-
-- Logistics Hubs werden im State erzeugt.
-- FOBs werden im State erzeugt.
-- F10 zeigt Logistics-/FOB-State.
-- MissionGenerator nutzt FOB-State.
-- CTLD-Hooks bleiben vorbereitet.
-- echte CTLD-Aktionen bleiben deaktiviert.
-
-Nicht aktiv:
-
-- echte CTLD-Crates
-- echte CTLD-FOBs
-- echte Cargo-Flüge
-- echter Supply-Verbrauch
-- echte FOB-Aktivierung
-- automatische Capture-Wirkung
-- Logistics-Persistenz
-
-Grund:
-
-    Logistik erzeugt viele DCS-Nebenwirkungen.
-    Vor echter CTLD-Anbindung müssen State und UI stabil sein.
+- Background Persistence funktioniert.
+- relevante echte Logistics-/FOB-Mutationen können Dirty setzen.
+- produktiver Startup-Restore ist weiterhin deaktiviert.
+- reale CTLD-Ergebnisse sind noch nicht produktiv in Logistics-/FOB-State zurückgeführt.
 
 ---
 
-## 26. Geplanter Namespace
+## 20. CTLD
 
-Der Logistics-Bereich nutzt den zentralen Theater-Command-Namespace:
+Vendor:
+
+    vendor/ctld/CTLD-i18n.lua
+    vendor/ctld/CTLD.lua
+
+Version:
+
+    CTLD 1.6.1
+
+Vendor-Regel:
+
+    unverändert lassen
+
+CTLD ist der vorgesehene Execution Layer für reale Transport- und Cargo-Funktionen.
+
+Perspektivisch:
+
+- Truppentransport
+- Cargo
+- Engineering
+- Repair
+- Supply
+- Fuel
+- Ammo
+- FOB-Aufbau
+- FOB-Versorgung
+
+---
+
+## 21. CTLD-Status seit 2026-09-29
+
+Die frühere Aussage:
+
+    CTLD ist nur geladen und praktisch noch ungetestet
+
+ist nicht mehr gültig.
+
+Am 2026-09-29 wurde ein vollständiger isolierter KI-Truppentransport praktisch bestätigt.
+
+Status:
+
+    Framework-Proof-of-Concept bestanden
+
+Noch nicht:
+
+    produktive Theater-Command-CTLD-Integration
+
+---
+
+## 22. CTLD-Testmission
+
+Testmission:
+
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz
+
+SHA-256 vor dem erfolgreichen Runtime-Test:
+
+    5F0D89DF744A7083401E36713B148BD21813FF187CC36EC1F088507163458C57
+
+Testgruppe:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01
+
+Testunit:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
+
+Luftfahrzeug:
+
+    Mi-8
+
+---
+
+## 23. CTLD-Zonen
+
+Verwendeter Pickup:
+
+    CTLD_PICKUP_BLUE_AKROTIRI_01
+
+Verwendeter technischer Dropoff:
+
+    CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01
+
+Reservierter späterer FOB-Dropoff:
+
+    CTLD_DROPOFF_BLUE_ERCAN_FOB_01
+
+Details:
+
+    mission_editor/ctld_start_zones.md
+
+Der technische Test-Dropoff westlich Akrotiri ist kein produktiver FOB-Dropoff.
+
+---
+
+## 24. CTLD Runtime-Zonenregistrierung
+
+Bestätigt:
+
+Nach der CTLD-Initialisierung können normalisierte Einträge ergänzt werden in:
+
+    ctld.pickupZones
+    ctld.dropOffZones
+
+Getesteter Pickup-Eintrag:
+
+    { "CTLD_PICKUP_BLUE_AKROTIRI_01", -1, 10000, 1, 2 }
+
+Getesteter Dropoff-Eintrag:
+
+    { "CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01", -1, 2, 1 }
+
+Eine erneute Ausführung von:
+
+    ctld.initialize()
+
+war für den getesteten Pfad nicht erforderlich.
+
+---
+
+## 25. CTLD KI-Transporterregistrierung
+
+Wichtiger Befund:
+
+Der verwendete KI-Transporter musste für den getesteten CTLD-AI-Pfad in:
+
+    ctld.transportPilotNames
+
+registriert sein.
+
+Testunit:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
+
+Vor Registrierung:
+
+    108 Einträge
+
+Nach temporärer idempotenter Registrierung:
+
+    109 Einträge
+
+Die Testunit war genau einmal vorhanden.
+
+Eine produktive Theater-Command-Integration muss diese Registrierung später automatisch und idempotent durchführen.
+
+---
+
+## 26. Bestätigter CTLD-Pickup
+
+Nach nativer Aktivierung der Gruppe:
+
+    16 Soldaten automatisch aufgenommen
+
+Pickup-Counter:
+
+    10000 -> 9999
+
+Nicht verwendet:
+
+- manuelles CTLD-Loading
+- direkte Manipulation des Onboard-State
+- Teleport
+- Runtime-Routenänderung
+
+Der Pickup wurde durch CTLD ausgeführt.
+
+---
+
+## 27. Bestätigter Transportflug
+
+Der Mi-8 führte selbständig aus:
+
+- Taxi
+- Takeoff
+- Transit
+- Descent
+- Off-Airfield-Anflug
+
+Die Route und der Land Task waren in der Mission gespeichert.
+
+Es war keine Runtime-Routen- oder Taskmanipulation erforderlich.
+
+---
+
+## 28. Off-Airfield-Landung
+
+Erfolgreicher Aufbau:
+
+    normaler Turning Point
+    +
+    Perform Task -> Land
+
+Dropoff-Zentrum:
+
+    x / North = -29249.110954281
+    z / East  = -271836.070539260
+
+Wegpunkt:
+
+    100 m BARO
+    30 m/s
+
+Land Task:
+
+    duration=300
+    durationFlag=true
+
+Bestätigte minimale Entfernung zum Dropoff-Zentrum:
+
+    ungefähr 1.06 m
+
+Für diesen getesteten Truppentransport war kein FARP erforderlich.
+
+Der zuvor verwendete ungebundene `Land / Landing`-Waypoint hatte keinen vollständigen erfolgreichen Transportzyklus geliefert.
+
+Die genaue Ursache des früheren Turnbacks ist dadurch nicht abschließend bewiesen.
+
+---
+
+## 29. Bestätigter CTLD-Dropoff
+
+Nach der Landung führte CTLD den Dropoff automatisch aus.
+
+Bestätigt:
+
+- transportierte Truppen wurden aus dem In-Transit-State der Unit entfernt
+- `ctld.droppedTroopsBLUE` erhielt einen neuen Eintrag
+- reale Blue-Bodengruppe wurde erzeugt
+
+Gruppe:
+
+    Dropped Group 2
+
+Group-ID:
+
+    70001
+
+Stärke:
+
+    16 x Soldier M249
+
+Damit ist für den getesteten Aufbau bestätigt:
+
+    Pickup
+    -> Flug
+    -> Off-Airfield-Landung
+    -> Dropoff
+    -> Bodengruppe
+
+---
+
+## 30. Grenze des CTLD-Proof-of-Concept
+
+Der Test bestätigt die technische Framework-Fähigkeit.
+
+Er bestätigt noch nicht:
+
+- automatische Theater-Command-Auftragserzeugung
+- produktive LogisticsDelivery-Kopplung
+- produktive FobSystem-Kopplung
+- Crate Spawn
+- Crate Loading
+- Sling Load
+- Crate Drop
+- Supply Cargo
+- Engineering Cargo
+- Repair Cargo
+- Fuel Cargo
+- Ammo Cargo
+- realen FOB-Bau
+- Capture-Wirkung aus Logistik
+- AI-Director-Verknüpfung
+- CTLD-Restore
+- Multiplayer
+
+Der bestandene Test war:
+
+    KI-Truppentransport
+
+und kein:
+
+    Cargo-/Crate-PoC
+
+---
+
+## 31. Bekannter CTLD-Integrationspunkt
+
+Beim Grounded-Übergang trat genau einmal auf:
+
+    CTLD.lua:6150:
+    attempt to get length of local 'RepackCommandsPath' (a nil value)
+
+Kontext:
+
+    updateRepackMenu
+    updateRepackMenuOnlanding
+
+Source-Analyse legt nahe:
+
+- die KI-Unit wird über `ctld.transportPilotNames` vom relevanten CTLD-Pfad verarbeitet
+- `ctld.vehicleCommandsPath[_unitName]` ist für eine reine KI-Unit nicht zwingend vorhanden
+- der daraus abgeleitete Repack-Menüpfad kann deshalb `nil` sein
+
+Pickup und Dropoff wurden dennoch erfolgreich abgeschlossen.
+
+Nicht bewiesen:
+
+- dass der Fehler harmlos ist
+- dass der betroffene Scheduler danach vollständig weiterläuft
+
+Verbindlich:
+
+    vendor/ctld/CTLD.lua wird nicht gepatcht.
+
+Der Fall muss vor produktiver Integration source-backed gelöst beziehungsweise sauber umgangen werden.
+
+---
+
+## 32. State-first vs. Execution Layer
+
+Der entscheidende Architekturübergang lautet:
+
+    Theater-Command-State
+    -> Auftrag
+    -> CTLD-Ausführung
+    -> Ergebnisvalidierung
+    -> Theater-Command-State
+    -> Dirty
+    -> Persistence
+
+Nicht:
+
+    CTLD-interne Runtime-Tabellen
+    =
+    langfristiger Campaign-State
+
+Theater Command bleibt State Owner.
+
+CTLD bleibt Execution Layer.
+
+---
+
+## 33. FOB-Zielarchitektur
+
+Aktuelle state-first FOBs:
+
+    FOB Ercan
+    FOB Gecitkale
+
+Perspektivischer Pfad:
+
+    MissionGenerator
+    -> Logistics Auftrag
+    -> reale CTLD-Ausführung
+    -> Delivery Validation
+    -> LogisticsDelivery
+    -> FobSystem
+    -> Build Progress
+    -> FOB Activation
+    -> Persistence
+
+Dieser Pfad ist noch nicht produktiv implementiert.
+
+---
+
+## 34. Cargo-/Crate-Bereich
+
+Noch separat zu testen:
+
+- Crate Spawn
+- Crate Loading
+- Sling Load
+- Crate Drop
+- Logistics-Zone-Voraussetzungen
+- Supply
+- Engineering
+- Repair
+- Fuel
+- Ammo
+- FOB Core
+
+Ein erfolgreicher Truppentransport wird nicht als Beleg für diese Funktionen verwendet.
+
+---
+
+## 35. Namespace
+
+Der Logistics-Bereich nutzt den zentralen Theater-Command-Namespace.
+
+Aktuell relevant:
 
     TC.Logistics
-
-Aktuelle oder geplante Unterbereiche:
-
     TC.Logistics.Delivery
     TC.Logistics.FobSystem
     TC.State.Logistics
-    TC.State.Logistics.Hubs
-    TC.State.Logistics.FOBs
-    TC.State.Logistics.Deliveries
 
-Nicht verwenden:
+Weitere Namespace-Strukturen werden nur bei tatsächlichem Implementierungsbedarf ergänzt.
 
-    TheaterCommandLogistics
-    LogisticsTC
-    tc_logistics_global
-    _G_TC_LOGISTICS
+Keine zusätzlichen globalen Parallel-Namespaces einführen.
 
 ---
 
-## 27. Testziele
+## 36. Ladeposition
 
-LogisticsDelivery v0.2.0 gilt aktuell als bestanden, wenn:
+Aktuelle Theater-Command-Ladereihenfolge im relevanten Abschnitt:
 
-- Datei lädt.
-- Version wird im Log angezeigt.
-- LogisticsDelivery startet.
-- 46 Logistics Hubs erzeugt werden.
-- 7 Blue Hubs erkannt werden.
-- 24 Red Hubs erkannt werden.
-- 15 Neutral Hubs erkannt werden.
-- 31 Active Hubs erkannt werden.
-- 15 Limited Hubs erkannt werden.
-- 0 Locked Hubs erkannt werden.
-- keine CTLD-Aktionen ausgelöst werden.
-- keine Theater-Command-Lua-Fehler auftreten.
-- keine Lua-Stacktraces auftreten.
+    CaptureSystem
+    -> PersistenceSystem
+    -> LogisticsDelivery
+    -> FobSystem
+    -> MissionGenerator
+    -> AICapManager
+    -> F10Menu
+    -> Main
+    -> Loader
 
-FobSystem v0.2.0 gilt aktuell als bestanden, wenn:
+Logistics kann davon ausgehen, dass:
 
-- Datei lädt.
-- Version wird im Log angezeigt.
-- FobSystem startet.
-- 6 FOB-Kandidaten erkannt werden.
-- 2 Blue-FOBs erzeugt werden.
-- FOB Ercan erzeugt wird.
-- FOB Gecitkale erzeugt wird.
-- FOBs auf UNDER_CONSTRUCTION stehen.
-- MissionGenerator FOB-Support erkennt.
-- keine echten CTLD-FOBs erzeugt werden.
-- keine Theater-Command-Lua-Fehler auftreten.
-- keine Lua-Stacktraces auftreten.
+- Core geladen ist
+- World geladen ist
+- CaptureSystem geladen ist
+- PersistenceSystem geladen ist
 
 ---
 
-## 28. Erwartete Logmarker
+## 37. Persistence-Schutz beim CTLD-Test
 
-Aktuelle erwartete Logistics-Logmarker:
+Produktive Save-Datei:
 
-    [TC] [LogisticsDelivery] Loaded src/logistics/tc_logistics_delivery.lua v0.2.0
-    [TC] [LogisticsDelivery] Logistics hubs summary:
-    [TC] [LogisticsDelivery] Logistics hubs created:
-    [TC] System started: Logistics Delivery
+    C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua
 
-Aktuelle erwartete FOB-Logmarker:
+Bestätigter SHA-256:
 
-    [TC] [FobSystem] Loaded src/logistics/tc_fob_system.lua v0.2.0
-    [TC] [FobSystem] FOB candidates:
-    [TC] [FobSystem] Blue FOBs:
-    [TC] [FobSystem] FOB planned:
-    [TC] System started: FOB System
+    C679B4FFE61A7AB601D50E159A057DCDF540B55C620086402883CA2DA27F2596
 
-Zusätzlich über MissionGenerator:
+Backup vor dem Test:
 
-    [TC] [MissionGenerator] Mission candidate summary: candidates=69, fobSupportCandidates=2, availableBefore=0, generationSlots=10
-    [TC] [MissionGenerator] Mission generation completed: 10 new missions from 69 candidates (fobSupportCandidates=2, reservedCreated=1, duplicatesSkipped=1, typeLimitSkipped=30)
+    C:\Users\Paul\Documents\TC_miz_backups\operation_levant_reclamation_save__pre_landtask_test_2026-09-29_100813.lua
 
-Der genaue Wortlaut einzelner Summary-Logs kann je nach Implementierung variieren.
+Der produktive Save wurde während des isolierten Tests geschützt.
 
-Wichtig ist:
+Nach dem Test bestätigt:
 
-    Version korrekt.
-    Werte korrekt.
-    keine echten CTLD-Aktionen.
-    keine Fehler.
+- Größe unverändert
+- Änderungszeit unverändert
+- SHA-256 unverändert
+- Campaign-State unverändert
+
+Final:
+
+    ReadOnly=False
 
 ---
 
-## 29. Abgrenzung
+## 38. Aktuelle Architekturgrenze
 
-Nicht Aufgabe von `src/logistics/`:
+Aktuell bewiesen:
 
-- Airbases aus DCS auslesen
-- Zonen geometrisch erzeugen
-- strategischen Besitz direkt festlegen
-- Missionen generieren
-- Missionen im F10 anzeigen
-- CAPs starten
-- IADS-Netzwerke aufbauen
-- Save-Dateien schreiben
-- Debug-Zeichnungen erzeugen
-- Vendor-Dateien verändern
+    Logistics State
+    FOB State
+    MissionGenerator FOB-Support
+    Persistence Dirty-Semantik
+    CTLD Framework-Truppentransport
 
-Diese Aufgaben gehören in andere Bereiche.
+Noch nicht produktiv verbunden:
 
-Logistics verwaltet Versorgung, Logistics Hubs, FOBs und spätere Lieferungen.
+    Theater Command Logistics
+    <->
+    CTLD Runtime
 
----
-
-## 30. Nächster sinnvoller Schritt
-
-Der nächste sinnvolle Schritt liegt nicht direkt im Logistics-Bereich.
-
-Empfohlene nächste Datei:
-
-    src/ui/tc_f10_menu.lua
-
-Ziel:
-
-    Capture-/Pressure-Status im F10-Menü sichtbar machen.
-
-Geplante neue F10-Funktionen:
-
-    Show Capture Status
-    Show Capture Ready Zones
-    Show Pressure Contested Zones
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 26 Commands bleiben funktionsfähig.
-- neue Capture-Commands werden ergänzt.
-- Capture Status zeigt mindestens:
-  - eligibleBases
-  - eligibleZones
-  - pressureRecords
-  - progressRecords
-  - captureReady
-  - pressureContested
-  - appliedMissionEffects
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
+Diese Verbindung ist der nächste technische Architekturbereich.
 
 ---
 
-## 31. Zielbild
+## 39. Nächster Entwicklungsbereich
 
-`src/logistics/` ist die Versorgungsschicht von Theater Command DCS.
+Aktueller Projektbereich:
 
-Der Logistics-Bereich verbindet:
+    Priority 4 – produktive CTLD-Integration vorbereiten
 
-- World-Daten
-- Campaign-State
-- Missionsergebnisse
-- FOB-Aufbau
-- CTLD
-- AI
-- IADS
-- Persistenz
-- UI
+Der nächste Schritt ist nicht:
 
-Aktueller Status:
+- erneut Priority 3 auditieren
+- denselben Mi-8-Test wiederholen
+- `tc_ctld.lua` anlegen
+- `tc_ctld_bridge.lua` anlegen
+- CTLD-Vendor patchen
+- sofort Crates implementieren
+- parallel MOOSE CAP integrieren
+- produktiven Restore aktivieren
 
-    LogisticsDelivery v0.2.0 ist state-first bestanden.
-    FobSystem v0.2.0 ist state-first bestanden.
-    Logistics Status ist über F10 sichtbar.
-    FOB Status ist über F10 sichtbar.
-    echte CTLD-Aktionen folgen später.
+Zuerst muss source-backed geklärt werden:
 
-Nächster notwendiger Zwischenschritt im Gesamtprojekt:
+- welche fachliche Komponente den Transportauftrag besitzt
+- welche Komponente CTLD-Zonen registriert
+- welche Komponente Transporter registriert
+- wie die Registrierung idempotent bleibt
+- wie Transporter-Lifecycle behandelt wird
+- wie der `RepackCommandsPath`-Fall behandelt wird
+- wie Erfolg und Fehler erkannt werden
+- welche Ergebnisse in `TC.State` geschrieben werden
+- welche Änderungen Dirty setzen
+- welche CTLD-Daten runtime-only bleiben
+- was später nach Restore rekonstruiert werden muss
 
-    F10Menu v0.2.1 mit Capture-/Pressure-Sichtbarkeit.
+Erst danach wird eine konkrete Source-Datei festgelegt.
+
+---
+
+## 40. Aktueller Abschlussstand
+
+Stand:
+
+    2026-09-29
+
+LogisticsDelivery:
+
+    v0.2.1
+    state-first bestanden
+    Read-Neutrality bestanden
+
+FobSystem:
+
+    v0.2.1
+    state-first bestanden
+    Read-Neutrality bestanden
+
+MissionGenerator:
+
+    v0.2.3
+    78 Candidates
+    10 Mission Records
+    2 FOB-Support Candidates
+
+AICapManager:
+
+    v0.2.1
+    12 CAP Requests
+
+Persistence:
+
+    v0.2.6
+    dirty-aware
+    productiveRestore=false
+
+CTLD:
+
+    1.6.1
+    KI-Truppentransport-PoC bestanden
+    produktive Theater-Command-Integration offen
+
+Aktueller Übergang:
+
+    stabiler Logistics-/FOB-State
+    +
+    abgeschlossene Priority-3-Dirty-Coverage
+    +
+    bestandener CTLD-KI-Transport-PoC
+    ->
+    kontrollierte produktive CTLD-Integration
