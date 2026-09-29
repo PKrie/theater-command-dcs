@@ -1,485 +1,1176 @@
 # AGENTS.md
 
-# Theater Command DCS - AI Development Instructions
+# Theater Command DCS — AI Development Instructions
 
-This document is the primary instruction set for AI development agents (Codex, ChatGPT, Claude Code and future agents).
+Diese Datei enthält die verbindlichen Arbeitsregeln für AI-Agenten, die am Projekt **Theater Command DCS** arbeiten.
 
-If this file conflicts with older documentation, always follow the project documentation referenced below. Never invent architecture.
+Sie gilt für:
 
----
+- ChatGPT
+- Claude
+- Claude Code
+- zukünftige Entwicklungsagenten
 
-# 1. Project Goal
+Projekt:
 
-Theater Command DCS is a modular, dynamic and later persistent campaign framework for DCS World.
+    Theater Command DCS
 
-Mission Editor is only used to create the stage.
+Erste Kampagne:
 
-Lua contains the campaign logic.
+    Operation Levant Reclamation
 
-GitHub is the project memory.
+Map:
 
-The long-term objective is a living battlefield where the player is only one participant inside a much larger autonomous military system.
+    Syria
 
----
+Aktueller verbindlicher Projektstand:
 
-# 2. Development Philosophy
-
-Always prefer:
-
-Correct architecture
-
-over
-
-Fast implementation.
-
-Every implementation must fit into the long-term architecture.
-
-Never implement shortcuts that create technical debt.
+    2026-09-29
 
 ---
 
-# 3. Required Reading
+# 1. Grundprinzip
 
-Before making any implementation, always read the current project documentation.
+Das zentrale Architekturprinzip lautet:
 
-Minimum required:
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis / Source of Truth
+    DCS Runtime = autoritativer Verhaltensbeweis
 
-README.md
+Der Mission Editor stellt die physische Umgebung bereit.
 
-ROADMAP.md
+Lua enthält die dynamische Kampagnenlogik.
 
-TASKS.md
+GitHub enthält den verbindlichen Projektstand.
 
-ARCHITECTURE.md
-
-MISSION_EDITOR_SETUP.md
-
-NAMING_CONVENTIONS.md
-
-LUA_STYLEGUIDE.md
-
-Relevant documentation inside docs/
-
-Relevant README inside src/
-
-Never assume documentation from memory.
+DCS selbst entscheidet letztlich, ob ein Simulator- oder Framework-Verhalten tatsächlich funktioniert.
 
 ---
 
-# 4. Repository Structure
+# 2. Projektziel
 
-Vendor frameworks remain completely untouched.
+Theater Command DCS soll langfristig eine modulare, dynamische und persistente DCS-World-Kampagne ermöglichen.
 
-```
-vendor/
-    mist/
-    moose/
-    ctld/
-    skynet-iads/
-```
+Der Spieler soll nur ein Teilnehmer innerhalb eines größeren militärischen Systems sein.
 
-Own logic belongs into:
+Langfristig vorgesehen sind unter anderem:
 
-```
-src/
-```
+- dynamische Missionen
+- Capture-System
+- Logistics
+- FOB-Netz
+- AI Commander
+- Ground Warfare
+- CAS Requests
+- CAP
+- Strike
+- SEAD / DEAD
+- IADS
+- Supply Chains
+- Carrier Operations
+- Air Tasking
+- Persistent Campaign State
+- Multiplayer
 
-Never modify vendor code.
-
-Never copy vendor code.
-
-Never fork vendor code.
-
----
-
-# 5. Lua Architecture
-
-Mission Editor
-
-↓
-
-Loader
-
-↓
-
-Main
-
-↓
-
-Subsystems
-
-Subsystems communicate through shared campaign state.
-
-Subsystems should not directly manipulate each other whenever possible.
-
-Prefer event driven architecture.
+Alle Systeme müssen modular bleiben.
 
 ---
 
-# 6. One Task Rule
+# 3. Aktueller Projektstand
 
-One task.
+Aktueller Entwicklungsstand:
 
-One file.
+    Priority 3 abgeschlossen
+    Priority 4 aktiv
 
-One commit.
+Priority 3:
 
-Never redesign multiple systems simultaneously.
+    Dirty-Coverage im dokumentierten Umfang abgeschlossen
 
----
+Abschluss:
 
-# 7. File Creation Rules
+    2026-09-21
 
-Whenever creating a file:
+Aktueller Entwicklungsbereich:
 
-Provide
+    Priority 4 – produktive CTLD-Integration vorbereiten
 
-Exact path
+Bestätigter CTLD-Stand:
 
-Complete file
+    CTLD 1.6.1
 
-No partial snippets
+Framework-Proof-of-Concept bestanden für:
 
-No "... continue ..."
+    KI-Truppentransport
+    -> automatischer Pickup
+    -> Flug
+    -> Off-Airfield-Landung
+    -> automatischer Dropoff
+    -> reale Bodengruppe
 
-No missing sections
+Noch nicht produktiv implementiert:
 
-Ready for copy & paste.
-
----
-
-# 8. Vendor Rules
-
-Allowed:
-
-Using MOOSE
-
-Using MIST
-
-Using CTLD
-
-Using Skynet
-
-Reading vendor documentation
-
-Forbidden:
-
-Editing vendor framework
-
-Renaming vendor framework
-
-Moving vendor framework
-
-Creating wrapper copies
+- Theater-Command-CTLD-Orchestrierung
+- CTLD-Crate-/Cargo-Wirtschaft
+- reale CTLD-FOBs
+- reale MOOSE-CAP-Flüge
+- AI Director
+- Ground Campaign
+- produktiver Startup-Restore
+- Carrier Operations
+- Multiplayer
 
 ---
 
-# 9. Naming Rules
+# 4. Pflichtlektüre vor jeder neuen Arbeit
 
-Follow:
+Vor einer Implementierung immer zuerst den aktuellen GitHub-Stand lesen.
 
-MISSION_EDITOR_SETUP.md
+Mindestens:
 
-NAMING_CONVENTIONS.md
+    README.md
+    ROADMAP.md
+    TASKS.md
+    ARCHITECTURE.md
+    CHANGELOG.md
+    MISSION_EDITOR_SETUP.md
+    NAMING_CONVENTIONS.md
+    LUA_STYLEGUIDE.md
 
-Never invent new naming schemes.
+Zusätzlich:
 
----
+    relevante Datei unter docs/
+    relevante README unter src/
+    relevante mission_editor/-Dokumentation
 
-# 10. Mission Editor Philosophy
+Bei CTLD-/Logistikarbeit insbesondere:
 
-Mission Editor is NOT campaign logic.
+    docs/05_logistics_system.md
+    docs/09_persistence.md
+    docs/10_testing.md
+    mission_editor/ctld_start_zones.md
+    src/logistics/README.md
 
-Mission Editor defines:
+Niemals nur aus Chat-Erinnerung oder einem alten Session-Prompt weiterarbeiten.
 
-terrain
-
-zones
-
-airbases
-
-statics
-
-templates
-
-clients
-
-initial placement
-
-Campaign logic belongs into Lua.
-
----
-
-# 11. DCS-SMS
-
-DCS-SMS is a development tool.
-
-It is NOT part of runtime architecture.
-
-Allowed:
-
-Mission inspection
-
-Mission Editor automation
-
-Lua execution
-
-Smoke testing
-
-Reading logs
-
-Prefab management
-
-Not allowed:
-
-Replacing campaign architecture
-
-Replacing vendor frameworks
-
-Moving campaign logic into DCS-SMS
+GitHub ist autoritativ.
 
 ---
 
-# 12. Codex Behaviour
+# 5. One-Task Rule
 
-Always:
+Verbindlich:
 
-Analyse first
+    eine konkrete Aufgabe
+    ein fachlicher Arbeitsschritt
+    möglichst eine Datei
+    ein Commit
 
-Explain reasoning
+Keine langen parallelen Aufgabenlisten.
 
-Modify one file
+Keine gleichzeitige Umgestaltung mehrerer Systeme.
 
-Show result
-
-Wait for confirmation
-
-Never silently modify multiple files.
-
----
-
-# 13. Git Rules
-
-Before modifications:
-
-Check project state.
-
-After modifications:
-
-Review changes.
-
-Never commit automatically.
-
-Never push automatically.
-
-Wait for user approval.
+Keine vorsorglichen Refactorings außerhalb der konkreten Aufgabe.
 
 ---
 
-# 14. Documentation Rules
+# 6. Dateiänderungen
 
-Architecture changes require documentation updates.
+Wenn dem Nutzer eine Datei zur manuellen Änderung auf GitHub gegeben wird:
 
-Feature changes require ROADMAP/TASKS verification.
+immer liefern:
 
-Never allow documentation to drift away from implementation.
+1. exakten Dateipfad
+2. vollständigen Dateiinhalt
+3. genau einen zusammenhängenden Codeblock
+4. vollständigen Copy-&-Paste-Inhalt
+5. konkreten Commit-Text
 
----
+Nicht liefern:
 
-# 15. Testing Rules
-
-After implementation verify:
-
-Lua syntax
-
-Initialization
-
-Runtime
-
-Mission loading
-
-Log output
-
-Never assume code works.
+- Teilstücke
+- Fortsetzungen
+- `...`
+- ausgelassene Bereiche
+- mehrere Codeblöcke für dieselbe Datei
 
 ---
 
-# 16. Logging
+# 7. Repository-Struktur
 
-Prefer structured logging.
+Vendor-Frameworks:
 
-Meaningful prefixes.
+    vendor/
+        mist/
+        moose/
+        ctld/
+        skynet-iads/
 
-Useful diagnostics.
+Eigene Logik:
 
-Avoid spam.
+    src/
 
----
+Dokumentation:
 
-# 17. Performance
+    docs/
+    mission_editor/
 
-Avoid:
-
-Long polling
-
-Large loops
-
-Repeated expensive searches
-
-Prefer:
-
-Cached data
-
-Incremental updates
-
-Events
+Framework-Code und eigener Projektcode bleiben strikt getrennt.
 
 ---
 
-# 18. Persistence
+# 8. Vendor-Regel
 
-Persistence runs automatically.
+Vendor-Dateien werden nicht verändert.
 
-Never require player interaction.
+Verbindlich:
 
-Persistence must survive mission restart.
+    vendor/ ist immutable
 
----
+Erlaubt:
 
-# 19. Future Architecture
+- Vendor-Code lesen
+- Vendor-Code analysieren
+- Vendor-APIs verwenden
+- Vendor-Verhalten testen
+- eigene Integrationslogik schreiben
 
-Long-term systems include:
+Nicht erlaubt:
 
-Dynamic AI Commander
+- Vendor-Code patchen
+- Vendor-Code umbenennen
+- Vendor-Code verschieben
+- modifizierte Kopien erzeugen
+- Projektfixes direkt im Vendor-Code verstecken
 
-Strategic AI
+Das gilt insbesondere für:
 
-Mission Generator
+    vendor/ctld/CTLD.lua
 
-Carrier Operations
-
-Ground Warfare
-
-Persistent Logistics
-
-FOB Network
-
-IADS
-
-Supply Chains
-
-CAS Requests
-
-Air Tasking Orders
-
-Player Mission Assignment
-
-Everything must remain modular.
+Der bekannte CTLD-`RepackCommandsPath`-Fall wird nicht durch einen Vendor-Patch gelöst.
 
 ---
 
-# 20. AI Behaviour Expectations
+# 9. Source-Architektur
 
-The AI agent is a software engineer.
+Eigene Lua-Logik wird nach fachlicher Aufgabe organisiert.
 
-Not merely a code generator.
+Aktuelle Struktur:
 
-Responsibilities:
+    src/core/
+    src/world/
+    src/campaign/
+    src/logistics/
+    src/missions/
+    src/ai/
+    src/iads/
+    src/ui/
+    src/debug/
 
-Understand architecture.
+Nicht nach Framework organisieren.
 
-Protect architecture.
+Verbotene beziehungsweise ausdrücklich unerwünschte Dateien:
 
-Reject bad shortcuts.
+    tc_all_in_one.lua
+    tc_moose.lua
+    tc_mist.lua
+    tc_ctld.lua
+    tc_ctld_all_in_one.lua
+    tc_ctld_bridge.lua
+    tc_logistics_all_in_one.lua
 
-Keep documentation synchronized.
+Eine fachliche Datei darf intern ein Framework verwenden.
 
-Prefer maintainability.
-
----
-
-# 21. Forbidden Actions
-
-Never modify vendor framework.
-
-Never invent undocumented architecture.
-
-Never merge unrelated changes.
-
-Never remove documentation.
-
-Never replace modular systems with monolithic files.
-
-Never create:
-
-tc_all_in_one.lua
-
-tc_moose.lua
-
-tc_mist.lua
-
-tc_ctld.lua
+Der Dateiname bleibt trotzdem fachlich.
 
 ---
 
-# 22. Preferred Development Flow
+# 10. Aktive Systeme
 
-Read documentation
+Aktuelle bestätigte Versionen:
 
-↓
+    Airbase Scanner      v0.2.2
+    ZoneFactory          v0.2.0
+    CaptureSystem        v0.2.2
+    PersistenceSystem    v0.2.6
+    LogisticsDelivery    v0.2.1
+    FobSystem            v0.2.1
+    MissionGenerator     v0.2.3
+    AICapManager         v0.2.1
+    F10Menu              v0.2.3
+    CTLD                 1.6.1
 
-Understand architecture
+Wenn Dokumentation oder eingebettete Mission eine andere Version zeigt:
 
-↓
+    nicht raten
 
-Implement one change
+sondern:
 
-↓
-
-Review
-
-↓
-
-Test
-
-↓
-
-Update documentation
-
-↓
-
-Commit
-
-↓
-
-Continue
+    aktuellen Source- und Missionsstand prüfen
 
 ---
 
-# 23. Definition of Done
+# 11. Architekturgrenze zu Frameworks
 
-A task is complete when:
+Verbindliche Trennung:
 
-Implementation finished
+    Theater Command
+    =
+    Campaign Logic
+    Decision Layer
+    State Owner
 
-Architecture respected
+Frameworks:
 
-Documentation updated
+    CTLD
+    MOOSE
+    Skynet IADS
+    MIST
 
-Testing completed
+sind:
 
-Logs verified
+    Execution Layer / technische Werkzeuge
 
-User approved
+Beispiele:
 
-Commit prepared
+Theater Command entscheidet:
+
+- welche Mission benötigt wird
+- welche Zone relevant ist
+- welcher Hub Versorgung benötigt
+- welcher FOB gebaut werden soll
+- wo CAP benötigt wird
+- welche Operation erfolgreich war
+- welche Folgen persistiert werden
+
+Frameworks führen reale DCS-Aktionen aus.
 
 ---
 
-# 24. Final Principle
+# 12. State-first Architecture
 
-Protect the long-term architecture.
+Neue Systeme grundsätzlich state-first entwickeln.
 
-Every decision should improve maintainability.
+Bevor reale Framework-Nebenwirkungen aktiviert werden:
 
-Every implementation should move Theater Command closer to becoming a complete autonomous campaign engine rather than solving only today's task.
+    State definieren
+    -> State erzeugen
+    -> State sichtbar machen
+    -> State testen
+    -> Dirty-Semantik prüfen
+    -> Framework-Pfad isoliert testen
+    -> Framework anbinden
+    -> Ergebnis validieren
+    -> State aktualisieren
+    -> Persistence
+
+Keine reale Spawn-/Cargo-/IADS-Orchestrierung einführen, bevor der betreffende State-Pfad verstanden ist.
+
+---
+
+# 13. State Ownership
+
+Langfristiger Kampagnenstate gehört Theater Command.
+
+Nicht einem Vendor-Framework.
+
+Beispiel CTLD:
+
+Nicht:
+
+    vollständige CTLD-Runtime
+    =
+    Campaign State
+
+Sondern:
+
+    Auftrag
+    -> CTLD-Ausführung
+    -> Ergebnisvalidierung
+    -> TC.State
+    -> Dirty
+    -> Persistence
+
+Vendor-Runtime kann temporäre Daten enthalten, die nicht persistiert werden dürfen.
+
+---
+
+# 14. Dirty-State-Regel
+
+Persistenzrelevante fachliche Mutationen müssen Dirty markieren.
+
+Zentral:
+
+    TC.State.Persistence.dirty
+    TC.State.Persistence.dirtyReason
+    TC.State.Persistence.dirtyAt
+
+Grundregeln:
+
+    echte Mutation
+    -> Dirty
+
+    reiner Read
+    -> kein Dirty
+
+    echter No-Op
+    -> kein Dirty
+
+Priority 3 hat diese Semantik für die aktuell relevanten Systeme abgesichert.
+
+---
+
+# 15. Priority 3
+
+Priority 3 ist abgeschlossen.
+
+Nicht erneut vollständig auditieren, solange kein neuer technischer Anlass besteht.
+
+Bestätigt:
+
+    Capture Getter Read-Neutrality
+    Capture Ownership No-Op
+    LogisticsDelivery Read-Neutrality
+    FobSystem Read-Neutrality
+    MissionGenerator Dirty-Coverage-Audit
+    AICapManager Read-Neutrality
+
+Später neu verdrahtete Lifecycle-Pfade müssen trotzdem gezielt getestet werden.
+
+Beispiel:
+
+    AICapManager.reactToActiveMissions()
+
+ist aktuell nicht produktiv verdrahtet und muss bei späterer Aktivierung erneut geprüft werden.
+
+---
+
+# 16. Persistence
+
+Persistence ist ein internes Hintergrundsystem.
+
+Aktuelle Version:
+
+    v0.2.6
+
+Bestätigt:
+
+- Save
+- Read-back
+- Compile
+- Evaluate
+- Validation
+- kontrollierter Import
+- dirty-aware Background Autosave
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`
+- Retry
+
+Verbindlich:
+
+    productiveRestore=false
+
+Produktiver Startup-Restore ist noch nicht freigegeben.
+
+Nicht behaupten, dass die Kampagne bereits automatisch über Missionsneustarts fortgesetzt wird.
+
+---
+
+# 17. Restore
+
+Technische Importfähigkeit ist nicht dasselbe wie produktiver Restore.
+
+Vor:
+
+    productiveRestore=true
+
+müssen mindestens geklärt werden:
+
+- Restore-/Initialisierungsreihenfolge
+- Save-Versionierung
+- Save-Kompatibilität
+- Framework-Rekonstruktion
+- End-to-End-Restore-Test
+
+Kein AI-Agent aktiviert produktiven Restore ohne einen expliziten, getesteten Entwicklungsschritt.
+
+---
+
+# 18. Mission Editor
+
+Der Mission Editor ist Bühne.
+
+Er enthält beziehungsweise stellt bereit:
+
+- Karte
+- Koalitionen
+- Client-Slots
+- Gruppen
+- Templates
+- Trigger
+- Trigger-Zonen
+- Wegpunkte
+- native Tasks
+- Statics
+- FARPs
+- Embedded Lua Resources
+
+Nicht in große Triggerketten verlagern:
+
+- Campaign Logic
+- Capture Logic
+- AI Commander
+- Persistence
+- Mission Generator
+- Logistics Decision Logic
+
+---
+
+# 19. Aktuelle Mission
+
+Technische Hauptmission:
+
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz
+
+Isolierte erfolgreiche CTLD-Testmission:
+
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz
+
+Testmission und DEV-Mission sind nicht gleichzusetzen.
+
+Erkenntnisse werden erst nach Test und Bewertung kontrolliert übernommen.
+
+---
+
+# 20. Embedded Resource Rule
+
+`DO SCRIPT FILE` bettet Lua-Dateien in die `.miz` ein.
+
+Daher gilt:
+
+    Repository geändert
+    !=
+    Embedded Mission Resource automatisch geändert
+
+Nach Source-Änderungen:
+
+- relevante Embedded-Ressource aktualisieren
+- Mission speichern
+- Missionsstand erneut prüfen
+- bei kritischen Änderungen Source-/Embedded-Match verifizieren
+
+Der erfolgreiche Embedded Resource Audit vom 2026-09-12 gilt nur für den damals geprüften Stand.
+
+---
+
+# 21. CTLD aktueller Stand
+
+CTLD:
+
+    Version 1.6.1
+
+Am 2026-09-29 praktisch bestätigt:
+
+    Runtime-Zonenregistrierung
+    KI-Transporterregistrierung
+    automatischer Pickup
+    Flug
+    Off-Airfield-Landung
+    automatischer Dropoff
+    reale Blue-Bodengruppe
+
+Getesteter Transporter:
+
+    Mi-8
+
+Getestete Unit:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
+
+Bestandener Pfad gilt für den getesteten Aufbau.
+
+Nicht pauschal auf alle Transporter oder Missionskonfigurationen verallgemeinern.
+
+---
+
+# 22. CTLD-Zonen
+
+Bestätigter Pickup:
+
+    CTLD_PICKUP_BLUE_AKROTIRI_01
+
+Technischer Test-Dropoff:
+
+    CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01
+
+Reservierter späterer produktiver FOB-Dropoff:
+
+    CTLD_DROPOFF_BLUE_ERCAN_FOB_01
+
+Normalisierte Runtime-Einträge können nach der initialen CTLD-Initialisierung ergänzt werden.
+
+Eine erneute Ausführung von:
+
+    ctld.initialize()
+
+war für den getesteten Pfad nicht erforderlich.
+
+Nicht daraus ableiten, dass `ctld.initialize()` generell verboten wäre.
+
+---
+
+# 23. CTLD transportPilotNames
+
+Für den getesteten KI-Transportpfad musste der exakte Unit-Name in:
+
+    ctld.transportPilotNames
+
+registriert sein.
+
+Die spätere Theater-Command-Integration muss diese Registrierung:
+
+- automatisch
+- idempotent
+- ohne Duplikate
+- lifecycle-sicher
+
+durchführen.
+
+Keine direkte Manipulation des CTLD-Onboard-State als Ersatz für einen echten Transportpfad.
+
+---
+
+# 24. CTLD Landing
+
+Erfolgreich getestet:
+
+    normaler Turning Point
+    +
+    Perform Task -> Land
+
+Land Task:
+
+    duration=300
+    durationFlag=true
+
+Für den getesteten Truppentransport war kein FARP erforderlich.
+
+Der vorherige ungebundene:
+
+    Land / Landing
+
+Waypoint führte nicht zu einem vollständigen erfolgreichen Transportzyklus.
+
+Die genaue Ursache dieses früheren Verhaltens ist nicht abschließend bewiesen.
+
+Keine stärkere Kausalbehauptung daraus ableiten.
+
+---
+
+# 25. CTLD RepackCommandsPath
+
+Beim Grounded-Übergang trat genau einmal auf:
+
+    CTLD.lua:6150:
+    attempt to get length of local 'RepackCommandsPath' (a nil value)
+
+Kontext:
+
+    updateRepackMenu
+    updateRepackMenuOnlanding
+
+Pickup und Dropoff wurden trotzdem erfolgreich abgeschlossen.
+
+Nicht als bewiesen behandeln:
+
+- dass der Fehler harmlos ist
+- dass der betreffende Scheduler danach normal weiterläuft
+- dass der Scheduler definitiv beendet wurde
+
+Letzteres ist nur eine mögliche Source-basierte Folgerung und kein direkter Runtime-Beweis.
+
+Vendor-Code wird nicht gepatcht.
+
+---
+
+# 26. CTLD-Testgrenze
+
+Der erfolgreiche Test war:
+
+    KI-Truppentransport
+
+Nicht damit bewiesen:
+
+- Crate Spawn
+- Crate Loading
+- Sling Load
+- Crate Drop
+- Supply Cargo
+- Engineering Cargo
+- Repair Cargo
+- Fuel Cargo
+- Ammo Cargo
+- FOB Core
+- realer FOB-Bau
+- LogisticsDelivery-Rückkopplung
+- FobSystem-Rückkopplung
+- CTLD-Restore
+- Multiplayer
+
+Framework-PoC und produktive Integration müssen sprachlich klar getrennt bleiben.
+
+---
+
+# 27. Aktuelle Priority 4
+
+Aktueller Entwicklungsbereich:
+
+    produktive CTLD-Integration vorbereiten
+
+Vor neuem produktiven Code klären:
+
+1. Welche fachliche Komponente besitzt einen Transportauftrag?
+2. Welche Komponente registriert CTLD-Zonen?
+3. Welche Komponente registriert KI-Transporter?
+4. Wann erfolgt die Registrierung?
+5. Wie bleibt sie idempotent?
+6. Wie wird der Transporter-Lifecycle behandelt?
+7. Wie wird Erfolg erkannt?
+8. Wie wird Fehler erkannt?
+9. Wie wird `RepackCommandsPath` behandelt?
+10. Welche Ergebnisse werden in `TC.State` geschrieben?
+11. Welche Mutationen setzen Dirty?
+12. Welche Daten bleiben runtime-only?
+13. Was muss später nach Restore rekonstruiert werden?
+
+Erst danach eine konkrete Source-Datei festlegen.
+
+---
+
+# 28. Keine voreilige neue CTLD-Datei
+
+Es existiert aktuell keine verbindlich beschlossene neue Integrationsdatei für CTLD.
+
+Nicht eigenmächtig anlegen:
+
+    tc_ctld.lua
+    tc_ctld_bridge.lua
+
+oder ähnliche generische Framework-Dateien.
+
+Zuerst Verantwortung und fachliche Aufgabe definieren.
+
+Dann Dateiname nach Aufgabe wählen.
+
+---
+
+# 29. Tool-Rollen
+
+Die Entwicklungswerkzeuge haben klar getrennte Rollen.
+
+Sie sind keine Runtime-Abhängigkeiten der späteren Kampagne.
+
+---
+
+# 30. ChatGPT
+
+Rolle:
+
+- Projektkoordination
+- Architektur
+- GitHub-Audit
+- Testplanung
+- Ergebnisbewertung
+- Dokumentationsführung
+- Definition des nächsten Einzelschritts
+- Vorbereitung präziser Arbeitsaufträge
+
+ChatGPT soll projektweite Entscheidungen gegen den aktuellen GitHub-Stand prüfen.
+
+---
+
+# 31. Claude + dcs-mcp
+
+Bevorzugter Pfad für:
+
+- `.miz`-Analyse
+- Mission-Editor-Strukturanalyse
+- Gruppen
+- Units
+- Zonen
+- Wegpunkte
+- Tasks
+- Ressourcen
+- gezielte Missionsänderungen
+- gespeicherten `.miz`-Audit
+
+Aktuelle Version:
+
+    dcs-mcp 0.9.11
+
+Terrain Store:
+
+    C:\Users\Paul\AppData\Local\dcs-mcp\terrain
+
+Syria-Terrain:
+
+    installiert
+
+Vor Änderungen:
+
+    aktuelle Mission zuerst lesen
+
+Keine Mission blind neu aufbauen.
+
+---
+
+# 32. Claude Code + DCS-SMS
+
+Bevorzugter Pfad für lokale Runtime-Diagnose.
+
+DCS-SMS:
+
+    0.27.2
+
+Hook:
+
+    me-bridge-0.27.2
+
+Verifiziertes Installationsverzeichnis:
+
+    C:\Tools\dcs-sms
+
+Claude-Code-Skill:
+
+    C:\Users\Paul\.claude\skills\dcs-sms\SKILL.md
+
+Verwendung:
+
+- Mission-Editor-Status
+- Runtime-Lua
+- Theater-Command-Live-State
+- CTLD-Live-State
+- Unit-/Group-State
+- Position
+- Geschwindigkeit
+- Grounded-/Airborne-State
+- Logs
+- Runtime-Regressionen
+
+Nicht behaupten, dass ein bestimmter Executable-Pfad verifiziert ist, wenn nur das Installationsverzeichnis bestätigt wurde.
+
+---
+
+# 33. DCS
+
+DCS selbst bleibt der autoritative Runtime-Beweis.
+
+Nur die reale Runtime kann zuverlässig beweisen:
+
+- Taxi
+- Takeoff
+- Navigation
+- Landung
+- Pickup
+- Dropoff
+- Spawn
+- Scheduler-Verhalten
+- tatsächliche AI-Reaktion
+
+Offline-Analyse und Runtime-Beweis nicht vermischen.
+
+---
+
+# 34. Verbindlicher Mission-Editor-/Framework-Workflow
+
+Für `.miz`- oder Framework-Arbeit:
+
+    GitHub prüfen
+    -> Ziel definieren
+    -> Testkriterium definieren
+    -> aktuelle .miz mit Claude + dcs-mcp lesen
+    -> nur konkrete Änderung durchführen
+    -> Mission speichern
+    -> gespeicherte Mission erneut auditieren
+    -> Runtime-Test vorbereiten
+    -> Claude Code + DCS-SMS verwenden
+    -> reales DCS-Verhalten prüfen
+    -> Ergebnis bewerten
+    -> GitHub aktualisieren
+
+Keine Paralleländerungen ohne Notwendigkeit.
+
+---
+
+# 35. Testevidenz
+
+Unterscheide immer:
+
+    Source-Befund
+    gespeicherte Missionsstruktur
+    Runtime-Beobachtung
+    Inferenz
+
+Beispiele:
+
+Gespeicherter `Perform Task -> Land`:
+
+    Missionsstruktur
+
+Tatsächliche Off-Airfield-Landung:
+
+    Runtime-Beweis
+
+Vermutung, dass ein Scheduler nach unbehandeltem Lua-Fehler endet:
+
+    Inferenz
+
+Diese Kategorien nicht sprachlich vermischen.
+
+---
+
+# 36. Persistence-Schutz bei isolierten Tests
+
+Wenn ein Framework-Test produktiven Campaign-State beeinflussen könnte:
+
+    aktuellen Save-Hash prüfen
+    -> Backup
+    -> Backup-Hash prüfen
+    -> produktiven Save ReadOnly setzen
+    -> ReadOnly bestätigen
+    -> Test durchführen
+    -> DCS vollständig beenden
+    -> Save erneut hashen
+    -> Hash vergleichen
+    -> nur bei Match ReadOnly entfernen
+    -> final erneut prüfen
+
+Der CTLD-Test vom 2026-09-29 wurde auf diese Weise abgesichert.
+
+---
+
+# 37. Git-Regeln
+
+Vor einer Änderung:
+
+- aktuellen GitHub-Stand prüfen
+- betroffene Dokumentation lesen
+- tatsächliche Datei prüfen
+
+Nach einer Änderung:
+
+- Inhalt kontrollieren
+- genau einen passenden Commit-Text vorbereiten
+- Nutzer die Änderung durchführen lassen, wenn im GitHub-Web-Workflow gearbeitet wird
+
+Nicht automatisch:
+
+- committen
+- pushen
+- mehrere Dateien verändern
+
+außer der Nutzer hat dies ausdrücklich beauftragt.
+
+---
+
+# 38. Dokumentationsregeln
+
+Dokumentation ist Teil der Architektur.
+
+Nach einem bestätigten technischen Meilenstein prüfen:
+
+- README
+- ROADMAP
+- TASKS
+- ARCHITECTURE
+- CHANGELOG
+- betroffene `docs/`
+- betroffene `src/.../README.md`
+- betroffene `mission_editor/`-Dokumentation
+
+Nicht jede kleine Codeänderung erfordert sofort einen kompletten Dokumentationsdurchlauf.
+
+Am Ende einer Entwicklungsphase muss der Projektstand jedoch konsistent sein.
+
+---
+
+# 39. Keine unbelegten Aussagen
+
+Nicht aus Vermutungen Fakten machen.
+
+Beispiele:
+
+Nicht schreiben:
+
+    der Scheduler ist definitiv beendet
+
+wenn nur ein unbehandelter Fehler beobachtet wurde.
+
+Nicht schreiben:
+
+    CTLD Cargo funktioniert
+
+wenn nur Truppentransport getestet wurde.
+
+Nicht schreiben:
+
+    Mi-8MT
+
+wenn nur:
+
+    Mi-8
+
+belegt ist.
+
+Nicht schreiben:
+
+    vollständige produktive CTLD-Integration
+
+wenn nur ein isolierter Framework-PoC bestanden ist.
+
+---
+
+# 40. Naming
+
+Naming-Regeln stehen in:
+
+    NAMING_CONVENTIONS.md
+
+Mission-Editor-spezifische Regeln stehen zusätzlich in:
+
+    MISSION_EDITOR_SETUP.md
+    mission_editor/
+
+Keine neuen Namensschemata erfinden.
+
+Bestehende Namespaces und Präfixe beibehalten.
+
+---
+
+# 41. Lua-Stil
+
+Lua-Code muss:
+
+- modular
+- lesbar
+- defensiv
+- nachvollziehbar
+- logbar
+- state-aware
+- persistence-aware
+
+sein.
+
+Styleguide:
+
+    LUA_STYLEGUIDE.md
+
+Keine großen monolithischen Dateien ohne belegten fachlichen Bedarf.
+
+---
+
+# 42. Logging
+
+Logging soll:
+
+- relevante Zustände sichtbar machen
+- Debugging ermöglichen
+- Fehlerursachen eingrenzen
+- keine unnötige Spam-Flut erzeugen
+
+Bevorzugt:
+
+    strukturierte Präfixe
+    klare Module
+    relevante IDs
+    aussagekräftige Reasons
+
+---
+
+# 43. Performance
+
+Vermeiden:
+
+- unnötiges Polling
+- große wiederholte Vollsuchen
+- teure Schleifen ohne Bedarf
+- permanente Framework-Abfragen ohne Zustandsänderung
+
+Bevorzugen:
+
+- Events
+- Caches
+- inkrementelle Updates
+- gezielte Scheduler
+- idempotente Operationen
+
+---
+
+# 44. Definition of Done
+
+Eine technische Aufgabe ist erst abgeschlossen, wenn die für den Schritt relevanten Punkte erfüllt sind.
+
+Je nach Aufgabe:
+
+- Architektur verstanden
+- eine konkrete Änderung durchgeführt
+- Syntax geprüft
+- Missionsstruktur geprüft
+- Runtime getestet
+- Logs geprüft
+- State geprüft
+- Dirty-Semantik geprüft
+- Persistence-Auswirkung geprüft
+- Cleanup durchgeführt
+- Dokumentation synchronisiert
+- Nutzer hat Ergebnis bestätigt
+- Commit vorbereitet beziehungsweise durchgeführt
+
+Nicht jeder Schritt benötigt alle Punkte.
+
+Die relevanten Punkte dürfen aber nicht übersprungen werden.
+
+---
+
+# 45. Aktueller nächster Architekturübergang
+
+Aktueller bestätigter Stand:
+
+    stabiler state-first Kampagnenkern
+    +
+    dirty-aware Persistence
+    +
+    abgeschlossene Priority-3-Dirty-Coverage
+    +
+    bestandener CTLD-KI-Truppentransport-PoC
+
+Nächster Übergang:
+
+    kontrollierte produktive CTLD-Integration
+
+Dabei bleibt verbindlich:
+
+    Theater Command = Decision / State Layer
+    CTLD = Execution Layer
+
+---
+
+# 46. Final Principle
+
+Langfristige Architektur hat Vorrang vor einem schnellen lokalen Workaround.
+
+Jede Änderung soll Theater Command näher an ein autonomes Kampagnensystem bringen.
+
+Nicht nur an eine funktionierende Einzelmission.
+
+Verbindlich:
+
+    modular
+    state-first
+    testbar
+    persistierbar
+    framework-unabhängig strukturiert
+    vendor-safe
+    dokumentiert
