@@ -3,27 +3,31 @@
 Diese Datei dokumentiert die wichtigsten technischen Änderungen, getesteten Zwischenstände und Architekturentscheidungen für **Theater Command DCS**.
 
 Projekt:
+
 **Theater Command DCS**
 
 Erste Kampagne:
+
 **Operation Levant Reclamation**
 
 Map:
+
 **Syria**
 
 Grundprinzip:
 
 - Mission Editor = Bühne
 - Lua = Kampagnensystem
-- GitHub = Projektgedächtnis
+- GitHub = Projektgedächtnis / Source of Truth
+- DCS Runtime = autoritativer Verhaltensbeweis
 
 ---
 
 ## 2026-09-29
 
-### CTLD-KI-Truppentransport vollständig praktisch bestätigt
+### CTLD-KI-Truppentransport für getesteten Aufbau praktisch bestätigt
 
-Erstmals wurde ein vollständiger automatischer CTLD-KI-Truppentransport in einer isolierten DCS-Testmission praktisch bestätigt.
+In einer isolierten DCS-Testmission wurde für den getesteten Aufbau ein vollständiger automatischer CTLD-KI-Truppentransport praktisch bestätigt.
 
 Testmission:
 
@@ -41,40 +45,40 @@ Testunit:
 
 `TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01`
 
-Testfahrzeug:
+Luftfahrzeug:
 
 - Mi-8
 
-Bestätigter Gesamtpfad:
+Bestätigter Pfad:
 
 `Pickup -> Taxi -> Takeoff -> Transit -> Off-Airfield-Anflug -> Landung -> automatischer CTLD-Dropoff -> reale Blue-Bodengruppe`
 
-Damit ist erstmals ein realer Vendor-Framework-Pfad außerhalb des rein state-first Theater-Command-Kerns vollständig praktisch durchlaufen worden.
+Der Test ist ein isolierter **Framework-Proof-of-Concept**.
 
-Der Test ist ein **Framework-Proof-of-Concept**.
+Er bestätigt die technische CTLD-Fähigkeit für diesen getesteten Aufbau.
 
-Er ist noch keine produktive Theater-Command-CTLD-Integration.
+Er bestätigt noch keine produktive Theater-Command-CTLD-Orchestrierung.
 
 ---
 
-### CTLD Pickup-/Dropoff-Zonen zur Laufzeit erfolgreich registriert
+### CTLD Pickup-/Dropoff-Zonen zur Laufzeit registriert
 
 Verwendeter Pickup:
 
 `CTLD_PICKUP_BLUE_AKROTIRI_01`
 
-Verwendeter Test-Dropoff:
+Verwendeter technischer Test-Dropoff:
 
 `CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01`
 
 Bestätigt:
 
 - CTLD `1.6.1` war bereits initialisiert.
-- Pickup-Zone wurde danach als normalisierter Eintrag in `ctld.pickupZones` ergänzt.
-- Dropoff-Zone wurde danach als normalisierter Eintrag in `ctld.dropOffZones` ergänzt.
-- die Einträge wurden aus dem CTLD-Live-State zurückgelesen.
+- die Pickup-Zone wurde danach als normalisierter Eintrag in `ctld.pickupZones` ergänzt.
+- die Dropoff-Zone wurde danach als normalisierter Eintrag in `ctld.dropOffZones` ergänzt.
+- beide Einträge wurden aus dem CTLD-Live-State zurückgelesen.
 - CTLD verwendete beide Einträge anschließend tatsächlich.
-- `ctld.initialize()` musste dafür nicht erneut ausgeführt werden.
+- eine erneute Ausführung von `ctld.initialize()` war für diesen getesteten Runtime-Pfad nicht erforderlich.
 
 Temporärer Pickup-Eintrag:
 
@@ -86,19 +90,29 @@ Temporärer Dropoff-Eintrag:
 
 Architekturfolgerung:
 
-Eine spätere Theater-Command-Integration kann CTLD-Zonen idempotent nach der Vendor-Initialisierung registrieren, ohne CTLD selbst zu verändern.
+Eine spätere Theater-Command-Integration kann normalisierte CTLD-Zonen nach der bestehenden Vendor-Initialisierung ergänzen.
+
+Diese Registrierung muss produktiv:
+
+- idempotent
+- nachvollziehbar
+- lifecycle-sicher
+
+implementiert werden.
+
+Aus dem Test wird nicht abgeleitet, dass `ctld.initialize()` generell niemals erneut aufgerufen werden dürfte.
 
 ---
 
-### CTLD-KI-Transporter benötigt `transportPilotNames`
+### CTLD-KI-Transporter benötigt Registrierung in `transportPilotNames`
 
-Wichtiger Runtime-Befund:
+Source- und Runtime-Befund:
 
-`ctld.checkAIStatus()` verarbeitet den getesteten KI-Transporter nur, wenn dessen exakter Unit-Name im relevanten CTLD-AI-Pfad in:
+`ctld.checkAIStatus()`
+
+verarbeitet den getesteten KI-Transporter im relevanten CTLD-AI-Pfad über:
 
 `ctld.transportPilotNames`
-
-vorhanden ist.
 
 Getestete Unit:
 
@@ -107,14 +121,12 @@ Getestete Unit:
 Vor temporärer Registrierung:
 
 - `108` Einträge
-- Testunit nicht vorhanden
+- Testunit nicht enthalten
 
-Nach Registrierung:
+Nach idempotenter temporärer Registrierung:
 
 - `109` Einträge
-- Testunit genau einmal vorhanden
-
-Die Registrierung erfolgte nur, wenn der Name zuvor nicht vorhanden war.
+- Testunit genau einmal enthalten
 
 Architekturfolgerung:
 
@@ -124,38 +136,39 @@ Eine produktive Theater-Command-Integration muss vorgesehene KI-Transporter:
 - idempotent
 - ohne Duplikate
 - anhand des exakten Unit-Namens
+- unter Berücksichtigung des Transporter-Lifecycles
 
 bei CTLD registrieren.
 
-Keine direkte Manipulation des CTLD-Bordzustands ist dafür erforderlich.
+Dafür war keine direkte Manipulation des CTLD-Onboard-State erforderlich.
 
 ---
 
 ### Automatischer CTLD-Pickup bestanden
 
-Nach nativer Aktivierung der KI-Gruppe wurde der Pickup vollständig durch CTLD durchgeführt.
+Nach nativer Aktivierung der KI-Gruppe erfolgte der Pickup automatisch über CTLD.
 
 Bestätigt:
 
-- 16 Soldaten wurden automatisch aufgenommen.
-- Pickup-Counter wechselte von `10000` auf `9999`.
-- der Transporter befand sich innerhalb der Pickup-Zone.
+- `16` Soldaten wurden aufgenommen.
+- der Pickup-Counter wechselte von `10000` auf `9999`.
+- der Transporter befand sich im Pickup-Bereich.
 - keine direkte Manipulation von `ctld.inTransitTroops`.
-- kein manuelles Laden.
+- kein manuelles CTLD-Loading.
 - kein Teleport.
 - keine Runtime-Routenänderung.
 
-Damit ist der CTLD-AI-Pickup praktisch bestätigt.
+Damit ist der automatische KI-Pickup für den getesteten Aufbau praktisch bestätigt.
 
 ---
 
 ### Off-Airfield-Landung über Perform Task `Land` bestanden
 
-Der erfolgreiche Test verwendete einen normalen DCS-Wegpunkt:
+Der erfolgreiche Missionsaufbau verwendete:
 
-`Turning Point`
+`normaler Turning Point`
 
-mit einem nativen:
+plus:
 
 `Perform Task -> Land`
 
@@ -183,19 +196,24 @@ Die KI führte selbständig aus:
 - Takeoff
 - Transit
 - Descent
-- Off-Airfield-Landung
+- Off-Airfield-Anflug
+- Landung
 
 Bestätigte minimale Entfernung zum Dropoff-Zentrum:
 
 - ungefähr `1.06 m`
 
-Die Maschine blieb anschließend am Boden.
+Für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 
-Ein Invisible FARP war für diesen Transportpfad nicht erforderlich.
+Der frühere ungebundene Wegpunkt vom Typ:
 
-Der frühere ungebundene `Land / Landing`-Waypoint-Ansatz hatte keinen vollständigen erfolgreichen Transportzyklus geliefert.
+`Land / Landing`
 
-Der neue Test isoliert die Landemethode als entscheidenden Unterschied, beweist aber nicht mathematisch die genaue Ursache des früheren Turnback-Verhaltens.
+hatte keinen vollständigen erfolgreichen Transportzyklus ergeben.
+
+Der erfolgreiche Test zeigt die Landemethode als wichtigen Unterschied zwischen den beiden Versuchsaufbauten.
+
+Die genaue Ursache des früheren Turnback-Verhaltens ist dadurch nicht abschließend bewiesen.
 
 ---
 
@@ -205,7 +223,7 @@ Nach der Landung führte CTLD den Dropoff automatisch aus.
 
 Bestätigt:
 
-- `troops` verschwand aus dem CTLD-In-Transit-Zustand der Unit.
+- der `troops`-Inhalt verschwand aus dem CTLD-In-Transit-State der Testunit.
 - `ctld.droppedTroopsBLUE` erhielt genau einen neuen Eintrag.
 - eine reale Blue-Bodengruppe wurde erzeugt.
 
@@ -232,18 +250,18 @@ Nicht verwendet wurden:
 - manuelles CTLD-Unload
 - direkte Bordzustandsmanipulation
 - Teleport
-- Runtime-Rerouting
+- Runtime-Routenänderung
 - Runtime-Taskänderung
 
-Damit ist der vollständige technische CTLD-Zyklus bestätigt:
+Damit ist für den getesteten Aufbau praktisch bestätigt:
 
-`Pickup -> Flug -> Off-Airfield-Landung -> Dropoff -> Bodengruppe`
+`Pickup -> Transport -> Off-Airfield-Landung -> automatischer Dropoff -> Bodengruppe`
 
 ---
 
-### CTLD `RepackCommandsPath`-Fehler reproduziert
+### CTLD `RepackCommandsPath`-Fehler genau einmal beim Touchdown beobachtet
 
-Beim Grounded-Übergang des registrierten KI-Transporters trat reproduzierbar auf:
+Beim Touchdown des registrierten KI-Transporters trat im erfolgreichen Test genau einmal auf:
 
 `CTLD.lua:6150: attempt to get length of local 'RepackCommandsPath' (a nil value)`
 
@@ -254,23 +272,34 @@ Stack-Kontext:
 
 Source-/Runtime-Einordnung:
 
-- der KI-Transporter ist über `ctld.transportPilotNames` im CTLD-AI-Pfad registriert.
-- der Vendor-Landemenüpfad kann deshalb auch diese Unit verarbeiten.
-- `ctld.vehicleCommandsPath[_unitName]` existiert typischerweise für Player-/F10-Menüpfade.
-- für einen reinen KI-Transporter kann dieser Wert `nil` sein.
-- der Vendor-Code behandelt diesen Zustand an dieser Stelle nicht robust.
+- der KI-Transporter war in `ctld.transportPilotNames` registriert.
+- damit erreichte die Unit auch einen CTLD-Landing-/Menüpfad.
+- `ctld.vehicleCommandsPath[_unitName]` ist für reine KI-Units nicht zwangsläufig vorhanden.
+- ein daraus abgeleiteter `RepackCommandsPath` kann deshalb `nil` sein.
+- der Vendor-Code behandelt diesen Zustand an der beobachteten Stelle nicht robust.
 
-Der CTLD-Pickup-/Dropoff-Pfad wurde trotzdem erfolgreich abgeschlossen.
+Der Fehler wurde in diesem Test genau einmal beobachtet.
 
-Daraus wird ausdrücklich **nicht** abgeleitet, dass der Fehler langfristig harmlos ist.
+Er wiederholte sich während der anschließenden Bodenphase nicht.
 
-Insbesondere ist vor produktiver Integration source-backed zu prüfen, ob der unbehandelte Fehler den betreffenden Scheduler beziehungsweise spätere Repack-Menü-Aktualisierungen beendet.
+Der automatische Pickup-/Dropoff-Pfad wurde trotzdem erfolgreich abgeschlossen.
 
-Verbindliche Entscheidung:
+Daraus wird ausdrücklich nicht abgeleitet:
 
-- `vendor/ctld/CTLD.lua` wird nicht gepatcht.
+- dass der Fehler harmlos ist
+- dass spätere Repack-Menü-Aktualisierungen sicher funktionieren
+- dass der betreffende Scheduler definitiv weiterläuft
+- dass der betreffende Scheduler definitiv beendet wurde
 
-Eine Lösung muss durch Theater-Command-seitige Konfiguration beziehungsweise Integrationslogik erfolgen.
+Dass ein unbehandelter Lua-Fehler den betreffenden Scheduler-Pfad beendet haben könnte, bleibt eine source-basierte technische Inferenz und ist kein direkter Runtime-Beweis.
+
+Verbindlich:
+
+`vendor/ctld/CTLD.lua`
+
+wird dafür nicht gepatcht.
+
+Eine spätere Lösung muss Theater-Command-seitig beziehungsweise über eine saubere Konfigurations-/Integrationsstrategie erfolgen.
 
 ---
 
@@ -280,7 +309,7 @@ Der erfolgreiche Test war:
 
 - KI-Truppentransport
 
-Noch nicht getestet wurden:
+Nicht getestet wurden:
 
 - Crate Spawn
 - Crate Loading
@@ -294,9 +323,9 @@ Noch nicht getestet wurden:
 - FOB Build Crates
 - reale CTLD-FOBs
 
-Eine funktionierende Pickup-/Dropoff-Zonenregistrierung bedeutet nicht automatisch, dass die CTLD-Crate-Wirtschaft bereits funktionsfähig ist.
+Eine funktionierende Pickup-/Dropoff-Zonenregistrierung und ein erfolgreicher Truppentransport bedeuten nicht automatisch, dass die CTLD-Crate-/Cargo-Wirtschaft bereits funktioniert.
 
-Cargo-/Crate-Integration bleibt ein separater zukünftiger Testbereich.
+Cargo-/Crate-Integration bleibt ein separater Entwicklungsbereich.
 
 ---
 
@@ -306,7 +335,7 @@ Produktive Save-Datei:
 
 `C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua`
 
-Vor dem Test wurde ein Backup angelegt:
+Vor dem Test angelegtes Backup:
 
 `C:\Users\Paul\Documents\TC_miz_backups\operation_levant_reclamation_save__pre_landtask_test_2026-09-29_100813.lua`
 
@@ -324,35 +353,35 @@ Größe:
 
 Während des Tests wurde die produktive Save-Datei temporär schreibgeschützt.
 
-Nach dem Test wurde der Hash zweimal kontrolliert.
-
-Bestätigt:
+Nach dem Test wurde bestätigt:
 
 - Größe unverändert
 - Änderungszeit unverändert
 - SHA-256 unverändert
 - produktiver Kampagnenstate nicht verändert
 
-Erst nach beendetem DCS wurde der Schreibschutz entfernt.
+Erst nach vollständig beendetem DCS wurde der Schreibschutz entfernt.
 
 Final:
 
 - `ReadOnly=False`
 - SHA-256 weiterhin identisch
 
-`productiveRestore=false` blieb unverändert.
+`productiveRestore=false`
+
+blieb unverändert.
 
 ---
 
 ### Priority 4 technisch konkretisiert
 
-Der bisher nur geplante Bereich:
+Der Bereich:
 
-`Priority 4 – CTLD-Integration vorbereiten`
+`Priority 4 – produktive CTLD-Integration vorbereiten`
 
-besitzt jetzt einen praktisch bestätigten Framework-Pfad.
+besitzt seit dem Test einen praktisch bestätigten Framework-Pfad.
 
-Bestanden sind:
+Für den getesteten Aufbau bestanden:
 
 - Runtime-Zonenregistrierung
 - KI-Transporterregistrierung
@@ -362,24 +391,33 @@ Bestanden sind:
 - automatischer Dropoff
 - reale Bodengruppe
 
-Noch offen ist die produktive Theater-Command-Orchestrierung.
+Noch offen:
 
-Der nächste Entwicklungsschritt ist deshalb nicht ein erneuter identischer Mi-8-Test.
-
-Vor produktivem Code müssen insbesondere geklärt werden:
-
-- fachliche Zuständigkeit unter `src/`
-- idempotente Zonenregistrierung
-- idempotente Transporterregistrierung
+- produktive Theater-Command-Orchestrierung
+- automatische TC-Zonenregistrierung
+- automatische TC-Transporterregistrierung
 - Transporter-Lifecycle
 - Auftragserzeugung
 - Ergebnisvalidierung
-- Rückkopplung in LogisticsDelivery
-- Rückkopplung in FobSystem
+- LogisticsDelivery-Rückkopplung
+- FobSystem-Rückkopplung
 - Dirty-/Persistence-Grenze
 - Behandlung von `RepackCommandsPath`
+- Crate-/Cargo-Pfad
 
-Keine generische `tc_ctld.lua`.
+Der nächste Schritt ist deshalb kein erneuter identischer Mi-8-PoC.
+
+Vor produktivem Code muss die Integrationsgrenze source-backed festgelegt werden.
+
+Keine generische:
+
+`tc_ctld.lua`
+
+oder:
+
+`tc_ctld_bridge.lua`
+
+wird vorschnell eingeführt.
 
 ---
 
@@ -398,13 +436,21 @@ Rolle:
 - Testplanung
 - Ergebnisbewertung
 - Definition des nächsten Einzelschritts
-- Vorbereitung präziser Claude-Arbeitsaufträge
+- Vorbereitung präziser Arbeitsaufträge
 
 #### Claude + dcs-mcp
 
 Verwendete Version:
 
 `dcs-mcp 0.9.11`
+
+Terrain Store:
+
+`C:\Users\Paul\AppData\Local\dcs-mcp\terrain`
+
+Syria-Terrain:
+
+- installiert
 
 Verwendung:
 
@@ -413,13 +459,11 @@ Verwendung:
 - Mission-Editor-Inhalte gezielt ändern
 - Gruppen
 - Units
-- Trigger Zones
+- Trigger-Zonen
 - Wegpunkte
 - Tasks
 - Airbase-Zuordnungen
 - gespeicherte Missionsdateien auditieren
-
-Syria-Terrain-Daten sind lokal installiert.
 
 #### Claude Code + DCS-SMS
 
@@ -431,9 +475,9 @@ Hook:
 
 `me-bridge-0.27.2`
 
-Lokale CLI:
+Verifiziertes Installationsverzeichnis:
 
-`C:\Tools\dcs-sms\dcs-sms.exe`
+`C:\Tools\dcs-sms`
 
 Lokaler Claude-Code-Skill:
 
@@ -443,14 +487,17 @@ Verwendung:
 
 - Mission-Editor-Status
 - laufende DCS-Runtime
-- Mission-Environment-Lua
+- Runtime-Lua
+- Theater-Command-Live-State
 - CTLD-Live-State
-- Unit-State
+- Unit-/Group-State
 - Position
 - Geschwindigkeit
 - Grounded-/Airborne-State
 - Logs
 - Runtime-Regressionen
+
+Aus dem aktuell bestätigten Stand wird kein exakter Executable-Pfad abgeleitet.
 
 #### Werkzeuggrenze
 
@@ -470,9 +517,7 @@ DCS selbst bleibt die autoritative Instanz für tatsächliches Simulatorverhalte
 
 ### Priority 3 im dokumentierten Umfang abgeschlossen
 
-Der am 2026-09-12 noch offene projektweite Dirty-Coverage-Bereich wurde anschließend vollständig read-only auditiert.
-
-Der Vier-System-Audit wurde am 2026-09-13 abgeschlossen.
+Der am 2026-09-12 noch offene Dirty-Coverage-Bereich wurde anschließend systematisch auditiert.
 
 Geprüft wurden:
 
@@ -480,6 +525,12 @@ Geprüft wurden:
 2. `src/logistics/tc_fob_system.lua`
 3. `src/missions/tc_mission_generator.lua`
 4. `src/ai/tc_ai_cap_manager.lua`
+
+Die daraus resultierenden aktiven Fixes und Runtime-Regressionen wurden bis zum:
+
+`2026-09-21`
+
+abgeschlossen.
 
 Ergebnis:
 
@@ -490,7 +541,7 @@ Ergebnis:
 - MissionGenerator ohne aktiven Missing-Dirty-Bug
 - latente Lifecycle-/No-Op-Punkte separat dokumentiert
 
-Die drei aktiven Probleme wurden am 2026-09-21 behoben und regressionsgetestet.
+Die drei aktiven Probleme wurden behoben und regressionsgetestet.
 
 ---
 
@@ -534,9 +585,13 @@ setzt weiterhin:
 
 `dirtyReason=logistics_delivery_created`
 
-Embedded Resource Audit und Runtime-Regression bestanden.
+Runtime-Regression:
 
-70/70 dokumentierte Prüfungen bestanden.
+- bestanden
+
+Dokumentierte Prüfungen:
+
+- `70/70`
 
 Rollback stellte den produktiven Ausgangszustand vollständig wieder her.
 
@@ -562,9 +617,9 @@ Lesende Statistik-/Summary-Pfade konnten persistierten FOB-State und Laufzeitfel
 
 Fix:
 
-- reine Statistikberechnung von persistierendem Update getrennt
+- reine Statistikberechnung vom persistierenden Update getrennt
 - Getter bleiben read-neutral
-- echte Mutationen behalten Dirty-Semantik
+- echte Mutationspfade behalten ihre Dirty-Semantik
 
 Bestätigte read-neutrale Pfade unter anderem:
 
@@ -585,9 +640,13 @@ setzt weiterhin:
 
 `dirtyReason=fob_created`
 
-Embedded Resource Audit und Runtime-Regression bestanden.
+Runtime-Regression:
 
-87/87 dokumentierte Prüfungen bestanden.
+- bestanden
+
+Dokumentierte Prüfungen:
+
+- `87/87`
 
 Rollback stellte den produktiven Ausgangszustand vollständig wieder her.
 
@@ -613,12 +672,12 @@ Problem:
 
 Fix:
 
-- neue reine Statistikberechnung
+- reine Statistikberechnung eingeführt
 - `getStatistics()` und `summary()` verändern keinen State
 - weitere Getter initialisieren keinen AI-State mehr
 - `updateStatistics()` bleibt als bewusster persistierender Mutationshelfer erhalten
 
-Bestätigt:
+Bestätigte read-neutrale Pfade:
 
 - `getStatistics()`
 - `summary()`
@@ -632,8 +691,6 @@ Bestätigt:
 - `getCancelledCaps()`
 - `getCapsBySide()`
 
-bleiben read-neutral.
-
 Positivtest:
 
 `setCapStatus()`
@@ -642,9 +699,13 @@ markiert bei echter Mutation weiterhin:
 
 `dirtyReason=ai_cap_record_changed`
 
-Embedded Resource Audit und Runtime-Regression bestanden.
+Runtime-Regression:
 
-99/99 dokumentierte Prüfungen bestanden.
+- bestanden
+
+Dokumentierte Prüfungen:
+
+- `99/99`
 
 Rollback stellte den produktiven Ausgangszustand vollständig wieder her.
 
@@ -664,13 +725,13 @@ Der read-only Audit fand keinen aktuell aktiven Missing-Dirty-Bug, der einen Cod
 
 Kein Fix wurde allein aus Vorsicht eingeführt.
 
-Der frühere Mission-Record-Verlust bleibt als widerlegte Diagnose dokumentiert.
+Der frühere vermeintliche Mission-Record-Verlust bleibt als widerlegte Diagnose dokumentiert.
 
 ---
 
 ### Priority 3 abgeschlossen, latente Punkte bleiben erhalten
 
-Priority 3 ist damit seit dem 2026-09-21 im Umfang des dokumentierten Audits und der daraus abgeleiteten aktiven Fixes abgeschlossen.
+Priority 3 ist seit dem 2026-09-21 im Umfang des dokumentierten Audits und der daraus abgeleiteten aktiven Fixes abgeschlossen.
 
 Dies ist keine pauschale Aussage, dass zukünftige oder derzeit unverdrahtete Lifecycle-Pfade automatisch fehlerfrei sind.
 
@@ -683,7 +744,7 @@ Weiter separat relevant bleiben unter anderem:
 - produktiver Persistence-Restore
 - spätere Framework-Rückkopplung
 
-Diese Punkte rechtfertigen keinen erneuten vollständigen Priority-3-Audit ohne neuen Anlass.
+Diese Punkte rechtfertigen keinen erneuten vollständigen Priority-3-Audit ohne neuen technischen Anlass.
 
 Nächster Projektbereich wurde danach:
 
@@ -693,182 +754,472 @@ Nächster Projektbereich wurde danach:
 
 ## 2026-09-12
 
-Diese Session hat die am 2026-08-04 offen gebliebene Mission-Record-Diagnose aufgelöst, die daraus resultierenden Regressionen erneut bestanden, zwei CaptureSystem-Dirty-Bugs behoben und den verbleibenden Priority-3-Dirty-Coverage-Bedarf dokumentiert.
-
 ### Mission-Record-Diagnose korrigiert
 
-- Der am 2026-08-04 angenommene Mission-Record-Verlust ist widerlegt. Es gingen zu keinem Zeitpunkt Mission Records verloren.
-- `State.Missions.available`, `.active`, `.completed`, `.failed`, `.expired` und `.cancelled` sind String-keyed Lua-Dictionaries. Der Lua-Längenoperator `#` ist dafür nicht autoritativ.
-- Live nachgewiesen: `TC.State.Missions.statistics.available = 10`, `pairs()`-Count `= 10`, `#TC.State.Missions.available = 0`.
-- Tatsächlicher Source-Bug: `src/core/tc_state.lua` -> `State.summary()` verwendete `#` für Mission-Dictionaries.
-- Fix: pairs-basierte Hilfsfunktion `countEntries()`.
-- Commit: `7d22eb4 Fix mission dictionary counts in state summary`.
-- Der Fix wurde committed, gepusht, in der DEV-`.miz` neu eingebettet und live regressionsgetestet.
-- Temporärer String-Key-Test: `State.summary().activeMissions = 1` bei einem eingefügten String-keyed Active-Mission-Eintrag; der Testeintrag wurde anschließend wieder entfernt.
-- Eine repo-weite READ-ONLY Prüfung fand keine weiteren entsprechenden falschen `#`-Counts auf Mission-State-Dictionaries. `MissionGenerator` verwendet dort bereits pairs-basierte Zählung.
-- Der Eintrag `## 2026-08-04` unten bleibt unverändert; die dortige Diagnose ("MissionGenerator-Record-Verlust untersucht", Klassifikation `PROJECT SOURCE HAS NO MATCHING WRITE SITE`) ist der damalige Wissensstand und gilt mit dem heutigen Befund als historisch widerlegt.
+Der am 2026-08-04 angenommene Mission-Record-Verlust wurde widerlegt.
+
+Es gingen zu keinem Zeitpunkt Mission Records verloren.
+
+Betroffene Collections:
+
+- `State.Missions.available`
+- `State.Missions.active`
+- `State.Missions.completed`
+- `State.Missions.failed`
+- `State.Missions.expired`
+- `State.Missions.cancelled`
+
+Diese Collections sind String-keyed Lua-Dictionaries.
+
+Der Lua-Längenoperator:
+
+`#`
+
+ist dafür nicht autoritativ.
+
+Live nachgewiesen:
+
+- `TC.State.Missions.statistics.available = 10`
+- `pairs()`-Count `= 10`
+- `#TC.State.Missions.available = 0`
+
+Tatsächlicher Source-Bug:
+
+`src/core/tc_state.lua`
+
+in:
+
+`State.summary()`
+
+Dort wurde `#` für Mission-Dictionaries verwendet.
+
+Fix:
+
+- pairs-basierte Hilfsfunktion `countEntries()`
+
+Commit:
+
+`7d22eb4 Fix mission dictionary counts in state summary`
+
+Der Fix wurde:
+
+- committed
+- gepusht
+- in der DEV-`.miz` neu eingebettet
+- live regressionsgetestet
+
+Temporärer String-Key-Test:
+
+`State.summary().activeMissions = 1`
+
+bei einem eingefügten String-keyed Active-Mission-Eintrag.
+
+Der Testeintrag wurde anschließend wieder entfernt.
+
+Eine repo-weite READ-ONLY-Prüfung fand keine weiteren entsprechenden falschen `#`-Counts auf Mission-State-Dictionaries.
+
+MissionGenerator verwendet dort bereits pairs-basierte Zählung.
+
+Der historische Eintrag vom 2026-08-04 bleibt als damaliger Diagnosezustand dokumentiert.
+
+---
 
 ### Offline Embedded Mission Resource Audit bestanden
 
-- Das Audit war strikt READ-ONLY und offline.
-- DEV-Mission und MCP_TEST-Kopie waren beim Audit byte-identisch.
-- 13/13 für den damaligen Blocker relevante aktive Theater-Command-Ressourcen: `EXACT_MATCH` zum Repository.
-- 0 aktive Byte-Mismatches, 0 fehlende bzw. Mapping-fehlerhafte aktive Ressourcen, keine aktive Embedded-Runtime-Drift.
-- Bekannte Cleanup-Altlast: `ResKey_Action_55` / `tc_persistence_system.lua` — als Ressource weiterhin in der `.miz` vorhanden, nicht von einem Trigger referenziert, nicht geladen, nicht byte-identisch zur aktuellen Persistence-Quelle, nicht ursächlich für die damaligen Symptome; separate spätere Cleanup-Aufgabe.
-- Aktiv geladen ist `tc_persistence_system_v0_2_6.lua`; diese war beim Audit byte-identisch zu `src/campaign/tc_persistence_system.lua`.
-- Damit ist Embedded Runtime Drift als Ursache der früheren Fehldiagnose ausgeschlossen.
+Das Audit war strikt:
+
+- READ-ONLY
+- offline
+
+DEV-Mission und MCP_TEST-Kopie waren beim Audit byte-identisch.
+
+Ergebnis:
+
+- `13/13` für den damaligen Blocker relevante aktive Theater-Command-Ressourcen `EXACT_MATCH`
+- `0` aktive Byte-Mismatches
+- `0` fehlende beziehungsweise Mapping-fehlerhafte aktive Ressourcen
+- keine aktive Embedded-Runtime-Drift
+
+Bekannte Cleanup-Altlast:
+
+`ResKey_Action_55`
+
+beziehungsweise:
+
+`tc_persistence_system.lua`
+
+Status:
+
+- als Ressource weiterhin in der `.miz` vorhanden
+- nicht von einem aktiven Trigger referenziert
+- nicht geladen
+- nicht byte-identisch zur damals aktuellen Persistence-Quelle
+- nicht ursächlich für die damaligen Symptome
+- separate spätere Cleanup-Aufgabe
+
+Aktiv geladen:
+
+`tc_persistence_system_v0_2_6.lua`
+
+Diese Ressource war beim Audit byte-identisch zu:
+
+`src/campaign/tc_persistence_system.lua`
+
+Embedded Runtime Drift wurde damit als Ursache der früheren Fehldiagnose ausgeschlossen.
+
+---
 
 ### DCS-SMS auf v0.27.2 bestätigt
 
-- DCS-SMS `v0.27.2`, Hook `me-bridge-0.27.2`.
-- Nach einem DCS-Update wurde der MissionScripting-Hook erneut installiert/repariert.
-- Auto-Routing per `dcs-sms exec --code "..."` erreicht korrekt das Mission Environment; `TC` ist als Table erreichbar.
-- DCS-SMS bleibt Entwicklungs-/Diagnosewerkzeug, kein Theater-Command-Runtime-Framework.
+Bestätigt:
+
+- DCS-SMS `v0.27.2`
+- Hook `me-bridge-0.27.2`
+- nach DCS-Update wurde der MissionScripting-Hook erneut installiert beziehungsweise repariert
+- Runtime-Zugriff auf das Mission Environment funktionierte
+- `TC` war als Table erreichbar
+
+DCS-SMS bleibt:
+
+- Entwicklungswerkzeug
+- Diagnosewerkzeug
+
+und ist kein:
+
+- Theater-Command-Runtime-Framework
+
+---
 
 ### Mission Completion, Mission Failure und Capture Ready Apply erneut bestanden
 
 #### Mission Completion
 
-Nach Activation + Completion: `available=9`, `active=0`, `completed=1`, `failed=0`, `statistics.available=9`, `statistics.active=0`, `statistics.completed=1`, `total=10`.
+Nach Activation + Completion:
 
-Persistence: `Periodic autosave decision: SAVED`, `dirtyReason=f10_active_mission_1_completed`, `dirtyCleared=true`, `productiveRestore=false`.
+- `available=9`
+- `active=0`
+- `completed=1`
+- `failed=0`
+- `statistics.available=9`
+- `statistics.active=0`
+- `statistics.completed=1`
+- `total=10`
+
+Persistence:
+
+- `Periodic autosave decision: SAVED`
+- `dirtyReason=f10_active_mission_1_completed`
+- `dirtyCleared=true`
+- `productiveRestore=false`
 
 #### Mission Failure
 
-Danach: `available=8`, `active=0`, `completed=1`, `failed=1`, `statistics.available=8`, `statistics.active=0`, `statistics.completed=1`, `statistics.failed=1`, `total=10`.
+Danach:
 
-Persistence: `SAVED`, `dirtyReason=f10_active_mission_1_failed`, `dirtyCleared=true`, `productiveRestore=false`.
+- `available=8`
+- `active=0`
+- `completed=1`
+- `failed=1`
+- `statistics.available=8`
+- `statistics.active=0`
+- `statistics.completed=1`
+- `statistics.failed=1`
+- `total=10`
+
+Persistence:
+
+- `SAVED`
+- `dirtyReason=f10_active_mission_1_failed`
+- `dirtyCleared=true`
+- `productiveRestore=false`
 
 #### Capture Ready Apply
 
-Zone `ZONE_AIRBASE_ABU_AL_DUHUR`. Vor Apply: tatsächlicher Owner-Wechsel `RED -> BLUE`, Progress `100 %`. Danach: `zoneOwner=BLUE`, `previousOwner=RED`, `baseOwner=BLUE`, `progress=0`, `status=STABLE`, `captureReady=false`.
+Zone:
 
-Persistence: `SAVED`, `dirtyReason=f10_capture_ready_zone_1_applied`, `dirtyCleared=true`, `productiveRestore=false`.
+`ZONE_AIRBASE_ABU_AL_DUHUR`
 
-Kosmetische Auffälligkeit: Die F10-Ausgabe zeigte beim Apply zeitweise `BLUE -> BLUE`; der Runtime-State bestätigte korrekt `previousOwner=RED` und den neuen Owner `BLUE`. Das ist eine reine Anzeige-/Logging-Auffälligkeit, kein CaptureSystem-Fehler; es wurde keine Codeänderung daraus abgeleitet.
+Vor Apply:
 
-Commit: `9396c28 Document completed mission and capture regressions`.
+- tatsächlicher Owner-Wechsel `RED -> BLUE`
+- Progress `100 %`
+
+Danach:
+
+- `zoneOwner=BLUE`
+- `previousOwner=RED`
+- `baseOwner=BLUE`
+- `progress=0`
+- `status=STABLE`
+- `captureReady=false`
+
+Persistence:
+
+- `SAVED`
+- `dirtyReason=f10_capture_ready_zone_1_applied`
+- `dirtyCleared=true`
+- `productiveRestore=false`
+
+Kosmetische Auffälligkeit:
+
+Die F10-Ausgabe zeigte beim Apply zeitweise:
+
+`BLUE -> BLUE`
+
+Der Runtime-State bestätigte korrekt:
+
+- `previousOwner=RED`
+- neuer Owner `BLUE`
+
+Das war eine Anzeige-/Logging-Auffälligkeit und kein CaptureSystem-Fehler.
+
+Commit:
+
+`9396c28 Document completed mission and capture regressions`
+
+---
 
 ### CaptureSystem Dirty-Tracking korrigiert
 
-Vor dem Fix live reproduziert: `TC.State.clearDirty()` gefolgt von `TC.Campaign.CaptureSystem.getCaptureReadyZones()` ergab `dirty=true`, `dirtyReason=capture_progress_updated`. Problem: Ein Read-/Statuspfad konnte persistenzrelevanten Dirty-State auslösen, obwohl sich fachlich nichts geändert hatte.
+Vor dem Fix live reproduziert:
 
-Fix in `src/campaign/tc_capture_system.lua`. Commit: `16bbcc6 Fix capture dirty state tracking` (dokumentiert zusätzlich in `2e94b3d Document capture dirty tracking regression`).
+`TC.State.clearDirty()`
+
+gefolgt von:
+
+`TC.Campaign.CaptureSystem.getCaptureReadyZones()`
+
+ergab:
+
+- `dirty=true`
+- `dirtyReason=capture_progress_updated`
+
+Problem:
+
+Ein Read-/Statuspfad konnte persistenzrelevanten Dirty-State auslösen, obwohl sich fachlich nichts geändert hatte.
+
+Fix:
+
+`src/campaign/tc_capture_system.lua`
+
+Commit:
+
+`16bbcc6 Fix capture dirty state tracking`
+
+Zusätzliche Dokumentation:
+
+`2e94b3d Document capture dirty tracking regression`
 
 Technisches Ergebnis:
 
 - Derived-/Eligibility-State wird nur bei tatsächlicher Änderung persistiert.
-- Pauschales Dirty-Setzen im reinen Recompute-/Read-Pfad wurde entfernt.
-- Failure-/Applied-Diagnostik wird nur noch bei tatsächlicher Änderung persistiert.
+- pauschales Dirty-Setzen im reinen Recompute-/Read-Pfad wurde entfernt.
+- Failure-/Applied-Diagnostik wird nur bei tatsächlicher Änderung persistiert.
 
-Embedded-Verifikation nach diesem Fix: MIZ Entry `l10n/DEFAULT/tc_capture_system.lua`, `90505` Bytes, SHA-256 `A9E493C5AF0F052AA56862EB38049CF50DE7954BFEDB1080FCD3AB232C74516A`, Repository-SHA-256 identisch, `MATCH=True`.
+Live Negativ-Regression:
 
-Live Negativ-Regression: folgende sieben Read-APIs jeweils nach `State.clearDirty()` getestet — `getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary`, `getCaptureProgress`. Alle: `ok=true`, `dirty=false`, `reason=nil`.
+Nach `State.clearDirty()` wurden getestet:
 
-Live Positiv-Regression: temporäre Capture-Pressure-Mutation auf `ZONE_AIRBASE_ABU_AL_DUHUR` — `before=0`, `changed=1`, `dirty=true`, `reason=capture_pressure_set`. Rollback: `rollbackOk=true`, `restored=0`, `finalDirty=false`. Kein bleibender Testzustand.
+- `getCaptureReadyZones`
+- `getPressureContestedZones`
+- `getPressureSummary`
+- `getCaptureEligibleBases`
+- `getCaptureEligibleZones`
+- `getEligibilitySummary`
+- `getCaptureProgress`
+
+Alle:
+
+- `ok=true`
+- `dirty=false`
+- `reason=nil`
+
+Live Positiv-Regression:
+
+Temporäre Capture-Pressure-Mutation auf:
+
+`ZONE_AIRBASE_ABU_AL_DUHUR`
+
+Ergebnis:
+
+- `before=0`
+- `changed=1`
+- `dirty=true`
+- `reason=capture_pressure_set`
+
+Rollback:
+
+- `rollbackOk=true`
+- `restored=0`
+- `finalDirty=false`
+
+Kein bleibender Testzustand.
+
+---
 
 ### Capture Ownership No-Op korrigiert
 
-Audit-Befund: Ein Aufruf von `setZoneOwner(zone, currentOwner, ...)` war vorher kein echter No-Op. Mögliche unnötige Mutationen: Zone-Timestamps, Progress-Timestamps, Progress Owner/Status, `captureReady`, `state.Campaign.capture.lastUpdateTime`. Besonders relevant: `progressRecord.previousOwner` konnte durch einen redundanten Owner-Set-Aufruf überschrieben werden und damit historische Owner-Information verlieren.
+Audit-Befund:
 
-Zusätzlich geprüft: `lastOwnerCheckAt` wurde nur im alten No-Op-Pfad geschrieben, ist repo-weit nirgends funktional gelesen und hat keine funktionale Abhängigkeit.
+Ein Aufruf von:
 
-Fix in `src/campaign/tc_capture_system.lua`. Commit: `3451082 Fix ownership no-op state mutations`.
+`setZoneOwner(zone, currentOwner, ...)`
+
+war vorher kein echter No-Op.
+
+Mögliche unnötige Mutationen:
+
+- Zone-Timestamps
+- Progress-Timestamps
+- Progress Owner/Status
+- `captureReady`
+- `state.Campaign.capture.lastUpdateTime`
+
+Besonders relevant:
+
+`progressRecord.previousOwner`
+
+konnte durch einen redundanten Owner-Set-Aufruf überschrieben werden und historische Owner-Information verlieren.
+
+Fix:
+
+`src/campaign/tc_capture_system.lua`
+
+Commit:
+
+`3451082 Fix ownership no-op state mutations`
 
 Neues Verhalten:
 
 - `setRecordOwner()` schreibt bei identischem Owner nichts.
 - `setBaseOwner()` und `setZoneOwner()` machen einen Early Return bei `changed ~= true`.
-- Kein Registry-Reassign, kein World-Sync, keine Progress-Mutation, kein `refreshAllCounters()`, kein Event, kein Dirty.
-- Echte Ownerwechsel behalten den bisherigen Codepfad.
+- kein Registry-Reassign.
+- kein World-Sync.
+- keine Progress-Mutation.
+- kein `refreshAllCounters()`.
+- kein Event.
+- kein Dirty.
 
-Finale Embedded-Verifikation nach Re-Embed: Repository-SHA-256 `06326C028388C6737BDB01C8C29C8F029375D612D72ADC1A02F49BFD9DAE9DCE`; MIZ `l10n/DEFAULT/tc_capture_system.lua`, `91160` Bytes, gleiche SHA-256, `MATCH=True`.
+Echte Ownerwechsel behalten den bisherigen Codepfad.
 
-Live No-Op-Regression auf Zone `ZONE_AIRBASE_ABU_AL_DUHUR`: `ok=true`, `owner=RED`, `zonePrevBefore=nil`, `zonePrevAfter=nil`, `progressPrevBefore=UNKNOWN`, `progressPrevAfter=UNKNOWN`, `zoneUpdatedSame=true`, `lastOwnerCheckSame=true`, `progressUpdatedSame=true`, `captureLastUpdateSame=true`, `dirty=false`, `reason=nil`.
+Status:
 
-Status: BEHOBEN / LIVE BESTANDEN.
+`BEHOBEN / LIVE BESTANDEN`
 
-### reactToActiveMissions() als latenter, nicht aktiver Dirty-Fall bewertet
+---
 
-Datei `src/ai/tc_ai_cap_manager.lua`, Funktion `CapManager.reactToActiveMissions(options)`, READ-ONLY geprüft.
+### `reactToActiveMissions()` als latenter, nicht aktiver Dirty-Fall bewertet
 
-Ergebnis: keine produktive Call-Site. Nicht aufgerufen durch `CapManager.start()`, Scheduler/Timer, `main.lua`, `loader.lua`, F10 oder andere `src/`-Pfade.
+Datei:
 
-Hypothetischer zukünftiger Pfad: `reactToActiveMissions()` -> `requestCap()` -> `addCapToContainer()` -> `updateReactionState()` -> `updateStatistics()`. Bei einem echten CAP Request setzt `addCapToContainer()` bereits `markDirty("ai_cap_record_changed")`.
+`src/ai/tc_ai_cap_manager.lua`
 
-Latenter Randfall bei `requested==0`: potenziell veränderte persistierte Felder (`state.AI.reactionState`, `state.AI.threatLevel`, `state.AI.capStatistics`, `state.AI.lastUpdate`) ohne zwingenden eigenen Dirty-Call.
+Funktion:
 
-Klassifikation: latenter Missing-Dirty-Bug in derzeit nicht verdrahtetem Code. Aktuell KEIN Runtime-Persistence-Bug. Entscheidung: jetzt keine Codeänderung; erst bei tatsächlicher Verdrahtung in den AI-Lifecycle beheben/testen.
+`CapManager.reactToActiveMissions(options)`
 
-### Priority 3 Dirty-Coverage bleibt offen
+READ-ONLY geprüft.
 
-Bereits geklärt: Capture Getter/Derived Dirty, Capture Ownership No-Op, `reactToActiveMissions()`-Sonderfall.
+Ergebnis:
 
-Noch systematisch zu prüfen, ein System pro Arbeitsschritt:
+- keine produktive Call-Site
+- nicht aufgerufen durch `CapManager.start()`
+- nicht durch Scheduler/Timer
+- nicht durch `main.lua`
+- nicht durch `loader.lua`
+- nicht durch F10
+- nicht durch andere aktive `src/`-Pfade
+
+Hypothetischer zukünftiger Pfad:
+
+`reactToActiveMissions() -> requestCap() -> addCapToContainer() -> updateReactionState() -> updateStatistics()`
+
+Bei einem echten CAP Request setzt:
+
+`addCapToContainer()`
+
+bereits:
+
+`markDirty("ai_cap_record_changed")`
+
+Latenter Randfall bei:
+
+`requested==0`
+
+Potentiell veränderte persistierte Felder:
+
+- `state.AI.reactionState`
+- `state.AI.threatLevel`
+- `state.AI.capStatistics`
+- `state.AI.lastUpdate`
+
+ohne zwingenden eigenen Dirty-Call.
+
+Klassifikation:
+
+- latenter Missing-Dirty-Fall
+- derzeit nicht verdrahtet
+- aktuell kein Runtime-Persistence-Bug
+
+Entscheidung:
+
+Keine Codeänderung zu diesem Zeitpunkt.
+
+Erst bei tatsächlicher Verdrahtung in den AI-Lifecycle erneut prüfen und testen.
+
+---
+
+### Priority 3 war zu diesem Zeitpunkt noch offen
+
+Stand am 2026-09-12:
+
+Noch systematisch zu prüfen:
 
 1. `src/logistics/tc_logistics_delivery.lua`
 2. `src/logistics/tc_fob_system.lua`
 3. `src/missions/tc_mission_generator.lua`
 4. `src/ai/tc_ai_cap_manager.lua`
 
-Nächster technischer Schritt: READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`. Priority 3 ist NICHT abgeschlossen; genau ein System pro Schritt, kein Code-Fix vor dem Audit. Danach folgen separat `src/logistics/tc_fob_system.lua`, `src/missions/tc_mission_generator.lua` und `src/ai/tc_ai_cap_manager.lua`.
+Der nächste technische Schritt war damals der READ-ONLY Dirty-Coverage-Audit von:
 
-Audit-Ziele später: persistierte Writes erfassen, `markDirty()`-Pfade erfassen, echte Mutationen vs. Reads/No-Ops prüfen, Dirty Reasons bewerten, erst bei belegtem Befund Code ändern.
+`src/logistics/tc_logistics_delivery.lua`
 
-Commit: `1023d1f Document remaining Priority 3 dirty coverage status`.
+Dieser historische offene Punkt wurde anschließend bis zum 2026-09-21 im dokumentierten Umfang abgeschlossen.
 
-### Persistence bleibt stabil, produktiver Restore weiter deaktiviert
+Commit des damaligen Dokumentationsstands:
 
-PersistenceSystem `v0.2.6` bestanden: Embedded Startup, `SAVED`, `SKIPPED`, kontrollierter `FAILED`, Retry, Dirty bleibt bei Fehler erhalten, Dirty wird erst nach vollständiger Write / Read-back / Compile / Evaluate / Validation gelöscht, ein älterer Save-Abschluss löscht keinen neueren Dirty-State, `productiveRestore=false`.
+`1023d1f Document remaining Priority 3 dirty coverage status`
 
-Produktiver Restore wird NICHT aktiviert.
+---
 
-Zu diesem Zeitpunkt gültige Voraussetzungen:
+### Persistence blieb stabil, produktiver Restore weiter deaktiviert
 
-1. Priority 3 allgemeine Dirty-Coverage vollständig abschließen.
-2. Restore-/Initialisierungsreihenfolge definieren.
-3. Save-Kompatibilitäts-/Versionsstrategie berücksichtigen.
-4. Separaten kontrollierten Restore-Test durchführen.
+PersistenceSystem:
 
-Der erste Punkt wurde am 2026-09-21 im dokumentierten Umfang abgeschlossen.
+`v0.2.6`
 
-Weiterhin offen bleiben:
+Bestätigt:
+
+- Embedded Startup
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`
+- Retry
+- Dirty bleibt bei Fehler erhalten
+- Dirty wird erst nach vollständiger Write-/Read-back-/Compile-/Evaluate-/Validation-Kette gelöscht
+- ein älterer Save-Abschluss löscht keinen neueren Dirty-State
+- `productiveRestore=false`
+
+Zum damaligen Zeitpunkt war allgemeine Priority-3-Dirty-Coverage noch eine Voraussetzung vor produktivem Restore.
+
+Dieser Punkt wurde am 2026-09-21 im dokumentierten Umfang abgeschlossen.
+
+Weiterhin offen:
 
 - Restore-/Initialisierungsreihenfolge
 - Save-Kompatibilitäts-/Versionsstrategie
 - kontrollierter Restore-Test
 - spätere Framework-Nebenwirkungen beim Restore
-
-Nicht mehr als Voraussetzungen gültig: "MissionGenerator-State-Verlust klären" und "blockierte Mission/Capture Regressionen durchführen" — beide Punkte sind widerlegt beziehungsweise erledigt.
-
-### Projektdokumentation auf den verifizierten Stand synchronisiert
-
-Die Dokumentationssynchronisierung zum verifizierten Stand 2026-09-12 wurde abgeschlossen.
-
-Synchronisiert wurden damals insbesondere:
-
-- `README.md`
-- `ROADMAP.md`
-- `TASKS.md`
-- `ARCHITECTURE.md`
-- `CHANGELOG.md`
-- `MISSION_EDITOR_SETUP.md`
-- `LUA_STYLEGUIDE.md`
-- `docs/00_project_overview.md`
-- `docs/01_campaign_design.md`
-- `docs/02_technical_architecture.md`
-- `docs/03_mission_editor_basics.md`
-- `docs/04_airbase_system.md`
-- `docs/05_logistics_system.md`
-- `docs/06_mission_generator.md`
-- `docs/07_ai_director.md`
-- `docs/08_iads_system.md`
-- `docs/09_persistence.md`
-- `docs/10_testing.md`
-
-Der dort beschriebene technische Stand ist historisch.
-
-Priority 3 wurde anschließend am 2026-09-21 abgeschlossen.
 
 ---
 
@@ -876,150 +1227,239 @@ Priority 3 wurde anschließend am 2026-09-21 abgeschlossen.
 
 ### PersistenceSystem v0.2.6 und Dirty-aware Autosave
 
-- Periodischer Autosave verwendet den vorhandenen `TC.State.Persistence`-Dirty-State.
-- Unveränderte Ticks werden als `SKIPPED` ohne Dateischreibzugriff protokolliert.
-- Dirty Ticks werden als `SAVED` oder `FAILED` protokolliert; beide relevanten Pfade enthalten den Dirty Reason.
+Periodischer Autosave verwendet:
+
+`TC.State.Persistence`
+
+Dirty-State.
+
+Bestätigt:
+
+- unveränderte Ticks werden als `SKIPPED` ohne Dateischreibzugriff protokolliert.
+- Dirty-Ticks werden als `SAVED` oder `FAILED` protokolliert.
+- relevante Pfade enthalten den Dirty Reason.
 - Write, Read-back, Compile, Evaluate und Validation müssen erfolgreich sein, bevor Dirty gelöscht wird.
-- Fehler behalten `dirty`, `dirtyReason` und `dirtyAt`; ein erfolgreicher Retry ist bestätigt.
-- Ein neuerer Dirty-State wird nicht durch den Abschluss eines älteren Saves gelöscht.
-- `20s` Initial Delay, `120s` Intervall und `productiveRestore=false` bleiben erhalten.
-- Es gibt keine Persistence-Spieler-F10-Controls und für diese Entwicklungsstufe sind keine geplant.
+- Fehler behalten `dirty`, `dirtyReason` und `dirtyAt`.
+- erfolgreicher Retry ist bestätigt.
+- neuerer Dirty-State wird nicht durch den Abschluss eines älteren Saves gelöscht.
+- `20s` Initial Delay.
+- `120s` Intervall.
+- `productiveRestore=false`.
+- keine Persistence-Spieler-F10-Controls.
+
+---
 
 ### Hotload- und Fehlerpfadtests
 
-- `SAVED` und anschließendes `SKIPPED` bestanden.
-- Kontrolliert injizierter Schreibfehler erzeugte `FAILED` und behielt Dirty-State sowie Dirty Reason.
-- Die bestehende Save-Datei blieb beim injizierten Fehler unverändert.
-- Retry nach Wiederherstellung von `io.open` erzeugte `SAVED` und löschte Dirty erst nach erfolgreicher Verifikation.
-- Keine neuen Scripting Errors oder Stack Tracebacks.
+Bestätigt:
 
-### Persistence-Ressource in DEV-Mission ersetzt und gespeichert
+- `SAVED`
+- anschließendes `SKIPPED`
+- kontrolliert injizierter Schreibfehler erzeugte `FAILED`
+- Dirty-State blieb beim Fehler erhalten
+- Dirty Reason blieb erhalten
+- bestehende Save-Datei blieb beim injizierten Fehler unverändert
+- Retry nach Wiederherstellung von `io.open` erzeugte `SAVED`
+- Dirty wurde erst nach erfolgreicher Verifikation gelöscht
+- keine neuen Scripting Errors oder Stack Tracebacks
 
-- Trigger: `TC_LOAD_TC_PERSISTENCE_SYSTEM`
-- Typ: `once`
-- Bedingung: `time-after 15 seconds`
-- Resource Key: `ResKey_advancedFile_56`
-- Embedded Filename: `tc_persistence_system_v0_2_6.lua`
-- Embedded Bytes entsprachen exakt `src/campaign/tc_persistence_system.lua`.
-- Die gespeicherte `.miz` enthält den neuen Key und die neue Ressource.
-- Der alte Trigger-Verweis `ResKey_Action_55` wurde entfernt.
-- Die native Mission-Editor-Save-Aktion wurde über den DCS-SMS-GUI-Bridge-Pfad verifiziert.
+---
+
+### Persistence-Ressource in DEV-Mission ersetzt
+
+Trigger:
+
+`TC_LOAD_TC_PERSISTENCE_SYSTEM`
+
+Typ:
+
+`once`
+
+Bedingung:
+
+`time-after 15 seconds`
+
+Resource Key:
+
+`ResKey_advancedFile_56`
+
+Embedded Filename:
+
+`tc_persistence_system_v0_2_6.lua`
+
+Bestätigt:
+
+- Embedded Bytes entsprachen `src/campaign/tc_persistence_system.lua`.
+- gespeicherte `.miz` enthält den neuen Key und die neue Ressource.
+- alter Trigger-Verweis `ResKey_Action_55` wurde entfernt.
+- native Mission-Editor-Save-Aktion wurde über den DCS-SMS-GUI-Bridge-Pfad verifiziert.
+
+---
 
 ### Normaler Embedded-Scheduler-Test
 
-- PersistenceSystem `v0.2.6` lud über den normalen Mission-Editor-/Simulator-Workflow.
-- Der Client-Slot `CLIENT_BLUE_FA18C_AKROTIRI_01` musste ausgewählt und bestätigt werden; danach wurde im Briefing `Fly` gedrückt.
-- Der reale Dirty-Grund `ai_cap_needs_evaluated` wurde selbständig als `SAVED` gespeichert.
-- `autosaveCount` wechselte von `0` auf `1`; Dirty wurde nach Verifikation gelöscht.
-- Drei folgende unveränderte Scheduler-Ticks waren `SKIPPED`.
+PersistenceSystem:
+
+`v0.2.6`
+
+lud über den normalen Mission-Editor-/Simulator-Workflow.
+
+Der Client-Slot:
+
+`CLIENT_BLUE_FA18C_AKROTIRI_01`
+
+wurde ausgewählt und bestätigt.
+
+Danach:
+
+`Fly`
+
+Bestätigt:
+
+- realer Dirty-Grund `ai_cap_needs_evaluated` wurde selbständig als `SAVED` gespeichert.
+- `autosaveCount` wechselte von `0` auf `1`.
+- Dirty wurde nach Verifikation gelöscht.
+- drei folgende unveränderte Scheduler-Ticks waren `SKIPPED`.
 - Dateigröße, Änderungszeit und SHA-256 der Save-Datei blieben bei `SKIPPED` unverändert.
-- Keine neuen `[TC][ERROR]`, `[TC][WARN]`, Scripting Errors oder Stack Tracebacks.
-- Die frühere Hotload-only-Scheduler-Einschränkung ist damit behoben.
+- keine neuen `[TC][ERROR]`.
+- keine neuen `[TC][WARN]`.
+- keine neuen Scripting Errors.
+- keine neuen Stack Tracebacks.
+
+Die frühere Hotload-only-Scheduler-Einschränkung war damit behoben.
+
+---
 
 ### DCS-SMS-Entwicklungsumgebung
 
-- Installierte CLI: `C:\Tools\dcs-sms\dcs-sms.exe`
-- Mission-Editor- und Runtime-Bridge sowie externe Ausführung sind operational.
-- Aktuelle Bridge-Umgebung: `os=true`, `io=true`, `lfs=true`, `require=false`.
-- PersistenceSystem selbst benötigt direkt `io` und `lfs`, nicht `os` oder `require`.
-- DCS-SMS `exec`, `status` und `tail-log` benötigen `os`, `io` und `lfs` unsanitized.
-- DCS-Updates können `MissionScripting.lua` überschreiben.
+Für diesen Entwicklungsstand war DCS-SMS als lokale Mission-Editor-/Runtime-Bridge operational.
+
+Aktuell verifiziertes Installationsverzeichnis:
+
+`C:\Tools\dcs-sms`
+
+Spätere Verifikation bestätigte:
+
+- DCS-SMS `0.27.2`
+- Hook `me-bridge-0.27.2`
+
+Ein exakter Executable-Pfad wird im aktuellen verbindlichen Dokumentationsstand nicht als separat verifiziert behandelt.
+
+DCS-Updates können lokale Änderungen an:
+
+`MissionScripting.lua`
+
+überschreiben.
+
+---
 
 ### MissionGenerator-Record-Verlust untersucht
 
-- MissionGenerator `v0.2.3` startete und erzeugte zehn state-only Missionen.
-- Der erste Persistence-Snapshot enthielt zehn verfügbare Missionen, eine `generationHistory`-Entry, `lastMissionId=10` und `lastGenerationTime=22.801`.
-- Später wurden alle sechs Status-Collections leer beobachtet, während `lastMissionId=10` und Statistiken `total=10`, `available=10` stehen blieben.
-- Der Verlust wurde in einem zweiten normalen Missionslauf reproduziert.
-- Mission-Collections sind Dictionaries und müssen mit `pairs()` beziehungsweise `countTableKeys()` gezählt werden; `#` und `ipairs()` sind nicht autoritativ.
-- Die widersprüchliche Messung `generationHistory pairs=0`, `#=1` ist kein normales Lua-Verhalten und bleibt ungeklärt.
-- Weder exakter Zeitpunkt noch Writer oder Mechanismus sind identifiziert; es ist unbekannt, ob die Collections ersetzt, geleert oder falsch beobachtet wurden.
-- PersistenceSystem und Main-Heartbeat sind nicht als Ursache belegt.
-- Es wurde kein Code-Fix implementiert.
+Dieser Eintrag dokumentiert ausdrücklich den damaligen Wissensstand.
 
-Statische Klassifikation:
+MissionGenerator:
 
-    PROJECT SOURCE HAS NO MATCHING WRITE SITE
+`v0.2.3`
 
-Nächste Untersuchung:
+erzeugte zehn state-only Missionen.
 
-- offline/read-only Audit der eingebetteten Theater-Command-Ressourcen in `Operation_Levant_Reclamation_DEV.miz`
-- Trigger- und Resource-Mappings sowie Byte-Längen, SHA-256, Versionen, stale/duplizierte/unerwartete/fehlende Skripte prüfen
-- Mission Completion, Mission Failure und Capture Ready Apply Regressionen bleiben bis zur Eingrenzung blockiert
-- produktiver Restore bleibt deaktiviert und ungetestet
+Damals wurde ein möglicher Verlust der Mission-Collections vermutet.
 
-Der Eintrag ist historisch.
+Der erste Persistence-Snapshot enthielt:
 
-Der vermeintliche Record-Verlust wurde am 2026-09-12 als Diagnosefehler widerlegt.
+- zehn verfügbare Missionen
+- eine `generationHistory`-Entry
+- `lastMissionId=10`
+- `lastGenerationTime=22.801`
+
+Später wurden die Collections in einer Diagnose fälschlich als leer interpretiert.
+
+Statische damalige Klassifikation:
+
+`PROJECT SOURCE HAS NO MATCHING WRITE SITE`
+
+Es wurde kein Code-Fix implementiert.
+
+Dieser Verdacht wurde am:
+
+`2026-09-12`
+
+widerlegt.
+
+Tatsächliche Ursache:
+
+- Mission-Collections sind String-keyed Dictionaries.
+- `#table` war für ihre Anzahl nicht autoritativ.
+
+Es gab keinen bestätigten Mission-Record-Datenverlust.
 
 ---
 
 ## 2026-07-06
 
-Die folgenden Einträge sind der historische Stand dieser Session.
+Die folgenden Einträge beschreiben den historischen Entwicklungsstand dieser Session.
 
-Insbesondere `os=false`, Persistence-Versionen bis `v0.2.5` und damalige nächste Schritte sind keine aktuellen Anweisungen.
+Persistence-Versionen bis:
 
-### Session-Schwerpunkt
+`v0.2.5`
 
-Diese Session hat die Mission-Outcome-/Capture-Pipeline abgeschlossen und anschließend die technische Persistenzgrundlage bis zum Hintergrund-Autosave-Service aufgebaut.
-
-Der Fokus lag bewusst weiterhin auf einer stabilen State-first-Grundlage:
-
-- keine echten MOOSE-Spawns
-- keine echten CTLD-Aktionen
-- keine echten CTLD-FOBs
-- keine echte Skynet-IADS-Kampagnenlogik
-- keine produktive automatische Savegame-Wiederherstellung beim Missionsstart
-- keine automatische DCS-Event-Auswertung für Missionserfolg
-- kein produktiver Ownership-Wechsel durch DCS-Ereignisse
+und damalige nächste Schritte sind keine aktuellen Anweisungen.
 
 ---
 
-### F10Menu von v0.2.2 auf v0.2.3 erweitert
+### Session-Schwerpunkt
+
+Die Mission-Outcome-/Capture-Pipeline wurde abgeschlossen und die technische Persistence-Grundlage bis zum Background-Autosave-Service aufgebaut.
+
+Der Fokus lag weiterhin auf einer state-first Grundlage.
+
+Damals noch nicht aktiv:
+
+- reale MOOSE-Spawns
+- reale CTLD-Aktionen
+- reale CTLD-FOBs
+- produktive Skynet-IADS-Kampagnenlogik
+- produktiver automatischer Startup-Restore
+- automatische DCS-Event-Auswertung für Missionserfolg
+- produktiver Ownership-Wechsel durch DCS-Ereignisse
+
+---
+
+### F10Menu auf v0.2.3 erweitert
 
 Datei:
 
-- `src/ui/tc_f10_menu.lua`
+`src/ui/tc_f10_menu.lua`
 
-Ziel:
+Ziele:
 
-- Mission Details direkt für Mission 1 bis 10 anzeigen
-- Missionen direkt über F10 aktivieren
-- Active Mission Outcome Status anzeigen
-- Active Mission 1 state-only auf `COMPLETED` setzen
-- Active Mission 1 state-only auf `FAILED` setzen
-- Capture Ready Zones anzeigen
-- Pressure Contested Zones anzeigen
+- Mission Details für Mission 1 bis 10
+- Missionen über F10 aktivieren
+- Active Mission Outcome Status
+- Active Mission 1 state-only auf `COMPLETED`
+- Active Mission 1 state-only auf `FAILED`
+- Capture Ready Zones
+- Pressure Contested Zones
 - Capture Ready Zone 1 state-only anwenden
 
-Bestätigter DCS-Logstatus:
+Bestätigt:
 
-- `F10Menu v0.2.3` lädt korrekt
-- F10-Menü initialisiert stabil mit `commands=33`
-- Mission Details Slot 1 funktioniert
-- Mission Activation Slot 1 funktioniert
-- Active Mission Outcome Status funktioniert
-- Complete Active Mission 1 funktioniert
-- Fail Active Mission 1 funktioniert
-- Capture Ready Zones anzeigen funktioniert
-- Apply Capture Ready Zone 1 funktioniert
-
-Wichtige bestätigte Marker:
-
-- `Mission details shown through F10`
-- `Mission activated through F10`
-- `Mission completed through F10`
-- `Mission failed through F10`
-- `Capture ready zones shown through F10`
-- `Capture ready zone applied through F10`
+- `F10Menu v0.2.3` lud korrekt.
+- F10-Menü initialisierte mit `commands=33`.
+- Mission Details Slot 1 funktionierte.
+- Mission Activation Slot 1 funktionierte.
+- Active Mission Outcome Status funktionierte.
+- Complete Active Mission 1 funktionierte.
+- Fail Active Mission 1 funktionierte.
+- Capture Ready Zones funktionierten.
+- Apply Capture Ready Zone 1 funktionierte.
 
 Bewertung:
 
-- Die Spieleroberfläche ist weiterhin state-only.
-- Sie löst keine echten MOOSE-, CTLD- oder Skynet-Aktionen aus.
-- Sie dient aktuell als kontrollierter Runtime-Testzugang.
-- Persistence wurde bewusst nicht als Spieler-F10-Menü umgesetzt, weil Persistenz als Hintergrundsystem laufen soll.
+- Spieleroberfläche weiterhin state-only.
+- keine realen MOOSE-, CTLD- oder Skynet-Aktionen.
+- kontrollierter Runtime-Testzugang.
+- Persistence bewusst nicht als Spieler-F10-Menü umgesetzt.
 
 ---
 
@@ -1028,41 +1468,38 @@ Bewertung:
 Bestätigter Ablauf:
 
 1. F10Menu zeigt Mission Details.
-2. F10Menu aktiviert Mission 1.
+2. F10Menu aktiviert Mission.
 3. MissionGenerator setzt Mission auf `ACTIVE`.
 4. F10Menu setzt aktive Mission state-only auf `COMPLETED`.
-5. MissionGenerator bereitet Mission Effects state-only vor.
-6. CaptureSystem verarbeitet abgeschlossene Mission Effects.
+5. MissionGenerator bereitet Mission Effects vor.
+6. CaptureSystem verarbeitet Mission Effects.
 7. CaptureSystem erzeugt Capture Pressure.
-8. CaptureSystem setzt Capture Progress auf 100 %.
+8. CaptureSystem setzt Capture Progress auf `100 %`.
 9. CaptureSystem erzeugt Capture Ready.
 10. F10Menu zeigt Capture Ready Zones.
-11. F10Menu wendet Capture Ready Zone 1 state-only an.
-12. CaptureSystem setzt Zone Ownership state-only auf `BLUE`.
-13. CaptureSystem synchronisiert die verknüpfte Airbase Ownership state-only auf `BLUE`.
-14. Capture pressure wird zurückgesetzt.
-15. Capture Ready geht zurück auf 0.
+11. F10Menu wendet Capture Ready Zone state-only an.
+12. CaptureSystem setzt Zone Ownership auf `BLUE`.
+13. CaptureSystem synchronisiert linked Airbase Ownership auf `BLUE`.
+14. Capture Pressure wird zurückgesetzt.
+15. Capture Ready geht auf `0`.
 
 Bestätigter Testfall:
 
 - completed mission: `MISSION_2`
 - target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
-- capture pressure owner: `BLUE`
+- pressure owner: `BLUE`
 - applied pressure: `105`
 - progress: `100 %`
-- appliedMissionEffects: `1`
 - ready vorher: `1`
 - ready nach Apply: `0`
-- contested: `0`
 - captured zone owner: `BLUE`
 - linked airbase owner: `BLUE`
 
 Bewertung:
 
-- Die Mission-Outcome-to-Capture-Pipeline ist bestanden.
-- Capture Ready Apply ist bestanden.
-- Zone- und Airbase-Ownership können state-only verändert werden.
-- Ein produktiver automatischer Capture-Workflow ist noch nicht aktiv.
+- Mission-Outcome-to-Capture-Pipeline bestanden.
+- Capture Ready Apply bestanden.
+- produktiver automatischer Capture-Workflow noch nicht aktiv.
 
 ---
 
@@ -1070,47 +1507,31 @@ Bewertung:
 
 Bestätigter Ablauf:
 
-1. F10Menu zeigt Mission Details.
-2. F10Menu aktiviert Mission 1.
-3. MissionGenerator setzt Mission auf `ACTIVE`.
-4. F10Menu zeigt Active Mission Outcome Status.
-5. F10Menu setzt aktive Mission state-only auf `FAILED`.
-6. MissionGenerator setzt den Outcome auf `FAILED`.
-7. MissionGenerator bereitet Failure Effects state-only vor.
-8. CaptureSystem verarbeitet abgeschlossene Mission Effects.
-9. CaptureSystem wendet bei `FAILED` aktuell keinen Capture Pressure an.
-
-Bestätigter technischer Status:
-
-- `Mission effects prepared state-only: status=FAILED`
-- `Mission outcome prepared: [FAILED]`
-- `Mission failed through F10`
-- `Completed mission effects processed: applied=0, skipped=0, failed=0`
-- `Capture progress updated: ready=0, contested=0, appliedMissionEffects=0`
+1. Mission aktiviert.
+2. Mission state-only auf `FAILED` gesetzt.
+3. MissionGenerator setzt Outcome auf `FAILED`.
+4. Failure Effects werden state-only vorbereitet.
+5. CaptureSystem verarbeitet die Effects.
+6. bei `FAILED` wird aktuell kein Capture Pressure angewendet.
 
 Bewertung:
 
-- Failure-Pfad ist bestanden.
+- Failure-Pfad bestanden.
 - Failed Missions erzeugen aktuell bewusst keinen Capture Pressure.
-- Das Verhalten ist für den aktuellen State-first-Teststand korrekt.
 
 ---
 
-### PersistenceSystem v0.2.0 eingeführt
-
-Datei:
-
-- `src/campaign/tc_persistence_system.lua`
+### PersistenceSystem v0.2.0
 
 Ziel:
 
-- DCS-Dateisystem-Sandbox prüfen
-- `os`, `io`, `lfs`, `require` prüfen
-- kontrolliert loggen, ob Dateizugriff möglich ist
-- bestehende In-Memory-Snapshot-Funktionalität erhalten
-- kein produktiver Save/Load-Betrieb
+- Sandbox-Zugriff prüfen
+- `os`
+- `io`
+- `lfs`
+- `require`
 
-Erster Teststatus:
+Erster damaliger Teststatus:
 
 - `os=false`
 - `io=false`
@@ -1119,33 +1540,30 @@ Erster Teststatus:
 
 Bewertung:
 
-- Modul lädt und startet.
-- DCS blockiert Dateisystemzugriff zunächst vollständig.
-- Kein Lua-Fehler.
-- Kein Theater-Command-Fehler.
-- Für Persistenz ist lokale Freigabe in `MissionScripting.lua` notwendig.
+- Modul lud.
+- kein Lua-Abbruch.
+- Dateisystemzugriff zunächst blockiert.
+- lokale MissionScripting-Konfiguration erforderlich.
 
 ---
 
-### Lokale DCS-Sandbox für Persistenz vorbereitet
+### Lokale DCS-Sandbox für Persistence vorbereitet
 
-Lokale DCS-Datei:
+Lokale Änderung an:
 
-- `...\DCS World\Scripts\MissionScripting.lua`
+`MissionScripting.lua`
 
-Lokale Änderung:
+Damals entsperrt:
 
-- `io` entsperrt
-- `lfs` entsperrt
-- `os` weiterhin gesperrt
-- `require` weiterhin gesperrt
+- `io`
+- `lfs`
 
-Ziel:
+Damals weiter gesperrt:
 
-- Dateioperationen im DCS Mission Scripting Environment ermöglichen
-- Persistenzdateien unter `Saved Games\DCS.openbeta\TheaterCommandDCS` schreiben und lesen können
+- `os`
+- `require`
 
-Bestätigter Status nach lokaler Änderung:
+Bestätigter damaliger Status:
 
 - `os=false`
 - `io=true`
@@ -1154,10 +1572,8 @@ Bestätigter Status nach lokaler Änderung:
 
 Bewertung:
 
-- Lokale Sandbox-Freigabe funktioniert.
-- Für Projektpersistenz reichen `io` und `lfs` aktuell aus.
-- `os` bleibt bewusst deaktiviert.
-- Bei DCS-Updates kann diese lokale Änderung überschrieben werden und muss dann erneut geprüft werden.
+- Dateizugriff für Persistence funktionierte.
+- DCS-Updates können diese lokale Änderung überschreiben.
 
 ---
 
@@ -1166,27 +1582,21 @@ Bewertung:
 Ziel:
 
 - Sandbox-Schreibtest korrigieren
-- `file:write()` nicht mehr fälschlich wegen nil-Rückgabewert als Fehler werten
-- nach Write direkt Read-Test entscheiden lassen
+- `file:write()` nicht wegen eines nil-Rückgabewerts fälschlich als Fehler behandeln
+- Read-Test nach Write verwenden
 
-Bestätigter DCS-Logstatus:
+Bestätigt:
 
 - `io=true`
 - `lfs=true`
-- Sandbox-Datei wird geschrieben
-- Sandbox-Datei wird gelesen
-- Marker wird gefunden
+- Sandbox-Datei geschrieben
+- Sandbox-Datei gelesen
+- Marker gefunden
 - `fileSystemAvailable=true`
 
-Bestätigter Pfad:
+Testdatei:
 
-- `C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\tc_persistence_sandbox_test.lua`
-
-Bewertung:
-
-- DCS-Dateisystemzugriff ist technisch bestanden.
-- Schreib-/Lesetest funktioniert.
-- Persistenzgrundlage ist verfügbar.
+`C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\tc_persistence_sandbox_test.lua`
 
 ---
 
@@ -1194,31 +1604,18 @@ Bewertung:
 
 Ziel:
 
-- echten Campaign-State-Snapshot als Datei schreiben
+- Campaign-State-Snapshot als Datei schreiben
 - kein automatisches Laden
 - kein produktiver Restore
-- Save-Test einmalig nach Missionsstart
-
-Bestätigter DCS-Logstatus:
-
-- Sandbox-Test bestanden
-- File Save Test geplant
-- Campaign-State-Snapshot geschrieben
 
 Bestätigter Save-Pfad:
 
-- `C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua`
+`C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua`
 
-Bestätigte Marker:
+Ergebnis:
 
-- `Persistence file save test scheduled: delay=8s`
-- `Campaign state file saved`
-
-Bewertung:
-
-- Erster echter Kampagnenzustand wurde als Lua-Return-Datei gespeichert.
-- Save-Datei ist technisch erzeugbar.
-- Produktiver Restore bleibt deaktiviert.
+- erster echter Campaign-State-Snapshot als Lua-Return-Datei geschrieben
+- produktiver Restore weiterhin deaktiviert
 
 ---
 
@@ -1226,36 +1623,23 @@ Bewertung:
 
 Ziel:
 
-- gespeicherte Campaign-State-Datei lesen
-- Dateiinhalt prüfen
+- Save-Datei lesen
+- Inhalt prüfen
 - Lua-Return-Tabelle kompilieren
-- Lua-Return-Tabelle evaluieren
-- Snapshot-Struktur validieren
-- noch keinen Import in `TC.State` durchführen
+- evaluieren
+- Snapshot validieren
+- noch nicht produktiv importieren
 
-Bestätigter DCS-Logstatus:
+Bestätigt:
 
-- `load=true`
-- `loadstring=true`
-- `loadfile=true`
-- Datei wurde gelesen
-- Datei enthält Save-Marker
-- Datei enthält `return { ... }`
-- Datei konnte kompiliert werden
-- Datei konnte evaluiert werden
-- Snapshot wurde validiert
+- Datei gelesen
+- Save-Marker vorhanden
+- Lua-Return-Struktur vorhanden
+- Compile bestanden
+- Evaluate bestanden
+- Validation bestanden
 - `sections=10`
 - `imported=false`
-
-Bestätigter Marker:
-
-- `Campaign state file validation passed`
-
-Bewertung:
-
-- Save-Datei ist nicht nur vorhanden, sondern auch strukturell verwendbar.
-- Read/Compile/Evaluate/Validate-Pipeline ist bestanden.
-- Noch kein Restore aktiv.
 
 ---
 
@@ -1266,32 +1650,22 @@ Ziel:
 - gespeicherte Datei lesen
 - Snapshot validieren
 - Snapshot kontrolliert in `TC.State` importieren
-- nur als verzögerter technischer Test
-- kein produktiver automatischer Missionsstart-Restore
+- weiterhin kein produktiver Startup-Restore
 
-Bestätigter DCS-Logstatus:
+Bestätigt:
 
-- Save-Datei wurde geschrieben
-- Save-Datei wurde validiert
-- Snapshot wurde kontrolliert importiert
+- Save-Datei geschrieben
+- Save-Datei validiert
+- Snapshot kontrolliert importiert
 - `sections=10`
 - `imported=true`
 - `productiveRestore=false`
 
-Bestätigte Marker:
+Technische Kette bestanden:
 
-- `Campaign state imported`
-- `Campaign state file load test passed`
-- `productiveRestore=false`
+`State -> Snapshot -> Datei schreiben -> Datei lesen -> Datei validieren -> Lua auswerten -> Snapshot importieren`
 
-Bewertung:
-
-- Vollständige technische Kette bestanden:
-
-    State -> Snapshot -> Datei schreiben -> Datei lesen -> Datei validieren -> Lua auswerten -> Snapshot importieren
-
-- Import funktioniert kontrolliert.
-- Produktiver Auto-Restore bleibt deaktiviert.
+Produktiver Auto-Restore blieb deaktiviert.
 
 ---
 
@@ -1299,50 +1673,30 @@ Bewertung:
 
 Ziel:
 
-- Persistence von Test-Timer-Kaskade auf Hintergrunddienst umstellen
+- Persistence vom Test-Timer-Pfad zum Background-Service entwickeln
 - keine Spieler-F10-Bedienung
-- keine Save-/Validate-/Load-Testtimer mehr
-- interner Background-Autosave nach Missionsstart
-- Save-/Validate-/Load-Funktionen intern erhalten
+- interner Autosave
 - produktiver Restore weiterhin deaktiviert
 
 Technischer Stand:
 
-- Autosave initial nach 20 Sekunden
-- Autosave-Intervall: 120 Sekunden
-- Save-Datei bleibt:
+- Autosave initial nach `20 s`
+- Autosave-Intervall `120 s`
 
-`C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua`
+Bestätigt:
 
-Bestätigter DCS-Logstatus:
-
-- `PersistenceSystem v0.2.5` lädt korrekt
-- Sandbox-Test bestanden
-- Autosave wurde geplant
-- Autosave wurde automatisch ausgeführt
-- `autosaveCount=1`
-- `productiveRestore=false`
-
-Bestätigte Marker:
-
-- `Persistence autosave scheduled: initialDelay=20s interval=120s productiveRestore=false`
-- `Persistence system initialized: sandboxStatus=PASSED, fileSystemAvailable=true, autosaveScheduled=true, autosaveInterval=120s, productiveRestore=false`
-- `Campaign state autosaved`
-
-Nicht mehr vorhandene Marker:
-
-- `Persistence file save test scheduled`
-- `Persistence file validation test scheduled`
-- `Persistence file load test scheduled`
-- `Campaign state file load test passed`
+- `PersistenceSystem v0.2.5` lud korrekt.
+- Sandbox-Test bestanden.
+- Autosave geplant.
+- Autosave automatisch ausgeführt.
+- `autosaveCount=1`.
+- `productiveRestore=false`.
 
 Bewertung:
 
-- Persistenz läuft jetzt korrekt als unsichtbares Hintergrundsystem.
-- Spieler müssen keine Persistenzaktionen über F10 auslösen.
-- Save/Load-Funktionen bleiben intern vorhanden.
-- Autosave ist aktiv.
-- Produktiver Restore beim Missionsstart ist noch bewusst deaktiviert.
+- Persistence lief als Hintergrundsystem.
+- Spieler mussten keine Save-Aktion über F10 auslösen.
+- produktiver Startup-Restore blieb deaktiviert.
 
 ---
 
@@ -1359,12 +1713,6 @@ Bewertung:
 | MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | damaliger Stand |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
-
-Die aktuell verbindlichen Versionen stehen in:
-
-- `README.md`
-- `TASKS.md`
-- `ARCHITECTURE.md`
 
 ---
 
@@ -1383,15 +1731,15 @@ Aktuell bestätigte Versionen:
 | MissionGenerator | `v0.2.3` | bestanden |
 | AICapManager | `v0.2.1` | Read-Neutrality und Runtime-Regression bestanden |
 | F10Menu | `v0.2.3` | bestanden |
-| CTLD | `1.6.1` | KI-Truppentransport-PoC bestanden |
+| CTLD | `1.6.1` | KI-Truppentransport-PoC für getesteten Aufbau bestanden |
 
-Aktueller nächster Entwicklungsbereich:
+Aktueller Entwicklungsbereich:
 
 `Priority 4 – produktive CTLD-Integration vorbereiten`
 
 Noch nicht produktiv umgesetzt:
 
-- produktive Theater-Command-CTLD-Bridge
+- Theater-Command-CTLD-Orchestrierung
 - CTLD-Crate-/Cargo-Wirtschaft
 - reale CTLD-FOBs
 - echte MOOSE-Spawns
@@ -1403,4 +1751,6 @@ Noch nicht produktiv umgesetzt:
 - produktiver Restore
 - Multiplayer
 
-`productiveRestore=false` bleibt unverändert.
+Verbindlich:
+
+`productiveRestore=false`
