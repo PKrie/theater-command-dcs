@@ -2,568 +2,887 @@
 
 ## 1. Zweck und Status
 
-Stand: 2026-09-29
+Stand:
 
-Dieses Dokument beschreibt die Benennung, Mission-Editor-Grundlage und die praktisch bestätigte CTLD-Konfigurationsstrategie für die erste CTLD-Integration von Theater Command DCS.
+    2026-09-29
 
-Verbindlicher operativer Projektstand: `TASKS.md`.
+Dieses Dokument beschreibt Benennung, Mission-Editor-Grundlage und praktisch bestätigte CTLD-Konfigurationsstrategie für die erste CTLD-Integration von Theater Command DCS.
 
-CTLD 1.6.1 ist als unverändertes Vendor-Framework geladen.
+Verbindlicher operativer Projektstand:
 
-Die Theater-Command-Integration verändert keine Dateien unter `vendor/`.
+    TASKS.md
 
-Bestätigt ist inzwischen:
+CTLD:
 
-- CTLD-Pickup-Zonen können nach der automatischen CTLD-Initialisierung durch bereits normalisierte Einträge in der Live-Tabelle `ctld.pickupZones` ergänzt werden.
-- CTLD-Dropoff-Zonen können entsprechend über `ctld.dropOffZones` ergänzt werden.
-- `ctld.initialize()` muss und darf dafür nicht erneut ausgeführt werden.
-- CTLD liest die nachträglich ergänzten Zonen im laufenden Betrieb.
-- Ein CTLD-KI-Transporter muss zusätzlich über seinen exakten Unit-Namen in `ctld.transportPilotNames` registriert sein, damit `ctld.checkAIStatus()` ihn verarbeitet.
-- Ein kompletter KI-Transportzyklus aus automatischem Pickup, Flug, Off-Airfield-Landung und automatischem Dropoff wurde am 2026-09-29 praktisch bestätigt.
-- Ein DCS-native Perform Task `Land` an einem normalen Turning-Point-Wegpunkt funktioniert für die getestete Mi-8 als Off-Airfield-Landeverfahren.
-- Der bekannte CTLD-Fehler `RepackCommandsPath` tritt beim Grounded-Übergang eines solchen KI-Transporters auf und muss vor einer produktiven Integration berücksichtigt werden.
+    Version 1.6.1
 
-Noch nicht vorhanden ist eine produktive Theater-Command-Lua-Brücke, die diese Runtime-Konfiguration automatisch erzeugt.
+Vendor-Regel:
+
+    vendor/ bleibt unverändert.
+
+Aktueller Entwicklungsbereich:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Für den getesteten Aufbau bestätigt:
+
+- CTLD-Pickup-Zonen können nach bestehender CTLD-Initialisierung als normalisierte Einträge in `ctld.pickupZones` ergänzt werden.
+- CTLD-Dropoff-Zonen können entsprechend in `ctld.dropOffZones` ergänzt werden.
+- eine erneute Ausführung von `ctld.initialize()` war für diesen getesteten Runtime-Pfad nicht erforderlich.
+- CTLD verwendete die nachträglich ergänzten Zonen im laufenden Betrieb.
+- der getestete KI-Transporter musste über seinen exakten Unit-Namen in `ctld.transportPilotNames` registriert sein, damit der relevante CTLD-AI-Pfad ihn verarbeitet.
+- ein vollständiger KI-Truppentransport aus automatischem Pickup, Flug, Off-Airfield-Landung und automatischem Dropoff wurde am 2026-09-29 praktisch bestätigt.
+- ein DCS-native `Perform Task -> Land` an einem normalen Turning-Point-Wegpunkt funktionierte für den getesteten Mi-8-Aufbau.
+- der CTLD-Fehler `RepackCommandsPath` wurde genau einmal beim Touchdown beobachtet.
+
+Noch nicht vorhanden:
+
+    produktive Theater-Command-CTLD-Orchestrierung
+
+Der erfolgreiche Test ist:
+
+    Framework-Proof-of-Concept für den getesteten Aufbau
+
+und nicht:
+
+    universelle CTLD-Freigabe
+    produktive Logistics-Integration
+    produktive FOB-Integration
 
 ---
 
-## 2. DEV-Mission und Testableitungen
+## 2. DEV-Mission und Testmission
 
 Produktive Entwicklungsmission:
 
-`C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz`
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz
 
 Die DEV-Mission bleibt der technische Haupt-Testträger des Projekts.
 
-Für die CTLD-KI-Transporttests wurden bewusst separate Testmissionen verwendet, damit die DEV-Mission nicht unnötig verändert wird.
+Für den CTLD-KI-Transporttest wurde bewusst eine separate Testmission verwendet.
 
 Erfolgreicher Teststand vom 2026-09-29:
 
-`C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz`
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz
 
 SHA-256 vor dem Runtime-Test:
 
-`5F0D89DF744A7083401E36713B148BD21813FF187CC36EC1F088507163458C57`
+    5F0D89DF744A7083401E36713B148BD21813FF187CC36EC1F088507163458C57
 
-Die produktive Persistence wurde während des Tests schreibgeschützt und blieb byte-identisch unverändert.
+Grundregel:
 
-Bestätigte produktive Save-Datei:
+    Testmission != DEV-Mission
 
-`C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua`
-
-Bestätigter SHA-256 vor und nach dem Test:
-
-`C679B4FFE61A7AB601D50E159A057DCDF540B55C620086402883CA2DA27F2596`
-
-Dateigröße:
-
-`3094967` Bytes
-
-Änderungszeit:
-
-`2026-09-21 15:00:00.5926451`
-
-Nach Abschluss des Tests wurde der temporäre Schreibschutz erst nach beendetem DCS und erfolgreicher Hash-Prüfung wieder aufgehoben.
+Ein erfolgreicher isolierter Test wird nicht automatisch in die DEV-Mission übernommen.
 
 ---
 
-## 3. Verbindliche CTLD-Zonennamen
+## 3. Schutz der produktiven Persistence
 
-Für Theater-Command-CTLD-Zonen gilt `NAMING_CONVENTIONS.md`.
+Produktive Save-Datei:
 
-Es werden keine abweichenden Namen nur deshalb eingeführt, weil sie in den CTLD-Vendor-Defaults vorkommen.
+    C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua
+
+Bestätigter SHA-256 vor und nach dem Test:
+
+    C679B4FFE61A7AB601D50E159A057DCDF540B55C620086402883CA2DA27F2596
+
+Dateigröße:
+
+    3094967 Bytes
+
+Änderungszeit:
+
+    2026-09-21 15:00:00.5926451
+
+Backup vor dem Test:
+
+    C:\Users\Paul\Documents\TC_miz_backups\operation_levant_reclamation_save__pre_landtask_test_2026-09-29_100813.lua
+
+Während des Tests:
+
+    produktive Save-Datei ReadOnly
+
+Nach vollständig beendetem DCS bestätigt:
+
+- Größe unverändert
+- Änderungszeit unverändert
+- SHA-256 unverändert
+- Campaign-State unverändert
+
+Anschließend wurde der Schreibschutz wieder entfernt.
+
+Final:
+
+    ReadOnly=False
+
+Verbindlich:
+
+    productiveRestore=false
+
+---
+
+## 4. Verbindliche CTLD-Zonennamen
+
+Für Theater-Command-CTLD-Zonen gilt:
+
+    NAMING_CONVENTIONS.md
+
+Es werden keine abweichenden Projektbezeichnungen eingeführt, nur weil CTLD eigene Vendor-Default-Namen verwendet.
 
 ### Pickup-Zone Akrotiri
 
 Verbindlicher Name:
 
-`CTLD_PICKUP_BLUE_AKROTIRI_01`
+    CTLD_PICKUP_BLUE_AKROTIRI_01
 
 Schema:
 
-`CTLD_PICKUP_SIDE_LOCATION_NUMBER`
-
-Diese Zone wurde inzwischen praktisch verwendet und ist nicht mehr nur ein Planungsname.
-
-Bestätigte Eigenschaften des Teststands:
-
-- Position im Bereich Akrotiri H1–H4
-- Radius: `250 m`
-- Blue
-- erfolgreicher automatischer CTLD-KI-Pickup praktisch bestätigt
-
-Im erfolgreichen Test nahm die Mi-8 innerhalb dieser Zone automatisch 16 CTLD-Soldaten auf.
-
-Der Pickup-Zähler änderte sich dabei von:
-
-`10000`
-
-auf:
-
-`9999`
-
-### Reservierter späterer Ercan-Dropoff
-
-Reservierter Name:
-
-`CTLD_DROPOFF_BLUE_ERCAN_FOB_01`
-
-Schema:
-
-`CTLD_DROPOFF_SIDE_LOCATION_ROLE_NUMBER`
-
-Dieser Name bleibt für eine mögliche spätere KI-Transportoperation im Zusammenhang mit dem FOB-Projekt Ercan reserviert.
-
-Er ist weiterhin nicht als produktive FOB-Versorgung implementiert.
-
-Die Rolle `FOB` beschreibt nur den vorgesehenen Kampagnenzweck.
-
-### Technische Test-Dropoff-Zone
-
-Für den isolierten KI-Transporttest wurde verwendet:
-
-`CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01`
+    CTLD_PICKUP_SIDE_LOCATION_NUMBER
 
 Bestätigte Eigenschaften:
 
-- Mittelpunkt:
-  - x/North: `-29249.110954281`
-  - y/East bzw. DCS-z: `-271836.070539260`
-- Radius: `60 m`
-- Blue
-- Off-Airfield-Gelände westlich von Akrotiri
+    Bereich Akrotiri H1-H4
+    Radius 250 m
+    Blue
 
-Diese Zone ist ausdrücklich eine technische Testzone und kein produktiver Kampagnen-Dropoff.
+Diese Zone wurde praktisch verwendet.
+
+Im erfolgreichen Test nahm der Mi-8 innerhalb dieser Zone automatisch:
+
+    16 CTLD-Soldaten
+
+auf.
+
+Pickup-Zähler:
+
+    10000 -> 9999
+
+Der Transporter befand sich beim erfolgreichen Pickup ungefähr:
+
+    87 m
+
+vom Pickup-Zentrum entfernt.
 
 ---
 
-## 4. Verhältnis zu älteren Namensvorschlägen
+## 5. Technische Test-Dropoff-Zone
+
+Verwendete Testzone:
+
+    CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01
+
+Schema:
+
+    CTLD_DROPOFF_SIDE_LOCATION_ROLE_NUMBER
+
+Mittelpunkt:
+
+    x / North = -29249.110954281
+    y / East beziehungsweise DCS-z = -271836.070539260
+
+Radius:
+
+    60 m
+
+Koalition:
+
+    Blue
+
+Lage:
+
+    Off-Airfield-Gelände westlich von Akrotiri
+
+Diese Zone ist:
+
+    technische Testzone
+
+und kein:
+
+    produktiver Kampagnen-Dropoff
+
+---
+
+## 6. Reservierter Ercan-Dropoff
+
+Reservierter Name:
+
+    CTLD_DROPOFF_BLUE_ERCAN_FOB_01
+
+Schema:
+
+    CTLD_DROPOFF_SIDE_LOCATION_ROLE_NUMBER
+
+Dieser Name bleibt für eine mögliche spätere Transportoperation im Zusammenhang mit dem FOB-Projekt Ercan reserviert.
+
+Aktueller Status:
+
+    reserviert
+    nicht produktiv verwendet
+
+Die Rolle:
+
+    FOB
+
+beschreibt nur den vorgesehenen späteren Kampagnenzweck.
+
+Sie bedeutet nicht, dass Ercan bereits durch CTLD versorgt oder aufgebaut wird.
+
+---
+
+## 7. Ältere Namensvorschläge
 
 Ältere Dokumentationsstände enthielten unter anderem:
 
-- `CTLD_PICKUP_BLUE_AKROTIRI`
-- `CTLD_DROPOFF_FOB_ERCAN`
+    CTLD_PICKUP_BLUE_AKROTIRI
+    CTLD_DROPOFF_FOB_ERCAN
 
 Diese Namen sind nicht mehr verbindlich.
 
-Verbindlich beziehungsweise aktuell verwendet sind:
+Aktuell:
 
-- `CTLD_PICKUP_BLUE_AKROTIRI_01`
-- `CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01` für den technischen Test
-- `CTLD_DROPOFF_BLUE_ERCAN_FOB_01` als reservierter späterer Ercan-Name
+    CTLD_PICKUP_BLUE_AKROTIRI_01
+
+    CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01
+
+    CTLD_DROPOFF_BLUE_ERCAN_FOB_01
 
 ---
 
-## 5. CTLD-Zonenregistrierung
+## 8. CTLD-Zonenregistrierung
 
-Die unveränderte Vendor-Datei `vendor/ctld/CTLD.lua` enthält eigene Pickup- und Dropoff-Zonenlisten mit Default-Namen wie:
+Die unveränderte Vendor-Datei:
 
-- `pickzone1`
-- `dropzone1`
+    vendor/ctld/CTLD.lua
 
-Theater-Command-Zonen werden dadurch nicht automatisch erkannt.
+enthält eigene Pickup- und Dropoff-Konfiguration.
 
-### Bestätigte technische Strategie
+Theater-Command-Zonen werden dadurch nicht automatisch anhand ihrer Projektbenennung registriert.
 
-CTLD 1.6.1 initialisiert sich beim Laden selbst.
+### Praktisch bestätigter Runtime-Pfad
 
-Nach dieser Initialisierung können bereits normalisierte Einträge direkt in die Live-Tabellen ergänzt werden:
+CTLD 1.6.1 war bereits initialisiert.
 
-`ctld.pickupZones`
+Danach wurden normalisierte Einträge ergänzt in:
+
+    ctld.pickupZones
 
 und:
 
-`ctld.dropOffZones`
-
-Die frühere, ausschließlich aus dem Quelltext abgeleitete Annahme wurde inzwischen praktisch bestätigt.
+    ctld.dropOffZones
 
 Eine erneute Ausführung von:
 
-`ctld.initialize()`
+    ctld.initialize()
 
-ist dafür weder notwendig noch zulässig.
+war für diesen getesteten Runtime-Pfad nicht erforderlich und wurde nicht durchgeführt.
 
-Eine erneute Initialisierung würde zusätzliche CTLD-interne Zustände verändern beziehungsweise zurücksetzen und ist nicht Teil der Theater-Command-Konfigurationsstrategie.
+Daraus wird ausdrücklich nicht abgeleitet:
 
-### Erfolgreich getesteter Pickup-Eintrag
+    ctld.initialize() darf grundsätzlich nie erneut aufgerufen werden.
 
-Im Runtime-Test wurde ergänzt:
+Ebenso wird aus diesem Test keine allgemeine Aussage über sämtliche möglichen Nebenwirkungen einer erneuten Initialisierung abgeleitet.
 
-`{ "CTLD_PICKUP_BLUE_AKROTIRI_01", -1, 10000, 1, 2 }`
+Für Theater Command gilt zunächst nur:
 
-Der Eintrag wurde anschließend aus der Live-Tabelle zurückgelesen und exakt bestätigt.
-
-CTLD verwendete die Zone anschließend erfolgreich für den automatischen KI-Pickup.
-
-### Erfolgreich getesteter Dropoff-Eintrag
-
-Im Runtime-Test wurde ergänzt:
-
-`{ "CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01", -1, 2, 1 }`
-
-Auch dieser Eintrag wurde aus der Live-Tabelle zurückgelesen und exakt bestätigt.
-
-CTLD verwendete die Zone anschließend erfolgreich für den automatischen KI-Dropoff.
-
-### Regeln für die spätere Theater-Command-Implementierung
-
-Eine spätere eigene TC-Integration muss mindestens:
-
-1. prüfen, ob `ctld` geladen und initialisiert ist,
-2. vorhandene Einträge prüfen,
-3. fehlende Theater-Command-Pickup-Zonen idempotent ergänzen,
-4. fehlende Theater-Command-Dropoff-Zonen idempotent ergänzen,
-5. bereits normalisierte Werte verwenden,
-6. Duplikate verhindern,
-7. `ctld.initialize()` nicht erneut aufrufen,
-8. keine Vendor-Datei verändern.
+    Der getestete Integrationspfad benötigt keine erneute Initialisierung.
 
 ---
 
-## 6. KI-Transporter-Registrierung
+## 9. Erfolgreich getesteter Pickup-Eintrag
 
-Der Test vom 2026-09-29 hat eine zusätzliche CTLD-Voraussetzung praktisch bestätigt.
+Zur Laufzeit ergänzt:
 
-`ctld.checkAIStatus()` verarbeitet KI-Transporter nicht allein deshalb, weil sie sich innerhalb einer Pickup- oder Dropoff-Zone befinden.
+    { "CTLD_PICKUP_BLUE_AKROTIRI_01", -1, 10000, 1, 2 }
 
-Die Unit muss über ihren exakten Unit-Namen in:
+Der Eintrag wurde anschließend aus:
 
-`ctld.transportPilotNames`
+    ctld.pickupZones
 
-enthalten sein.
+zurückgelesen und bestätigt.
+
+CTLD verwendete ihn anschließend erfolgreich für den automatischen KI-Pickup.
+
+Damit gilt für den getesteten Aufbau:
+
+    Runtime-Registrierung der Pickup-Zone bestanden
+
+---
+
+## 10. Erfolgreich getesteter Dropoff-Eintrag
+
+Zur Laufzeit ergänzt:
+
+    { "CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01", -1, 2, 1 }
+
+Der Eintrag wurde anschließend aus:
+
+    ctld.dropOffZones
+
+zurückgelesen und bestätigt.
+
+CTLD verwendete ihn anschließend erfolgreich für den automatischen KI-Dropoff.
+
+Damit gilt für den getesteten Aufbau:
+
+    Runtime-Registrierung der Dropoff-Zone bestanden
+
+---
+
+## 11. Regeln für spätere automatische Zonenregistrierung
+
+Eine produktive Theater-Command-Integration muss mindestens:
+
+1. prüfen, ob CTLD verfügbar ist,
+2. den vorhandenen Runtime-Zustand prüfen,
+3. bestehende Pickup-Einträge erkennen,
+4. bestehende Dropoff-Einträge erkennen,
+5. fehlende Theater-Command-Zonen idempotent ergänzen,
+6. normalisierte CTLD-Einträge verwenden,
+7. Duplikate verhindern,
+8. die getestete Integration nicht unnötig über eine erneute CTLD-Initialisierung aufbauen,
+9. Vendor-Dateien unverändert lassen.
+
+Die konkrete verantwortliche `src/`-Komponente ist noch nicht festgelegt.
+
+Keine generische Framework-Datei wie:
+
+    tc_ctld.lua
+    tc_ctld_bridge.lua
+    tc_ctld_all_in_one.lua
+
+wird vorschnell angelegt.
+
+---
+
+## 12. KI-Transporterregistrierung
+
+Der Test vom 2026-09-29 bestätigte eine zusätzliche CTLD-Voraussetzung.
 
 Getestete Unit:
 
-`TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01`
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
 
-Vor der temporären Registrierung:
+Gruppe:
 
-- `ctld.transportPilotNames`: `108` Einträge
-- getestete Mi-8: nicht enthalten
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01
+
+Luftfahrzeug:
+
+    Mi-8
+
+Der relevante getestete CTLD-AI-Pfad verarbeitete den Transporter erst nach Registrierung seines exakten Unit-Namens in:
+
+    ctld.transportPilotNames
+
+Vor der Registrierung:
+
+    108 Einträge
+    Testunit nicht enthalten
 
 Temporär ergänzt wurde:
 
-`table.insert(ctld.transportPilotNames, "TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01")`
+    table.insert(ctld.transportPilotNames, "TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01")
 
 Nach der Registrierung:
 
-- `109` Einträge
-- getestete Mi-8 an Index `109`
-- genau ein Vorkommen
-- kein Duplikat
+    109 Einträge
+    Testunit genau einmal enthalten
 
-Vor Aktivierung war die Unit zwar vorhanden, aber nicht aktiv.
+Die Registrierung war:
 
-Nach Aktivierung wurde das von `ctld.getTransportUnit()` verwendete Active-/Life-Gate erfüllt.
+- idempotent vorbereitet
+- duplikatfrei
+- reine CTLD-Konfiguration
 
-Damit konnte `ctld.checkAIStatus()` die Unit verarbeiten.
-
-### Konsequenz für Theater Command
-
-Eine spätere produktive CTLD-KI-Transportintegration muss ihre vorgesehenen Transport-Units automatisch und idempotent in `ctld.transportPilotNames` registrieren.
-
-Das darf nicht davon abhängen, dass ein Theater-Command-Unit-Name zufällig bereits in der CTLD-Vendor-Default-Liste vorkommt.
-
-Die Registrierung ist Konfiguration des CTLD-KI-Erkennungspfads.
-
-Sie ist keine direkte Manipulation des CTLD-Bordzustands und löst selbst weder Pickup noch Dropoff aus.
+Sie war keine direkte Manipulation des transportierten Truppenstates.
 
 ---
 
-## 7. Bestätigter KI-Pickup
+## 13. Source-Befund zu `transportPilotNames`
 
-Am 2026-09-29 wurde der automatische CTLD-Pickup praktisch bestätigt.
+Der CTLD-Source-Audit zeigte für den getesteten AI-Pfad:
 
-Testgruppe:
+    ctld.checkAIStatus()
 
-`TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01`
+iteriert über:
 
-Testunit:
+    ctld.transportPilotNames
 
-`TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01`
+Daraus folgt für die spätere produktive Theater-Command-Integration:
 
-Typ:
+KI-Transporter dürfen nicht davon abhängen, zufällig bereits in der CTLD-Vendor-Default-Liste zu stehen.
 
-`Mi-8MT`
+Ihre Registrierung muss später:
 
-Start:
+- automatisch
+- idempotent
+- duplikatfrei
+- lifecycle-sicher
 
-- Akrotiri
-- Parking H4
-- `TakeOffParkingHot`
-- Late Activation
+durchgeführt werden.
 
-Nach Aktivierung erkannte CTLD die Mi-8 innerhalb der Pickup-Zone automatisch.
+Zu berücksichtigen sind insbesondere:
+
+- Aktivierung
+- möglicher späterer Spawn
+- Despawn
+- Wiederverwendung
+- Missionsneustart
+- Restore
+
+---
+
+## 14. Aktivierung des Testtransporters
+
+Die Testgruppe wurde in der Runtime nativ aktiviert über:
+
+    trigger.action.activateGroup()
+
+Aktivierung erfolgte ungefähr:
+
+    t=665 s
+
+Aktiver Zustand bestätigt ungefähr:
+
+    t=677 s
+
+Für den belegten CTLD-Erfolg relevant sind:
+
+- exakte Gruppe
+- exakte Unit
+- native Aktivierung
+- CTLD-Transporterregistrierung
+- Pickup-Zone
+- gespeicherte Route
+- gespeicherter Land-Task
+
+Nicht als verbindliche Voraussetzung des erfolgreichen PoC dokumentiert werden:
+
+- ein bestimmter Parkplatz H4
+- ein bestimmter Hot-Start-Modus
+- Late Activation als notwendige technische Voraussetzung
+
+Diese Details sind für die bestätigte technische Schlussfolgerung nicht erforderlich belegt.
+
+---
+
+## 15. Bestätigter automatischer Pickup
+
+Nach Aktivierung und CTLD-Registrierung erkannte CTLD den Mi-8 innerhalb der Pickup-Zone.
 
 Bestätigtes Ergebnis:
 
-- 16 Soldaten automatisch geladen
-- Coalition Blue
-- `onboard.troopUnitCount = 16`
-- Pickup-Zähler `10000 -> 9999`
-- kein manuelles Laden
-- keine direkte Manipulation von `ctld.inTransitTroops`
-- kein DCS-native Embarking
-- kein Teleport
-- keine Runtime-Routenänderung
+    16 Soldaten automatisch geladen
 
-Damit ist der automatische CTLD-KI-Pickup für diesen Testaufbau bestanden.
+Pickup-Zähler:
+
+    10000 -> 9999
+
+Bestätigter Abstand zum Pickup-Zentrum:
+
+    ungefähr 87 m
+
+Nicht verwendet:
+
+- manuelles CTLD-Loading
+- direkte Manipulation von `ctld.inTransitTroops`
+- direkte Manipulation des Onboard-State
+- Teleport
+- Runtime-Routenänderung
+- Runtime-Taskänderung
+
+Damit ist für den getesteten Aufbau:
+
+    automatischer CTLD-KI-Pickup bestanden
 
 ---
 
-## 8. Off-Airfield-Landung
+## 16. Flugphase
 
-Die vorherigen Tests vom 2026-09-21 zeigten, dass ein ungebundener Wegpunkt vom Typ:
+Nach erfolgreichem Pickup führte die DCS-AI die gespeicherte Mission selbständig weiter.
 
-`Land / Landing`
+Beobachteter Ablauf:
 
-problematisch beziehungsweise nicht zuverlässig war.
+    Taxi
+    -> Takeoff
+    -> Transit
+    -> Descent
+    -> Off-Airfield-Anflug
+    -> Landung
 
-Im erfolgreichen Test vom 2026-09-29 wurde deshalb ein anderer DCS-nativer Ansatz verwendet.
+Takeoff-Phase:
 
-Der Zielwegpunkt blieb ein normaler:
+    ungefähr t=1051.6 bis 1081.7 s
 
-`Turning Point`
+Transit:
+
+    ungefähr 100 m AGL
+    ungefähr 30 m/s
+
+Sinkflug:
+
+    ab ungefähr t=1345 s
+
+Keine Runtime-Routenänderung war erforderlich.
+
+Keine Runtime-Taskänderung war erforderlich.
+
+---
+
+## 17. Off-Airfield-Landung
+
+Frühere Tests vom 2026-09-21 mit einem ungebundenen:
+
+    Land / Landing
+
+Waypoint führten nicht zu einem vollständigen erfolgreichen Transportzyklus.
+
+Der erfolgreiche Test vom 2026-09-29 verwendete einen anderen DCS-nativen Missionsaufbau.
+
+Zielwegpunkt:
+
+    normaler Turning Point
 
 Name:
 
-`LAND_OFFAIRFIELD`
+    LAND_OFFAIRFIELD
 
 Position:
 
-- x: `-29249.110954281`
-- y/z: `-271836.070539260`
+    x / North = -29249.110954281
+    y / East beziehungsweise DCS-z = -271836.070539260
 
 Höhe:
 
-`100 m BARO`
+    100 m BARO
 
 Geschwindigkeit:
 
-`30 m/s`
+    30 m/s
 
-An diesem Wegpunkt war genau ein DCS-native Perform Task vorhanden:
+An diesem Wegpunkt war genau ein DCS-native:
 
-`Land`
+    Perform Task -> Land
+
+gespeichert.
 
 Parameter:
 
-- x: `-29249.110954281`
-- y: `-271836.070539260`
-- `duration = 300`
-- `durationFlag = true`
-- `enabled = true`
+    x = -29249.110954281
+    y = -271836.070539260
+    duration = 300
+    durationFlag = true
+    enabled = true
 
-Keine Airbase-, FARP- oder Helipad-Bindung war vorhanden.
+Keine Airbase-, FARP- oder Helipad-Bindung war für diesen getesteten Land-Task erforderlich.
 
-### Runtime-Ergebnis
+---
 
-Die Mi-8:
+## 18. Runtime-Ergebnis der Landung
+
+Der Mi-8:
 
 1. nahm automatisch 16 CTLD-Soldaten auf,
 2. rollte selbständig,
 3. startete,
-4. flog die Route,
-5. begann den Sinkflug zum Ziel,
-6. landete off-airfield,
-7. setzte nahezu exakt im Zentrum der Dropoff-Zone auf.
+4. flog die gespeicherte Route,
+5. begann den Sinkflug,
+6. landete im vorgesehenen Off-Airfield-Bereich,
+7. setzte nahezu exakt im Dropoff-Zentrum auf.
 
-Bestätigte minimale Entfernung zum Dropoff-Zentrum beim Touchdown:
+Touchdown-Phase:
 
-`1.06 m`
+    ungefähr t=1405.9 bis 1426.0 s
+
+Bestätigte minimale Entfernung zum Dropoff-Zentrum:
+
+    ungefähr 1.06 m
 
 Landeposition ungefähr:
 
-- x: `-29248.1`
-- z: `-271836`
+    x = -29248.1
+    z = -271836
 
-Geschwindigkeit beim bestätigten Grounded-Zustand:
+Geschwindigkeit nach der Landung:
 
-nahe `0 m/s`
+    ungefähr 0.01 m/s
 
-Die Mi-8 blieb nach der Landung mindestens ungefähr `220 s` ununterbrochen am Boden.
+Der Mi-8 blieb anschließend mindestens ungefähr:
 
-Der Test wurde nach bestätigtem CTLD-Dropoff beendet; ein vollständiges Abwarten der konfigurierten 300 Sekunden war nicht erforderlich.
+    220 Sekunden
 
-### Technische Schlussfolgerung
+am Boden.
 
-Für den getesteten Mi-8-KI-Transport ist:
+Der volle konfigurierte Zeitraum:
 
-`Turning Point + DCS-native Perform Task Land`
+    duration=300
 
-ein praktisch bestätigter Off-Airfield-Landeansatz.
+musste für den Dropoff-Nachweis nicht abgewartet werden.
 
-Ein Invisible FARP war dafür nicht erforderlich.
+Der CTLD-Dropoff war vorher bereits eindeutig erfolgt.
 
 ---
 
-## 9. Bestätigter automatischer CTLD-Dropoff
+## 19. Bewertung des Landeverfahrens
 
-Nach der Off-Airfield-Landung erkannte CTLD den Transporter automatisch innerhalb der Dropoff-Zone.
+Für den getesteten Mi-8-Aufbau ist praktisch bestätigt:
+
+    Turning Point
+    +
+    DCS-native Perform Task -> Land
+    ->
+    erfolgreiche Off-Airfield-Landung
+
+Für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
+
+Daraus wird nicht abgeleitet:
+
+- dass ein Invisible FARP grundsätzlich unnötig ist
+- dass alle Luftfahrzeugtypen identisch reagieren
+- dass alle Geländearten identisch funktionieren
+- dass Cargo-/Crate-Pfade identische Anforderungen besitzen
+- dass reale FOB-Infrastruktur keinen FARP benötigt
+
+Der vorherige ungebundene:
+
+    Land / Landing
+
+Waypoint hatte keinen vollständigen erfolgreichen Transportzyklus ergeben.
+
+Die neue Landemethode ist ein wesentlicher Unterschied zwischen den getesteten Aufbauten.
+
+Nicht bewiesen ist jedoch:
+
+- dass die fehlende Bindung des früheren Waypoints die Ursache des Turnbacks war
+- dass die genaue Ursache des früheren Fehlverhaltens abschließend bestimmt wurde
+
+---
+
+## 20. Bestätigter automatischer CTLD-Dropoff
+
+Nach der Landung erkannte CTLD den registrierten Transporter automatisch innerhalb der Dropoff-Zone.
 
 Bestätigt:
 
-- die 16 Soldaten wurden automatisch aus dem CTLD-Bordzustand entfernt,
-- `ctld.inTransitTroops[unitName]` verlor den `troops`-Eintrag,
-- `ctld.droppedTroopsBLUE` erhielt einen neuen Eintrag,
+- der `troops`-Inhalt verschwand aus dem In-Transit-State der Testunit,
+- `ctld.droppedTroopsBLUE` erhielt genau einen neuen Eintrag,
 - eine neue Blue-Bodengruppe wurde erzeugt.
 
 Erzeugte Gruppe:
 
-`Dropped Group 2`
+    Dropped Group 2
 
 Group-ID:
 
-`70001`
+    70001
 
 Einheiten:
 
-`16`
+    16
 
 Typ:
 
-`Soldier M249`
+    Soldier M249
 
-Der Dropoff wurde nicht manuell ausgelöst.
+Die Bodengruppe bewegte sich anschließend unter normaler DCS-AI weiter.
 
-Nicht verwendet wurden:
+Nicht verwendet:
 
-- manuelles Unload
-- direkte Bordzustandsmanipulation
-- DCS-native Disembarking
-- Teleportation
+- manuelles CTLD-Unload
+- direkte Manipulation des Onboard-State
+- Teleport
 - Runtime-Routenänderung
 - Runtime-Taskänderung
 
-Damit ist für diesen Testaufbau der vollständige automatische CTLD-KI-Zyklus praktisch bestätigt:
+Damit ist für den getesteten Aufbau der technische Zyklus bestätigt:
 
-`Pickup -> Taxi -> Takeoff -> Transit -> Off-Airfield Land -> CTLD Dropoff -> Ground Group`
+    Pickup
+    -> Taxi
+    -> Takeoff
+    -> Transit
+    -> Off-Airfield-Landung
+    -> automatischer CTLD-Dropoff
+    -> reale Bodengruppe
 
 ---
 
-## 10. RepackCommandsPath-Fehler
+## 21. `RepackCommandsPath`-Fehler
 
-Beim Grounded-Übergang der KI-Mi-8 trat der bereits aus einem früheren Test bekannte CTLD-Fehler erneut auf.
+Beim **Touchdown** des registrierten KI-Transporters wurde genau einmal beobachtet:
 
-Bestätigter Fehler:
-
-`CTLD.lua:6150: attempt to get length of local 'RepackCommandsPath' (a nil value)`
+    CTLD.lua:6150:
+    attempt to get length of local 'RepackCommandsPath' (a nil value)
 
 Stack-Kontext:
 
-- `updateRepackMenu`
-- `updateRepackMenuOnlanding`
+    updateRepackMenu
+    updateRepackMenuOnlanding
 
-Der Fehler trat zeitlich beim beziehungsweise unmittelbar nach dem Grounded-Übergang auf.
+Während der anschließenden ungefähr 220 Sekunden Bodenbeobachtung wurde dieser Fehler nicht erneut beobachtet.
 
-### Technische Einordnung
+### Source-basierte Einordnung
 
-Der geprüfte CTLD-Code führt `updateRepackMenuOnlanding()` auch über Namen aus `ctld.transportPilotNames`.
+Der untersuchte CTLD-Code führt den Landing-/Menüpfad auch für entsprechend registrierte Transporter aus.
 
-Für die reine KI-Mi-8 existiert jedoch nicht zwangsläufig derselbe F10-/Vehicle-Command-Pfad wie für einen Spielertransport.
+Für eine reine KI-Unit ist:
 
-Dadurch kann:
+    ctld.vehicleCommandsPath[_unitName]
 
-`ctld.vehicleCommandsPath[_unitName]`
+nicht zwangsläufig vorhanden.
 
-für die KI-Unit `nil` sein.
+Ein daraus abgeleiteter:
 
-Der anschließende Repack-Menüpfad erwartet diesen Zustand nicht korrekt und läuft in den beobachteten Fehler.
+    RepackCommandsPath
 
-### Wichtiges Testergebnis
+kann dadurch `nil` sein.
+
+Der Vendor-Code behandelt diesen Zustand an der beobachteten Stelle nicht robust.
+
+---
+
+## 22. Bewertung des `RepackCommandsPath`-Fehlers
 
 Trotz dieses Fehlers funktionierten im selben Test:
 
-- automatischer Pickup,
-- Transport,
-- Landung,
-- automatischer Dropoff,
-- Erzeugung der Bodengruppe.
+- automatischer Pickup
+- Flug
+- Off-Airfield-Landung
+- automatischer Dropoff
+- Erzeugung der Bodengruppe
 
-Der Fehler hat den getesteten Pickup-/Dropoff-Pfad somit in diesem konkreten Lauf nicht verhindert.
+Daraus wird nicht abgeleitet:
 
-Nicht daraus abgeleitet werden darf, dass der Fehler produktiv ignoriert werden kann.
+    der Fehler ist harmlos
 
-Insbesondere besteht der Verdacht, dass der Repack-Menü-Scheduler nach dem unbehandelten Fehler nicht erneut geplant wird.
+Nicht direkt bewiesen ist:
 
-Das ist vor produktiver CTLD-KI-Integration separat zu behandeln.
+- ob spätere Repack-Menü-Aktualisierungen funktionieren
+- ob der betreffende Scheduler-Pfad anschließend weiterlief
+- ob der betreffende Scheduler-Pfad anschließend beendet wurde
 
-### Vendor-Regel
+Dass ein unbehandelter Lua-Fehler den betreffenden Scheduler-Pfad beendet haben könnte, bleibt:
 
-`vendor/ctld/CTLD.lua` wird dafür nicht verändert.
+    source-basierte technische Inferenz
 
-Eine spätere Lösung muss TC-seitig erfolgen oder durch eine sauber belegte Konfigurations-/Integrationsstrategie erreicht werden.
+und ist kein:
+
+    direkter Runtime-Beweis
+
+Verbindlich:
+
+    vendor/ctld/CTLD.lua wird nicht gepatcht.
+
+Eine spätere produktive Integration muss diesen Punkt außerhalb des Vendor-Codes sauber behandeln oder isolieren.
 
 ---
 
-## 11. Pickup-Zone und Crate-Spawn bleiben getrennt
+## 23. Pickup-Zone und Cargo bleiben getrennt
 
-Eine funktionierende Pickup-Zone bedeutet weiterhin nicht automatisch, dass CTLD-Crates gespawnt werden können.
+Eine funktionierende Pickup-Zone für Truppen bedeutet nicht automatisch, dass CTLD-Cargo oder CTLD-Crates produktiv funktionieren.
 
-Für Crate-Spawn verwendet CTLD unter anderem seinen Logistics-Zone-/Logistic-Unit-Pfad.
+Der erfolgreiche Test vom 2026-09-29 war:
 
-Ein späterer Spieler- oder KI-Crate-Test ist deshalb ein eigener Integrationsschritt.
-
-Der erfolgreiche Test vom 2026-09-29 war ein:
-
-`KI-Truppentransport`
+    KI-Truppentransport
 
 und kein:
 
-`Crate-/Cargo-Transport`.
+    Cargo-/Crate-Test
 
-Nicht als bestätigt gelten deshalb:
+Nicht bestätigt:
 
-- Crate-Spawn
-- Crate-Loading
+- Crate Spawn
+- Crate Loading
 - Sling Load
-- Crate-Drop
+- Crate Drop
+- Supply Cargo
+- Engineering Cargo
+- Repair Cargo
+- Fuel Cargo
+- Ammo Cargo
+- FOB Core
 - FOB-Bau durch Crates
-- Theater-Command-Supply-Effekt aus Crates
+- Theater-Command-Supply-Effekt aus Cargo
+
+Diese Funktionen benötigen eigene isolierte Tests.
 
 ---
 
-## 12. Verhältnis zu Theater-Command-State
+## 24. Verhältnis zu Theater-Command-State
 
-Der erfolgreiche CTLD-Test war bewusst ein isolierter Framework-Integrationstest.
+Der erfolgreiche CTLD-Test war bewusst ein isolierter Framework-Fähigkeitsnachweis.
 
-Noch nicht implementiert ist die Verbindung zwischen dem erfolgreichen CTLD-Runtime-Pfad und dem persistierten Theater-Command-State.
+Noch nicht produktiv implementiert:
 
-Insbesondere noch nicht produktiv:
-
-- CTLD-Transportauftrag aus MissionGenerator
+- Transportauftrag aus Theater-Command-State
 - automatische Auswahl eines KI-Transporters
-- automatische TC-seitige CTLD-Zonenregistrierung
+- automatische Theater-Command-Zonenregistrierung
 - automatische `transportPilotNames`-Registrierung
 - LogisticsDelivery -> CTLD
 - CTLD Dropoff -> LogisticsDelivery
-- CTLD Dropoff -> FOB Build Progress
+- CTLD Dropoff -> FobSystem
+- CTLD Dropoff -> Build Progress
 - CTLD Dropoff -> Supply
 - CTLD Dropoff -> Capture
 - CTLD Dropoff -> AI Director
 - CTLD-Runtime-State Restore
 
-Diese Verknüpfungen werden nicht aus dem erfolgreichen Proof-of-Concept als bereits implementiert abgeleitet.
+Diese Verknüpfungen werden nicht aus dem erfolgreichen PoC als vorhanden abgeleitet.
 
 ---
 
-## 13. Invisible FARP
+## 25. Invisible FARP
 
-Ein Invisible FARP wurde als möglicher technischer Ansatz untersucht, aber für den erfolgreichen Test nicht benötigt.
+Ein Invisible FARP wurde als möglicher technischer Ansatz betrachtet.
 
-Der Test vom 2026-09-29 bestätigt, dass die getestete Mi-8 mit einem DCS-native Perform Task `Land` direkt auf geeignetem Gelände landen kann.
+Für den erfolgreichen getesteten KI-Truppentransport war er nicht erforderlich.
 
-Deshalb wird für diesen Transportpfad derzeit kein Invisible FARP als technische Voraussetzung angenommen.
+Bestätigt ist:
 
-Eine spätere Verwendung von Invisible FARPs für echte FOB-Infrastruktur, Rearming, Refueling, Parking oder andere Kampagnenfunktionen bleibt davon unberührt und muss separat entschieden werden.
+    Mi-8
+    +
+    geeigneter Off-Airfield-Bereich
+    +
+    Turning Point
+    +
+    Perform Task -> Land
+    ->
+    erfolgreiche Landung und CTLD-Dropoff
+
+Eine spätere Verwendung von Invisible FARPs für:
+
+- reale FOB-Infrastruktur
+- Rearming
+- Refueling
+- Parking
+- Cargo-/Crate-Prozesse
+- andere Luftfahrzeuge
+- andere Kampagnenfunktionen
+
+bleibt davon unberührt.
 
 ---
 
-## 14. Werkzeugtrennung
+## 26. Werkzeugtrennung
 
-Für die CTLD-Tests hat sich folgende Entwicklungswerkzeug-Trennung bestätigt:
+Für die CTLD-Tests gilt die aktuelle Entwicklungswerkzeug-Trennung.
 
-### dcs-mcp
+### ChatGPT
+
+Rolle:
+
+- Projektkoordination
+- Architektur
+- Testplanung
+- Ergebnisbewertung
+- GitHub-Audit
+- Dokumentationsführung
+
+### Claude + dcs-mcp
+
+Version:
+
+    dcs-mcp 0.9.11
 
 Verwendet für:
 
@@ -576,12 +895,33 @@ Verwendet für:
 - Tasks
 - Terrainprüfung
 - gespeicherte Missionsänderungen
+- gespeicherten Missionsaudit
 
-Aktuell bestätigte verwendete Version:
+Terrain Store:
 
-`dcs-mcp 0.9.11`
+    C:\Users\Paul\AppData\Local\dcs-mcp\terrain
 
-### DCS-SMS
+Syria:
+
+    installiert
+
+### Claude Code + DCS-SMS
+
+Version:
+
+    DCS-SMS 0.27.2
+
+Hook:
+
+    me-bridge-0.27.2
+
+Verifiziertes Installationsverzeichnis:
+
+    C:\Tools\dcs-sms
+
+Claude-Code-Skill:
+
+    C:\Users\Paul\.claude\skills\dcs-sms\SKILL.md
 
 Verwendet für:
 
@@ -589,87 +929,103 @@ Verwendet für:
 - laufende DCS-Runtime
 - Runtime-Lua
 - CTLD-Live-State
-- Unit-Aktivierung
+- Unit-/Group-State
 - Positions-/Flugzustandsbeobachtung
 - Logauswertung
+- Runtime-Regressionen
 
-Aktuell bestätigte Version:
+Aus dem bestätigten Stand wird kein exakter DCS-SMS-Executable-Pfad abgeleitet.
 
-`DCS-SMS 0.27.2`
+DCS-SMS ist:
 
-Hook:
+    Entwicklungs- und Diagnosewerkzeug
 
-`me-bridge-0.27.2`
+und kein:
 
-DCS-SMS bleibt ausschließlich Entwicklungs- und Diagnosewerkzeug.
-
-Es ist kein Theater-Command-Runtime-Framework.
+    Theater-Command-Runtime-Framework
 
 ---
 
-## 15. Aktueller Integrationsstand
+## 27. Aktueller Integrationsstand
 
-Bestanden:
+Für den getesteten Aufbau bestanden:
 
 - CTLD 1.6.1 lädt und initialisiert.
-- nachträgliche Pickup-Zonenregistrierung funktioniert.
-- nachträgliche Dropoff-Zonenregistrierung funktioniert.
-- keine erneute CTLD-Initialisierung erforderlich.
+- nachträgliche normalisierte Pickup-Zonenregistrierung funktioniert.
+- nachträgliche normalisierte Dropoff-Zonenregistrierung funktioniert.
+- erneute `ctld.initialize()`-Ausführung war für den getesteten Pfad nicht erforderlich.
 - KI-Transporter kann über `ctld.transportPilotNames` registriert werden.
-- CTLD erkennt den registrierten KI-Transporter.
+- CTLD erkennt den registrierten KI-Transporter im getesteten AI-Pfad.
 - automatischer KI-Truppen-Pickup funktioniert.
 - 16 Soldaten werden transportiert.
-- DCS-native Off-Airfield-Landung über Perform Task `Land` funktioniert.
+- DCS-native Off-Airfield-Landung über `Perform Task -> Land` funktioniert für den getesteten Mi-8-Aufbau.
 - CTLD erkennt den gelandeten KI-Transporter in der Dropoff-Zone.
 - automatischer CTLD-Dropoff funktioniert.
-- 16-Mann-Bodengruppe wird erzeugt.
+- eine 16-Mann-Bodengruppe wird erzeugt.
+- für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 - produktive Persistence blieb während des isolierten Tests unverändert.
 - Vendor-Dateien blieben unverändert.
 
-Bekannter Fehler:
+Bekannter Integrationspunkt:
 
-- `RepackCommandsPath` bei KI-Grounded-Transition.
+    RepackCommandsPath
+    genau einmal beim Touchdown beobachtet
 
 Noch nicht produktiv:
 
-- eigene TC-CTLD-Bridge unter `src/`
-- automatische Zonenregistrierung
+- automatische Theater-Command-Zonenregistrierung
 - automatische KI-Transporterregistrierung
-- Crate-/Cargo-Transport
+- Transportauftrag aus Campaign-State
+- Cargo-/Crate-Transport
 - LogisticsDelivery-Kopplung
-- FOB-Bau durch CTLD
+- FobSystem-Kopplung
+- realer FOB-Bau durch CTLD
 - Supply-Effekt
-- Persistenz des CTLD-Runtime-Zustands
-- Multiplayer-Test
+- CTLD-Ergebnis-Persistence
+- CTLD-Restore
+- Multiplayer
 
 ---
 
-## 16. Nächster technischer Architekturpunkt
+## 28. Nächster technischer Architekturpunkt
 
-Der Proof-of-Concept ist abgeschlossen.
+Der isolierte KI-Truppentransport-PoC ist für den getesteten Aufbau abgeschlossen.
 
-Der nächste produktive CTLD-Schritt darf deshalb nicht einfach ein weiterer manueller Runtime-Test derselben Art sein.
+Der nächste Schritt ist deshalb nicht:
 
-Vor einer produktiven Integration muss festgelegt werden, wie Theater Command die bestätigten CTLD-Voraussetzungen in eigener Logik unter `src/` verwaltet.
+    denselben manuellen Transport erneut testen
 
-Mindestens zu berücksichtigen:
+Vor einer produktiven Integration muss festgelegt werden, wie Theater Command die bestätigten CTLD-Voraussetzungen in eigener fachlicher Logik unter:
 
-1. idempotente Registrierung von Pickup-Zonen,
-2. idempotente Registrierung von Dropoff-Zonen,
-3. idempotente Registrierung von KI-Transport-Units in `ctld.transportPilotNames`,
-4. Lifecycle bei Spawn/Aktivierung/Despawn,
-5. Behandlung des `RepackCommandsPath`-Problems ohne Vendor-Modifikation,
-6. Trennung zwischen Truppentransport und Crate-/Cargo-Transport,
-7. spätere Kopplung an LogisticsDelivery und FobSystem,
-8. klare Persistence-Grenze zwischen Theater-Command-State und CTLD-Runtime-State.
+    src/
 
-Die konkrete Implementierungsdatei und der genaue erste produktive Code-Schritt werden separat festgelegt.
+verwaltet.
+
+Mindestens zu klären:
+
+1. welche fachliche Komponente den Transportauftrag besitzt,
+2. wie Pickup-Zonen idempotent registriert werden,
+3. wie Dropoff-Zonen idempotent registriert werden,
+4. wie KI-Transporter idempotent in `ctld.transportPilotNames` registriert werden,
+5. wie Aktivierung, Spawn, Despawn und Wiederverwendung behandelt werden,
+6. wie `RepackCommandsPath` ohne Vendor-Patch behandelt oder isoliert wird,
+7. wie Truppentransport und Cargo-/Crate-Transport getrennt bleiben,
+8. wie reale Ergebnisse in LogisticsDelivery zurückgeführt werden,
+9. wie reale Ergebnisse in FobSystem zurückgeführt werden,
+10. welche Mutationen Dirty setzen,
+11. welche Ergebnisse persistiert werden,
+12. welche CTLD-Daten runtime-only bleiben,
+13. was später nach Restore rekonstruiert werden muss.
+
+Die konkrete Implementierungsdatei wird erst nach dieser Architekturentscheidung festgelegt.
 
 Es gilt weiterhin:
 
-- eine konkrete Aufgabe,
-- eine Datei,
-- ein Test,
-- eine klare Bewertung.
+    eine konkrete Aufgabe
+    eine Datei
+    ein Test
+    eine klare Bewertung
 
-`productiveRestore=false` bleibt unverändert.
+Verbindlich:
+
+    productiveRestore=false
