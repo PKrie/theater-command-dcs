@@ -21,6 +21,7 @@ Grundprinzip:
 - Mission Editor = Bühne
 - Lua = Kampagnensystem
 - GitHub = Projektgedächtnis / Source of Truth
+- DCS Runtime = autoritativer Verhaltensbeweis
 
 Aktueller verbindlicher Stand:
 
@@ -50,7 +51,7 @@ Bestätigt sind:
 - Mission Failure
 - Capture Ready Apply
 - projektweite Priority-3-Dirty-Coverage im dokumentierten Umfang
-- CTLD-KI-Truppentransport als isolierter Framework-Proof-of-Concept
+- CTLD-KI-Truppentransport als isolierter Framework-Proof-of-Concept für den getesteten Aufbau
 
 Priority 3 wurde am:
 
@@ -87,7 +88,7 @@ Der aktuelle Entwicklungsbereich ist:
 
 - Priority 4 – produktive CTLD-Integration vorbereiten
 
-Am 2026-09-29 wurde erstmals ein vollständiger automatischer CTLD-KI-Truppentransport praktisch bestätigt:
+Am 2026-09-29 wurde für den getesteten Aufbau ein vollständiger automatischer CTLD-KI-Truppentransport praktisch bestätigt:
 
 - Pickup
 - Taxi
@@ -97,7 +98,7 @@ Am 2026-09-29 wurde erstmals ein vollständiger automatischer CTLD-KI-Truppentra
 - automatischer Dropoff
 - reale Blue-Bodengruppe
 
-Der Proof-of-Concept ist bestanden.
+Der isolierte Proof-of-Concept ist damit bestanden.
 
 Eine produktive Theater-Command-CTLD-Integration existiert noch nicht.
 
@@ -740,6 +741,7 @@ Pfad:
 Letzter bestätigter Stand nach dem CTLD-Test vom 2026-09-29:
 
 - Größe: `3094967` Bytes
+- Änderungszeit: `2026-09-21 15:00:00.5926451`
 
 SHA-256:
 
@@ -799,7 +801,7 @@ Ergebnis:
 
 Latente Lifecycle-Punkte bleiben dokumentiert.
 
-Priority 3 wird ohne neuen Anlass nicht erneut vollständig durchgeführt.
+Priority 3 wird ohne neuen technischen Anlass nicht erneut vollständig durchgeführt.
 
 ---
 
@@ -807,7 +809,7 @@ Priority 3 wird ohne neuen Anlass nicht erneut vollständig durchgeführt.
 
 Status:
 
-- KI-Truppentransport-PoC bestanden
+- KI-Truppentransport-PoC für den getesteten Aufbau bestanden
 - produktive TC-Integration offen
 
 Testdatum:
@@ -822,9 +824,9 @@ CTLD:
 
 ## 15.1 Zonenregistrierung
 
-Bestätigt:
+Für den getesteten Runtime-Pfad bestätigt:
 
-Nach CTLD-Initialisierung können normalisierte Einträge ergänzt werden in:
+Nach bestehender CTLD-Initialisierung können normalisierte Einträge ergänzt werden in:
 
 - `ctld.pickupZones`
 - `ctld.dropOffZones`
@@ -841,17 +843,23 @@ Reservierter späterer FOB-Dropoff:
 
 - `CTLD_DROPOFF_BLUE_ERCAN_FOB_01`
 
-Verbindlich:
+CTLD verwendete die ergänzten Einträge im Test tatsächlich.
 
-- `ctld.initialize()` wird nicht erneut ausgeführt.
+Für diese getestete Runtime-Ergänzung war keine erneute Ausführung von:
+
+- `ctld.initialize()`
+
+erforderlich.
+
+Daraus wird nicht abgeleitet, dass `ctld.initialize()` generell niemals erneut aufgerufen werden dürfte.
 
 ---
 
 ## 15.2 KI-Transporterregistrierung
 
-Bestätigt:
+Für den getesteten CTLD-AI-Pfad bestätigt:
 
-Ein KI-Transporter muss im verwendeten CTLD-AI-Pfad in:
+Ein KI-Transporter muss in:
 
 - `ctld.transportPilotNames`
 
@@ -873,7 +881,7 @@ Unit:
 
 - genau einmal vorhanden
 
-Produktive TC-Integration muss dies später automatisch und idempotent durchführen.
+Produktive TC-Integration muss dies später automatisch, idempotent und lifecycle-sicher durchführen.
 
 ---
 
@@ -883,7 +891,7 @@ Testmission:
 
 `C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz`
 
-SHA-256 vor Test:
+SHA-256 vor Runtime-Test:
 
 `5F0D89DF744A7083401E36713B148BD21813FF187CC36EC1F088507163458C57`
 
@@ -897,9 +905,9 @@ Transportunit:
 
 Typ:
 
-- Mi-8MT
+- Mi-8
 
-Bestätigter Ablauf:
+Für den getesteten Aufbau bestätigter Ablauf:
 
 `Pickup -> Taxi -> Takeoff -> Transit -> Off-Airfield-Landung -> automatischer Dropoff -> Bodengruppe`
 
@@ -923,35 +931,58 @@ Einheiten:
 
 - `16 x Soldier M249`
 
+Nicht verwendet wurden:
+
+- manuelles CTLD-Loading
+- manuelles CTLD-Unload
+- direkte Manipulation von `ctld.inTransitTroops`
+- Teleport
+- Runtime-Routenänderung
+- Runtime-Taskänderung
+
+Der Test bestätigt diesen isolierten Framework-Pfad.
+
+Er bestätigt noch keine produktive Theater-Command-Orchestrierung.
+
 ---
 
 ## 15.4 Off-Airfield-Landung
 
-Bestätigter Ansatz:
+Für den getesteten Aufbau bestätigter Ansatz:
 
 - normaler Turning Point
 - DCS-native Perform Task `Land`
 
 Dropoff-Zentrum:
 
-- x: `-29249.110954281`
-- z: `-271836.070539260`
+- x / North: `-29249.110954281`
+- z / East: `-271836.070539260`
+
+Wegpunkt:
+
+- Höhe: `100 m BARO`
+- Geschwindigkeit: `30 m/s`
+
+Land Task:
+
+- `duration=300`
+- `durationFlag=true`
 
 Touchdown:
 
 - ungefähr `1.06 m` vom Zentrum entfernt
 
-Invisible FARP:
+Für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 
-- nicht erforderlich
+Der ältere ungebundene `Land / Landing`-Waypoint-Ansatz führte nicht zu einem vollständigen erfolgreichen Transportzyklus.
 
-Der ältere ungebundene `Land / Landing`-Waypoint-Ansatz wird nicht als bestätigter Zielansatz verwendet.
+Die genaue Ursache des früheren Turnback-Verhaltens ist dadurch nicht abschließend bewiesen.
 
 ---
 
 ## 15.5 Bekannter CTLD-Fehler
 
-Reproduziert:
+Beim Grounded-Übergang trat im erfolgreichen Test genau einmal auf:
 
 `CTLD.lua:6150: attempt to get length of local 'RepackCommandsPath' (a nil value)`
 
@@ -964,13 +995,16 @@ Der Pickup-/Dropoff-Pfad wurde trotzdem abgeschlossen.
 
 Nicht bewiesen:
 
-- dass der Fehler langfristig harmlos ist.
+- dass der Fehler langfristig harmlos ist
+- dass der betreffende Scheduler danach dauerhaft beendet wurde
+
+Dass der unbehandelte Fehler den betreffenden Scheduler-Pfad beendet haben könnte, ist eine source-basierte technische Inferenz und kein direkter Runtime-Beweis.
 
 Verbindlich:
 
 - kein Patch an `vendor/ctld/CTLD.lua`
 
-Vor produktiver Integration muss eine TC-seitige beziehungsweise konfigurationsbasierte Lösung bewertet werden.
+Vor produktiver Integration muss eine Theater-Command-seitige beziehungsweise konfigurationsbasierte Lösung oder saubere Isolation bewertet werden.
 
 ---
 
@@ -1006,6 +1040,7 @@ Zu definieren:
 Verbindlich:
 
 - keine generische `tc_ctld.lua`
+- keine generische `tc_ctld_bridge.lua`
 - Vendor unverändert
 
 ---
@@ -1076,7 +1111,7 @@ Mögliche spätere Funktionen:
 
 Invisible FARPs können für echte FOB-Infrastruktur später sinnvoll sein.
 
-Sie waren für den bestätigten Off-Airfield-Transport-PoC nicht erforderlich.
+Für den getesteten KI-Truppentransport-PoC war kein Invisible FARP erforderlich.
 
 ---
 
@@ -1326,6 +1361,14 @@ Aktuell:
 
 - `dcs-mcp 0.9.11`
 
+Terrain Store:
+
+- `C:\Users\Paul\AppData\Local\dcs-mcp\terrain`
+
+Syria:
+
+- installiert
+
 Verwendung:
 
 - `.miz` analysieren
@@ -1354,9 +1397,9 @@ Hook:
 
 - `me-bridge-0.27.2`
 
-Lokaler Pfad:
+Verifiziertes Installationsverzeichnis:
 
-`C:\Tools\dcs-sms\dcs-sms.exe`
+`C:\Tools\dcs-sms`
 
 Claude-Code-Skill:
 
@@ -1367,6 +1410,7 @@ Verwendung:
 - Mission-Editor-Status
 - laufende DCS-Runtime
 - Runtime-Lua
+- Theater-Command-Live-State
 - CTLD-Live-State
 - Units
 - Positionen
@@ -1376,6 +1420,8 @@ Verwendung:
 - Runtime-Regressionen
 
 DCS-SMS ist kein Theater-Command-Runtime-Framework.
+
+Aus dem bestätigten Stand wird kein exakter Executable-Pfad abgeleitet.
 
 ---
 
@@ -1441,12 +1487,12 @@ Dabei:
 - LogisticsDelivery Read-Neutrality
 - FobSystem Read-Neutrality
 - AICapManager Read-Neutrality
-- Priority 3 abgeschlossen
-- CTLD Runtime-Zonenregistrierung bestätigt
-- CTLD KI-Transporterregistrierung bestätigt
-- automatischer CTLD-KI-Pickup bestätigt
-- Off-Airfield-Landung bestätigt
-- automatischer CTLD-Dropoff bestätigt
+- Priority 3 im dokumentierten Umfang abgeschlossen
+- CTLD Runtime-Zonenregistrierung für getesteten Pfad bestätigt
+- CTLD KI-Transporterregistrierung für getesteten Pfad bestätigt
+- automatischer CTLD-KI-Pickup für getesteten Aufbau bestätigt
+- Off-Airfield-Landung für getesteten Mi-8-Aufbau bestätigt
+- automatischer CTLD-Dropoff für getesteten Aufbau bestätigt
 - reale Bodengruppe nach Dropoff bestätigt
 - Persistence während isoliertem CTLD-Test unverändert bestätigt
 
@@ -1456,9 +1502,9 @@ Dabei:
 
 **Priority 4 – produktive CTLD-Integration vorbereiten**
 
-Der technische Transport-PoC ist abgeschlossen.
+Der technische Transport-PoC für den getesteten Aufbau ist abgeschlossen.
 
-Jetzt muss aus dem manuellen Test eine saubere Theater-Command-Architektur entstehen.
+Jetzt muss aus dem isolierten Test eine saubere Theater-Command-Architektur entstehen.
 
 ---
 
@@ -1509,6 +1555,8 @@ Zu klären:
 - wie Resultate in `TC.State` zurückgeführt werden
 - welche Resultate Dirty setzen
 - welche Daten persistiert werden
+- welche CTLD-Daten runtime-only bleiben
+- was später nach Restore rekonstruiert werden muss
 
 ---
 
@@ -1516,7 +1564,7 @@ Zu klären:
 
 Noch nicht produktiv:
 
-- CTLD Theater-Command-Bridge
+- Theater-Command-CTLD-Integration
 - CTLD Cargo Economy
 - CTLD Crates
 - reale CTLD-FOBs
@@ -1539,18 +1587,23 @@ Noch nicht produktiv:
 
 ## CTLD Repack-Menü
 
-Bekannter Fehler:
+Beim erfolgreichen Test genau einmal beobachteter Fehler:
 
 `CTLD.lua:6150: attempt to get length of local 'RepackCommandsPath' (a nil value)`
 
 Risiko:
 
-- Scheduler-/Menüpfad könnte nach unbehandeltem Fehler beeinträchtigt sein.
+- Scheduler-/Menüpfad könnte nach dem unbehandelten Fehler beeinträchtigt sein.
+
+Nicht direkt bewiesen:
+
+- ob der betreffende Scheduler dauerhaft beendet wurde
 
 Maßnahme:
 
 - Source-backed prüfen.
 - keinen Vendor-Patch vornehmen.
+- TC-seitige beziehungsweise konfigurationsbasierte Isolation oder Lösung bewerten.
 
 ---
 
@@ -1633,9 +1686,9 @@ Seitdem zusätzlich erreicht:
 - PersistenceSystem `v0.2.6`
 - MissionGenerator-Diagnose korrigiert
 - Mission-/Capture-Regressions bestätigt
-- Priority 3 vollständig auditiert
+- Priority 3 im dokumentierten Umfang abgeschlossen
 - drei Read-Neutrality-Fixes
-- CTLD-KI-Transport-PoC
+- CTLD-KI-Transport-PoC für den getesteten Aufbau
 
 Der historische Stand ist kein aktueller Arbeitsauftrag mehr.
 
@@ -1655,6 +1708,8 @@ Mindestens prüfen:
 
 Für den aktuellen CTLD-Bereich zusätzlich:
 
+- `AGENTS.md`
+- `.agents/skills/theater-command/SKILL.md`
 - `MISSION_EDITOR_SETUP.md`
 - `docs/02_technical_architecture.md`
 - `docs/03_mission_editor_basics.md`
@@ -1664,6 +1719,7 @@ Für den aktuellen CTLD-Bereich zusätzlich:
 - `mission_editor/README.md`
 - `mission_editor/ctld_start_zones.md`
 - `mission_editor/trigger_setup.md`
+- `src/logistics/README.md`
 - `src/logistics/tc_logistics_delivery.lua`
 - `src/logistics/tc_fob_system.lua`
 - `src/missions/tc_mission_generator.lua`
@@ -1695,4 +1751,4 @@ Aktueller Leitsatz:
 
 Aktueller Übergang:
 
-**state-first Kampagnenkern + bestandener CTLD-Transport-PoC -> kontrollierte produktive CTLD-Integration**
+**state-first Kampagnenkern + dirty-aware Persistence + abgeschlossene Priority-3-Dirty-Coverage + bestandener CTLD-KI-Truppentransport-PoC -> kontrollierte produktive CTLD-Integration**
