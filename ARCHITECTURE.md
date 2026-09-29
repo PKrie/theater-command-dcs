@@ -25,11 +25,12 @@ Kampagnenausgangslage:
 
 # 1. Architekturgrundsatz
 
-Theater Command DCS folgt drei zentralen Grundsätzen:
+Theater Command DCS folgt vier zentralen Grundsätzen:
 
     Mission Editor = Bühne
     Lua = Kampagnensystem
     GitHub = Projektgedächtnis / Source of Truth
+    DCS Runtime = autoritativer Verhaltensbeweis
 
 Der Mission Editor stellt die konkrete DCS-Welt bereit.
 
@@ -68,6 +69,8 @@ GitHub hält den bestätigten Entwicklungsstand fest:
 - bekannte Grenzen
 - historische Entscheidungen
 
+DCS selbst ist für tatsächliches Simulator- und Framework-Verhalten die autoritative Runtime.
+
 ---
 
 # 2. Langfristiges Zielbild
@@ -100,7 +103,7 @@ Der Spieler kann:
 - in laufende Operationen eingreifen
 - die Kampagnenlage beeinflussen
 
-Die Kampagne soll aber auch ohne permanente Spielerinteraktion weiter funktionieren.
+Die Kampagne soll langfristig auch ohne permanente Spielerinteraktion funktionieren.
 
 ---
 
@@ -127,6 +130,7 @@ Nicht gewünscht:
     tc_mist.lua
     tc_ctld.lua
     tc_ctld_all_in_one.lua
+    tc_ctld_bridge.lua
     tc_all_in_one.lua
 
 Ein fachliches Modul darf intern Framework-Funktionen verwenden.
@@ -180,7 +184,9 @@ Vendor-Dateien:
     vendor/ctld/CTLD-i18n.lua
     vendor/ctld/CTLD.lua
 
-Framework-Anpassungen erfolgen durch eigene Theater-Command-Logik unter `src/`.
+Framework-Anpassungen erfolgen durch eigene Theater-Command-Logik unter:
+
+    src/
 
 ---
 
@@ -199,6 +205,10 @@ Reihenfolge:
     -> Persistence absichern
     -> Framework-Funktion isoliert testen
     -> Framework kontrolliert integrieren
+    -> Ergebnis validieren
+    -> Theater-Command-State aktualisieren
+    -> Dirty markieren
+    -> Persistence
 
 Das reduziert die Zahl gleichzeitig bewegter Teile.
 
@@ -206,7 +216,7 @@ Beispiel:
 
 Der MissionGenerator erzeugt zuerst einen Mission Record.
 
-Er startet nicht sofort:
+Er startet nicht automatisch:
 
 - MOOSE-Flugzeuge
 - CTLD-Transporte
@@ -287,7 +297,7 @@ String-keyed Lua-Dictionaries dürfen nicht mit dem Längenoperator:
 
     #
 
-gezählt werden.
+autorativ gezählt werden.
 
 Für diese Tabellen wird:
 
@@ -295,7 +305,7 @@ Für diese Tabellen wird:
 
 beziehungsweise eine pairs-basierte Count-Funktion verwendet.
 
-Der frühere vermeintliche Mission-Record-Verlust war genau eine solche Fehldiagnose und kein realer Datenverlust.
+Der frühere vermeintliche Mission-Record-Verlust war eine solche Fehldiagnose und kein realer Datenverlust.
 
 ---
 
@@ -842,20 +852,22 @@ Reservierter späterer FOB-Dropoff:
 
     CTLD_DROPOFF_BLUE_ERCAN_FOB_01
 
-CTLD initialisiert seine Zonenlisten selbst.
+Für den getesteten Runtime-Pfad wurde bestätigt:
 
-Nach der Initialisierung können bereits normalisierte Einträge ergänzt werden in:
+Nach der bestehenden CTLD-Initialisierung können bereits normalisierte Einträge ergänzt werden in:
 
     ctld.pickupZones
     ctld.dropOffZones
 
-Dieser Ansatz wurde am 2026-09-29 praktisch bestätigt.
+CTLD verwendete diese Einträge im Test tatsächlich.
 
-Verbindlich:
+Für diese getestete Runtime-Ergänzung war keine erneute Ausführung von:
 
     ctld.initialize()
 
-wird dafür nicht erneut aufgerufen.
+erforderlich.
+
+Daraus wird nicht abgeleitet, dass `ctld.initialize()` generell niemals erneut aufgerufen werden dürfte.
 
 ---
 
@@ -863,7 +875,7 @@ wird dafür nicht erneut aufgerufen.
 
 Wichtiger Architekturfund:
 
-Ein KI-Transporter muss im relevanten CTLD-AI-Pfad unter:
+Ein KI-Transporter muss im relevanten getesteten CTLD-AI-Pfad unter:
 
     ctld.transportPilotNames
 
@@ -883,7 +895,7 @@ Nach idempotent geprüfter temporärer Registrierung:
 
 Die Unit war genau einmal vorhanden.
 
-Eine produktive TC-Integration muss diese Registrierung automatisch durchführen.
+Eine produktive TC-Integration muss diese Registrierung automatisch, idempotent und lifecycle-sicher durchführen.
 
 ---
 
@@ -903,7 +915,7 @@ Mission-SHA-256 vor Test:
 
 Transporter:
 
-    Mi-8MT
+    Mi-8
 
 Gruppe:
 
@@ -913,7 +925,7 @@ Unit:
 
     TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
 
-Vollständig bestätigt:
+Für den getesteten Aufbau bestätigt:
 
     Pickup
     -> Taxi
@@ -938,6 +950,10 @@ Dropoff erzeugte:
     Group-ID 70001
     16 x Soldier M249
 
+Der Test bestätigt damit einen isolierten CTLD-KI-Truppentransportpfad.
+
+Er bestätigt noch keine produktive Theater-Command-Orchestrierung dieses Pfads.
+
 ---
 
 # 20. Off-Airfield-Landearchitektur
@@ -957,6 +973,11 @@ Ziel:
     x = -29249.110954281
     z = -271836.070539260
 
+Wegpunkt:
+
+    100 m BARO
+    30 m/s
+
 Land-Task:
 
     duration = 300
@@ -966,21 +987,28 @@ Touchdown:
 
     ungefähr 1.06 m vom Dropoff-Zentrum
 
-Ein Invisible FARP war dafür nicht notwendig.
+Für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 
 Architekturfolgerung:
 
-Für geeignete Helikopter und Gelände kann ein normaler Route-Wegpunkt mit Perform Task `Land` als Off-Airfield-Transportziel dienen.
+Für den getesteten Mi-8-Aufbau ist ein normaler Route-Wegpunkt mit Perform Task `Land` als Off-Airfield-Transportziel praktisch bestätigt.
 
-Dies ist für den getesteten Mi-8-Pfad bestätigt.
+Dies ist keine pauschale Garantie für:
 
-Es ist keine pauschale Garantie für jeden Luftfahrzeugtyp.
+- andere Luftfahrzeugtypen
+- andere Geländearten
+- andere Routen
+- andere Missionskonfigurationen
+
+Der vorherige ungebundene `Land / Landing`-Ansatz führte nicht zu einem vollständigen erfolgreichen Transportzyklus.
+
+Die genaue Ursache dieses früheren Verhaltens ist nicht abschließend bewiesen.
 
 ---
 
 # 21. CTLD `RepackCommandsPath`
 
-Bekannter reproduzierter Vendor-Runtime-Fehler:
+Beim Grounded-Übergang wurde im erfolgreichen Test genau einmal folgender Vendor-Runtime-Fehler beobachtet:
 
     CTLD.lua:6150:
     attempt to get length of local 'RepackCommandsPath' (a nil value)
@@ -993,9 +1021,9 @@ Stack:
 Technische Einordnung:
 
 - der KI-Transporter befindet sich in `ctld.transportPilotNames`
-- der Repack-Menüpfad kann dadurch auch für diesen Transporter laufen
+- der Repack-Menüpfad kann dadurch auch für diesen Transporter relevant werden
 - reine KI-Units besitzen nicht zwingend einen Player-/F10-`vehicleCommandsPath`
-- der Vendor-Code behandelt diesen Fall nicht robust
+- der Vendor-Code behandelt diesen Fall an der beobachteten Stelle nicht robust
 
 Trotz des Fehlers wurde der automatische Dropoff im Test abgeschlossen.
 
@@ -1003,13 +1031,17 @@ Nicht bewiesen:
 
     dass der Fehler langfristig harmlos ist
 
-Insbesondere ist zu prüfen, ob der Scheduler nach diesem unbehandelten Fehler weiterläuft.
+Ebenfalls nicht direkt bewiesen:
+
+    dass der betreffende Scheduler danach dauerhaft beendet wurde
+
+Dass ein unbehandelter Fehler den betreffenden Scheduler-Pfad beendet haben könnte, bleibt eine source-basierte technische Inferenz.
 
 Verbindlich:
 
     vendor/ctld/CTLD.lua wird nicht gepatcht.
 
-Die Integrationsstrategie muss den Fall außerhalb des Vendor-Codes behandeln.
+Die Integrationsstrategie muss den Fall außerhalb des Vendor-Codes behandeln oder sauber isolieren.
 
 ---
 
@@ -1052,7 +1084,7 @@ CTLD ist dabei:
 
 Theater Command ist:
 
-    Campaign Logic / Decision Layer
+    Campaign Logic / Decision Layer / State Owner
 
 ---
 
@@ -1075,7 +1107,7 @@ Nicht getestet wurden:
 - Ammo Crates
 - FOB Build Crates
 
-Pickup-Zonen und Crate-Logistik sind deshalb architektonisch getrennt zu behandeln.
+Pickup-/Dropoff-Zonen und Crate-/Cargo-Logistik dürfen deshalb nicht als bereits vollständig bewiesener gemeinsamer Produktivpfad behandelt werden.
 
 ---
 
@@ -1160,7 +1192,7 @@ Terrain Store:
 
     C:\Users\Paul\AppData\Local\dcs-mcp\terrain
 
-Installiert unter anderem:
+Installiert:
 
     Syria
 
@@ -1182,9 +1214,9 @@ Hook:
 
     me-bridge-0.27.2
 
-CLI:
+Verifiziertes Installationsverzeichnis:
 
-    C:\Tools\dcs-sms\dcs-sms.exe
+    C:\Tools\dcs-sms
 
 Claude-Code-Skill:
 
@@ -1206,11 +1238,17 @@ Verwendung:
 
 Claude Code kann damit direkt mit der lokalen DCS-Installation arbeiten.
 
+Nicht als verifiziert dokumentieren:
+
+    C:\Tools\dcs-sms\dcs-sms.exe
+
+solange nur das Installationsverzeichnis sicher bestätigt ist.
+
 ---
 
 ## 25.4 GitHub
 
-GitHub bleibt das Projektgedächtnis.
+GitHub bleibt das Projektgedächtnis und die Source of Truth.
 
 Neue Sessions dürfen nicht nur aus Chat-Erinnerung weiterarbeiten.
 
@@ -1305,7 +1343,7 @@ Wenn ein Test den produktiven Save potentiell beeinflussen könnte:
     -> nur bei Match ReadOnly entfernen
     -> Hash nochmals bestätigen
 
-Der ReadOnly-Schutz wird niemals während einer laufenden Testmission entfernt.
+Der ReadOnly-Schutz wird nicht während einer laufenden Testmission entfernt.
 
 ---
 
@@ -1508,7 +1546,7 @@ Zusätzlich für Mission Outcomes:
     -> Ownership
     -> Persistence
 
-Neu technisch bestätigt:
+Neu technisch bestätigt für den getesteten CTLD-Aufbau:
 
     CTLD Runtime Configuration
     -> AI Transporter
@@ -1559,7 +1597,7 @@ Priority 3:
 
 CTLD-KI-Truppentransport-PoC:
 
-    bestanden
+    bestanden für den getesteten Aufbau
 
 Nächster Bereich:
 
@@ -1579,7 +1617,10 @@ Vor dem ersten produktiven Code-Schritt ist zu entscheiden:
 - welche Daten persistiert werden
 - welche CTLD-Daten runtime-only bleiben
 
-Keine generische `tc_ctld.lua`.
+Keine generische:
+
+    tc_ctld.lua
+    tc_ctld_bridge.lua
 
 ---
 
@@ -1623,6 +1664,10 @@ Aktueller Übergang:
 
     state-first Kampagnenkern
     +
-    getesteter CTLD Framework-PoC
+    dirty-aware Persistence
+    +
+    abgeschlossene Priority-3-Dirty-Coverage
+    +
+    bestandener CTLD-KI-Truppentransport-PoC
     ->
     kontrollierte produktive Framework-Integration
