@@ -1,70 +1,59 @@
 # Technical Architecture
 
-## Verbindliches Update — 2026-09-12
-
-MissionGenerator `v0.2.3` erzeugt 10 Mission Records. Die sechs Mission-Status-Collections sind String-keyed Lua-Dictionaries; `#` ist dafür kein autoritativer Count. Live bestätigt: `statistics.available=10`, `pairs()`-Count `=10`, `#available=0`. Der frühere Mission-Record-Loss war eine Fehldiagnose. Der tatsächliche Source-Bug lag in `src/core/tc_state.lua` -> `State.summary()`: `active` und `completed` wurden mit `#` gezählt. Die pairs-basierte Funktion `countEntries()` behebt dies; der Fix wurde committed, gepusht, neu eingebettet und live getestet. Eine repo-weite READ-ONLY Prüfung fand keine weiteren entsprechenden falschen `#`-Counts auf Mission-State-Dictionaries. Die frühere Klassifikation `PROJECT SOURCE HAS NO MATCHING WRITE SITE` ist ausschließlich historischer, inzwischen widerlegter Diagnosekontext.
-
-Der Offline Embedded Mission Resource Audit ist abgeschlossen und bestanden: DEV und MCP_TEST waren beim Audit byte-identisch; 13/13 relevante aktive Theater-Command-Ressourcen waren `EXACT_MATCH` zum Repository, bei 0 relevanten aktiven Byte-Mismatches. Es gab keine aktive Embedded-Runtime-Drift; sie ist als Ursache der früheren Mission-Diagnose ausgeschlossen. Bei `ResKey_Action_55` / `tc_persistence_system.lua` wurde nur der alte Trigger-Verweis entfernt. Die Ressource liegt weiterhin verwaist in der `.miz`, ist nicht referenziert, nicht geladen, nicht ursächlich und eine separate spätere Cleanup-Aufgabe. Aktiv geladen wird `tc_persistence_system_v0_2_6.lua`.
-
-DCS-SMS ist Entwicklungs-/Mission-Editor-/Diagnose-Tooling, kein Theater-Command-Runtime-Framework. Bestätigter Stand: `v0.27.2`, Hook `me-bridge-0.27.2`; Auto-Routing per `dcs-sms exec --code "..."` erreicht das Mission Environment und `TC`. Nach einem DCS-Update musste der MissionScripting-Hook erneut installiert/repariert werden. Die Sandbox ist mit `os=true`, `io=true`, `lfs=true`, `require=false` bestätigt. Persistence benötigt direkt `io`/`lfs`, die aktuelle Bridge `os`/`io`/`lfs`. DCS-Updates können `MissionScripting.lua` überschreiben.
-
-Mission Completion, Mission Failure, Capture Ready Apply und ihre Background-Autosaves sind bestanden; zusätzlich Capture Getter Dirty-Neutralität und Capture Ownership No-Op. PersistenceSystem `v0.2.6` bleibt dirty-aware mit `productiveRestore=false`. Priority 3 ist noch offen; nächster technischer Einzelschritt ist der READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`.
-
-Referenzstand: `README.md`, `ROADMAP.md`, `TASKS.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `MISSION_EDITOR_SETUP.md`, `docs/00_project_overview.md`, `docs/06_mission_generator.md`, `docs/09_persistence.md` und `docs/10_testing.md`.
+## Verbindlicher Stand — 2026-09-29
 
 Diese Datei beschreibt die technische Architektur von **Theater Command DCS**.
 
 Erste Kampagne:
 
-- **Operation Levant Reclamation**
+    Operation Levant Reclamation
 
 Map:
 
-- **Syria**
+    Syria
 
 Ausgangslage:
 
-- Blue startet auf **Akrotiri / Zypern**
-- das syrische Festland ist zu Beginn rot kontrolliert
-- Red hält zu Beginn den Großteil der strategischen Flugplätze
-- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
-- Spieler sollen sich in eine laufende Kampagnenlage einklinken, nicht jede Aktion allein auslösen
-- Blue und Red sollen perspektivisch eigene Operationen planen und durchführen
+- Blue startet auf Akrotiri / Zypern.
+- Das syrische Festland ist zu Beginn rot kontrolliert.
+- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten.
+- Spieler sollen Teil einer laufenden Kampagne sein und nicht jede Operation selbst auslösen müssen.
+- Blue und Red sollen perspektivisch zunehmend autonom handeln.
+
+Grundprinzip:
+
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis / Source of Truth
+
+Zusätzlich gilt für die Runtime-Bewertung:
+
+    DCS Runtime = autoritativer Verhaltensbeweis
 
 ---
 
-## 1. Grundprinzip
+## 1. Architekturziel
 
-Das zentrale Architekturprinzip lautet:
+Theater Command DCS soll langfristig keine Sammlung statischer Missionen sein.
 
-- **Mission Editor = Bühne**
-- **Lua = Kampagnensystem**
-- **GitHub = Projektgedächtnis**
+Das Ziel ist eine modulare Kampagnenruntime, die:
 
-Der DCS Mission Editor stellt die physische Umgebung bereit.
+- strategischen Kampagnenzustand verwaltet
+- Airbases und Zonen bewertet
+- Besitzstände verwaltet
+- Capture Pressure und Capture Progress verwaltet
+- Missionen erzeugt
+- Logistik verwaltet
+- FOBs verwaltet
+- AI-Bedarf ableitet
+- reale Operationen über Frameworks ausführen lässt
+- Ergebnisse zurück in den Kampagnenstate überführt
+- relevanten State persistent speichert
+- später Missionsneustarts überstehen kann
 
-Lua übernimmt die dynamische Kampagnenlogik.
+Perspektivisch sollen zusammenarbeiten:
 
-GitHub dokumentiert:
-
-- Struktur
-- Entscheidungen
-- Versionen
-- Aufgabenstand
-- Testergebnisse
-- bekannte Einschränkungen
-- Übergaben zwischen Sessions
-
----
-
-## 2. Architekturziel
-
-Theater Command DCS soll langfristig eine dynamische und später persistente DCS-Kampagne ermöglichen.
-
-Ziel ist keine einzelne statische Mission, sondern eine modulare Kampagnenruntime.
-
-Langfristig sollen folgende Systeme zusammenarbeiten:
-
+- Core Layer
 - World Layer
 - Campaign Layer
 - Capture System
@@ -74,233 +63,297 @@ Langfristig sollen folgende Systeme zusammenarbeiten:
 - AI CAP Manager
 - AI Director
 - IADS System
-- F10 UI
-- Debug System
-- Persistence System
-
-Spieler sollen sich über Client-Slots und F10-Menüs in die laufende Kampagne einklinken.
-
-Die Kampagne soll perspektivisch auch ohne ständige Spielerentscheidung weiterlaufen.
-
-Blue und Red sollen später eigene Operationen planen und durchführen.
+- UI
+- Debug
+- Persistence
+- CTLD
+- MOOSE
+- Skynet IADS
 
 ---
 
-## 3. Aktueller technischer Stand
+## 2. Zentrale Architekturtrennung
 
-Historische Baseline: **2026-07-06**. Verbindlicher aktueller Stand: **2026-09-12**.
+Die wichtigste Architekturgrenze lautet:
 
-Aktueller Status:
+    Theater Command
+    =
+    Campaign Logic
+    Decision Layer
+    State Owner
 
-- **State-first Runtime-Grundlage stabil getestet**
-- **Mission Outcome to Capture Pressure Pipeline bestanden**
-- **Capture Ready über F10 sichtbar bestätigt**
-- MissionGenerator state-first funktional bestätigt; Activation, Completion, Failure und Effects bestanden.
-- Completion -> Capture Pressure und Failure -> kein Capture Pressure bestanden.
-- Capture Ready Apply, Zone Ownership Update und linked Airbase Ownership Sync bestanden.
-- dirty-aware Background Autosave und Embedded Resource Audit bestanden.
-- Capture Getter Dirty-Neutralität und Capture Ownership No-Op bestanden.
-- `productiveRestore=false`; Priority 3 bleibt offen.
+und:
 
-Aktuell vorhanden:
+    CTLD / MOOSE / Skynet IADS
+    =
+    Execution Layer
 
-- Repository-Grundstruktur
-- zentrale Projektdokumentation
-- `docs/`-Dokumentation
-- `mission_editor/`-Dokumentation
-- `vendor/`-Frameworkstruktur
-- MIST
-- MOOSE
-- CTLD
-- Skynet IADS
-- `src/`-Grundstruktur
-- Loader
-- Main-Initialisierung
-- Core-System
-- World-System
-- Campaign-System
+Das bedeutet:
+
+Theater Command entscheidet beispielsweise:
+
+- welche Zone strategisch relevant ist
+- welche Mission benötigt wird
+- welcher Hub Versorgung braucht
+- welcher FOB gebaut werden soll
+- wo CAP benötigt wird
+- welche Operation erfolgreich war
+- welche Folgen daraus entstehen
+- was persistiert werden muss
+
+Frameworks führen reale DCS-Aktionen aus.
+
+Beispiele:
+
+CTLD:
+
+- Truppentransport
+- Cargo
+- spätere FOB-Logistik
+
+MOOSE:
+
+- CAP
+- Strike
+- SEAD
+- DEAD
+- CAS
+- weitere reale AI-Air-Operationen
+
+Skynet IADS:
+
+- SAM-/EWR-Netz
+- Radarverhalten
+- IADS-Ausführung
+
+Theater Command darf seinen langfristigen Kampagnenstate nicht einfach an interne Runtime-Strukturen eines Frameworks delegieren.
+
+---
+
+## 3. State-first-Prinzip
+
+Die aktuelle Entwicklung folgt weiterhin:
+
+    State zuerst.
+
+Reihenfolge:
+
+    State erzeugen
+    -> State sichtbar machen
+    -> State testen
+    -> Dirty-/Persistence-Semantik absichern
+    -> Framework-Funktion isoliert beweisen
+    -> Framework kontrolliert anbinden
+    -> Ergebnis validieren
+    -> Ergebnis in Theater-Command-State zurückführen
+    -> Dirty markieren
+    -> Persistence
+
+Dieses Prinzip hat sich bisher bewährt.
+
+Es trennt:
+
+- Kampagnenlogik
+- DCS-Verhalten
+- Framework-Verhalten
+- Persistence
+- Mission-Editor-Struktur
+
+voneinander.
+
+---
+
+## 4. Aktueller technischer Gesamtstand
+
+Stand:
+
+    2026-09-29
+
+Bestätigt:
+
+- Repository-Struktur
+- Vendor-Struktur
+- Core Layer
+- World Layer
+- Airbase Scanner
+- ZoneFactory
 - CaptureSystem
-- PersistenceSystem `v0.2.6` mit dirty-aware Background-Autosave
+- PersistenceSystem
 - LogisticsDelivery
 - FobSystem
 - MissionGenerator
 - AICapManager
 - F10Menu
-- IADS- und Debug-Bereiche vorbereitet
-- minimale Syria-DEV-Mission
-- erster blauer F/A-18C-Client-Slot auf Akrotiri
-- sichere Einzeldatei-Ladung im Mission Editor
-- reale DCS-Starttests
-- erfolgreiche `dcs.log`-Auswertungen
+- Mission Activation
+- Mission Completion
+- Mission Failure
+- Mission Effects
+- Completion -> Capture Pressure
+- Capture Progress
+- Capture Ready
+- Capture Ready Apply
+- Zone Ownership
+- linked Airbase Ownership
+- dirty-aware Background Persistence
+- Capture Getter Read-Neutrality
+- Capture Ownership No-Op
+- LogisticsDelivery Read-Neutrality
+- FobSystem Read-Neutrality
+- MissionGenerator Dirty-Coverage-Audit
+- AICapManager Read-Neutrality
+- Priority 3 abgeschlossen
+- CTLD Runtime-Zonenregistrierung
+- CTLD KI-Transporterregistrierung
+- automatischer CTLD-KI-Pickup
+- autonomer KI-Transportflug
+- Off-Airfield-Landung
+- automatischer CTLD-Dropoff
+- reale Blue-Bodengruppe nach Dropoff
 
-Aktuell bestätigt:
+Noch nicht produktiv:
 
-- Vendor-Frameworks werden durch DCS geladen.
-- Frameworks werden durch Theater Command erkannt.
-- eigene Source-Dateien werden geladen.
-- Loader startet.
-- Main startet.
-- Runtime-Systeme werden initialisiert.
-- Airbase Scanner läuft.
-- ZoneFactory läuft.
-- CaptureSystem läuft.
-- PersistenceSystem `v0.2.6` lädt/startet und führt verifizierte dirty-aware Autosaves aus; Restore bleibt deaktiviert.
-- LogisticsDelivery läuft.
-- FobSystem läuft.
-- MissionGenerator läuft.
-- AICapManager läuft.
-- F10Menu läuft.
-- Loader beendet sauber.
-- Missionen sind über F10 sichtbar.
-- Missionen können über F10 aktiviert werden.
-- aktive Mission 1 kann über F10 auf `COMPLETED` gesetzt werden.
-- Mission Effects werden state-only vorbereitet.
-- CaptureSystem verarbeitet abgeschlossene Mission Effects.
-- Capture Pressure wird durch Mission Completion erzeugt.
-- Capture Progress wird durch Mission Completion aktualisiert.
-- Capture Ready entsteht dynamisch.
-- Capture Ready Zones sind über F10 sichtbar.
-
-Wichtiger technischer Befund:
-
-- DCS Syria liefert **225 airbase-like objects**.
-- Airbase Scanner klassifiziert diese Objekte.
-- ZoneFactory erzeugt daraus **46 relevante Kampagnenzonen**.
-- ZoneFactory überspringt **179 nicht geeignete airbase-like objects**.
-- CaptureSystem arbeitet auf **32 capture-fähigen Zielen**.
-- CaptureSystem erzeugt **32 Pressure-Records**.
-- CaptureSystem erzeugt **32 Progress-Records**.
-- LogisticsDelivery erzeugt **46 Logistics Hubs**.
-- FobSystem erzeugt **6 FOB-Kandidaten** und **2 Blue-FOBs**.
-- MissionGenerator erzeugt **10 Mission Records** aus **78 Mission Candidates**, darunter **2 FOB-Support Candidates**.
-- F10Menu erzeugt **33 Commands**.
-- Mission Completion erzeugt einen Capture Effect.
-- `appliedMissionEffects=1` wurde bestätigt.
-- `ready=1` wurde bestätigt.
-- `contested=0` wurde bestätigt.
-
-Bewertung:
-
-- Die technische Startkette funktioniert.
-- Die state-first Runtime-Grundlage ist stabil.
-- Die erste modulübergreifende Kampagnenpipeline ist bestätigt.
-- Das Projekt ist noch keine fertige spielbare dynamische Kampagne.
-- Echte MOOSE-, CTLD- und Skynet-Ausführung sind bewusst noch nicht aktiv.
+- produktive Theater-Command-CTLD-Orchestrierung
+- CTLD Crate-/Cargo-Wirtschaft
+- reale CTLD-FOBs
+- reale MOOSE-CAP-Spawns
+- AI Director
+- Ground Campaign
+- CAS-Automatisierung
+- Skynet-IADS-Kampagnenintegration
+- produktiver Startup-Restore
+- Carrier Operations
+- Multiplayer
 
 ---
 
-## 4. Hauptstruktur
+## 5. Aktueller Modulstand
 
-Aktuelle Hauptstruktur:
+| System | Datei | Version | Status |
+|---|---|---:|---|
+| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
+| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
+| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
+| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Background Persistence bestanden |
+| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.1` | bestanden |
+| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.1` | bestanden |
+| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | bestanden |
+| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.1` | bestanden |
+| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` | KI-Truppentransport-PoC bestanden |
 
-```text
-docs/
-mission_editor/
-src/
-vendor/
-README.md
-ROADMAP.md
-TASKS.md
-CHANGELOG.md
-ARCHITECTURE.md
-MISSION_EDITOR_SETUP.md
-NAMING_CONVENTIONS.md
-LUA_STYLEGUIDE.md
-```
+Verbindlich:
+
+    productiveRestore=false
 
 ---
 
-## 5. Source-Struktur
+## 6. Repository-Hauptstruktur
+
+Aktuelle fachliche Hauptstruktur:
+
+    theater-command-dcs/
+    ├── .agents/
+    ├── docs/
+    ├── mission_editor/
+    ├── src/
+    ├── tools/
+    ├── vendor/
+    ├── AGENTS.md
+    ├── ARCHITECTURE.md
+    ├── CHANGELOG.md
+    ├── LUA_STYLEGUIDE.md
+    ├── MISSION_EDITOR_SETUP.md
+    ├── NAMING_CONVENTIONS.md
+    ├── README.md
+    ├── ROADMAP.md
+    └── TASKS.md
+
+---
+
+## 7. Source-Struktur
 
 Eigene Theater-Command-Logik liegt unter:
 
-```text
-src/
-```
+    src/
 
 Aktuelle Struktur:
 
-```text
-src/
-├── README.md
-├── loader.lua
-├── main.lua
-├── core/
-├── world/
-├── campaign/
-├── logistics/
-├── missions/
-├── ai/
-├── iads/
-├── ui/
-└── debug/
-```
+    src/
+    ├── core/
+    ├── world/
+    ├── campaign/
+    ├── logistics/
+    ├── missions/
+    ├── ai/
+    ├── iads/
+    ├── ui/
+    ├── debug/
+    ├── main.lua
+    └── loader.lua
 
-Die Struktur ist nach Aufgaben sortiert, nicht nach Frameworks.
+Die Source-Struktur ist nach fachlicher Aufgabe organisiert.
 
-Nicht gewünscht sind Dateien wie:
+Nicht nach Framework.
 
-```text
-tc_moose.lua
-tc_mist.lua
-tc_ctld.lua
-tc_all_in_one.lua
-```
+Nicht gewünscht:
 
----
+    tc_moose.lua
+    tc_mist.lua
+    tc_ctld.lua
+    tc_ctld_all_in_one.lua
+    tc_ctld_bridge.lua
+    tc_all_in_one.lua
 
-## 6. Aktive Source-Dateien
+Ein fachliches Modul darf intern ein Framework verwenden.
 
-Aktuell aktive eigene Lua-Dateien:
+Beispiel:
 
-```text
-src/loader.lua
-src/main.lua
-src/core/tc_config.lua
-src/core/tc_logger.lua
-src/core/tc_state.lua
-src/core/tc_utils.lua
-src/core/tc_scheduler.lua
-src/world/tc_airbase_scanner.lua
-src/world/tc_zone_factory.lua
-src/campaign/tc_capture_system.lua
-src/campaign/tc_persistence_system.lua
-src/logistics/tc_logistics_delivery.lua
-src/logistics/tc_fob_system.lua
-src/missions/tc_mission_generator.lua
-src/ai/tc_ai_cap_manager.lua
-src/ui/tc_f10_menu.lua
-```
+    LogisticsDelivery
 
-Aktuell vorbereitet, aber noch nicht produktiv implementiert:
+darf später CTLD zur Ausführung verwenden.
 
-```text
-src/iads/
-src/debug/
-```
-
-Wichtige Korrektur gegenüber älteren Dokumenten:
-
-- `src/ui/` ist nicht mehr nur dokumentiert.
-- `src/ui/tc_f10_menu.lua` ist aktiv und getestet.
-- `src/campaign/tc_capture_system.lua` ist inzwischen `v0.2.2`.
-- `src/missions/tc_mission_generator.lua` ist inzwischen `v0.2.3`.
-- `src/ui/tc_f10_menu.lua` ist inzwischen `v0.2.3`.
+Dadurch wird LogisticsDelivery nicht zu einem generischen CTLD-Wrapper.
 
 ---
 
-## 7. Vendor-Struktur
+## 8. Aktive Source-Dateien
 
-Externe Frameworks liegen unter:
+Aktuell aktive eigene Dateien:
 
-```text
-vendor/
-```
+    src/core/tc_config.lua
+    src/core/tc_logger.lua
+    src/core/tc_state.lua
+    src/core/tc_utils.lua
+    src/core/tc_scheduler.lua
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_zone_factory.lua
+    src/campaign/tc_capture_system.lua
+    src/campaign/tc_persistence_system.lua
+    src/logistics/tc_logistics_delivery.lua
+    src/logistics/tc_fob_system.lua
+    src/missions/tc_mission_generator.lua
+    src/ai/tc_ai_cap_manager.lua
+    src/ui/tc_f10_menu.lua
+    src/main.lua
+    src/loader.lua
 
-Aktuelle Framework-Basis:
+Vorbereitet, aber noch nicht produktiv aktiv:
+
+    src/iads/
+    src/debug/
+
+---
+
+## 9. Vendor-Struktur
+
+Externe Frameworks liegen ausschließlich unter:
+
+    vendor/
+
+Aktuell:
 
 | Framework | Projektpfad | Stand |
-|---|---|---|
+|---|---|---:|
 | MIST | `vendor/mist/mist.lua` | `4.5.128-DYNSLOTS-02` |
 | MOOSE | `vendor/moose/Moose.lua` | `2.9.17` |
 | CTLD-i18n | `vendor/ctld/CTLD-i18n.lua` | geladen |
@@ -309,1368 +362,1851 @@ Aktuelle Framework-Basis:
 
 Regeln:
 
-- Frameworks werden nicht verändert.
-- Eigene Logik wird nicht in Framework-Dateien geschrieben.
-- Frameworks werden nur geladen und später über eigene Module gekapselt genutzt.
-- Die aktive MIST-Version stammt bewusst aus dem CTLD-Paket.
-
-Aktueller Stand:
-
-- MIST wird geladen.
-- MOOSE wird geladen.
-- CTLD wird geladen.
-- Skynet IADS wird geladen.
-- Produktive Framework-Ausführung ist noch nicht aktiv.
+- Vendor-Dateien werden nicht verändert.
+- Eigene Kampagnenlogik wird nicht in Vendor-Dateien geschrieben.
+- Projektfixes werden nicht als lokale Vendor-Patches versteckt.
+- Frameworks bleiben austauschbare Ausführungsschichten.
 
 ---
 
-## 8. DCS-Lade-Reihenfolge
+## 10. DCS-Ladefolge
 
-Die externe Framework-Lade-Reihenfolge lautet:
+Vendor:
 
-1. `vendor/mist/mist.lua`
-2. `vendor/moose/Moose.lua`
-3. `vendor/ctld/CTLD-i18n.lua`
-4. `vendor/ctld/CTLD.lua`
-5. `vendor/skynet-iads/SkynetIADS.lua`
+    1. vendor/mist/mist.lua
+    2. vendor/moose/Moose.lua
+    3. vendor/ctld/CTLD-i18n.lua
+    4. vendor/ctld/CTLD.lua
+    5. vendor/skynet-iads/SkynetIADS.lua
 
-Danach wird die eigene Theater-Command-Logik geladen.
+Theater Command:
 
-Aktive Theater-Command-Ladefolge:
+    1. src/core/tc_config.lua
+    2. src/core/tc_logger.lua
+    3. src/core/tc_state.lua
+    4. src/core/tc_utils.lua
+    5. src/core/tc_scheduler.lua
+    6. src/world/tc_airbase_scanner.lua
+    7. src/world/tc_zone_factory.lua
+    8. src/campaign/tc_capture_system.lua
+    9. src/campaign/tc_persistence_system.lua
+    10. src/logistics/tc_logistics_delivery.lua
+    11. src/logistics/tc_fob_system.lua
+    12. src/missions/tc_mission_generator.lua
+    13. src/ai/tc_ai_cap_manager.lua
+    14. src/ui/tc_f10_menu.lua
+    15. src/main.lua
+    16. src/loader.lua
 
-1. `src/core/tc_config.lua`
-2. `src/core/tc_logger.lua`
-3. `src/core/tc_state.lua`
-4. `src/core/tc_utils.lua`
-5. `src/core/tc_scheduler.lua`
-6. `src/world/tc_airbase_scanner.lua`
-7. `src/world/tc_zone_factory.lua`
-8. `src/campaign/tc_capture_system.lua`
-9. `src/campaign/tc_persistence_system.lua`
-10. `src/logistics/tc_logistics_delivery.lua`
-11. `src/logistics/tc_fob_system.lua`
-12. `src/missions/tc_mission_generator.lua`
-13. `src/ai/tc_ai_cap_manager.lua`
-14. `src/ui/tc_f10_menu.lua`
-15. `src/main.lua`
-16. `src/loader.lua`
+Die sichere Einzeldatei-Ladung über:
 
-Wichtig:
+    DO SCRIPT FILE
 
-- `src/ui/tc_f10_menu.lua` wird nach `src/ai/tc_ai_cap_manager.lua` und vor `src/main.lua` geladen.
-- `src/main.lua` initialisiert die Runtime-Systeme.
-- `src/loader.lua` bleibt aktuell die letzte eigene Datei.
+bleibt aktueller Standard.
 
 ---
 
-## 9. Starttest-Variante A
-
-Aktuell verwendete Methode:
-
-- Starttest-Variante A — sichere Einzeldatei-Ladung
-
-Dabei werden alle aktiven Dateien einzeln per `DO SCRIPT FILE` geladen.
-
-Reihenfolge:
-
-```text
-Frameworks
-Core
-World
-Campaign
-Logistics
-Missions
-AI
-UI
-Main
-Loader
-```
-
-Ergebnis:
-
-- **Bestanden**
-
-Wichtig:
-
-Eine per `DO SCRIPT FILE` geladene Lua-Datei wird in die `.miz` eingebettet.
-
-Nach jeder Lua-Änderung muss die jeweilige Datei im Mission Editor erneut ausgewählt und die Mission gespeichert werden.
-
----
-
-## 10. Geprüfte Logik im aktuellen DCS-Teststand
-
-Bestätigt wurde:
-
-- MIST erkannt
-- MOOSE erkannt
-- CTLD erkannt
-- Skynet IADS erkannt
-- Core geladen
-- World geladen
-- Campaign geladen
-- Logistics geladen
-- Missions geladen
-- AI geladen
-- UI geladen
-- F10Menu geladen
-- Main gestartet
-- Runtime-Systeme initialisiert
-- Loader beendet
-
-Wichtige positive Log-Einträge:
-
-```text
-[TC] Theater Command loader started
-[TC] Framework available: MIST
-[TC] Framework available: MOOSE
-[TC] Framework available: CTLD
-[TC] Framework available: Skynet IADS
-[TC] Main start requested
-[TC] Core check passed
-[TC] Runtime systems initialized
-[TC] Main initialized
-[TC] Main started
-[TC] Theater Command loader finished
-```
-
-Aktuelle Runtime-Ergebnisse:
-
-```text
-[TC] [AirbaseScanner] Loaded src/world/tc_airbase_scanner.lua v0.2.2
-[TC] [ZoneFactory] Loaded src/world/tc_zone_factory.lua v0.2.0
-[TC] [CaptureSystem] Loaded src/campaign/tc_capture_system.lua v0.2.2
-[TC] [LogisticsDelivery] Loaded src/logistics/tc_logistics_delivery.lua v0.2.0
-[TC] [FobSystem] Loaded src/logistics/tc_fob_system.lua v0.2.0
-[TC] [MissionGenerator] Loaded src/missions/tc_mission_generator.lua v0.2.3
-[TC] [AICapManager] Loaded src/ai/tc_ai_cap_manager.lua v0.2.0
-[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.3
-[TC] [F10Menu] F10 menu initialized: commands=33
-```
-
-Bestätigte Pipeline-Logik:
-
-```text
-[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_2
-[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2
-[TC] [F10Menu] Active mission outcome status shown through F10
-[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared
-[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared
-[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
-[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105
-[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1
-[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
-[TC] [F10Menu] Capture ready zones shown through F10
-```
-
-Bewertung:
-
-- Die Startarchitektur funktioniert.
-- Die technische Grundlage ist stabil genug für weitere State-, UI- und Debug-Schritte.
-- Die Mission Outcome to Capture Pressure Pipeline ist bestätigt.
-
-PersistenceSystem `v0.2.6` gehört zum bestandenen Runtime-Stand: Embedded Start, normaler `20s`-/`120s`-Scheduler, `SAVED`, `SKIPPED`, kontrollierter `FAILED`-Pfad und Retry.
-
-Bestätigte vollständige Pipeline:
-
-```text
-Mission Details -> Mission Activation -> Mission Completion -> Mission Effects
--> Capture Pressure -> Capture Progress -> Capture Ready -> Capture Ready Apply
--> Zone Ownership Update -> linked Airbase Ownership Sync -> Background Autosave
-```
-
-Zusätzlich bestätigt:
-
-```text
-Mission Activation -> FAILED -> Failure Effects prepared
--> CaptureSystem verarbeitet (applied=0) -> kein Capture Pressure -> Persistence SAVED
-```
-
----
-
-## 11. Aktueller getesteter Systemstand
-
-Stand: **2026-09-12**.
-
-| System | Datei | Version | Status |
-|---|---|---:|---|
-| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
-| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | funktional bestanden; Read-Dirty- und Ownership-No-Op-Regressionen bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded Start, SAVED, SKIPPED, FAILED, Retry und Campaign-Persistence-Regressionen bestanden; productiveRestore=false |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | funktional bestanden; Dirty-Coverage ist nächster Priority-3-Audit |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | funktional bestanden; allgemeine Dirty-Coverage offen |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | 10 Mission Records; Activation, Completion, Failure und Effects bestanden; Record-Loss widerlegt; allgemeine Dirty-Coverage offen |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | state-first bestanden; reactToActiveMissions()-Sonderfall bewertet; allgemeine Dirty-Coverage offen |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden; 33 Commands |
-
----
-
-## 12. Core-Schicht
+## 11. Core Layer
 
 Pfad:
 
-```text
-src/core/
-```
+    src/core/
 
-Aktuelle Dateien:
+Aktive Dateien:
 
-```text
-src/core/tc_config.lua
-src/core/tc_logger.lua
-src/core/tc_state.lua
-src/core/tc_utils.lua
-src/core/tc_scheduler.lua
-```
+    tc_config.lua
+    tc_logger.lua
+    tc_state.lua
+    tc_utils.lua
+    tc_scheduler.lua
 
 Aufgaben:
 
 - zentrale Konfiguration
 - Logging
-- globaler Theater-Command-State
-- Hilfsfunktionen
-- Scheduler-Grundfunktionen
-- technische Start- und Laufzeitunterstützung
+- gemeinsamer State
+- Utility-Funktionen
+- Scheduler-Grundlage
 - Modulstatus
 - Featurestatus
-- Konstanten
+- gemeinsame Konstanten
 
-Regel:
+Grundregel:
 
-- Core darf von allen Systemen genutzt werden.
-- Core soll keine fachliche Kampagnenentscheidung erzwingen.
+Core stellt Infrastruktur bereit.
 
----
-
-## 13. State-Modell
-
-Zentraler Zustand:
-
-```text
-TC.State
-TC.state
-```
-
-Aktuelle State-Bereiche:
-
-```text
-State.Core
-State.Modules
-State.Features
-State.Bases
-State.Zones
-State.Campaign
-State.Logistics
-State.Missions
-State.AI
-State.UI
-State.Persistence
-```
-
-Grundregeln:
-
-- Module schreiben ihren fachlichen Zustand in den State.
-- Andere Module lesen diesen Zustand über definierte Tabellen oder Funktionen.
-- Framework-Ausführung wird später aus dem State abgeleitet.
-- Der State soll persistierbar bleiben.
-- State-first kommt vor echten Spawns.
-- Mission Effects werden zuerst state-only vorbereitet.
-- Mission Effects werden durch Fachsysteme verarbeitet.
-- Capture Pressure und Capture Progress sind State-Daten.
-- Ownership-Wechsel dürfen nicht unkontrolliert automatisch passieren.
-
-Aktuell im State vorhanden oder vorbereitet:
-
-- klassifizierte Airbases
-- Kampagnenzonen
-- Capture-Eligibility
-- Capture-Pressure
-- Capture-Progress
-- Capture Ready
-- angewendete Mission Effects
-- Logistics Hubs
-- FOB-Kandidaten
-- geplante FOBs
-- verfügbare Missionen
-- aktive Missionen
-- abgeschlossene Missionen
-- Mission Objectives
-- Mission Briefings
-- Mission Progress
-- Mission Activation Metadata
-- Mission Outcome State
-- Mission Effect State
-- AI-CAP-State
-- F10-UI-State
-
-Mission-State-Invariante:
-
-- `State.Missions.available`, `.active`, `.completed`, `.failed`, `.expired` und `.cancelled` sind String-keyed Dictionaries.
-- Autoritative Zählung erfolgt mit `pairs()` bzw. pairs-basierten Helfern wie `countEntries()`/`countTableKeys()`.
-- `#table` und `ipairs()` sind für diese Dictionaries nicht autoritativ.
-- Echte Arrays, History-Arrays und temporär sortierte Listen sind davon nicht betroffen.
-
-Dirty-State-Architektur:
-
-- Zentrale Persistence-Felder liegen unter `TC.State.Persistence`: `dirty`, `dirtyReason`, `dirtyAt`.
-- Fachsysteme markieren persistenzrelevante Mutationen über den zentralen State-Mechanismus (`markDirty()`).
-- Reads und echte No-Ops dürfen keinen künstlichen Dirty-State erzeugen.
-- Jede persistierte fachliche Mutation muss zuverlässig Dirty markieren; die allgemeine Abdeckung ist Gegenstand der offenen Priority 3 (Abschnitt 38).
+Core soll keine fachlichen Kampagnenentscheidungen erzwingen.
 
 ---
 
-## 14. World-Schicht
+## 12. State-Modell
+
+Zentraler State:
+
+    TC.State
+    TC.state
+
+Aktuelle Bereiche umfassen unter anderem:
+
+    State.Core
+    State.Modules
+    State.Features
+    State.Bases
+    State.Zones
+    State.Campaign
+    State.Logistics
+    State.Missions
+    State.AI
+    State.UI
+    State.Persistence
+
+State-Regeln:
+
+- Fachmodule sind Eigentümer ihres State-Bereichs.
+- Andere Systeme lesen Daten über definierte Tabellen oder APIs.
+- Framework-Runtime wird nicht zum primären Campaign-State.
+- State muss grundsätzlich persistierbar bleiben.
+- Runtime-only-Daten und persistierbarer State müssen getrennt bleiben.
+
+---
+
+## 13. Mission-State-Dictionaries
+
+Mission-Collections sind String-keyed Lua-Dictionaries.
+
+Dazu gehören:
+
+    State.Missions.available
+    State.Missions.active
+    State.Missions.completed
+    State.Missions.failed
+    State.Missions.expired
+    State.Missions.cancelled
+
+Deshalb ist:
+
+    #table
+
+für deren Anzahl nicht autoritativ.
+
+Korrekte Zählung erfolgt über:
+
+    pairs()
+
+beziehungsweise pairs-basierte Hilfsfunktionen.
+
+Der frühere Verdacht eines Mission-Record-Verlusts wurde am 2026-09-12 widerlegt.
+
+Es gingen keine Mission Records verloren.
+
+Der tatsächliche Fehler lag in einer falschen Count-Auswertung in:
+
+    src/core/tc_state.lua
+
+Dieser Fehler wurde behoben und regressionsgetestet.
+
+---
+
+## 14. Dirty-State-Architektur
+
+Persistence-relevanter Dirty-State liegt zentral unter:
+
+    TC.State.Persistence
+
+Relevante Felder:
+
+    dirty
+    dirtyReason
+    dirtyAt
+
+Fachliche Mutationen verwenden:
+
+    TC.State.markDirty(reason)
+
+Reads und echte No-Ops sollen:
+
+    keinen Dirty-State erzeugen
+
+Architekturregel:
+
+    echte persistierbare Mutation
+    -> Dirty
+
+und:
+
+    reiner Read
+    -> kein Dirty
+
+sowie:
+
+    echter No-Op
+    -> kein Dirty
+
+Priority 3 hat diese Semantik für die relevanten aktiven Systeme überprüft.
+
+---
+
+## 15. Priority 3
+
+Status:
+
+    ABGESCHLOSSEN IM DOKUMENTIERTEN UMFANG
+
+Abschlussdatum:
+
+    2026-09-21
+
+Geprüft:
+
+    LogisticsDelivery
+    FobSystem
+    MissionGenerator
+    AICapManager
+
+Ergebnis:
+
+### LogisticsDelivery
+
+Version:
+
+    v0.2.1
+
+Read-Neutrality:
+
+    bestanden
+
+Positive Mutation:
+
+    createDelivery()
+    -> dirtyReason=logistics_delivery_created
+
+### FobSystem
+
+Version:
+
+    v0.2.1
+
+Read-Neutrality:
+
+    bestanden
+
+Positive Mutation:
+
+    FobSystem.create()
+    -> dirtyReason=fob_created
+
+### MissionGenerator
+
+Version:
+
+    v0.2.3
+
+Audit:
+
+    kein aktuell aktiver Missing-Dirty-Bug
+
+### AICapManager
+
+Version:
+
+    v0.2.1
+
+Read-Neutrality:
+
+    bestanden
+
+Positive Mutation:
+
+    setCapStatus()
+    -> dirtyReason=ai_cap_record_changed
+
+Priority 3 wird ohne neuen technischen Anlass nicht vollständig wiederholt.
+
+---
+
+## 16. World Layer
 
 Pfad:
 
-```text
-src/world/
-```
+    src/world/
 
-Aktuelle Dateien:
+Aktive Dateien:
 
-```text
-src/world/tc_airbase_scanner.lua
-src/world/tc_zone_factory.lua
-```
+    src/world/tc_airbase_scanner.lua
+    src/world/tc_zone_factory.lua
 
-Aufgaben:
+Aufgabe:
 
-- DCS-Airbases erfassen
+- reale DCS-Welt erfassen
 - Airbase-like Objects klassifizieren
-- Koalitionsstatus erkennen
-- Positionen erfassen
-- relevante virtuelle Kampagnenzonen erzeugen
-- Daten für Campaign, Logistics, Missions und AI bereitstellen
+- relevante Kampagnenobjekte ableiten
+- Positionsdaten bereitstellen
+- Owner-/Coalition-Daten erfassen
+- Campaign-, Logistics-, Missions- und AI-Layer versorgen
 
-Regel:
+World erkennt.
 
-- World erkennt und klassifiziert.
-- World entscheidet nicht allein über Capture oder Kampagnenfortschritt.
+World entscheidet nicht eigenständig über strategische Kampagnenaktionen.
 
 ---
 
-## 15. Airbase Scanner
+## 17. Airbase Scanner
 
 Datei:
 
-```text
-src/world/tc_airbase_scanner.lua
-```
+    src/world/tc_airbase_scanner.lua
 
-Getestete Version:
+Version:
 
-```text
-v0.2.2
-```
+    v0.2.2
 
 Status:
 
-- bestanden
+    bestanden
 
 Bestätigte Werte:
 
-- total: 225
-- strategic: 19
-- secondary: 13
-- heliports: 1
-- helipads: 95
-- medical: 40
-- farps: 0
-- tactical: 13
-- unknown: 44
-- captureCandidates: 32
-- missionCandidates: 32
-- logisticsCandidates: 46
-- blueStartBases: 1
-- redStrategicCandidates: 18
+    total: 225
+    strategic: 19
+    secondary: 13
+    heliports: 1
+    helipads: 95
+    medical: 40
+    farps: 0
+    tactical: 13
+    unknown: 44
+    captureCandidates: 32
+    missionCandidates: 32
+    logisticsCandidates: 46
+    blueStartBases: 1
+    redStrategicCandidates: 18
 
-Architekturrolle:
+Wichtig:
 
-- Grundlage für ZoneFactory
-- Grundlage für CaptureSystem
-- Grundlage für LogisticsDelivery
-- Grundlage für MissionGenerator
-- Grundlage für AICapManager
-- spätere Grundlage für IADS und AI Director
+Nicht alle 225 Airbase-like Objects sind echte strategische Kampagnenobjekte.
+
+Die Klassifikation filtert die Rohdaten.
 
 ---
 
-## 16. ZoneFactory
+## 18. ZoneFactory
 
 Datei:
 
-```text
-src/world/tc_zone_factory.lua
-```
+    src/world/tc_zone_factory.lua
 
-Getestete Version:
+Version:
 
-```text
-v0.2.0
-```
+    v0.2.0
 
 Status:
 
-- bestanden
+    bestanden
 
 Bestätigte Werte:
 
-- total zones: 46
-- classified airbase zones: 46
-- Mission Editor zones: 0
-- skipped airbase-like objects: 179
-- strategic zones: 19
-- secondary zones: 13
-- heliport zones: 1
-- farp zones: 0
-- tactical zones: 13
-- captureZones: 32
-- missionZones: 32
-- logisticsZones: 46
-- startBaseZones: 1
+    relevante Kampagnenzonen: 46
+    skipped airbase-like objects: 179
+    captureZones: 32
+    missionZones: 32
+    logisticsZones: 46
+    startBaseZones: 1
 
-Architekturrolle:
+ZoneFactory erzeugt virtuelle Kampagnenzonen aus klassifizierten World-Daten.
 
-- übersetzt Airbase-Klassifizierung in Kampagnenzonen
-- erzeugt die zentrale Raumstruktur der Kampagne
-- trennt strategisch relevante und nicht relevante Objekte
-- verhindert, dass alle 225 Airbase-like Objects ungefiltert als Kampagnenzonen wirken
+Diese Zonen sind Theater-Command-State.
+
+Sie sind nicht automatisch identisch mit physisch im Mission Editor angelegten Trigger-Zonen.
 
 ---
 
-## 17. Campaign-Schicht
+## 19. Campaign Layer
 
 Pfad:
 
-```text
-src/campaign/
-```
+    src/campaign/
 
-Aktuelle Dateien:
+Aktive Dateien:
 
-```text
-src/campaign/tc_capture_system.lua
-src/campaign/tc_persistence_system.lua
-```
+    src/campaign/tc_capture_system.lua
+    src/campaign/tc_persistence_system.lua
 
-Aufgaben:
+Campaign verwaltet strategischen Zustand.
 
-- Besitzstatus verwalten
-- Zonenstatus verwalten
-- Capture-Zustände verwalten
-- Capture-Events speichern
-- Capture-Pressure verwalten
-- Capture-Progress verwalten
-- Mission Effects auswerten
-- Kampagnenzustand vorbereiten
-- Background Save unterstützen; produktiven Startup-Restore später integrieren
+Aktuelle Kernbereiche:
 
-Regel:
-
-- Campaign entscheidet über strategischen Besitz.
-- Campaign spawnt keine DCS-Objekte direkt.
-- Automatische Besitzwechsel dürfen erst nach kontrolliertem Testpfad produktiv werden.
+- Ownership
+- Capture
+- Mission Effects
+- Persistence
 
 ---
 
-## 18. CaptureSystem
+## 20. CaptureSystem
 
 Datei:
 
-```text
-src/campaign/tc_capture_system.lua
-```
+    src/campaign/tc_capture_system.lua
 
-Getestete Version:
+Version:
 
-```text
-v0.2.2
-```
+    v0.2.2
 
 Status:
 
-- bestanden
+    bestanden
 
 Bestätigte Startwerte:
 
-- eligibleBases: 32
-- eligibleZones: 32
-- nonCaptureBases: 193
-- nonCaptureZones: 14
-- pressureRecords: 32
-- progressRecords: 32
-- appliedMissionEffects: 0
-- ready: 0
-- contested: 0
+    eligibleBases: 32
+    eligibleZones: 32
+    nonCaptureBases: 193
+    nonCaptureZones: 14
+    pressureRecords: 32
+    progressRecords: 32
 
-Bestätigte Werte nach Mission Completion:
+Bestätigte Funktionen:
 
-- completed mission: `MISSION_2`
-- target zone: `ZONE_AIRBASE_ABU_AL_DUHUR`
-- capture pressure owner: `BLUE`
-- applied pressure: 105
-- progress: 100 %
-- appliedMissionEffects: 1
-- ready: 1
-- contested: 0
+- Capture Eligibility
+- Capture Pressure
+- Capture Progress
+- Capture Ready
+- Mission Effect Processing
+- Ownership Apply
+- linked Airbase Sync
+- Pressure Reset
+- Getter Read-Neutrality
+- Ownership No-Op
 
-Aufgaben:
+Bestätigter Pfad:
 
-- Ownership von Basen und Zonen verwalten
-- Capture-Eligibility bestimmen
-- ungeeignete Objekte ausschließen
-- Linked Airbase/Zone Ownership synchronisieren
-- Capture Events speichern
-- Capture Pressure erzeugen
-- Capture Progress erzeugen
-- abgeschlossene Mission Effects state-only als Capture-Druck anwenden
-- Capture Ready und Pressure Contested erkennen
-- Capture Ready Zones für F10 bereitstellen
+    Mission Completion
+    -> Mission Effects
+    -> Capture Pressure
+    -> Capture Progress
+    -> Capture Ready
+    -> Apply
+    -> Ownership Update
+    -> linked Airbase Ownership
+    -> Persistence
 
-Aktuelle Architektur:
+Mission Failure:
 
-- Capture ist noch nicht automatisch produktiv.
-- Capture Pressure wird state-only verarbeitet.
-- Capture Progress wird state-only verarbeitet.
-- Missionseffekte können vorbereitet und angewendet werden.
-- Capture Ready kann dynamisch entstehen.
-- Capture Ready ist über F10 sichtbar.
-- Ownership-Wechsel bleiben kontrolliert.
-- Kein automatischer produktiver Ownership-Wechsel ohne F10-/Debug-Bestätigung.
-
-Am 2026-09-12 erneut bestätigt:
-
-- Mission Completion -> Capture Pressure.
-- Mission Failure -> CaptureSystem verarbeitet mit `applied=0`, kein Capture Pressure.
-- Capture Ready Apply -> Zone Ownership Update -> linked Airbase Ownership Sync.
-- Apply auf `ZONE_AIRBASE_ABU_AL_DUHUR`: `RED -> BLUE`, danach `zoneOwner=BLUE`, `previousOwner=RED`, `baseOwner=BLUE`, `progress=0`, `status=STABLE`, `captureReady=false`.
-
-Capture Dirty Regression nach Fix: Die unveränderten Read-/Derived-Abfragen `getCaptureReadyZones`, `getPressureContestedZones`, `getPressureSummary`, `getCaptureEligibleBases`, `getCaptureEligibleZones`, `getEligibilitySummary` und `getCaptureProgress` liefern jeweils `dirty=false`, `reason=nil`. Eine echte Pressure-Mutation setzt weiterhin `dirty=true`, `reason=capture_pressure_set`.
-
-Ownership-No-Op nach Fix: `setZoneOwner(zone,currentOwner,...)` bzw. der entsprechende `setBaseOwner()`-Pfad verändert bei identischem Owner keinen persistierten State. Es gibt keinen unnötigen Timestamp-/Progress-/Counter-Write, keinen World-Sync, kein Event und kein Dirty (`dirty=false`, `reason=nil`). Historische Owner-Information bleibt erhalten.
-
-Architekturregel: Reads und fachliche No-Ops dürfen keine Persistence-Arbeit erzwingen.
+    erzeugt aktuell bewusst keinen Capture Pressure
 
 ---
 
-## 19. PersistenceSystem
+## 21. PersistenceSystem
 
-Datei: `src/campaign/tc_persistence_system.lua`, getestete Version: `v0.2.6`.
+Datei:
 
-Persistence ist ein internes Hintergrundsystem mit dirty-aware Autosave, kein Spieler-F10-Workflow. Background Save ist real aktiv und getestet; `productiveRestore=false`.
+    src/campaign/tc_persistence_system.lua
 
-Bestanden:
+Version:
 
-- DCS-Dateisystemzugriff, Save, Read-back, Compile, Evaluate und Validation.
-- Kontrollierter Import ist technisch möglich.
-- Embedded Start mit `initialDelay=20s`, `interval=120s`.
-- `SAVED`, `SKIPPED`, kontrollierter `FAILED`-Pfad und Retry.
+    v0.2.6
 
-Save-Sicherheitsinvariante:
+Status:
 
-```text
-Write -> Read-back -> Compile -> Evaluate -> Validation -> Dirty löschen
-```
+    technische Persistence bestanden
+    produktiver Restore deaktiviert
 
-Bei Fehler bleibt Dirty erhalten. Ein während eines laufenden Saves neu entstandener Dirty-State darf nicht durch den Abschluss eines älteren Saves gelöscht werden.
+Bestätigt:
 
-Campaign-Persistence-Regressionen vom 2026-09-12:
+- Sandbox-Prüfung
+- Dateischreiben
+- Read-back
+- Compile
+- Evaluate
+- Validation
+- kontrollierter Import
+- Background Autosave
+- Dirty Awareness
+- `SAVED`
+- `SKIPPED`
+- kontrollierter `FAILED`
+- Retry
 
-| Fachlicher Pfad | Ergebnis | dirtyReason | dirtyCleared |
-|---|---|---|---|
-| Mission Completion | `SAVED` | `f10_active_mission_1_completed` | `true` |
-| Mission Failure | `SAVED` | `f10_active_mission_1_failed` | `true` |
-| Capture Ready Apply | `SAVED` | `f10_capture_ready_zone_1_applied` | `true` |
+Autosave:
 
-In allen Fällen blieb `productiveRestore=false`. Technische Importfähigkeit ist keine Freigabe für produktiven Startup-Restore; Voraussetzungen stehen in Abschnitt 30.
+    erster Lauf nach 20 Sekunden
+    danach alle 120 Sekunden
+
+Verbindlich:
+
+    productiveRestore=false
 
 ---
 
-## 20. Logistics-Schicht
+## 22. Persistence-Architektur
+
+Persistence ist ein Querschnittssystem.
+
+Es ist keine fachlich höhere Kampagnenschicht.
+
+Grundpfad:
+
+    Fachsystem mutiert State
+    -> markDirty()
+    -> Persistence erkennt dirty
+    -> Snapshot
+    -> Write
+    -> Read-back
+    -> Compile
+    -> Evaluate
+    -> Validation
+    -> Dirty nur bei unverändertem ursprünglichem Dirty-State löschen
+
+Bei:
+
+    dirty=false
+
+wird nicht geschrieben.
+
+Ergebnis:
+
+    SKIPPED
+
+Bei kontrolliertem Fehler:
+
+    FAILED
+
+Dirty bleibt dabei erhalten.
+
+---
+
+## 23. Produktiver Restore
+
+Technische Importfähigkeit:
+
+    bestanden
+
+Produktiver Missionsstart-Restore:
+
+    deaktiviert
+
+Priority 3 ist nicht mehr der offene Blocker.
+
+Vor `productiveRestore=true` sind weiterhin notwendig:
+
+- Restore-/Initialisierungsreihenfolge
+- Save-Versionierung
+- Save-Kompatibilitätsstrategie
+- Framework-Rekonstruktionsregeln
+- kontrollierter End-to-End-Restore-Test
+
+Langfristige Zielreihenfolge:
+
+    Mission startet
+    -> Save prüfen
+    -> Save validieren
+    -> State importieren
+    -> Fachsysteme auf restored State setzen
+    -> Framework-Runtime kontrolliert rekonstruieren
+    -> Scheduler starten
+    -> Kampagne fortsetzen
+
+---
+
+## 24. Logistics Layer
 
 Pfad:
 
-```text
-src/logistics/
-```
+    src/logistics/
 
-Aktuelle Dateien:
+Aktive Dateien:
 
-```text
-src/logistics/tc_logistics_delivery.lua
-src/logistics/tc_fob_system.lua
-```
+    src/logistics/tc_logistics_delivery.lua
+    src/logistics/tc_fob_system.lua
 
-Aufgaben:
+Logistics verwaltet strategischen Versorgungsstate.
 
-- Logistics Hubs aus Kampagnenzonen erzeugen
-- Supply-/Fuel-/Ammo-/Engineering-Zustände vorbereiten
-- Deliveries vorbereiten
-- FOB-Kandidaten erzeugen
-- FOBs state-only planen
-- spätere CTLD-Anbindung vorbereiten
-
-Regel:
-
-- Logistics entscheidet nicht allein über Besitz.
-- Logistics beeinflusst Campaign, Missions und AI über Zustandsdaten.
+CTLD wird später reale Ausführung übernehmen.
 
 ---
 
-## 21. LogisticsDelivery
+## 25. LogisticsDelivery
 
 Datei:
 
-```text
-src/logistics/tc_logistics_delivery.lua
-```
+    src/logistics/tc_logistics_delivery.lua
 
-Getestete Version:
+Version:
 
-```text
-v0.2.0
-```
+    v0.2.1
 
 Status:
 
-- bestanden
+    state-first bestanden
+    Read-Neutrality bestanden
 
 Bestätigte Werte:
 
-- logistics hubs: 46
-- blue hubs: 7
-- red hubs: 24
-- neutral hubs: 15
-- active hubs: 31
-- limited hubs: 15
-- locked hubs: 0
+    logistics hubs: 46
+    blue hubs: 7
+    red hubs: 24
+    neutral hubs: 15
+    active hubs: 31
+    limited hubs: 15
+    locked hubs: 0
 
-Aktuelle Architektur:
+Architektur:
 
-- Logistics Hubs sind State-only.
-- CTLD wird noch nicht aktiv aufgerufen.
-- Keine echten Cargo-Flüge.
-- Keine echten Dropoffs.
-- Keine echten Supply-Verbräuche.
-- Mission Effects wirken noch nicht produktiv auf Logistics.
-
-LogisticsDelivery ist funktional bestanden. Die allgemeine Dirty-Coverage dieses Moduls wurde noch nicht systematisch auditiert und ist der nächste Priority-3-Schritt: zunächst READ ONLY, kein Code-Fix ohne konkreten Befund. Aus dem offenen Audit wird kein Missing-Dirty-Bug abgeleitet.
+- LogisticsDelivery hält Theater-Command-Logistics-State.
+- CTLD ist nicht Eigentümer dieses langfristigen Campaign-State.
+- reale Transporte sind noch nicht produktiv verdrahtet.
 
 ---
 
-## 22. FobSystem
+## 26. FobSystem
 
 Datei:
 
-```text
-src/logistics/tc_fob_system.lua
-```
+    src/logistics/tc_fob_system.lua
 
-Getestete Version:
+Version:
 
-```text
-v0.2.0
-```
+    v0.2.1
 
 Status:
 
-- bestanden
+    state-first bestanden
+    Read-Neutrality bestanden
 
-Bestätigte Werte:
+Bestätigt:
 
-- FOB candidates: 6
-- stored candidates: 6
-- auto-planned FOBs: 2
-- skipped candidates: 4
-- Blue FOBs: 2
+    FOB candidates: 6
+    stored candidates: 6
+    auto-planned FOBs: 2
+    skipped candidates: 4
+    Blue FOBs: 2
 
-Erzeugte FOBs:
+FOBs:
 
-- `FOB Ercan`
-- `FOB Gecitkale`
+    FOB Ercan
+    FOB Gecitkale
 
 Status:
 
-- `UNDER_CONSTRUCTION`
+    UNDER_CONSTRUCTION
 
-Aktuelle Architektur:
+Diese FOBs sind aktuell:
 
-- FOBs sind State-only.
-- Es werden noch keine CTLD-FOBs erzeugt.
-- Baufortschritt wird noch nicht durch echte Cargo-Lieferungen beeinflusst.
-- FOBs können bereits vom MissionGenerator für FOB-Support genutzt werden.
+    Campaign State
 
-Es werden keine echten Crates erzeugt. Die allgemeine FOB-Dirty-Coverage bleibt offen; daraus allein folgt kein konkreter Missing-Dirty-Bug.
+Sie sind noch keine real durch CTLD gebauten FOBs.
 
 ---
 
-## 23. Missions-Schicht
+## 27. Missions Layer
 
 Pfad:
 
-```text
-src/missions/
-```
+    src/missions/
 
-Aktuelle Datei:
+Aktive Datei:
 
-```text
-src/missions/tc_mission_generator.lua
-```
+    src/missions/tc_mission_generator.lua
 
-Regel:
+MissionGenerator erzeugt Kampagnenaufträge aus State-Daten.
 
-- Missions erzeugt Aufträge aus State-Daten.
-- Missions verändert strategischen Besitz nicht direkt.
-- Missionsergebnisse liefern Effects für Empfängersysteme; Logistics-, AI- und IADS-Verarbeitung sind noch nicht produktiv angebunden.
-- Der erste bestätigte Empfänger ist CaptureSystem.
+MissionGenerator soll nicht selbst alle realen DCS-Ausführungen übernehmen.
+
+Mission Effects werden für Fachsysteme vorbereitet.
 
 ---
 
-## 24. MissionGenerator
+## 28. MissionGenerator
 
 Datei:
 
-```text
-src/missions/tc_mission_generator.lua
-```
+    src/missions/tc_mission_generator.lua
 
-Getestete Version:
+Version:
 
-```text
-v0.2.3
-```
+    v0.2.3
 
 Status:
 
-- bestanden
+    bestanden
 
-Bestätigte Werte:
+Bestätigt:
 
-- mission candidates: 78
-- fobSupportCandidates: 2
-- generated missions: 10
-- reservedCreated: 1
-- duplicatesSkipped: 1
-- typeLimitSkipped: 68
+    mission candidates: 78
+    fobSupportCandidates: 2
+    generated missions: 10
+    reservedCreated: 1
+    duplicatesSkipped: 1
+    typeLimitSkipped: 68
 
-Aktuelle Missionstypen:
+Aktuelle Missionstypen umfassen:
 
-- `RECON`
-- `STRIKE`
-- `SEAD`
-- `DEAD`
-- `CAS`
-- `INTERDICTION`
-- `ESCORT`
-- `CAP`
-- `LOGISTICS`
-- `FOB_SUPPORT`
-- `AIRBASE_ATTACK`
-- `IADS_SUPPRESSION`
+- RECON
+- STRIKE
+- SEAD
+- DEAD
+- CAS
+- INTERDICTION
+- ESCORT
+- CAP
+- LOGISTICS
+- FOB_SUPPORT
+- AIRBASE_ATTACK
+- IADS_SUPPRESSION
 
-Aktuelle Mission Records enthalten:
+Bestätigte Statuswechsel:
 
-- ID
-- Key
-- Name
-- Type
-- Status
-- Owner
-- Source Base
-- Target Zone
-- Target Base
-- Target FOB
-- Priority
-- Strategic Relevance
-- Objective
-- Briefing
-- Recommended Aircraft
-- Recommended Payload
-- Progress
-- Activation Metadata
-- Outcome State
-- Effect State
-- Execution Plan
-- Effects
-- reserved MOOSE hook
-- reserved CTLD hook
-- reserved Skynet hook
+    AVAILABLE -> ACTIVE
+    ACTIVE -> COMPLETED
+    ACTIVE -> FAILED
 
-Aktuelle Architektur:
+Bestätigt:
 
-- Missionen sind State-only.
-- Aktivierung setzt Missionen auf `ACTIVE`.
-- Aktivierung triggert keine echten Spawns.
-- Spawn-Hooks bleiben reserviert.
-- Missionen können auf `COMPLETED` gesetzt werden.
-- Mission Completion bereitet Mission Effects vor.
-- CaptureSystem kann abgeschlossene Mission Effects verarbeiten.
-- Die Statuswechsel `AVAILABLE -> ACTIVE`, `ACTIVE -> COMPLETED` und `ACTIVE -> FAILED` sind praktisch bestätigt.
-- Completion -> Capture Pressure und Failure -> kein Capture Pressure sind bestätigt.
-- Mission-State-Collections sind String-keyed Dictionaries; der Record-Loss-Verdacht ist widerlegt (siehe Kopf und Abschnitt 13).
-- Completion und Failure mit Dirty/`SAVED` sind bestätigt; dies ist keine vollständig auditierte allgemeine MissionGenerator-Dirty-Coverage.
+    COMPLETED
+    -> Capture Effect
+
+und:
+
+    FAILED
+    -> aktuell kein Capture Pressure
 
 Noch offen:
 
-- `CANCELLED` und `EXPIRED` praktisch testen.
-- automatische DCS-Event-Auswertung.
-- allgemeine MissionGenerator-Dirty-Coverage.
-- Effects auf Logistics/AI/IADS.
-- echte Framework-Ausführung; MOOSE-/CTLD-/Skynet-Hooks bleiben reserviert.
+- CANCELLED praktisch testen
+- EXPIRED praktisch testen
+- automatische DCS-Outcome-Auswertung
+- produktive Logistics Effects
+- produktive AI Effects
+- produktive IADS Effects
+- reale Framework-Ausführung
 
 ---
 
-## 25. AI-Schicht
+## 29. AI Layer
 
 Pfad:
 
-```text
-src/ai/
-```
+    src/ai/
 
 Aktive Datei:
 
-```text
-src/ai/tc_ai_cap_manager.lua
-```
+    src/ai/tc_ai_cap_manager.lua
 
-Geplante spätere Dateien:
+Perspektivisch können weitere fachliche AI-Module hinzukommen.
 
-```text
-src/ai/tc_ai_director.lua
-src/ai/tc_ai_gci_manager.lua
-src/ai/tc_ai_counterattack.lua
-```
+Beispielsweise:
 
-Regel:
+    tc_ai_director.lua
+    tc_ai_gci_manager.lua
+    tc_ai_counterattack.lua
 
-- AI reagiert auf den Kampagnenzustand.
-- AI darf später MOOSE für reale Spawns nutzen.
-- AI trifft keine strategischen Besitzentscheidungen allein.
+Diese Dateien werden erst angelegt, wenn der konkrete fachliche Bedarf besteht.
 
 ---
 
-## 26. AICapManager
+## 30. AICapManager
 
 Datei:
 
-```text
-src/ai/tc_ai_cap_manager.lua
-```
+    src/ai/tc_ai_cap_manager.lua
 
-Getestete Version:
+Version:
 
-```text
-v0.2.0
-```
+    v0.2.1
 
 Status:
 
-- bestanden
+    state-first bestanden
+    Read-Neutrality bestanden
 
-Bestätigte Werte:
+Bestätigt:
 
-- cap zone candidates: 31
-- auto-registered CAP zones: 12
-- CAP requests: 12
-- reactionState: `AIR_REACTION_REQUESTED`
-- threatLevel: `HIGH`
+    cap zone candidates: 31
+    CAP zones: 12
+    CAP requests: 12
 
-Aktuelle Architektur:
+Noch keine:
 
-- CAP ist State-only.
-- MOOSE wird noch nicht produktiv genutzt.
-- `spawn=MOOSE_PENDING` ist erwartetes Verhalten.
+    realen MOOSE-CAP-Flüge
 
-`reactToActiveMissions(options)` wurde READ-ONLY auditiert. Es gibt aktuell keine produktive Call-Site: weder `start()`, Scheduler/Timer, `main.lua`, `loader.lua`, F10 noch andere produktive `src/`-Pfade rufen die Funktion auf.
+MOOSE wird später Execution Layer.
 
-Bei späterer Verdrahtung könnten im `requested==0`-Pfad `reactionState`, `threatLevel`, `capStatistics` und `lastUpdate` verändert werden, ohne zwingenden eigenen Dirty-Call. Klassifikation: latenter Missing-Dirty-Fall in derzeit nicht verdrahtetem Code, aktuell kein Runtime-Persistence-Bug. Jetzt kein Fix; bei späterer Verdrahtung erneut prüfen.
-
-Die allgemeine AICapManager-Dirty-Coverage bleibt offen.
+AICapManager bleibt Intent-/State-Layer.
 
 ---
 
-## 27. IADS-Schicht
+## 31. `reactToActiveMissions()`
 
-Pfad:
+Diese Funktion wurde separat auditiert.
 
-```text
-src/iads/
-```
+Aktuell:
 
-Aktueller Stand:
+    keine produktive Call-Site
 
-- Vendor geladen.
-- Eigenes Theater-Command-IADS-Modul noch nicht aktiv implementiert.
+Sie wird derzeit nicht durch:
 
-Geplante Module:
+- `start()`
+- Scheduler
+- `main.lua`
+- `loader.lua`
+- F10
+- andere aktive produktive Pfade
 
-```text
-src/iads/tc_iads_system.lua
-src/iads/tc_iads_network.lua
-src/iads/tc_iads_sector_manager.lua
-src/iads/tc_iads_site_registry.lua
-src/iads/tc_iads_mission_bridge.lua
-```
+aufgerufen.
 
-Aufgaben:
-
-- Skynet-IADS-Anbindung kapseln
-- IADS-Netzwerke vorbereiten
-- IADS-Sektoren definieren
-- SAM-Standorte verwalten
-- Radar-Standorte verwalten
-- IADS-Zustand im Kampagnen-State speichern
-- IADS-Zustand mit MissionGenerator verbinden
-- SEAD- und DEAD-Ziele vorbereiten
-
-Regel:
-
-- Skynet IADS bleibt Framework.
-- Theater Command bewertet und speichert den Kampagnenzustand darüber.
-
-Aktueller Stand:
-
-- MissionGenerator reserviert bereits Skynet-Hooks.
-- Keine echte IADS-Kampagnenlogik aktiv.
-
----
-
-## 28. UI-Schicht
-
-Pfad:
-
-```text
-src/ui/
-```
-
-Aktive Datei:
-
-```text
-src/ui/tc_f10_menu.lua
-```
-
-Getestete Version:
-
-```text
-v0.2.3
-```
+Ein potenzieller Dirty-Randfall wurde für eine spätere Verdrahtung dokumentiert.
 
 Status:
 
-- bestanden; 33 Commands
+    latent
+    aktuell kein Runtime-Persistence-Bug
 
-Aufgaben:
+Erneut prüfen:
 
-- F10-Menüs bereitstellen
-- verfügbare Missionen anzeigen
-- aktive Missionen anzeigen
-- Mission 1 bis Mission 10 Details anzeigen
-- Mission 1 bis Mission 10 aktivieren
-- Mission Outcome Controls bereitstellen
-- Kampagnenstatus anzeigen
-- Capture Status anzeigen
-- Capture Ready Zones anzeigen
-- Pressure Contested Zones anzeigen
-- Logistikstatus anzeigen
-- FOB-Status anzeigen
-- AI-CAP-Status anzeigen
-
-Aktuelle Menüstruktur:
-
-```text
-F10
-└── Theater Command
-    ├── Missions
-    │   ├── Show Available Missions
-    │   ├── Show Active Missions
-    │   ├── Mission Details
-    │   │   ├── Show Mission 1 Details
-    │   │   ├── ...
-    │   │   └── Show Mission 10 Details
-    │   ├── Activate Mission
-    │   │   ├── Activate Mission 1
-    │   │   ├── ...
-    │   │   └── Activate Mission 10
-    │   └── Mission Outcome
-    │       ├── Show Active Mission Outcome Status
-    │       ├── Complete Active Mission 1
-    │       └── Fail Active Mission 1
-    ├── Status
-    │   ├── Show Campaign Status
-    │   ├── Show Capture Status
-    │   ├── Show Capture Ready Zones
-    │   ├── Apply Capture Ready Zone 1
-    │   └── Show Pressure Contested Zones
-    ├── Logistics
-    │   ├── Show Logistics Status
-    │   └── Show FOB Status
-    └── AI
-        └── Show AI CAP Status
-```
-
-Regel:
-
-- UI zeigt Daten und nimmt Spielerkommandos entgegen.
-- UI entscheidet nicht selbst über Kampagnenlogik.
-- UI triggert aktuell keine echten Spawns.
-- UI triggert keine CTLD-Aktion.
-- UI triggert keine Skynet-Aktion.
-- UI ruft sichere State-Funktionen auf.
-
-`Apply Capture Ready Zone 1` ist implementiert und bestanden. Mission Details und Activation 1–10, Active Mission Outcome Status, Complete/Fail Active Mission 1 sowie die aufgeführten Campaign-/Capture-/Logistics-/FOB-/AI-Statusfunktionen sind bestätigt. UI ruft kontrollierte State-Funktionen auf, führt aber keine direkte MOOSE-/CTLD-/Skynet-Ausführung aus.
+    sobald die Funktion produktiv in den Lifecycle eingebunden wird
 
 ---
 
-## 29. Debug-Schicht
+## 32. IADS Layer
 
 Pfad:
 
-```text
-src/debug/
-```
+    src/iads/
 
-Aktueller Stand:
+Aktuell:
 
-- Dokumentiert, noch nicht aktiv implementiert.
-
-Geplante Module:
-
-```text
-src/debug/tc_debug_console.lua
-src/debug/tc_debug_state_dump.lua
-src/debug/tc_debug_zone_overlay.lua
-src/debug/tc_debug_airbase_report.lua
-src/debug/tc_debug_mission_report.lua
-src/debug/tc_debug_logistics_report.lua
-src/debug/tc_debug_ai_report.lua
-src/debug/tc_debug_iads_report.lua
-```
-
-Aufgaben:
-
-- Debug-Ausgaben bündeln
-- State-Dumps erzeugen
-- Airbase-Reports erzeugen
-- Zonen-Reports erzeugen
-- Capture-Reports erzeugen
-- Logistik-Reports erzeugen
-- Missions-Reports erzeugen
-- AI-Reports erzeugen
-- IADS-Reports erzeugen
-
-Regel:
-
-- Debug macht Daten sichtbar.
-- Debug ersetzt keine produktive Kampagnenlogik.
-- Debug darf keine produktiven Aktionen versteckt auslösen.
-
----
-
-## 30. Persistenz-Architektur
-
-Aktive Datei: `src/campaign/tc_persistence_system.lua`, Version `v0.2.6`.
-
-Persistence beobachtet und serialisiert Kampagnen-State als Querschnittssystem. Save/Read-back/Compile/Evaluate/Validation, kontrollierter Import und dirty-aware Background Autosave sind technisch bestanden (Abschnitt 19). Die Save-Datei ist eine Lua-Return-Datei; persistierter State muss ohne Funktionen, Userdata oder zyklische Tabellen serialisierbar bleiben. Die Sandbox ist geprüft: Persistence benötigt direkt `io` und `lfs`.
-
-Background Save sichert die getesteten fachlichen State-Änderungen automatisch. Das ersetzt weder die noch offene vollständige Dirty-Coverage noch produktiven Startup-Restore. Es gibt keine automatische Kampagnenfortsetzung aus einem Save beim Missionstart; `productiveRestore=false`.
-
-Bereits erfüllte Restore-Vorarbeiten: Embedded Start von `v0.2.6`, normaler Scheduler, `SAVED`, `SKIPPED`, `FAILED`, Retry sowie Mission-Completion-, Mission-Failure- und Capture-Ready-Apply-Regressionen.
-
-Vor Freigabe von produktivem Restore noch erforderlich:
-
-1. Priority 3 allgemeine Dirty-Coverage abschließen.
-2. Restore-/Initialisierungsreihenfolge definieren.
-3. Save-Kompatibilitäts-/Versionsstrategie festlegen.
-4. Einen separaten kontrollierten produktiven Restore-Test durchführen.
-5. Sicherstellen, dass Framework-Hooks beim Restore keine unbeabsichtigten Aktionen auslösen.
-
-Die Save-Invarianten aus Abschnitt 19 gelten unverändert: Dirty erst nach erfolgreicher vollständiger Verifikation löschen; bei Fehler erhalten; neuen Dirty-State nicht durch einen älteren Save-Abschluss löschen.
-
----
-
-## 31. Mission-Editor-Architektur
-
-Aktuelle DEV-Mission:
-
-```text
-Operation_Levant_Reclamation_DEV.miz
-```
-
-Aktueller Inhalt:
-
-- Map: Syria
-- Koalitionspreset: Modern
-- Blue Start: Akrotiri / Zypern
-- erster blauer Client-Slot: F/A-18C Lot 20 auf Akrotiri
-- Trigger: Starttest-Variante A vollständig angelegt
-- Vendor-Frameworks geladen
-- Theater-Command-Source-Dateien geladen
-- F10-Menü aktiv
-- keine produktive rote Frontlinie
-- keine produktiven IADS-Stellungen
-- keine produktiven CTLD-Zonen
-- keine produktiven Template-Gruppen
-- keine echten MOOSE-Spawns
-- keine echten CTLD-FOBs
-- kein produktiver Startup-Restore
-
-Regel:
-
-- Der Mission Editor bleibt schlank.
-- Große dynamische Logik gehört nach Lua.
-- Der Mission Editor liefert Bühne, Slots, Templates, Zonen und statische Objekte.
-
-Bestätigter Stand vom 2026-09-12: PersistenceSystem `v0.2.6` ist eingebettet, dirty-aware Background Autosave aktiv; F10Menu `v0.2.3` bietet 33 Commands. Capture Ready Apply ist testbar und bestanden. Es gibt noch keine automatische Kampagnenfortsetzung aus einem Save beim Missionstart.
-
----
-
-## 32. Loader-only-Architektur
-
-Noch nicht getestet:
-
-- Starttest-Variante B — Loader-only mit `dofile`
+- Skynet IADS Vendor geladen
+- eigenes produktives Theater-Command-IADS-System noch nicht aktiv
 
 Ziel:
 
-- Frameworks im Mission Editor laden
-- nur `src/loader.lua` laden
-- prüfen, ob `src/loader.lua` weitere Source-Dateien per `dofile` nachladen kann
-- DCS-Sandbox-Verhalten bewerten
-- spätere Deployment-Strategie entscheiden
+Theater Command verwaltet später:
 
-Mögliche Ergebnisse:
+- IADS-State
+- Netzwerke
+- strategische Relevanz
+- Missionsverknüpfung
+- Beschädigung
+- Reparatur
 
-- Loader-only funktioniert
-- Einzeldatei-Ladung bleibt für Entwicklung notwendig
-- spätere Build-Datei wird benötigt
-- DCS-Sandbox muss gezielt berücksichtigt werden
-
-Diese Entscheidung wird erst nach einem praktischen Test getroffen.
+Skynet führt reale IADS-Funktion aus.
 
 ---
 
-## 33. Abhängigkeitsregeln
+## 33. UI Layer
 
-Grundregel: Fachliche Verantwortlichkeiten bleiben getrennt; gemeinsame Grundlagen sollen keine Abhängigkeit von höherer Fachlogik erhalten.
+Pfad:
 
-Grobe Schichtung, keine harte lineare technische Dependency-Kette:
+    src/ui/
 
-```text
-Core -> World -> Campaign -> Logistics -> Missions -> AI -> IADS -> UI -> Debug
-```
+Aktive Datei:
 
-Praktische Regeln:
+    src/ui/tc_f10_menu.lua
 
-- Core darf von allen genutzt werden.
-- World liefert DCS-Weltdaten.
-- Campaign verwaltet strategischen Zustand.
-- Logistics liefert Versorgungszustände.
-- Missions erzeugt Aufträge aus State-Daten.
-- AI reagiert auf State-Daten.
-- IADS liefert Luftverteidigungszustände.
-- UI macht State sichtbar und löst sichere State-Aktionen aus.
-- Debug macht State sichtbar.
-- Framework-Ausführung erfolgt später über eigene Fachmodule.
+Version:
 
-Wichtige Ausnahme:
+    v0.2.3
 
-- UI darf sichere Funktionen aus Campaign und Missions aufrufen.
-- Diese Funktionen müssen state-only oder klar kontrolliert sein.
-- UI darf keine direkte Framework-Ausführung verstecken.
+Status:
 
-Reale Modulbeziehungen:
+    bestanden
 
-- Fachmodule interagieren über gemeinsamen State und definierte APIs.
-- MissionGenerator liefert Outcome/Effects an Empfängersysteme; CaptureSystem verarbeitet Capture Effects.
-- UI darf kontrollierte Campaign-/Mission-Funktionen aufrufen.
-- Persistence beobachtet/serialisiert State als Querschnittssystem und ist keine fachlich höhere Schicht.
-- Vendor Frameworks sind Werkzeuge außerhalb dieser fachlichen Layerordnung.
+Commands:
+
+    33
+
+Unter anderem vorhanden:
+
+- Mission Details
+- Mission Activation
+- Mission Completion
+- Mission Failure
+- Campaign Status
+- Capture Status
+- Capture Ready
+- Capture Apply
+- Pressure Contested
+- Logistics Status
+- FOB Status
+- AI CAP Status
+
+Architekturregel:
+
+UI:
+
+- macht State sichtbar
+- ruft definierte State-Funktionen auf
+- dient aktuell auch als Testzugang
+
+UI:
+
+- soll keine versteckte Framework-Orchestrierung enthalten
+- soll nicht zum Hauptmotor der Kampagne werden
 
 ---
 
-## 34. Aktuelle modulübergreifende Pipeline
+## 34. Debug Layer
 
-Aktuell bestätigt:
+Pfad:
 
-```text
-Mission Details
-Mission Activation
-Mission Completion
-Mission Effect Preparation
-CaptureSystem Effect Processing
-Capture Pressure Update
-Capture Progress Update
-Capture Ready Detection
-F10 Capture Ready Visibility
-Capture Ready Apply
-Zone Ownership Update
-Linked Airbase Ownership Sync
-Background Autosave
-```
+    src/debug/
+
+Aktuell:
+
+    vorbereitet
+    noch nicht produktiv implementiert
+
+Debug soll später unter anderem bereitstellen:
+
+- State Dumps
+- Airbase Reports
+- Zone Reports
+- Capture Reports
+- Logistics Reports
+- Mission Reports
+- AI Reports
+- IADS Reports
+
+Regel:
+
+    Debug macht State sichtbar.
+    Debug verändert nicht versteckt produktiven State.
+
+---
+
+## 35. Aktuelle modulübergreifende Pipeline
+
+Bestätigter erfolgreicher Pfad:
+
+    Mission Details
+    -> Mission Activation
+    -> Mission Completion
+    -> Mission Effect Preparation
+    -> CaptureSystem Effect Processing
+    -> Capture Pressure
+    -> Capture Progress
+    -> Capture Ready
+    -> F10 Visibility
+    -> Capture Ready Apply
+    -> Zone Ownership
+    -> linked Airbase Ownership
+    -> Background Persistence
 
 Bestätigter Testfall:
 
-```text
-MISSION_2 -> ZONE_AIRBASE_ABU_AL_DUHUR -> BLUE pressure 105 -> progress 100% -> ready=1
-```
+    MISSION_2
+    -> ZONE_AIRBASE_ABU_AL_DUHUR
+    -> BLUE pressure 105
+    -> progress 100 %
+    -> ready=1
 
-Architekturbedeutung:
+Failure-Pfad:
 
-- Das ist der erste bestätigte Kampagnenzusammenhang über mehrere Module hinweg.
-- MissionGenerator erzeugt einen Effekt.
-- CaptureSystem verarbeitet diesen Effekt.
-- F10Menu macht das Ergebnis sichtbar.
-- Die fachlichen Mission-/Capture-Aktionen bleiben state-only; Background Autosave sichert den State im Dateisystem.
-- Keine echte Framework-Aktion wird ausgelöst.
-
-Zusätzlich bestätigter Failure-Pfad:
-
-```text
-Mission Activation
-Mission Failure
-Failure Effects prepared
-CaptureSystem applied=0
-kein Capture Pressure
-Background Autosave
-```
-
-MissionGenerator erzeugt Outcome/Effects, CaptureSystem verarbeitet Capture-Wirkungen, UI stellt den kontrollierten Test-/Spielerzugang bereit und Persistence sichert fachliche State-Änderungen. Die Verantwortlichkeiten bleiben getrennt; state-only bezieht sich auf die fachlichen Aktionen, Background Save schreibt tatsächlich Dateien.
+    Mission Activation
+    -> Mission Failure
+    -> Failure Effect
+    -> CaptureSystem applied=0
+    -> kein Capture Pressure
+    -> Background Persistence
 
 ---
 
-## 35. Aktuell nicht verbunden
+## 36. CTLD-Architektur
 
-Bereits verbunden und bestätigt:
+CTLD:
 
-- Mission Failure zu CaptureSystem mit `applied=0`, ohne Capture Pressure.
-- Capture Ready zu kontrolliertem Ownership-Wechsel.
-- Zone/Airbase Ownership Sync.
-- Background Persistence für die getesteten State-Änderungen.
+    vendor/ctld/CTLD.lua
+    Version 1.6.1
 
-Weiterhin nicht produktiv verbunden:
+Status:
 
-- Mission Effects zu Logistics.
-- Mission Effects zu AI.
-- Mission Effects zu IADS.
-- CTLD zu Logistics/FOB.
-- MOOSE zu CAP/Mission Packages.
-- Skynet zu produktivem IADS-State.
-- AI Director zu Gesamtstrategie.
-- produktiver Startup-Restore.
-- autonome Kampagnenoperationen.
+    Vendor geladen
+    Framework-PoC für KI-Truppentransport bestanden
+    produktive Theater-Command-Integration offen
+
+CTLD ist:
+
+    Execution Layer
+
+Theater Command bleibt:
+
+    Decision Layer
+    Campaign State Owner
 
 ---
 
-## 36. Framework-Integrationsstrategie
+## 37. CTLD Runtime-Zonenregistrierung
 
-Theater Command nutzt Frameworks nicht direkt als Architekturordnung.
+Am 2026-09-29 wurde bestätigt:
 
-Frameworks sind Werkzeuge.
+Nach der CTLD-Initialisierung können normalisierte Einträge ergänzt werden in:
 
-Eigene Logik bleibt fachlich sortiert.
+    ctld.pickupZones
+    ctld.dropOffZones
 
-Geplante Zuordnung:
+Getesteter Pickup:
 
-| Funktion | Framework |
+    CTLD_PICKUP_BLUE_AKROTIRI_01
+
+Getesteter technischer Dropoff:
+
+    CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01
+
+Getesteter Pickup-Eintrag:
+
+    { "CTLD_PICKUP_BLUE_AKROTIRI_01", -1, 10000, 1, 2 }
+
+Getesteter Dropoff-Eintrag:
+
+    { "CTLD_DROPOFF_BLUE_AKROTIRIWEST_TEST_01", -1, 2, 1 }
+
+Eine erneute Ausführung von:
+
+    ctld.initialize()
+
+war dafür nicht erforderlich.
+
+---
+
+## 38. CTLD KI-Transporterregistrierung
+
+Testunit:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
+
+Für den getesteten AI-Pfad musste die Unit in:
+
+    ctld.transportPilotNames
+
+registriert sein.
+
+Vor Registrierung:
+
+    108 Einträge
+
+Nach temporärer idempotenter Registrierung:
+
+    109 Einträge
+
+Testunit:
+
+    genau einmal vorhanden
+
+Source-Audit:
+
+    ctld.checkAIStatus()
+
+iteriert für diesen Pfad über:
+
+    ctld.transportPilotNames
+
+Produktive Architektur muss diese Registrierung später automatisch und idempotent durchführen.
+
+---
+
+## 39. CTLD-KI-Truppentransport-PoC
+
+Testdatum:
+
+    2026-09-29
+
+Testmission:
+
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz
+
+SHA-256 vor Test:
+
+    5F0D89DF744A7083401E36713B148BD21813FF187CC36EC1F088507163458C57
+
+Gruppe:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01
+
+Unit:
+
+    TPL_BLUE_TRANSPORT_MI8_AKROTIRI_01_U01
+
+Luftfahrzeug:
+
+    Mi-8
+
+Bestätigter Ablauf:
+
+    Aktivierung
+    -> automatischer Pickup
+    -> Taxi
+    -> Takeoff
+    -> Transit
+    -> Off-Airfield-Landung
+    -> automatischer Dropoff
+    -> reale Blue-Bodengruppe
+
+Pickup:
+
+    16 Soldaten
+
+Pickup-Counter:
+
+    10000 -> 9999
+
+Dropoff-Gruppe:
+
+    Dropped Group 2
+
+Group-ID:
+
+    70001
+
+Stärke:
+
+    16 x Soldier M249
+
+---
+
+## 40. Off-Airfield-Landung
+
+Erfolgreicher gespeicherter Missionsaufbau:
+
+    normaler Turning Point
+    +
+    Perform Task -> Land
+
+Dropoff-Zentrum:
+
+    x / North = -29249.110954281
+    z / East  = -271836.070539260
+
+Wegpunkt:
+
+    100 m BARO
+    30 m/s
+
+Land Task:
+
+    duration=300
+    durationFlag=true
+
+Bestätigte minimale Entfernung zum Zentrum:
+
+    ungefähr 1.06 m
+
+Für diesen getesteten Truppentransport war kein FARP erforderlich.
+
+Der zuvor verwendete ungebundene:
+
+    Land / Landing
+
+Waypoint hatte keinen vollständigen erfolgreichen Transportzyklus ergeben.
+
+Der erfolgreiche neue Aufbau isoliert die Landemethode als wichtigen Unterschied.
+
+Die genaue Ursache des vorherigen Turnback-Verhaltens ist dadurch nicht vollständig bewiesen.
+
+---
+
+## 41. CTLD-Ergebnisgrenze
+
+Der PoC beweist für den getesteten Aufbau:
+
+- Runtime-Zonenregistrierung funktioniert.
+- KI-Transporterregistrierung funktioniert.
+- automatischer Pickup funktioniert.
+- DCS-AI führt den Transport durch.
+- Off-Airfield-Landung funktioniert.
+- automatischer Dropoff funktioniert.
+- reale Bodengruppe entsteht.
+
+Der PoC beweist noch nicht:
+
+- produktive Theater-Command-Auftragserzeugung
+- LogisticsDelivery-Rückkopplung
+- FobSystem-Rückkopplung
+- CTLD-Crates
+- Sling Load
+- Supply Cargo
+- Engineering Cargo
+- Repair Cargo
+- Fuel Cargo
+- Ammo Cargo
+- FOB-Bau
+- Capture-Effekt aus Logistik
+- AI-Director-Verknüpfung
+- CTLD-Restore
+- Multiplayer
+
+---
+
+## 42. CTLD `RepackCommandsPath`
+
+Beim Grounded-Übergang des registrierten KI-Transporters wurde beobachtet:
+
+    CTLD.lua:6150:
+    attempt to get length of local 'RepackCommandsPath' (a nil value)
+
+Kontext:
+
+    updateRepackMenu
+    updateRepackMenuOnlanding
+
+Source-Analyse legt nahe:
+
+- der registrierte KI-Transporter erreicht einen CTLD-Landing-/Menüpfad,
+- `ctld.vehicleCommandsPath[_unitName]` ist bei einer reinen KI-Unit nicht zwangsläufig vorhanden,
+- daraus kann ein nil `RepackCommandsPath` entstehen.
+
+Pickup und Dropoff wurden trotzdem abgeschlossen.
+
+Nicht bewiesen:
+
+    dass der Fehler langfristig harmlos ist
+
+Ebenfalls noch nicht direkt bewiesen:
+
+    ob der unbehandelte Fehler den betreffenden Scheduler dauerhaft beendet
+
+Diese Schedulerwirkung bleibt eine technisch begründete Vermutung.
+
+Verbindlich:
+
+    vendor/ctld/CTLD.lua wird nicht gepatcht.
+
+---
+
+## 43. Zukünftige produktive CTLD-Architektur
+
+Die produktive Integration muss mindestens folgende Verantwortlichkeiten trennen:
+
+    Campaign Decision
+    -> Transportauftrag
+    -> Transporter auswählen
+    -> CTLD-Zonen konfigurieren
+    -> Transporter bei CTLD registrieren
+    -> DCS Route / Task
+    -> Pickup
+    -> Transport
+    -> Landung
+    -> Dropoff
+    -> Ergebnis validieren
+    -> Theater-Command-State mutieren
+    -> Dirty
+    -> Persistence
+
+Vor dem ersten produktiven Code-Schritt muss entschieden werden:
+
+- welche fachliche `src/`-Komponente die CTLD-Konfiguration übernimmt
+- ob eine bestehende fachliche Datei erweitert wird
+- oder ob eine neue task-orientierte Datei nötig ist
+
+Keine generische:
+
+    tc_ctld.lua
+
+oder:
+
+    tc_ctld_bridge.lua
+
+---
+
+## 44. Framework-Integrationsstrategie
+
+Aktuelle Zuordnung:
+
+| Funktion | Execution Layer |
 |---|---|
-| Airbase/Utility/DB/Events | MIST nach Bedarf |
-| CAP/Strike/SEAD/DEAD/CAS | MOOSE |
-| Cargo/Transport/FOB | CTLD |
-| IADS/SAM/EWR | Skynet IADS |
-| Kampagnenlogik | eigene Lua-Module |
-| State/Persistence | eigene Lua-Module |
-| F10/UI | native DCS-Funktionen und eigene Lua-Module |
+| Utility / DCS-Helfer | MIST nach Bedarf |
+| CAP / Strike / SEAD / DEAD / CAS | MOOSE |
+| Truppentransport / Cargo / FOB | CTLD |
+| SAM / EWR / IADS | Skynet IADS |
+| Kampagnenentscheidung | Theater Command |
+| State | Theater Command |
+| Persistence | Theater Command |
+| F10 / UI | eigene Lua-Logik + native DCS-Funktionen |
 
-Aktueller Stand:
+Frameworks werden nach Bedarf innerhalb fachlicher Module verwendet.
 
-- Frameworks sind geladen.
-- Produktive Ausführung folgt später.
-- State-Systeme werden zuerst stabilisiert.
-- Keine echten Framework-Aktionen ohne vorherige Templates, Zonen und Testpfade.
+Die Framework-Namen definieren nicht die eigene Source-Struktur.
 
 ---
 
-## 37. Sicherheitsprinzip der aktuellen Runtime
+## 45. Mission-Editor-Architektur
 
-Aktuell gilt:
+Aktuelle DEV-Mission:
 
-- keine echten MOOSE-Spawns
-- keine echte CTLD-Aktion
-- keine echte Skynet-Aktion
-- kein produktiver Startup-Restore
-- keine unkontrollierten Ownership-Wechsel
-- keine automatischen Kampagnenfolgen ohne Test
-- keine Änderung an Vendor-Dateien
-- keine All-in-one-Dateien
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_DEV.miz
 
-Grund:
+Aktuelle isolierte CTLD-Testmission:
 
-- DCS-Missionen sind schwer zu debuggen.
-- Jede Schicht muss einzeln stabil sein.
-- State muss sichtbar und testbar sein.
-- Framework-Ausführung wird erst später aktiviert.
-- Die getesteten Ownership-Wechsel sind kontrolliert und werden im Hintergrund gespeichert; autonome AI-Director-Operationen bleiben ein späterer Schritt.
+    C:\Users\Paul\Saved Games\DCS.openbeta\Missions\Operation_Levant_Reclamation_CTLD_LANDTASK_TEST.miz
 
-Background Persistence ist aktiv und getestet. Weiterhin ausgeschlossen sind automatische Framework-Ausführung durch Restore und versteckte produktive Aktionen in UI/Debug. Vendor-Dateien bleiben unverändert.
+Mission Editor stellt bereit:
 
----
+- Karte
+- Koalitionen
+- Client-Slots
+- Gruppen
+- Templates
+- Trigger
+- Trigger-Zonen
+- Wegpunkte
+- native Tasks
+- spätere Statics/FARPs
+- Embedded Lua Resources
 
-## 38. Nächster architektonischer Schritt
-
-Priority 3 (Dirty-Coverage) ist **nicht abgeschlossen**.
-
-Bereits geklärt:
-
-- Capture Getter-/Derived-Dirty.
-- Capture Ownership No-Op.
-- `reactToActiveMissions()`-Sonderfall in derzeit nicht verdrahtetem Code.
-
-Noch systematisch zu prüfen, jeweils ein Modul pro Schritt:
-
-1. `src/logistics/tc_logistics_delivery.lua`
-2. `src/logistics/tc_fob_system.lua`
-3. `src/missions/tc_mission_generator.lua`
-4. `src/ai/tc_ai_cap_manager.lua`
-
-Architekturziel: Jede persistierte fachliche Mutation muss zuverlässig Dirty markieren. Reads und echte No-Ops sollen keinen unnötigen Dirty-State erzeugen.
-
-Nächster einzelner technischer/architektonischer Schritt: **READ-ONLY Dirty-Coverage-Audit von `src/logistics/tc_logistics_delivery.lua`**.
-
-Audit-Ziele:
-
-- alle persistierten Logistics-State-Writes identifizieren.
-- alle `markDirty()`-Pfade identifizieren.
-- Call-Sites erfassen.
-- echte Mutationen auf Dirty-Coverage prüfen.
-- Reads/No-Ops auf unnötiges Dirty prüfen.
-- Dirty Reasons bewerten.
-- runtime-only und persistierten State unterscheiden.
-- keine Codeänderung ohne belegten Befund.
-
-Zunächst ist keine Mission-Editor-Änderung erforderlich. FOB, MissionGenerator und AI werden nicht parallel auditiert. Der Audit ist der nächste technische Schritt; diese Dokumentationssynchronisierung führt ihn nicht vorweg.
+Große Kampagnenlogik bleibt in Lua.
 
 ---
 
-## 39. Architekturabschlussstand
+## 46. Testmission vs. DEV-Mission
 
-Stand: **2026-09-12**.
+Verbindlich:
 
-| System | Version | Status |
-|---|---:|---|
-| Airbase Scanner | `v0.2.2` | bestanden |
-| ZoneFactory | `v0.2.0` | bestanden |
-| CaptureSystem | `v0.2.2` | funktional bestanden; Read-Dirty- und Ownership-No-Op-Regressionen bestanden |
-| PersistenceSystem | `v0.2.6` | Embedded Start, SAVED, SKIPPED, FAILED, Retry und Campaign-Persistence-Regressionen bestanden; productiveRestore=false |
-| LogisticsDelivery | `v0.2.0` | funktional bestanden; Dirty-Coverage ist nächster Priority-3-Audit |
-| FobSystem | `v0.2.0` | funktional bestanden; allgemeine Dirty-Coverage offen |
-| MissionGenerator | `v0.2.3` | 10 Mission Records; Activation, Completion, Failure und Effects bestanden; Record-Loss widerlegt; allgemeine Dirty-Coverage offen |
-| AICapManager | `v0.2.0` | state-first bestanden; reactToActiveMissions()-Sonderfall bewertet; allgemeine Dirty-Coverage offen |
-| F10Menu | `v0.2.3` | bestanden; 33 Commands |
+    Testmission != DEV-Mission
 
-Die state-first Architektur ist tragfähig. Mission/Capture/Persistence-Kernpfade sind bestätigt, der Record-Loss-Verdacht ist widerlegt und aktive Embedded Drift als Ursache ausgeschlossen. Priority 3 bleibt offen. Produktiver Restore und produktive Framework-Ausführung bleiben deaktiviert.
+Isolierte Framework-Experimente werden nicht automatisch in die DEV-Mission übernommen.
 
-Nächster technischer Einzelschritt: LogisticsDelivery Dirty-Coverage READ ONLY in `src/logistics/tc_logistics_delivery.lua`.
+Ablauf:
+
+    Testidee
+    -> isolierte .miz
+    -> strukturierter Audit
+    -> DCS Runtime-Test
+    -> Ergebnisbewertung
+    -> erst danach kontrollierte Übernahme
+
+Diese Trennung schützt:
+
+- DEV-Mission
+- produktive Embedded-Ressourcen
+- Persistence
+- bestehende Regressionen
+
+---
+
+## 47. Persistence-Grenze zu Frameworks
+
+Theater Command soll langfristigen Campaign-State speichern.
+
+Framework-Runtime soll nicht blind serialisiert werden.
+
+Beispiel CTLD:
+
+Nach einer erfolgreichen Lieferung kann Theater Command später speichern:
+
+- Auftrag
+- Empfänger
+- Cargo-Typ
+- Menge
+- Erfolg
+- Zeitpunkt
+- State-Effekt
+
+Nicht zwangsläufig:
+
+- vollständige interne CTLD-Tabellen
+- Scheduler
+- Menüpfade
+- temporäre DCS-Objektreferenzen
+
+Nach Restore muss Framework-Runtime aus Theater-Command-State rekonstruiert werden.
+
+---
+
+## 48. Produktive Save-Datei
+
+Aktuell:
+
+    C:\Users\Paul\Saved Games\DCS.openbeta\TheaterCommandDCS\operation_levant_reclamation_save.lua
+
+Bestätigter Stand nach CTLD-Test vom 2026-09-29:
+
+    Größe: 3094967 Bytes
+
+SHA-256:
+
+    C679B4FFE61A7AB601D50E159A057DCDF540B55C620086402883CA2DA27F2596
+
+Der isolierte CTLD-Test hat diesen produktiven Save nicht verändert.
+
+---
+
+## 49. Tooling-Architektur
+
+Seit 2026-09-29 ist die Entwicklung klar nach Werkzeugrollen getrennt.
+
+Diese Werkzeuge sind:
+
+    Entwicklungs- und Diagnosewerkzeuge
+
+Sie sind nicht:
+
+    Runtime-Abhängigkeiten der fertigen Kampagne
+
+---
+
+## 50. ChatGPT
+
+Rolle:
+
+- Projektkoordination
+- Architektur
+- GitHub-Audit
+- Dokumentationsführung
+- Testplanung
+- Ergebnisbewertung
+- Definition des nächsten Einzelschritts
+- Vorbereitung präziser Arbeitsaufträge
+
+ChatGPT ist nicht die Instanz, die tatsächliches DCS-Runtime-Verhalten allein beweist.
+
+---
+
+## 51. Claude + dcs-mcp
+
+Version:
+
+    dcs-mcp 0.9.11
+
+Terrain Store:
+
+    C:\Users\Paul\AppData\Local\dcs-mcp\terrain
+
+Syria-Terrain:
+
+    installiert
+
+Rolle:
+
+- `.miz` strukturiert analysieren
+- Mission-Editor-Inhalte prüfen
+- Gruppen prüfen
+- Units prüfen
+- Trigger-Zonen prüfen
+- Wegpunkte prüfen
+- Tasks prüfen
+- Airbase-Zuordnungen prüfen
+- Mission gezielt bearbeiten
+- gespeicherte `.miz` erneut auditieren
+
+dcs-mcp ist für Mission-Editor-/`.miz`-Arbeit aktuell das bevorzugte Werkzeug.
+
+Es ersetzt keinen DCS-Runtime-Test.
+
+---
+
+## 52. Claude Code + DCS-SMS
+
+DCS-SMS:
+
+    0.27.2
+
+Hook:
+
+    me-bridge-0.27.2
+
+Verifiziertes Installationsverzeichnis:
+
+    C:\Tools\dcs-sms
+
+Claude-Code-Skill:
+
+    C:\Users\Paul\.claude\skills\dcs-sms\SKILL.md
+
+Rolle:
+
+- Mission-Editor-Status
+- laufende DCS-Runtime
+- Runtime-Lua
+- Theater-Command-Live-State
+- CTLD-Live-State
+- Unit-State
+- Position
+- Geschwindigkeit
+- Grounded-/Airborne-State
+- Logs
+- Runtime-Regressionen
+
+DCS-SMS ist kein Theater-Command-Framework.
+
+---
+
+## 53. GitHub
+
+GitHub ist:
+
+    Source of Truth
+
+GitHub hält:
+
+- eigene Lua-Source
+- Dokumentation
+- Architektur
+- Roadmap
+- Tasks
+- Changelog
+- Naming
+- Styleguide
+- Vendor-Versionen
+- bestätigte Testergebnisse
+
+Ein Chatstand ist nicht autoritativer als ein neuerer GitHub-Stand.
+
+---
+
+## 54. DCS
+
+DCS selbst ist die autoritative Instanz für reales Simulatorverhalten.
+
+Nur DCS kann praktisch beweisen:
+
+- AI-Taxi
+- Takeoff
+- Navigation
+- Landung
+- Spawn
+- CTLD-Pickup
+- CTLD-Dropoff
+- Scheduler-Verhalten
+- tatsächliche AI-Reaktion
+
+Offline-Strukturprüfung und Runtime-Beweis sind unterschiedliche Evidenzarten.
+
+---
+
+## 55. Verbindlicher Entwicklungsworkflow
+
+Für Mission-Editor-/Framework-Arbeit:
+
+    ChatGPT
+    -> Ziel und Architekturgrenze definieren
+
+    Claude + dcs-mcp
+    -> aktuelle .miz lesen
+    -> konkrete Missionsänderung durchführen
+    -> gespeicherte Mission auditieren
+
+    Claude Code + DCS-SMS
+    -> lokale Runtime diagnostizieren
+
+    DCS
+    -> tatsächliches Verhalten beweisen
+
+    ChatGPT
+    -> Ergebnis in Projektarchitektur einordnen
+
+    GitHub
+    -> bestätigten Stand speichern
+
+Pro Schritt:
+
+    eine konkrete Aufgabe
+
+---
+
+## 56. Embedded-Resource-Architektur
+
+Bei:
+
+    DO SCRIPT FILE
+
+wird die Lua-Datei in die `.miz` eingebettet.
+
+Deshalb:
+
+    GitHub Source geändert
+    !=
+    .miz automatisch aktualisiert
+
+Embedded Resource Audit vom 2026-09-12:
+
+    13/13 relevante aktive Theater-Command-Ressourcen EXACT_MATCH
+
+Keine aktive Embedded-Runtime-Drift.
+
+Historische verwaiste Persistence-Ressource:
+
+    ResKey_Action_55
+    tc_persistence_system.lua
+
+Status:
+
+- nicht referenziert
+- nicht geladen
+- kein aktueller Blocker
+- spätere Cleanup-Aufgabe
+
+---
+
+## 57. DCS-Sandbox
+
+Persistence benötigt direkt:
+
+    io
+    lfs
+
+Aktuelle lokale Entwicklungsumgebung:
+
+    os=true
+    io=true
+    lfs=true
+    require=false
+
+DCS-SMS benötigt für die aktuelle Bridge ebenfalls entsprechende lokale Freigaben.
+
+DCS-Updates können:
+
+    MissionScripting.lua
+
+überschreiben.
+
+Danach müssen lokale Sandbox- und Bridge-Voraussetzungen erneut geprüft werden.
+
+---
+
+## 58. Sicherheitsprinzipien
+
+Aktuell verbindlich:
+
+- Vendor-Code bleibt unverändert.
+- Keine All-in-one-Dateien.
+- Keine versteckte Framework-Ausführung in UI oder Debug.
+- Keine produktive Restore-Aktivierung ohne eigenen Test.
+- Keine große Paralleländerung mehrerer Systeme.
+- State und Framework-Runtime klar trennen.
+- Reads dürfen nicht persistierten State verändern.
+- No-Ops dürfen keinen Dirty-State erzeugen.
+- Framework-Ergebnis vor State-Mutation validieren.
+- Persistierbaren State nur über definierte Theater-Command-Schnittstellen verändern.
+- Riskante Tests isolieren.
+- Produktiven Save bei Bedarf schützen.
+- GitHub nur mit bestätigtem Projektstand aktualisieren.
+
+---
+
+## 59. Aktuell verbundene Systeme
+
+Produktiv beziehungsweise state-first miteinander verbunden:
+
+    Airbase Scanner
+    -> ZoneFactory
+
+    ZoneFactory
+    -> CaptureSystem
+
+    ZoneFactory
+    -> LogisticsDelivery
+
+    LogisticsDelivery
+    -> FobSystem
+
+    Logistics / FOB
+    -> MissionGenerator Candidate State
+
+    MissionGenerator Completion
+    -> CaptureSystem
+
+    CaptureSystem
+    -> Ownership State
+
+    Fachliche Mutationen
+    -> Persistence Dirty State
+
+    F10Menu
+    -> kontrollierte State-Funktionen
+
+---
+
+## 60. Noch nicht produktiv verbundene Systeme
+
+Noch offen:
+
+    CTLD
+    -> LogisticsDelivery
+
+    CTLD
+    -> FobSystem
+
+    MissionGenerator
+    -> reale CTLD-Operation
+
+    MissionGenerator
+    -> reale MOOSE-Operation
+
+    MissionGenerator
+    -> produktive Skynet-Wirkung
+
+    AICapManager
+    -> reale MOOSE CAP
+
+    AI Director
+    -> Gesamtstrategie
+
+    Logistics
+    -> Capture
+
+    Ground Campaign
+    -> CAS
+
+    Persistence Restore
+    -> Framework-Rekonstruktion
+
+---
+
+## 61. Aktueller nächster Architekturabschnitt
+
+Priority 3 ist abgeschlossen.
+
+Der CTLD-KI-Truppentransport-PoC ist bestanden.
+
+Der nächste Architekturabschnitt ist:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Nicht sofort:
+
+- neue generische CTLD-Datei anlegen
+- CTLD-Vendor patchen
+- Crates implementieren
+- produktiven Restore aktivieren
+- MOOSE CAP parallel integrieren
+
+Zuerst muss die Integrationsgrenze source-backed festgelegt werden.
+
+---
+
+## 62. Fragen vor dem ersten produktiven CTLD-Code
+
+Zu beantworten:
+
+1. Welche fachliche Theater-Command-Komponente besitzt den Transportauftrag?
+2. Welche Komponente registriert Pickup-/Dropoff-Zonen?
+3. Welche Komponente registriert KI-Transporter?
+4. Wann erfolgt diese Registrierung?
+5. Wie bleibt sie idempotent?
+6. Wie wird der Transporter-Lifecycle behandelt?
+7. Wie wird ein Transportauftrag repräsentiert?
+8. Wie wird Pickup erkannt?
+9. Wie wird Erfolg des Dropoffs erkannt?
+10. Wie werden Fehler erkannt?
+11. Wie wird `RepackCommandsPath` ohne Vendor-Patch behandelt?
+12. Welche CTLD-Daten bleiben runtime-only?
+13. Welche Ergebnisse werden in `TC.State` geschrieben?
+14. Welche Mutationen setzen Dirty?
+15. Was muss später nach Restore rekonstruiert werden?
+
+Erst danach wird die nächste konkrete Source-Datei festgelegt.
+
+---
+
+## 63. Perspektivische Carrier-Architektur
+
+Später vorgesehen:
+
+- Supercarrier
+- Carrier Task Group
+- Carrier Air Wing
+- F/A-18C
+- F-14
+- weitere Carrier-fähige Flugzeuge
+- Carrier CAP
+- Fleet Defense
+- Strike
+- Escort
+- Carrier Logistics
+
+Der Carrier soll später Teil der operativen Kampagne sein.
+
+Nicht nur statische Kulisse.
+
+Diese Architektur ist Zukunftsplanung und noch nicht produktiv implementiert.
+
+---
+
+## 64. Perspektivische Ground-/CAS-Architektur
+
+Später vorgesehen:
+
+    Ground Operation
+    -> Enemy Contact
+    -> CAS Need
+    -> AI Director / MissionGenerator
+    -> verfügbares Air Asset
+    -> CAS Mission
+    -> Ergebnis
+    -> Ground State
+
+Bodentruppen sollen später nicht nur statisch existieren.
+
+Sie sollen Bestandteil der Kampagnenlogik werden.
+
+---
+
+## 65. Architekturabschlussstand
+
+Stand:
+
+    2026-09-29
+
+State-first Kern:
+
+    tragfähig und praktisch bestätigt
+
+Priority 3:
+
+    abgeschlossen im dokumentierten Umfang
+
+Persistence:
+
+    v0.2.6
+    dirty-aware
+    produktiver Restore deaktiviert
+
+Logistics:
+
+    LogisticsDelivery v0.2.1
+    FobSystem v0.2.1
+
+Missions:
+
+    MissionGenerator v0.2.3
+    10 Mission Records
+
+AI:
+
+    AICapManager v0.2.1
+    12 CAP Requests
+    noch keine realen MOOSE-CAP-Flüge
+
+CTLD:
+
+    1.6.1
+    KI-Truppentransport-PoC bestanden
+    produktive TC-Integration offen
+
+Tooling:
+
+    ChatGPT
+    -> Projektkoordination / Architektur
+
+    Claude + dcs-mcp
+    -> .miz / Mission Editor
+
+    Claude Code + DCS-SMS
+    -> lokale Runtime-Diagnose
+
+    DCS
+    -> autoritativer Runtime-Beweis
+
+    GitHub
+    -> Source of Truth
+
+Aktueller Architekturübergang:
+
+    state-first Kampagnenkern
+    +
+    stabile dirty-aware Persistence
+    +
+    abgeschlossene Priority-3-Dirty-Coverage
+    +
+    bestandener CTLD-KI-Transport-PoC
+    ->
+    kontrollierte produktive CTLD-Integration
