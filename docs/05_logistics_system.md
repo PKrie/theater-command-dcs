@@ -33,13 +33,13 @@ Aktueller Kernstand:
 - MissionGenerator `v0.2.3` nutzt Logistics-/FOB-State bereits für Missionskandidaten.
 - AICapManager `v0.2.1` ist state-first aktiv.
 - CTLD `1.6.1` ist als unverändertes Vendor-Framework geladen.
-- Die technische CTLD-Zonenregistrierung wurde praktisch bestätigt.
-- Ein vollständiger automatischer CTLD-KI-Truppentransport wurde am 2026-09-29 praktisch bestätigt.
+- Die technische CTLD-Zonenregistrierung wurde für den getesteten Runtime-Pfad praktisch bestätigt.
+- Ein vollständiger automatischer CTLD-KI-Truppentransport wurde am 2026-09-29 für den getesteten Aufbau praktisch bestätigt.
 - Die produktive Theater-Command-CTLD-Integration existiert noch nicht.
 - Crate-/Cargo-Logistik ist noch nicht praktisch bestätigt.
-- Der CTLD-Fehler `RepackCommandsPath` bei einem registrierten KI-Transporter wurde beim Grounded-Übergang beobachtet und muss vor produktiver Integration berücksichtigt werden.
+- Der CTLD-Fehler `RepackCommandsPath` wurde beim erfolgreichen Test genau einmal beim Touchdown des registrierten KI-Transporters beobachtet und muss vor produktiver Integration berücksichtigt werden.
 
-Der erfolgreiche CTLD-Test ist ein **Framework-Proof-of-Concept**.
+Der erfolgreiche CTLD-Test ist ein **Framework-Proof-of-Concept für den getesteten Aufbau**.
 
 Er bedeutet nicht, dass Theater Command bereits produktiv CTLD-Transporte plant, erzeugt oder steuert.
 
@@ -117,6 +117,7 @@ Nicht gewünscht sind generische Framework-Dateien wie:
 
     tc_ctld.lua
     tc_ctld_all_in_one.lua
+    tc_ctld_bridge.lua
     tc_all_in_one.lua
 
 Eigene Integration wird weiterhin nach fachlicher Aufgabe unter `src/` organisiert.
@@ -227,7 +228,7 @@ setzt weiterhin:
 
     dirtyReason=fob_created
 
-Damit ist die allgemeine Priority-3-Dirty-Coverage dieser beiden aktiven Logistikmodule abgeschlossen.
+Damit ist Priority 3 für diese beiden aktiven Logistikmodule im dokumentierten Umfang abgeschlossen.
 
 Neue beziehungsweise später verdrahtete Lifecycle-Pfade müssen weiterhin separat geprüft werden.
 
@@ -464,14 +465,14 @@ Perspektivische Aufgaben:
 
 Wichtig:
 
-    CTLD ist technisch in einem isolierten Truppentransport getestet,
+    CTLD ist technisch in einem isolierten Truppentransport für den getesteten Aufbau bestätigt,
     aber noch nicht produktiv durch Theater Command orchestriert.
 
 ---
 
 ## 12. CTLD-Zonenregistrierung
 
-Die nachträgliche CTLD-Zonenregistrierung wurde praktisch bestätigt.
+Die nachträgliche CTLD-Zonenregistrierung wurde für den getesteten Runtime-Pfad praktisch bestätigt.
 
 CTLD `1.6.1` war im erfolgreichen Test bereits initialisiert.
 
@@ -484,7 +485,9 @@ Eine erneute Ausführung von:
 
     ctld.initialize()
 
-war dafür nicht erforderlich und wurde im Test nicht durchgeführt.
+war für diesen getesteten Runtime-Pfad nicht erforderlich und wurde im Test nicht durchgeführt.
+
+Daraus wird nicht abgeleitet, dass ein erneuter Aufruf von `ctld.initialize()` grundsätzlich verboten wäre.
 
 Im erfolgreichen Test wurden registriert:
 
@@ -506,7 +509,7 @@ Getesteter Dropoff-Eintrag:
 
 Die Einträge wurden aus dem CTLD-Live-State zurückgelesen und anschließend tatsächlich vom Framework verwendet.
 
-Damit ist die grundsätzliche Runtime-Zonenregistrierung praktisch bestätigt.
+Damit ist diese Runtime-Zonenregistrierung für den getesteten Aufbau praktisch bestätigt.
 
 Details:
 
@@ -588,7 +591,7 @@ Luftfahrzeug:
 
     Mi-8
 
-Ablauf:
+Ablauf für den getesteten Aufbau:
 
     CTLD-Zonen registrieren
     -> KI-Transporter in transportPilotNames registrieren
@@ -618,6 +621,7 @@ Nicht verwendet wurden:
 - direkte Manipulation von `ctld.inTransitTroops`
 - Teleport
 - Runtime-Routenänderung
+- Runtime-Taskänderung
 
 Damit ist der CTLD-AI-Pickup für den getesteten Aufbau praktisch bestätigt.
 
@@ -635,12 +639,12 @@ Der erfolgreiche Test verwendete:
 
     normaler Turning Point
     +
-    DCS-native Perform Task Land
+    DCS-native Perform Task -> Land
 
 Zielposition:
 
-    x = -29249.110954281
-    z = -271836.070539260
+    x / North = -29249.110954281
+    z / East  = -271836.070539260
 
 Wegpunkthöhe:
 
@@ -652,8 +656,8 @@ Wegpunktgeschwindigkeit:
 
 Land-Task:
 
-    duration = 300
-    durationFlag = true
+    duration=300
+    durationFlag=true
 
 Der Mi-8 führte den Flug und den Off-Airfield-Anflug selbständig über die gespeicherte DCS-Route aus.
 
@@ -661,11 +665,11 @@ Bestätigte minimale Entfernung zum vorgesehenen Dropoff-Zentrum:
 
     ungefähr 1.06 m
 
-Ein Invisible FARP war für diesen getesteten Transportpfad nicht erforderlich.
+Für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 
 Damit ist für den getesteten Mi-8-Aufbau:
 
-    Turning Point + Perform Task Land
+    Turning Point + Perform Task -> Land
 
 praktisch bestätigt.
 
@@ -681,8 +685,8 @@ Nach der Landung erfolgte der CTLD-Dropoff automatisch.
 
 Bestätigt:
 
-- der `troops`-Inhalt verschwand aus dem In-Transit-State der Testunit,
-- `ctld.droppedTroopsBLUE` erhielt genau einen neuen Eintrag,
+- der `troops`-Inhalt verschwand aus dem In-Transit-State der Testunit.
+- `ctld.droppedTroopsBLUE` erhielt genau einen neuen Eintrag.
 - eine neue Blue-Bodengruppe wurde erzeugt.
 
 Erzeugte Gruppe:
@@ -711,12 +715,12 @@ Nicht verwendet wurden:
 - Runtime-Routenänderung
 - Runtime-Taskänderung
 
-Damit ist der technische Zyklus bestätigt:
+Damit ist für den getesteten Aufbau der technische Zyklus bestätigt:
 
     Pickup
     -> Transport
     -> Off-Airfield-Landung
-    -> Dropoff
+    -> automatischer Dropoff
     -> Bodengruppe
 
 ---
@@ -725,26 +729,26 @@ Damit ist der technische Zyklus bestätigt:
 
 Der Test beweist für den getesteten Aufbau:
 
-- CTLD `1.6.1` kann nach der Initialisierung zusätzliche normalisierte Pickup-Zonen verwenden.
-- CTLD kann nach der Initialisierung zusätzliche normalisierte Dropoff-Zonen verwenden.
-- eine erneute `ctld.initialize()`-Ausführung war dafür nicht erforderlich.
+- CTLD `1.6.1` kann nach der bestehenden Initialisierung zusätzliche normalisierte Pickup-Zonen verwenden.
+- CTLD kann nach der bestehenden Initialisierung zusätzliche normalisierte Dropoff-Zonen verwenden.
+- eine erneute `ctld.initialize()`-Ausführung war für diese Runtime-Ergänzung nicht erforderlich.
 - der getestete KI-Transporter kann über `ctld.transportPilotNames` in den relevanten CTLD-AI-Pfad eingebunden werden.
 - CTLD kann den registrierten KI-Transporter automatisch beladen.
 - die DCS-AI kann den gespeicherten Transportflug durchführen.
-- `Perform Task -> Land` kann für den getesteten Mi-8 eine geeignete Off-Airfield-Landung ermöglichen.
+- `Perform Task -> Land` kann für den getesteten Mi-8-Aufbau eine geeignete Off-Airfield-Landung ermöglichen.
 - CTLD kann nach der Landung automatisch entladen.
 - CTLD kann daraus eine reale Bodengruppe erzeugen.
-- für diesen Truppentransport war kein FARP erforderlich.
+- für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 
 Der Test beweist ausdrücklich noch nicht:
 
 - automatische Theater-Command-Auftragserzeugung
 - produktive LogisticsDelivery-CTLD-Kopplung
 - produktive FobSystem-CTLD-Kopplung
-- Crate-Spawn
-- Crate-Loading
+- Crate Spawn
+- Crate Loading
 - Sling Load
-- Crate-Drop
+- Crate Drop
 - FOB-Bau aus CTLD-Crates
 - Supply-Effekt aus Cargo
 - Capture-Effekt aus Cargo
@@ -756,7 +760,7 @@ Der Test beweist ausdrücklich noch nicht:
 
 ## 18. `RepackCommandsPath`-Fehler
 
-Beim Grounded-Übergang des registrierten KI-Transporters trat auf:
+Beim Touchdown des registrierten KI-Transporters wurde im erfolgreichen Test genau einmal beobachtet:
 
     CTLD.lua:6150:
     attempt to get length of local 'RepackCommandsPath' (a nil value)
@@ -766,22 +770,26 @@ Stack-Kontext:
     updateRepackMenu
     updateRepackMenuOnlanding
 
-Der Fehler trat im erfolgreichen Test am Bodenübergang auf.
+Während der anschließenden ungefähr 220 Sekunden Bodenbeobachtung wurde der Fehler nicht erneut beobachtet.
 
 Source-Analyse legt nahe:
 
-- der registrierte KI-Transporter gelangt über `ctld.transportPilotNames` in einen CTLD-Landing-/Menüpfad,
-- `ctld.vehicleCommandsPath[_unitName]` ist für reine KI-Units nicht zwangsläufig vorhanden,
-- ein daraus abgeleiteter `RepackCommandsPath` kann `nil` sein,
+- der registrierte KI-Transporter gelangt über `ctld.transportPilotNames` in einen CTLD-Landing-/Menüpfad.
+- `ctld.vehicleCommandsPath[_unitName]` ist für reine KI-Units nicht zwangsläufig vorhanden.
+- ein daraus abgeleiteter `RepackCommandsPath` kann `nil` sein.
 - der Vendor-Code behandelt diesen Zustand an dieser Stelle nicht robust.
 
 Pickup und Dropoff wurden im Test trotzdem erfolgreich abgeschlossen.
 
 Daraus wird nicht abgeleitet, dass der Fehler harmlos ist.
 
-Insbesondere ist vor produktiver Integration zu prüfen, ob der unbehandelte Fehler den betreffenden Scheduler beziehungsweise spätere Repack-Menü-Aktualisierungen beendet.
+Nicht direkt bewiesen ist:
 
-Diese Schedulerwirkung ist derzeit eine begründete technische Vermutung und kein direkt bewiesener Befund.
+- ob spätere Repack-Menü-Aktualisierungen weiterhin funktionieren
+- ob der betreffende Scheduler-Pfad nach dem unbehandelten Fehler weiterlief
+- ob der betreffende Scheduler-Pfad nach dem unbehandelten Fehler beendet wurde
+
+Dass der unbehandelte Fehler den betreffenden Scheduler-Pfad beendet haben könnte, bleibt eine source-basierte technische Inferenz und kein direkter Runtime-Beweis.
 
 Vendor-Regel:
 
@@ -918,7 +926,7 @@ Perspektivische Logistik-/AI-Wirkungen:
 - CAS anfordern
 - Gegenangriffe unterstützen
 
-Der erfolgreiche CTLD-KI-Transport zeigt, dass ein realer Transportpfad für den getesteten Aufbau grundsätzlich möglich ist.
+Der erfolgreiche CTLD-KI-Transport zeigt, dass ein realer Transportpfad für den getesteten Aufbau technisch möglich ist.
 
 Die operative Theater-Command-Entscheidungsschicht dafür existiert noch nicht.
 
@@ -1209,32 +1217,34 @@ und:
 | MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | 10 Mission Records; Activation/Completion/Failure/Effects bestanden |
 | AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.1` | state-first und Read-Neutrality bestanden |
 | F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.3` | bestanden; 33 Commands |
-| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` | KI-Truppentransport-PoC bestanden; keine produktive TC-Integration |
+| CTLD | `vendor/ctld/CTLD.lua` | `1.6.1` | KI-Truppentransport-PoC für getesteten Aufbau bestanden; keine produktive TC-Integration |
 
 ---
 
 ## 30. CTLD-Akzeptanzstand
 
-Praktisch bestanden:
+Für den getesteten Aufbau praktisch bestanden:
 
 - CTLD lädt und initialisiert.
 - CTLD bleibt unverändert unter `vendor/`.
 - nachträgliche normalisierte Pickup-Zonenregistrierung funktioniert.
 - nachträgliche normalisierte Dropoff-Zonenregistrierung funktioniert.
-- eine erneute `ctld.initialize()`-Ausführung war nicht erforderlich.
+- eine erneute `ctld.initialize()`-Ausführung war für diesen Runtime-Pfad nicht erforderlich.
 - der getestete KI-Transporter kann in `ctld.transportPilotNames` registriert werden.
 - CTLD verarbeitet den registrierten aktiven Transporter im getesteten AI-Pfad.
 - automatischer Truppen-Pickup funktioniert.
 - 16 Soldaten werden transportiert.
-- Off-Airfield-Landung über `Perform Task -> Land` funktioniert für den getesteten Mi-8.
+- Off-Airfield-Landung über `Perform Task -> Land` funktioniert für den getesteten Mi-8-Aufbau.
 - CTLD erkennt die Landung im vorgesehenen Dropoff-Bereich.
 - automatischer Dropoff funktioniert.
 - eine 16-Mann-Bodengruppe wird erzeugt.
+- für diesen getesteten Truppentransport war kein Invisible FARP erforderlich.
 - produktiver Kampagnen-Save bleibt bei isoliertem Test unverändert.
 
 Bekannter Integrationspunkt:
 
-    RepackCommandsPath bei Grounded-Transition
+    RepackCommandsPath
+    genau einmal beim Touchdown beobachtet
 
 Noch offen:
 
@@ -1257,7 +1267,7 @@ Noch offen:
 
 Die wichtigste Grenze nach dem Proof-of-Concept lautet:
 
-    Framework-Fähigkeit bestätigt
+    Framework-Fähigkeit für getesteten Aufbau bestätigt
     !=
     Theater-Command-Feature produktiv implementiert
 
@@ -1287,7 +1297,7 @@ CTLD bleibt:
 
 Theater Command bleibt:
 
-    Campaign Logic / Decision Layer
+    Campaign Logic / Decision Layer / State Owner
 
 ---
 
@@ -1321,25 +1331,25 @@ Gegenmaßnahmen:
 
 ## 33. Nächster produktiver Logistikschritt
 
-Der manuelle CTLD-KI-Truppentransport-Proof-of-Concept ist abgeschlossen.
+Der isolierte CTLD-KI-Truppentransport-Proof-of-Concept ist für den getesteten Aufbau abgeschlossen.
 
-Ein weiterer identischer manueller Test ist derzeit nicht der nächste sinnvolle Schritt.
+Ein weiterer identischer Test ist derzeit nicht der nächste sinnvolle Schritt.
 
 Vor produktiver Implementierung muss die Integrationsgrenze entworfen werden.
 
 Zu definieren sind insbesondere:
 
-- welche fachliche eigene `src/`-Komponente die CTLD-Runtime-Konfiguration übernimmt,
-- ob dafür eine bestehende fachliche Datei erweitert wird oder eine neue aufgabenorientierte Datei erforderlich ist,
-- wie Pickup-/Dropoff-Zonen idempotent registriert werden,
-- wie KI-Transporter idempotent registriert werden,
-- wie Transporter-Lifecycle behandelt wird,
-- wie der `RepackCommandsPath`-Fall ohne Vendor-Patch behandelt wird,
-- wie ein Transportauftrag aus Theater-Command-State entsteht,
-- wie Erfolg und Fehler erkannt werden,
-- wie der erfolgreiche Dropoff in LogisticsDelivery und FobSystem zurückgeführt wird,
-- welche CTLD-Daten runtime-only bleiben,
-- welche Resultate persistiert werden.
+- welche fachliche eigene `src/`-Komponente die CTLD-Runtime-Konfiguration übernimmt
+- ob dafür eine bestehende fachliche Datei erweitert wird oder eine neue aufgabenorientierte Datei erforderlich ist
+- wie Pickup-/Dropoff-Zonen idempotent registriert werden
+- wie KI-Transporter idempotent registriert werden
+- wie Transporter-Lifecycle behandelt wird
+- wie der `RepackCommandsPath`-Fall ohne Vendor-Patch behandelt wird
+- wie ein Transportauftrag aus Theater-Command-State entsteht
+- wie Erfolg und Fehler erkannt werden
+- wie der erfolgreiche Dropoff in LogisticsDelivery und FobSystem zurückgeführt wird
+- welche CTLD-Daten runtime-only bleiben
+- welche Resultate persistiert werden
 
 Es wird nicht vorschnell eine generische Framework-Datei wie:
 
@@ -1383,7 +1393,7 @@ Bestanden:
 
 ### CTLD-Framework-Proof-of-Concept
 
-Bestanden:
+Für den getesteten Aufbau bestanden:
 
 - Runtime-Zonenregistrierung
 - KI-Transporterregistrierung
@@ -1393,6 +1403,11 @@ Bestanden:
 - Off-Airfield-Landung
 - automatischer Dropoff
 - erzeugte 16-Mann-Bodengruppe
+
+Bekannter Caveat:
+
+    RepackCommandsPath-Fehler
+    genau einmal beim Touchdown beobachtet
 
 Noch nicht produktiv verbunden:
 
@@ -1409,4 +1424,4 @@ Verbindlich:
 
 Der erfolgreiche CTLD-Test vom 2026-09-29 ist technische Grundlage für die nächste Integrationsphase.
 
-Er ist kein Beleg dafür, dass noch nicht implementierte Cargo-, FOB-, AI- oder Persistence-Funktionen bereits produktiv vorhanden sind.
+Er ist kein Beleg dafür, dass noch nicht implementierte Cargo-, FOB-, AI- oder Restore-Funktionen bereits produktiv vorhanden sind.
