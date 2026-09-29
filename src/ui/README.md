@@ -1,927 +1,922 @@
-# src/ui/README.md
+# UI – Theater Command DCS
 
-## Autoritativer UI-Stand — 2026-08-04
-
-- F10Menu `v0.2.3` erzeugt 33 Befehle.
-- Es existieren keine Persistence-F10-Controls und für diese Entwicklungsstufe sind keine geplant; Autosave benötigt keine Spielerinteraktion.
-- Missionslisten lesen die Mission-State-Dictionaries. Im aktuellen reproduzierten Defekt sind alle sechs Status-Collections leer, daher sieht das Menü keine auswählbare Mission; die früher bestätigten Auswahl-/Outcome-Flows bleiben historische Regressionsergebnisse.
-- Der UI-Code ist nicht als Writer des Record-Verlusts belegt: Für Sortierung werden temporäre Arrays verwendet. Statische Gesamtklassifikation: `PROJECT SOURCE HAS NO MATCHING WRITE SITE`.
-- Nächster Schritt ist der Offline/read-only Embedded Mission Resource Audit, nicht eine neue F10-Funktion. Abweichende ältere Angaben unten sind historische Stände.
-
----
+## Verbindlicher Stand — 2026-09-29
 
 Diese Datei beschreibt den UI-Bereich von **Theater Command DCS**.
 
-Der UI-Bereich enthält eigene Lua-Logik für Spielerinteraktion, F10-Menüs, Statusanzeigen und spätere Debug-/Kampagnensteuerung.
+Projekt:
+
+    Theater Command DCS
 
 Erste Kampagne:
 
-- **Operation Levant Reclamation**
+    Operation Levant Reclamation
 
 Map:
 
-- **Syria**
+    Syria
 
-Ausgangslage:
+Aktive Datei:
 
-- Blue startet auf **Akrotiri / Zypern**
-- das syrische Festland ist zu Beginn rot kontrolliert
-- Red hält zu Beginn den Großteil der strategischen Flugplätze
-- Blue soll sich vom Brückenkopf Zypern aus auf das syrische Festland vorarbeiten
-- Spieler sollen sich in eine laufende Kampagnenlage einklinken, nicht jede Aktion allein auslösen
-- Blue und Red sollen später eigene Operationen durchführen
+    src/ui/tc_f10_menu.lua
+
+Version:
+
+    v0.2.3
+
+Bestätigt:
+
+    33 F10 Commands
+
+Aktueller Entwicklungsbereich des Gesamtprojekts:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Priority 3:
+
+    abgeschlossen im dokumentierten Umfang seit 2026-09-21
+
+Verbindlich:
+
+    productiveRestore=false
 
 ---
 
 ## 1. Zweck des UI-Bereichs
 
-`src/ui/` ist die Schnittstelle zwischen Spieler und Theater-Command-Kampagnenzustand.
+`src/ui/` ist die Spieler-, Status- und aktuelle Testoberfläche für Theater Command DCS.
 
-Langfristig soll UI ermöglichen:
+Der UI-Bereich macht Kampagnenstate sichtbar und stellt kontrollierte Interaktionspfade bereit.
 
-- Kampagnenstatus anzeigen
+Aktuelle Aufgaben:
+
 - verfügbare Missionen anzeigen
 - aktive Missionen anzeigen
-- Missionen auswählen
-- Missionen aktivieren
-- Mission Outcome Controls nutzen
 - Missionsdetails anzeigen
+- Missionen aktivieren
+- Mission Outcomes kontrolliert testen
+- Campaign Status anzeigen
 - Capture Status anzeigen
 - Capture Ready Zones anzeigen
-- Pressure Contested Zones anzeigen
-- Logistikstatus anzeigen
-- FOB-Status anzeigen
-- AI-Status anzeigen
-- spätere IADS-Informationen anzeigen
-- spätere Debug-Informationen anzeigen
-- spätere Save/Load- oder Admin-Funktionen anbieten
-
-Aktuell ist der UI-Bereich aktiv und getestet.
-
-Das F10-Menü ist sichtbar, navigierbar und bereits mit MissionGenerator und CaptureSystem verbunden.
-
----
-
-## 2. Aktueller technischer Stand
-
-Historischer Stand: **2026-07-06**
-
-Aktive Datei:
-
-```text
-src/ui/tc_f10_menu.lua
-```
-
-Historisch getestete Version in diesem Abschnitt:
-
-```text
-v0.2.2
-```
-
-Status:
-
-- **bestanden**
-
-Bestätigt durch DCS-Logtests:
-
-- F10Menu lädt.
-- F10Menu startet.
-- F10Menu erzeugt 32 Commands.
-- F10-Menü ist in DCS sichtbar.
-- F10-Menü ist navigierbar.
-- Missionen können angezeigt werden.
-- aktive Missionen können angezeigt werden.
-- Missionsdetails können pro Slot angezeigt werden.
-- Missionen können direkt aktiviert werden.
-- Mission Outcome Controls sind vorhanden.
-- Active Mission Outcome Status kann angezeigt werden.
-- Active Mission 1 kann auf `COMPLETED` gesetzt werden.
-- MissionGenerator setzt aktivierte Missionen auf `ACTIVE`.
-- MissionGenerator setzt abgeschlossene Missionen auf `COMPLETED`.
-- MissionGenerator bereitet Mission Effects state-only vor.
-- CaptureSystem verarbeitet abgeschlossene Mission Effects.
-- CaptureSystem erzeugt Capture Pressure.
-- CaptureSystem aktualisiert Capture Progress.
-- Capture Ready entsteht dynamisch.
-- Capture Ready Zones sind über F10 sichtbar.
-- Pressure Contested Zones sind über F10 sichtbar.
-- Aktivierung bleibt state-only.
-- Completion bleibt state-only.
-- Es werden keine echten Spawns ausgelöst.
-- Es gab keinen Theater-Command-Lua-Fehler.
-- Es gab keinen Lua-Stacktrace.
-
----
-
-## 3. Historische Menüstruktur vor v0.2.3
-
-Aktuelle F10-Struktur:
-
-```text
-F10
-└── Theater Command
-    ├── Missions
-    │   ├── Show Available Missions
-    │   ├── Show Active Missions
-    │   ├── Mission Details
-    │   │   ├── Show Mission 1 Details
-    │   │   ├── Show Mission 2 Details
-    │   │   ├── Show Mission 3 Details
-    │   │   ├── Show Mission 4 Details
-    │   │   ├── Show Mission 5 Details
-    │   │   ├── Show Mission 6 Details
-    │   │   ├── Show Mission 7 Details
-    │   │   ├── Show Mission 8 Details
-    │   │   ├── Show Mission 9 Details
-    │   │   └── Show Mission 10 Details
-    │   ├── Activate Mission
-    │   │   ├── Activate Mission 1
-    │   │   ├── Activate Mission 2
-    │   │   ├── Activate Mission 3
-    │   │   ├── Activate Mission 4
-    │   │   ├── Activate Mission 5
-    │   │   ├── Activate Mission 6
-    │   │   ├── Activate Mission 7
-    │   │   ├── Activate Mission 8
-    │   │   ├── Activate Mission 9
-    │   │   └── Activate Mission 10
-    │   └── Mission Outcome
-    │       ├── Show Active Mission Outcome Status
-    │       ├── Complete Active Mission 1
-    │       └── Fail Active Mission 1
-    ├── Status
-    │   ├── Show Campaign Status
-    │   ├── Show Capture Status
-    │   ├── Show Capture Ready Zones
-    │   └── Show Pressure Contested Zones
-    ├── Logistics
-    │   ├── Show Logistics Status
-    │   └── Show FOB Status
-    └── AI
-        └── Show AI CAP Status
-```
-
-Historisch bestätigte Commands:
-
-```text
-commands: 32
-```
-
----
-
-## 4. Historische F10-Funktionen vor v0.2.3
-
-Historisch unterstützte F10Menu `v0.2.2`:
-
-- verfügbare Missionen anzeigen
-- aktive Missionen anzeigen
-- Mission 1 Details anzeigen
-- Mission 2 Details anzeigen
-- Mission 3 Details anzeigen
-- Mission 4 Details anzeigen
-- Mission 5 Details anzeigen
-- Mission 6 Details anzeigen
-- Mission 7 Details anzeigen
-- Mission 8 Details anzeigen
-- Mission 9 Details anzeigen
-- Mission 10 Details anzeigen
-- Mission 1 aktivieren
-- Mission 2 aktivieren
-- Mission 3 aktivieren
-- Mission 4 aktivieren
-- Mission 5 aktivieren
-- Mission 6 aktivieren
-- Mission 7 aktivieren
-- Mission 8 aktivieren
-- Mission 9 aktivieren
-- Mission 10 aktivieren
-- Active Mission Outcome Status anzeigen
-- Active Mission 1 auf `COMPLETED` setzen
-- Active Mission 1 auf `FAILED` setzen
-- Kampagnenstatus anzeigen
-- Capture Status anzeigen
-- Capture Ready Zones anzeigen
-- Pressure Contested Zones anzeigen
-- Logistikstatus anzeigen
-- FOB-Status anzeigen
-- AI-CAP-Status anzeigen
-
-Bestätigt getestet:
-
-- Mission Details Slot 1
-- Mission Slot 1 aktivieren
-- Active Mission Outcome Status anzeigen
-- Active Mission 1 auf `COMPLETED` setzen
-- Capture Status anzeigen
-- Capture Ready Zones anzeigen
+- Capture Ready kontrolliert anwenden
 - Pressure Contested Zones anzeigen
 - Logistics Status anzeigen
 - FOB Status anzeigen
 - AI CAP Status anzeigen
 
-Noch nicht praktisch bestätigt:
+F10 ist aktuell vor allem:
 
-- `Fail Active Mission 1`
+    Sichtbarkeit
+    Debug
+    kontrollierter Testzugang
 
----
-
-## 5. Verhältnis zu MissionGenerator
-
-F10Menu ist aktuell eng mit MissionGenerator verbunden.
-
-Aktive MissionGenerator-Datei:
-
-```text
-src/missions/tc_mission_generator.lua
-```
-
-Getestete Version:
-
-```text
-v0.2.3
-```
-
-MissionGenerator liefert:
-
-- verfügbare Missionen
-- aktive Missionen
-- Missionsdetails
-- Mission Status
-- Mission Objectives
-- Mission Briefings
-- Mission Progress
-- Activation Metadata
-- Outcome State
-- Effect State
-- reserved Spawn Hooks
-
-F10Menu nutzt diese Daten, um:
-
-- Missionen zu sortieren
-- Mission Slots 1 bis 10 darzustellen
-- Missionsdetails pro Slot anzuzeigen
-- Missionen über F10 zu aktivieren
-- Active Mission Outcome Status anzuzeigen
-- aktive Mission 1 state-only abzuschließen
-- Aktivierung an MissionGenerator weiterzugeben
-- Completion an MissionGenerator weiterzugeben
-
-Bestätigte MissionGenerator-Werte:
-
-```text
-mission candidates: 78
-fobSupportCandidates: 2
-generated missions: 10
-reservedCreated: 1
-duplicatesSkipped: 1
-typeLimitSkipped: 68
-```
-
-Bestätigte Aktivierung:
-
-```text
-[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2
-[TC] [MissionGenerator] Mission status changed: MISSION_2 [ACTIVE]
-[TC] [MissionGenerator] Mission activation prepared: MISSION_2 stateOnly=true spawnHooks=reserved
-```
-
-Bestätigte Completion:
-
-```text
-[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared
-[TC] [MissionGenerator] Mission effects prepared state-only: MISSION_2 status=COMPLETED
-[TC] [MissionGenerator] Mission outcome prepared: MISSION_2 [COMPLETED] stateOnly=true effects=prepared
-```
-
-Wichtig:
-
-- F10Menu aktiviert Missionen aktuell nur state-only.
-- F10Menu schließt Missionen aktuell nur state-only ab.
-- Es werden keine echten MOOSE-, CTLD- oder Skynet-Aktionen ausgelöst.
+Das F10-Menü ist nicht der eigentliche Kampagnenmotor.
 
 ---
 
-## 6. Verhältnis zu CaptureSystem
+## 2. Architekturregel
 
-CaptureSystem ist inzwischen im F10-Menü sichtbar und praktisch mit Mission Outcome verbunden.
+Das UI folgt der Theater-Command-Grundarchitektur:
 
-Aktive Capture-Datei:
+    Mission Editor = Bühne
+    Lua = Kampagnensystem
+    GitHub = Projektgedächtnis / Source of Truth
+    DCS Runtime = autoritativer Verhaltensbeweis
 
-```text
-src/campaign/tc_capture_system.lua
-```
+Für UI gilt zusätzlich:
 
-Getestete Version:
+    UI liest State
+    -> zeigt State
+    -> ruft definierte Theater-Command-Funktionen auf
 
-```text
-v0.2.2
-```
+UI soll nicht:
 
-Bestätigte Startwerte:
-
-```text
-eligibleBases: 32
-eligibleZones: 32
-nonCaptureBases: 193
-nonCaptureZones: 14
-pressureRecords: 32
-progressRecords: 32
-appliedMissionEffects: 0
-ready: 0
-contested: 0
-```
-
-Bestätigte Werte nach Mission Completion:
-
-```text
-completed mission: MISSION_2
-target zone: ZONE_AIRBASE_ABU_AL_DUHUR
-capture pressure owner: BLUE
-applied pressure: 105
-progress: 100 %
-appliedMissionEffects: 1
-ready: 1
-contested: 0
-```
-
-Aktive F10-Funktionen:
-
-```text
-Show Capture Status
-Show Capture Ready Zones
-Show Pressure Contested Zones
-```
-
-Bestätigte Capture-Folge:
-
-```text
-[TC] [CaptureSystem] Capture pressure added: zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE amount=105 progress=100%
-[TC] [CaptureSystem] Mission effect applied to capture: mission=MISSION_2 zone=ZONE_AIRBASE_ABU_AL_DUHUR owner=BLUE pressure=105
-[TC] [CaptureSystem] Completed mission effects processed: applied=1, skipped=0, failed=0, appliedMissionEffects=1
-[TC] [CaptureSystem] Capture progress updated: zones=32, ready=1, contested=0, appliedMissionEffects=1
-[TC] [F10Menu] Capture ready zones shown through F10
-```
-
-Bewertung:
-
-- Capture-/Pressure-Sichtbarkeit ist bestanden.
-- Capture Ready Zones sind über F10 sichtbar.
-- Pressure Contested Zones sind über F10 sichtbar.
-- Der frühere nächste UI-Schritt „Capture-/Pressure-Status sichtbar machen“ ist erledigt.
-
-Nächster UI-Schritt:
-
-```text
-Apply Capture Ready Zone 1
-```
-
-Ziel:
-
-- kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
-- kein automatischer Besitzwechsel ohne Spieler-/Debug-Bestätigung
+- eigene Kampagnenlogik duplizieren
+- Framework-Orchestrierung übernehmen
+- Vendor-State direkt manipulieren
+- CTLD direkt produktiv steuern
+- MOOSE direkt produktiv steuern
+- Skynet direkt produktiv steuern
+- Save-Dateien direkt verwalten
 
 ---
 
-## 7. Verhältnis zu LogisticsDelivery
+## 3. Aktive Datei
 
-F10Menu zeigt Logistikstatus an.
+Datei:
 
-Aktive Logistics-Datei:
+    src/ui/tc_f10_menu.lua
 
-```text
-src/logistics/tc_logistics_delivery.lua
-```
+Version:
 
-Getestete Version:
+    v0.2.3
 
-```text
-v0.2.0
-```
+Source-Verantwortlichkeiten:
 
-Bestätigte Werte:
-
-```text
-logistics hubs: 46
-blue hubs: 7
-red hubs: 24
-neutral hubs: 15
-active hubs: 31
-limited hubs: 15
-locked hubs: 0
-```
-
-Aktuelle F10-Funktion:
-
-```text
-Show Logistics Status
-```
-
-Bewertung:
-
-- Logistics-Status ist über F10 erreichbar.
-- Die Darstellung kann später erweitert werden.
-- CTLD-Aktionen sind noch nicht produktiv angebunden.
-
----
-
-## 8. Verhältnis zu FobSystem
-
-F10Menu zeigt FOB-Status an.
-
-Aktive FOB-Datei:
-
-```text
-src/logistics/tc_fob_system.lua
-```
-
-Getestete Version:
-
-```text
-v0.2.0
-```
-
-Bestätigte Werte:
-
-```text
-FOB candidates: 6
-stored candidates: 6
-auto-planned FOBs: 2
-skipped candidates: 4
-Blue FOBs: 2
-```
-
-Erzeugte FOBs:
-
-```text
-FOB Ercan
-FOB Gecitkale
-```
-
-Status:
-
-```text
-UNDER_CONSTRUCTION
-```
-
-Aktuelle F10-Funktion:
-
-```text
-Show FOB Status
-```
-
-Bewertung:
-
-- FOB-Status ist über F10 erreichbar.
-- FOBs sind aktuell state-only.
-- Es werden noch keine echten CTLD-FOBs erzeugt.
-
----
-
-## 9. Verhältnis zu AICapManager
-
-F10Menu zeigt AI-CAP-Status an.
-
-Aktive AI-Datei:
-
-```text
-src/ai/tc_ai_cap_manager.lua
-```
-
-Getestete Version:
-
-```text
-v0.2.0
-```
-
-Bestätigte Werte:
-
-```text
-cap zone candidates: 31
-auto-registered CAP zones: 12
-CAP requests: 12
-reactionState: AIR_REACTION_REQUESTED
-threatLevel: HIGH
-```
-
-Aktuelle F10-Funktion:
-
-```text
-Show AI CAP Status
-```
-
-Bewertung:
-
-- AI-CAP-State ist über F10 erreichbar.
-- Echte MOOSE-CAP-Spawns sind noch nicht aktiv.
-- `spawn=MOOSE_PENDING` ist erwartetes Verhalten.
-
----
-
-## 10. Verhältnis zu Campaign State
-
-F10Menu zeigt inzwischen mehrere Campaign- und Capture-Bereiche.
-
-Aktuelle F10-Funktionen:
-
-```text
-Show Campaign Status
-Show Capture Status
-Show Capture Ready Zones
-Show Pressure Contested Zones
-```
-
-Campaign State enthält oder soll enthalten:
-
-- Airbase-/Zone-Ownership
-- Capture-Eligibility
-- Capture-Pressure
-- Capture-Progress
-- Capture Ready
-- Pressure Contested
-- Mission State
-- Mission Effects
-- Logistics State
-- FOB State
-- AI State
-- später IADS State
-- später Persistence State
-
-Aktueller Stand:
-
-- F10Menu zeigt grundlegende Campaign-Informationen.
-- F10Menu zeigt Capture-/Pressure-Informationen.
-- Capture Ready Zones sind sichtbar.
-- Pressure Contested Zones sind sichtbar.
-- nächster sinnvoller UI-Schritt ist kontrollierter Capture Ready Apply.
-
----
-
-## 11. Verhältnis zu Persistence
-
-F10Menu enthält aktuell keine Save-/Load-Funktionen.
-
-PersistenceSystem:
-
-```text
-src/campaign/tc_persistence_system.lua
-```
-
-Status:
-
-```text
-v0.2.6 implementiert
-Embedded-Scheduler SAVED und SKIPPED bestanden
-produktiver Restore deaktiviert
-```
-
-Es existieren keine Persistence-F10-Funktionen und für diese Entwicklungsstufe sind keine geplant. Autosave läuft ohne Spielerinteraktion.
-
----
-
-## 12. Verhältnis zu IADS
-
-F10Menu enthält aktuell keine IADS-Anzeige.
-
-IADS-Stand:
-
-- Skynet IADS wird geladen.
-- Theater-Command-IADS-Modul ist noch nicht implementiert.
-- MissionGenerator reserviert Skynet-Hooks.
-
-Spätere mögliche F10-Funktionen:
-
-- Show IADS Status
-- Show IADS Sectors
-- Show Active SAM Sites
-- Show Suppressed SAM Sites
-- Show Destroyed SAM Sites
-- Show SEAD Targets
-
-Aktuell nicht vorgesehen:
-
-- IADS-F10-Funktionen als nächster Schritt
-
-Grund:
-
-- IADS-F10-Funktionen werden erst nach eigenem IADS-State sinnvoll.
-
----
-
-## 13. UI-State
-
-F10Menu schreibt oder nutzt UI-bezogenen State.
-
-Mögliche UI-State-Daten:
-
-- Menüstatus
-- registrierte Commands
-- letzte angezeigte Mission
-- Anzahl verfügbarer Missionen
-- Anzahl aktiver Missionen
-- letzte Aktivierung
-- letzter Mission Outcome
-- letzte Statusabfrage
-- letzte Capture-Anzeige
-- UI-Version
-
-Aktuell bestätigt:
-
-```text
-F10Menu initialized: commands=32
-```
-
-F10Menu kann:
-
-- Mission Details anzeigen
-- Mission Activation auslösen
-- Mission Completion auslösen
+- Blue Coalition Theater Command F10-Menü erzeugen
+- verfügbare Missionen anzeigen
+- aktive Missionen anzeigen
+- Mission Details 1–10 anzeigen
+- Mission 1–10 aktivieren
+- Active Mission Outcome Status anzeigen
+- Active Mission 1 state-only abschließen
+- Active Mission 1 state-only fehlschlagen lassen
+- Campaign Status anzeigen
 - Capture Status anzeigen
 - Capture Ready Zones anzeigen
 - Pressure Contested Zones anzeigen
-
-UI bleibt state-only.
+- Capture Ready Zone 1 kontrolliert anwenden
+- Logistics Status anzeigen
+- FOB Status anzeigen
+- AI CAP Status anzeigen
+- alle UI-Funktionen ohne direkte Framework-Execution halten
 
 ---
 
-## 14. State-only-Regel
+## 4. Aktueller F10-Stand
 
-F10Menu folgt aktuell strikt der state-first-Architektur.
+Version:
+
+    v0.2.3
+
+Commands:
+
+    33
+
+Bestätigt:
+
+- Menü lädt.
+- Menü startet.
+- Theater Command F10-Menü erscheint.
+- Menü ist navigierbar.
+- Missionen werden angezeigt.
+- Missionsdetails funktionieren.
+- Mission Activation funktioniert.
+- Mission Completion funktioniert.
+- Mission Failure funktioniert.
+- Capture Status funktioniert.
+- Capture Ready funktioniert.
+- Pressure Contested funktioniert.
+- Capture Ready Apply funktioniert.
+- Logistics Status funktioniert.
+- FOB Status funktioniert.
+- AI CAP Status funktioniert.
+
+Es werden über diese UI-Pfade keine realen MOOSE-, CTLD- oder Skynet-Operationen ausgelöst.
+
+---
+
+## 5. Aktuelle Menüstruktur
+
+    F10
+    └── Theater Command
+        ├── Missions
+        │   ├── Show Available Missions
+        │   ├── Show Active Missions
+        │   ├── Mission Details
+        │   │   ├── Show Mission 1 Details
+        │   │   ├── ...
+        │   │   └── Show Mission 10 Details
+        │   ├── Activate Mission
+        │   │   ├── Activate Mission 1
+        │   │   ├── ...
+        │   │   └── Activate Mission 10
+        │   └── Mission Outcome
+        │       ├── Show Active Mission Outcome Status
+        │       ├── Complete Active Mission 1
+        │       └── Fail Active Mission 1
+        ├── Status
+        │   ├── Show Campaign Status
+        │   ├── Show Capture Status
+        │   ├── Show Capture Ready Zones
+        │   ├── Apply Capture Ready Zone 1
+        │   └── Show Pressure Contested Zones
+        ├── Logistics
+        │   ├── Show Logistics Status
+        │   └── Show FOB Status
+        └── AI
+            └── Show AI CAP Status
+
+---
+
+## 6. MissionGenerator-Integration
+
+MissionGenerator:
+
+    src/missions/tc_mission_generator.lua
+    v0.2.3
+
+Bestätigt:
+
+    Mission Candidates: 78
+    FOB Support Candidates: 2
+    Mission Records: 10
+
+F10Menu verwendet MissionGenerator unter anderem für:
+
+- Available Missions
+- Active Missions
+- Mission Details
+- Activation
+- Completion
+- Failure
+- Outcome Status
+
+Bestätigte Statuswechsel:
+
+    AVAILABLE -> ACTIVE
+    ACTIVE -> COMPLETED
+    ACTIVE -> FAILED
+
+Missionen bleiben aktuell:
+
+    state-only
+
+Die reservierten Framework Hooks lösen noch keine reale Mission Execution aus.
+
+---
+
+## 7. Mission-Record-Diagnose
+
+Der frühere Verdacht eines Mission-Record-Verlusts wurde am:
+
+    2026-09-12
+
+widerlegt.
+
+Mission Collections sind:
+
+    String-keyed Lua-Dictionaries
+
+Daher ist:
+
+    #table
+
+für diese Collections nicht autoritativ.
+
+Live bestätigt:
+
+    statistics.available = 10
+    pairs()-Count = 10
+    #available = 0
+
+Die Mission Records waren vorhanden.
+
+Der damalige Zählfehler lag in:
+
+    src/core/tc_state.lua
+
+F10Menu war nicht Verursacher eines Mission-Record-Verlusts.
+
+Es existiert aktuell kein bestätigter Mission-Record-Loss.
+
+---
+
+## 8. Mission Activation
+
+Bestätigt:
+
+    F10
+    -> Activate Mission
+    -> MissionGenerator
+    -> AVAILABLE -> ACTIVE
+
+Activation Metadata:
+
+    stateOnly=true
+    spawnHooks=reserved
+
+Damit gilt:
+
+    Mission Activation
+    !=
+    realer Framework-Spawn
+
+Dieser Zustand ist aktuell bewusst.
+
+---
+
+## 9. Mission Completion
+
+Bestätigt:
+
+    F10
+    -> Complete Active Mission 1
+    -> MissionGenerator
+    -> ACTIVE -> COMPLETED
+    -> Mission Effects
+    -> CaptureSystem
+
+Bestätigter Wirkungspfad:
+
+    Completion
+    -> Capture Pressure
+    -> Capture Progress
+    -> Capture Ready
+
+Persistence wurde dabei ebenfalls erfolgreich ausgelöst.
+
+---
+
+## 10. Mission Failure
+
+Bestätigt:
+
+    F10
+    -> Fail Active Mission 1
+    -> MissionGenerator
+    -> ACTIVE -> FAILED
+
+Aktuelles Capture-Verhalten:
+
+    FAILED
+    -> kein Capture Pressure
+
+Persistence:
+
+    bestanden
+
+Damit ist die frühere offene Failure-Regression abgeschlossen.
+
+---
+
+## 11. CaptureSystem-Integration
+
+CaptureSystem:
+
+    src/campaign/tc_capture_system.lua
+    v0.2.2
+
+F10Menu zeigt beziehungsweise steuert kontrolliert:
+
+- Capture Status
+- Capture Ready Zones
+- Pressure Contested Zones
+- Apply Capture Ready Zone 1
+
+Bestätigte Capture-Grundwerte:
+
+    eligibleBases: 32
+    eligibleZones: 32
+    pressureRecords: 32
+    progressRecords: 32
+
+---
+
+## 12. Capture Ready
+
+Bestätigter Testfall:
+
+    Mission MISSION_2
+    -> ZONE_AIRBASE_ABU_AL_DUHUR
+    -> BLUE pressure 105
+    -> progress 100 %
+    -> captureReady=true
+
+F10Menu kann diesen Zustand anzeigen.
+
+Damit ist Capture Ready nicht mehr nur ein interner Log-/State-Befund.
+
+---
+
+## 13. Capture Ready Apply
+
+F10Menu `v0.2.3` ergänzte den kontrollierten Befehl:
+
+    Apply Capture Ready Zone 1
+
+Der Befehl ruft die bestehende CaptureSystem-Logik auf.
+
+Bestätigter Test:
+
+    ZONE_AIRBASE_ABU_AL_DUHUR
+
+Vor Apply:
+
+    owner=RED
+    progress=100 %
+    captureReady=true
+
+Nach Apply:
+
+    zoneOwner=BLUE
+    previousOwner=RED
+    baseOwner=BLUE
+    progress=0
+    status=STABLE
+    captureReady=false
+
+Persistence:
+
+    SAVED
+
+Dirty Reason:
+
+    f10_capture_ready_zone_1_applied
+
+Damit ist der frühere UI-Arbeitsschritt:
+
+    kontrollierter Capture Ready Apply
+
+abgeschlossen.
+
+---
+
+## 14. F10-Anzeige des Ownership-Wechsels
+
+Bei einem früheren Test zeigte die F10-Ausgabe kosmetisch:
+
+    BLUE -> BLUE
+
+Der Runtime-State bestätigte tatsächlich:
+
+    RED -> BLUE
+
+Damit war der Ownership-Wechsel korrekt.
+
+Die Anzeigeabweichung war kein CaptureSystem-State-Fehler.
+
+Bei späterer UI-Arbeit können solche Darstellungsdetails separat verbessert werden.
+
+Sie sind aktuell kein Kampagnenblocker.
+
+---
+
+## 15. LogisticsDelivery-Integration
+
+LogisticsDelivery:
+
+    src/logistics/tc_logistics_delivery.lua
+    v0.2.1
+
+Bestätigte Werte:
+
+    Logistics Hubs: 46
+    Blue: 7
+    Red: 24
+    Neutral: 15
+    Active: 31
+    Limited: 15
+    Locked: 0
+
+F10-Funktion:
+
+    Show Logistics Status
+
+Priority-3-Ergebnis:
+
+    Read-Neutrality bestanden
+
+F10 liest Logistics-State.
+
+F10 löst aktuell keine reale CTLD-Logistikoperation aus.
+
+---
+
+## 16. FobSystem-Integration
+
+FobSystem:
+
+    src/logistics/tc_fob_system.lua
+    v0.2.1
+
+Bestätigt:
+
+    FOB Candidates: 6
+    Blue FOBs: 2
+
+FOBs:
+
+    FOB Ercan
+    FOB Gecitkale
+
+Status:
+
+    UNDER_CONSTRUCTION
+
+F10-Funktion:
+
+    Show FOB Status
+
+Diese FOBs sind weiterhin:
+
+    Campaign State
+
+und keine real durch CTLD gebauten FOBs.
+
+---
+
+## 17. AICapManager-Integration
+
+AICapManager:
+
+    src/ai/tc_ai_cap_manager.lua
+    v0.2.1
+
+Bestätigt:
+
+    CAP Zone Candidates: 31
+    CAP Zones: 12
+    CAP Requests: 12
+
+F10-Funktion:
+
+    Show AI CAP Status
+
+Priority-3-Ergebnis:
+
+    Read-Neutrality bestanden
+
+Es existieren noch keine realen MOOSE-CAP-Flüge.
+
+---
+
+## 18. Persistence und F10
+
+PersistenceSystem:
+
+    src/campaign/tc_persistence_system.lua
+    v0.2.6
+
+Aktuelle Architekturentscheidung:
+
+    kein normales Spieler-Persistence-Menü
+
+Nicht vorhanden:
+
+- Save Campaign State
+- Load Campaign State
+- Validate Save
+- Restore Campaign
+
+als reguläre Spieler-F10-Befehle.
+
+Persistence läuft im Hintergrund.
+
+Bestätigt:
+
+- `SAVED`
+- `SKIPPED`
+- `FAILED`
+- Retry
+
+Verbindlich:
+
+    productiveRestore=false
+
+---
+
+## 19. Warum Persistence nicht über F10 gesteuert wird
+
+Persistence ist:
+
+    Systemverhalten
+
+und kein normaler Spielerauftrag.
+
+Der Spieler soll später:
+
+- Missionen fliegen
+- kämpfen
+- Gebiete beeinflussen
+- Logistik durchführen
+
+und nicht:
+
+- Save-Dateien verwalten
+- Restore auslösen
+- Persistence validieren
+
+Ein späteres separates Admin-/Debug-Konzept wäre nur bei konkretem Bedarf zu entscheiden.
+
+---
+
+## 20. Verhältnis zu CTLD
+
+CTLD:
+
+    1.6.1
+
+Am 2026-09-29 wurde für einen isolierten getesteten Aufbau ein vollständiger KI-Truppentransport praktisch bestätigt.
+
+Bestätigter Pfad:
+
+    Runtime-Zonenregistrierung
+    -> Transporterregistrierung
+    -> automatischer Pickup
+    -> Flug
+    -> Off-Airfield-Landung
+    -> automatischer Dropoff
+    -> reale Blue-Bodengruppe
+
+F10Menu ist an diesem erfolgreichen Testpfad nicht als produktiver CTLD-Orchestrator beteiligt.
+
+Aktuell existiert kein:
+
+    F10
+    -> CTLD Transport starten
+
+Produktiver Transport soll langfristig aus Kampagnenlogik entstehen und nicht von einem manuellen Spieler-Debug-Befehl abhängen.
+
+---
+
+## 21. Verhältnis zu IADS
+
+Skynet IADS:
+
+    3.3.0
+
+ist geladen.
+
+Ein produktiver Theater-Command-IADS-State existiert noch nicht.
+
+Deshalb existiert aktuell auch kein IADS-F10-Bereich.
+
+Mögliche spätere Statusanzeigen werden erst ergänzt, wenn das zugrunde liegende IADS-System existiert.
+
+UI wird nicht vor dem Fachsystem gebaut.
+
+---
+
+## 22. State-first-Regel
+
+F10Menu folgt weiterhin:
+
+    State zuerst.
 
 Das bedeutet:
 
-- F10 liest State.
-- F10 zeigt State an.
-- F10 ruft sichere Theater-Command-Funktionen auf.
-- F10 aktiviert Missionen state-only.
-- F10 schließt Missionen state-only ab.
-- F10 zeigt Capture State.
-- F10 löst keine echten DCS-Spawns aus.
-- F10 ruft CTLD nicht produktiv auf.
-- F10 ruft Skynet nicht produktiv auf.
+- F10 liest Theater-Command-State.
+- F10 zeigt Theater-Command-State.
+- F10 ruft definierte Theater-Command-Funktionen auf.
+- F10 Mission Activation bleibt state-only.
+- F10 Mission Outcome bleibt state-first.
+- Capture Apply verwendet CaptureSystem.
 - F10 verändert keine Vendor-Dateien.
-- F10 löst keinen automatischen produktiven Ownership-Wechsel aus.
+- F10 orchestriert keine reale CTLD-Execution.
+- F10 orchestriert keine reale MOOSE-Execution.
+- F10 orchestriert keine reale Skynet-Execution.
 
-Diese Regel bleibt auch für die nächste Version wichtig.
-
----
-
-## 15. Warum F10Menu aktuell wichtig ist
-
-F10Menu ist aktuell die wichtigste Sichtbarkeits- und Kontrollfläche.
-
-Grund:
-
-- DCS-Logauswertung allein reicht nicht für spätere Kampagnensteuerung.
-- Spieler brauchen Zugriff auf Missionen.
-- Entwickler brauchen Zugriff auf State-Zusammenfassungen.
-- Mission Activation ist über F10 bestätigt.
-- Mission Completion ist über F10 bestätigt.
-- Capture-Pressure und Capture-Progress sind über F10 sichtbar.
-- Capture Ready ist über F10 sichtbar.
-- spätere Mission Effects brauchen UI-/Debug-Kontrolle.
-- Ownership-Wechsel müssen bewusst und sichtbar getestet werden.
-
-F10Menu ist damit aktuell die Brücke zwischen State-Systemen und praktischer DCS-Bewertung.
+Framework-Execution bleibt außerhalb des UI.
 
 ---
 
-## 16. Versionen und erwartete Logmarker
+## 23. UI-State und interne Laufzeitdaten
 
-Aktuelle Version:
+F10Menu besitzt eigene Runtime-Felder unter anderem für:
 
-```text
-F10Menu v0.2.2
-```
+    menuRootCreated
+    commandCount
+    lastUpdateTime
+    lastMessage
+    lastSelectedMissionKey
+    lastOutcomeMissionKey
+    lastOutcomeAction
+    lastAppliedCaptureZoneKey
+    lastAppliedCaptureZoneName
+    lastAppliedCaptureOwner
+    lastAppliedCaptureStatus
 
-Erwartete aktuelle Logmarker:
+Diese Werte unterstützen die UI-Runtime.
 
-```text
-[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.2
-[TC] [F10Menu] F10 menu started
-[TC] [F10Menu] F10 menu initialized: commands=32
-[TC] System started: F10 Menu
-[TC] [F10Menu] Mission details shown through F10: slot=1 key=MISSION_2
-[TC] [F10Menu] Mission activated through F10: slot=1 key=MISSION_2
-[TC] [F10Menu] Active mission outcome status shown through F10
-[TC] [F10Menu] Mission completed through F10: slot=1 key=MISSION_2 stateOnly=true effects=prepared
-[TC] [F10Menu] Capture status shown through F10
-[TC] [F10Menu] Capture ready zones shown through F10
-[TC] [F10Menu] Pressure contested zones shown through F10
-```
-
-Erwartete nächste Version:
-
-```text
-F10Menu v0.2.3
-```
-
-Erwartete neue Logmarker nach nächstem Schritt:
-
-```text
-[TC] [F10Menu] Loaded src/ui/tc_f10_menu.lua v0.2.3
-[TC] [F10Menu] F10 menu initialized:
-[TC] [F10Menu] Capture ready zones shown through F10
-[TC] [F10Menu] Capture ready zone applied through F10:
-[TC] [CaptureSystem] Zone captured:
-```
+Sie machen das UI nicht zum Eigentümer des fachlichen Campaign-State.
 
 ---
 
-## 17. Aktuelle Akzeptanzkriterien
+## 24. Priority 3
 
-F10Menu `v0.2.2` gilt als bestanden, weil:
+Priority 3 wurde am:
 
-- Datei lädt.
-- Version wird im Log angezeigt.
+    2026-09-21
+
+im dokumentierten Umfang abgeschlossen.
+
+Relevante aktuelle Modulstände:
+
+    LogisticsDelivery v0.2.1
+    FobSystem v0.2.1
+    MissionGenerator v0.2.3
+    AICapManager v0.2.1
+
+F10Menu selbst ist aktuell:
+
+    v0.2.3
+
+Der alte Mission-Record-Loss-Verdacht wurde bereits vorher widerlegt.
+
+Priority 3 ist nicht mehr der aktuelle Entwicklungsbereich.
+
+---
+
+## 25. Aktueller Systemstand
+
+    AirbaseScanner      v0.2.2
+    ZoneFactory         v0.2.0
+    CaptureSystem       v0.2.2
+    PersistenceSystem   v0.2.6
+    LogisticsDelivery   v0.2.1
+    FobSystem           v0.2.1
+    MissionGenerator    v0.2.3
+    AICapManager        v0.2.1
+    F10Menu             v0.2.3
+
+F10 Commands:
+
+    33
+
+Verbindlich:
+
+    productiveRestore=false
+
+---
+
+## 26. Aktuelle UI-Akzeptanzkriterien
+
+Bestanden:
+
+- F10Menu `v0.2.3` lädt.
 - Menü startet.
-- 32 Commands werden erzeugt.
+- 33 Commands werden erzeugt.
 - F10-Menü ist sichtbar.
 - F10-Menü ist navigierbar.
-- Mission Details sind abrufbar.
+- Available Missions funktionieren.
+- Active Missions funktionieren.
+- Mission Details funktionieren.
 - Mission Activation funktioniert.
-- MissionGenerator setzt Missionen auf `ACTIVE`.
 - Mission Completion funktioniert.
-- MissionGenerator setzt Missionen auf `COMPLETED`.
-- Mission Effects werden vorbereitet.
-- CaptureSystem verarbeitet abgeschlossene Mission Effects.
-- Capture Status ist sichtbar.
-- Capture Ready Zones sind sichtbar.
-- Pressure Contested Zones sind sichtbar.
-- Aktivierung bleibt state-only.
-- Completion bleibt state-only.
-- keine echten Spawns.
-- keine CTLD-Aktionen.
-- keine Skynet-Aktionen.
-- keine Theater-Command-Lua-Fehler.
-- keine Lua-Stacktraces.
-
-Noch offen:
-
-- `Fail Active Mission 1` praktisch testen
-- kontrollierten Capture Ready Apply implementieren und testen
+- Mission Failure funktioniert.
+- Campaign Status funktioniert.
+- Capture Status funktioniert.
+- Capture Ready Zones funktionieren.
+- Pressure Contested Zones funktionieren.
+- Apply Capture Ready Zone 1 funktioniert.
+- Logistics Status funktioniert.
+- FOB Status funktioniert.
+- AI CAP Status funktioniert.
+- Capture Apply synchronisiert Zone und linked Airbase im getesteten Pfad.
+- getestete State-Mutationen lösen Persistence korrekt aus.
+- keine reale CTLD-Execution wird durch F10 ausgelöst.
+- keine reale MOOSE-Execution wird durch F10 ausgelöst.
+- keine reale Skynet-Execution wird durch F10 ausgelöst.
 
 ---
 
-## 18. Nächster UI-Schritt
+## 27. Noch offene UI-Bereiche
 
-Empfohlene nächste Datei:
+Noch nicht implementiert beziehungsweise nicht aktuell benötigt:
 
-```text
-src/ui/tc_f10_menu.lua
-```
-
-Ziel:
-
-```text
-kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
-```
-
-Geplante neue F10-Funktion:
-
-```text
-Apply Capture Ready Zone 1
-```
-
-Akzeptanzkriterien:
-
-- F10Menu lädt als neue Version.
-- bisherige 32 Commands bleiben funktionsfähig.
-- neuer Capture-Apply-Command wird ergänzt.
-- Capture Ready Zone 1 kann bewusst angewendet werden.
-- Zone Ownership wird state-only aktualisiert.
-- linked Airbase Ownership wird kontrolliert über bestehende CaptureSystem-Funktion synchronisiert.
-- Capture Pressure wird nach erfolgreichem Ownership-Wechsel zurückgesetzt oder sauber markiert.
-- Logmarker zeigen eindeutig den Ownership-Wechsel.
-- keine echten Spawns
-- keine CTLD-Aktion
-- keine Skynet-Aktion
-- keine Lua-Fehler
-- keine Theater-Command-Fehler
-
----
-
-## 19. Spätere UI-Schritte
-
-Nach kontrolliertem Capture Ready Apply:
-
-1. `Fail Active Mission 1` praktisch testen
-2. Persistence weiterhin ohne F10-Steuerung als Hintergrundsystem behandeln
-3. Mission Effects auf Logistics später sichtbar machen
-4. Mission Effects auf AI später sichtbar machen
-5. Mission Effects auf IADS später sichtbar machen
-6. AI Director Status später anzeigen
-7. IADS Status später anzeigen
-8. Debug-Menü getrennt aufbauen
-9. Persistence-Menü in dieser Entwicklungsstufe nicht planen; jede spätere Admin-/Debug-Idee benötigt eine separate Freigabe
-
-Mögliche spätere Menüs:
-
-```text
-Theater Command
-Theater Command Debug
-Theater Command Admin
-Theater Command Persistence (historische Idee, aktuell nicht geplant)
-```
-
-Diese Struktur ist noch nicht final.
-
----
-
-## 20. Risiken
-
-Risiken im UI-Bereich:
-
-- zu viele F10-Commands werden unübersichtlich
-- Mission Slots können veralten, wenn Missionen dynamisch wechseln
-- F10-Auswahl kann falsche Mission aktivieren, wenn Sortierung instabil ist
-- Statusanzeigen können zu lang für DCS-Textausgabe werden
-- F10-Funktionen können zu früh echte Framework-Aktionen auslösen
-- UI kann Kampagnenlogik versehentlich selbst übernehmen
-- Debug- und Spielerfunktionen können vermischt werden
-- Capture Ready Apply kann Ownership unkontrolliert ändern
-- Capture Pressure kann nach Ownership-Wechsel inkonsistent bleiben
-
-Aktuelle Gegenmaßnahmen:
-
-- stabile Missionssortierung
-- feste Slots 1 bis 10
-- state-only Aktivierung
-- state-only Completion
-- keine echten Framework-Aktionen
-- klare Logmarker
-- kleine UI-Schritte
-- Debug später getrennt behandeln
-- Ownership-Wechsel nur bewusst über F10-/Debug-Pfad
-
----
-
-## 21. Nicht-Ziele im aktuellen UI-Stand
-
-Aktuell nicht vorgesehen:
-
+- dynamische statt fester Mission-Slots
+- Pagination
 - vollständige Spieleroberfläche
-- komplexe Pagination
-- vollständiger Debug-Viewer
-- IADS-Menü
-- Persistence-Menü
-- AI Director-Menü
-- CTLD-Cargo-Menü
-- echte Spawn-Auslösung über F10
-- Admin-Kommandos für produktive Kampagnenänderungen
-- automatischer Ownership-Wechsel ohne Bestätigung
-- echte CTLD-Aktion über F10
-- echte Skynet-Aktion über F10
+- separates Debug-Menü
+- separates Admin-Menü
+- AI Director Status
+- IADS Status
+- produktive Logistics-Mission-Control
+- produktive CTLD-Control
+- Multiplayer-spezifische UI
+- finales UX-Design
 
-Grund:
-
-Zuerst muss die State-Sichtbarkeit stabil bleiben und der nächste Ownership-Schritt kontrolliert getestet werden.
+Diese Bereiche sind keine aktuelle Priority-4-Aufgabe.
 
 ---
 
-## 22. Aktueller getesteter Systemstand
+## 28. Kein aktueller UI-Code-Schritt
 
-| System | Datei | Version | Status |
-|---|---|---:|---|
-| Airbase Scanner | `src/world/tc_airbase_scanner.lua` | `v0.2.2` | bestanden |
-| ZoneFactory | `src/world/tc_zone_factory.lua` | `v0.2.0` | bestanden |
-| CaptureSystem | `src/campaign/tc_capture_system.lua` | `v0.2.2` | bestanden |
-| PersistenceSystem | `src/campaign/tc_persistence_system.lua` | `v0.2.6` | Embedded-Scheduler bestanden; Restore deaktiviert |
-| LogisticsDelivery | `src/logistics/tc_logistics_delivery.lua` | `v0.2.0` | bestanden |
-| FobSystem | `src/logistics/tc_fob_system.lua` | `v0.2.0` | bestanden |
-| MissionGenerator | `src/missions/tc_mission_generator.lua` | `v0.2.3` | historische Pfade bestanden; aktueller Record-Verlust ungelöst |
-| AICapManager | `src/ai/tc_ai_cap_manager.lua` | `v0.2.0` | bestanden |
-| F10Menu | `src/ui/tc_f10_menu.lua` | `v0.2.2` | bestanden |
+Der frühere nächste UI-Schritt:
+
+    Apply Capture Ready Zone 1
+
+ist inzwischen abgeschlossen und getestet.
+
+Der aktuelle Projektbereich ist:
+
+    Priority 4 – produktive CTLD-Integration vorbereiten
+
+Deshalb wird aktuell nicht parallel:
+
+- F10Menu erweitert
+- neues Admin-Menü gebaut
+- Debug-Menü gebaut
+- CTLD-Steuerung in F10 eingebaut
+- IADS-Menü gebaut
+- AI-Director-Menü gebaut
+
+UI bleibt auf:
+
+    v0.2.3
+
+bis ein neuer fachlicher Bedarf entsteht.
 
 ---
 
-## 23. Aktueller Status
+## 29. Entwicklungswerkzeuge
 
-Der UI-Bereich ist aktiv und bestanden.
+Aktuelle Rollen:
 
-Aktuelle Fähigkeit:
+### ChatGPT
 
-- F10-Menü erscheint in DCS.
-- Theater Command-Menü ist navigierbar.
-- verfügbare Missionen können angezeigt werden.
-- aktive Missionen können angezeigt werden.
-- Missionsdetails können angezeigt werden.
-- Missionen können direkt aktiviert werden.
-- Mission Completion kann direkt über F10 getestet werden.
-- Kampagnenstatus kann angezeigt werden.
-- Capture Status kann angezeigt werden.
-- Capture Ready Zones können angezeigt werden.
-- Pressure Contested Zones können angezeigt werden.
-- Logistikstatus kann angezeigt werden.
-- FOB-Status kann angezeigt werden.
-- AI-CAP-Status kann angezeigt werden.
-- Mission Activation bleibt state-only.
-- Mission Completion bleibt state-only.
-- Capture Ready bleibt state-only sichtbar.
-- keine echten Framework-Aktionen werden ausgelöst.
+    Projektkoordination
+    Architektur
+    GitHub-Audit
+    Testplanung
+    Bewertung
+    Dokumentation
 
-Nächster notwendiger Schritt:
+### Claude + dcs-mcp
 
-```text
-F10Menu v0.2.3
-kontrollierter state-only Ownership-Wechsel aus Capture Ready Zone 1
-```
+Version:
+
+    dcs-mcp 0.9.11
+
+Rolle:
+
+    .miz
+    Mission Editor
+    Gruppen
+    Zonen
+    Trigger
+    gespeicherte Missionsstruktur
+
+### Claude Code + DCS-SMS
+
+Version:
+
+    DCS-SMS 0.27.2
+
+Hook:
+
+    me-bridge-0.27.2
+
+Verifiziertes Installationsverzeichnis:
+
+    C:\Tools\dcs-sms
+
+Rolle:
+
+    lokale Runtime
+    Runtime-Lua
+    Theater-Command-State
+    F10-Runtime
+    Logs
+    Regressionen
+
+Aus dem bestätigten Stand wird kein exakter DCS-SMS-Executable-Pfad abgeleitet.
+
+---
+
+## 30. Aktueller Abschlussstand
+
+Stand:
+
+    2026-09-29
+
+F10Menu:
+
+    v0.2.3
+
+Commands:
+
+    33
+
+Bestätigt:
+
+    Mission Visibility
+    Mission Details
+    Mission Activation
+    Mission Completion
+    Mission Failure
+    Campaign Status
+    Capture Status
+    Capture Ready
+    Pressure Contested
+    Capture Ready Apply
+    Logistics Status
+    FOB Status
+    AI CAP Status
+
+Mission-Record-Loss:
+
+    widerlegt
+
+Persistence:
+
+    Background-System
+    kein Spieler-Save-/Load-Menü
+    productiveRestore=false
+
+Framework-Execution aus F10:
+
+    nicht produktiv aktiv
+
+Aktueller Projektübergang:
+
+    stabiler state-first Kampagnenkern
+    +
+    vollständiger aktueller F10-Testzugang
+    +
+    abgeschlossene Priority-3-Dirty-Coverage
+    +
+    bestandener CTLD-KI-Truppentransport-PoC
+    ->
+    kontrollierte produktive CTLD-Integration
